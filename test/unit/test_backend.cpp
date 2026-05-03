@@ -42,6 +42,21 @@ TEST_CASE("acquire_read returns current generation snapshot")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that dropping cached backend memory does not mark package data stale.
+// -----------------------------------------------------------------------------
+TEST_CASE("BaseManager cache drop keeps generation stable")
+{
+  auto &mgr = BaseManager::instance();
+
+  REQUIRE_NOTHROW(mgr.acquire_read());
+  const auto before = mgr.current_generation();
+
+  mgr.drop_cached_base();
+
+  REQUIRE(mgr.current_generation() == before);
+}
+
+// -----------------------------------------------------------------------------
 // Verify that startup still exposes installed packages when repo loading fails.
 // -----------------------------------------------------------------------------
 TEST_CASE("BaseManager falls back to installed-package-only initialization when repo-backed startup fails")

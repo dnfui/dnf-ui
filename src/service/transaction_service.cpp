@@ -303,6 +303,13 @@ struct PreviewWorkerGuard {
   }
 };
 
+struct BackendBaseDropGuard {
+  ~BackendBaseDropGuard()
+  {
+    BaseManager::instance().drop_cached_base();
+  }
+};
+
 // -----------------------------------------------------------------------------
 // Copy one queued progress message onto the main loop and emit it on D-Bus.
 // -----------------------------------------------------------------------------
@@ -753,6 +760,8 @@ validate_transaction_request_for_service(const TransactionRequest &request, std:
     return true;
   }
 
+  BackendBaseDropGuard base_drop_guard;
+
   try {
     BaseManager::instance().ensure_system_only_initialized_if_needed();
     dnf_backend_refresh_installed_nevras();
@@ -797,6 +806,8 @@ run_transaction_preview(TransactionSession *session)
   if (!session) {
     return;
   }
+
+  BackendBaseDropGuard base_drop_guard;
 
   try {
     TransactionPreview preview;
@@ -938,6 +949,7 @@ run_transaction_apply(TransactionSession *session)
   }
 
   ApplyGuard apply_guard { session->service->apply_running };
+  BackendBaseDropGuard base_drop_guard;
 
   // Stop if the request was released after the worker started but before
   // backend package work begins.

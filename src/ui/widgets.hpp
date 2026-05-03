@@ -46,7 +46,6 @@ struct PackageResultsWidgets {
   GtkTextBuffer *deps_buffer = nullptr;
   GtkTextBuffer *changelog_buffer = nullptr;
   GtkLabel *count_label = nullptr;
-  std::vector<PackageRow> current_packages;
   std::string selected_nevra;
 };
 

@@ -103,6 +103,10 @@ class BaseManager {
   // -----------------------------------------------------------------------------
   void rebuild_system_only();
   // -----------------------------------------------------------------------------
+  // Drop the cached Base so the next backend operation rebuilds it on demand.
+  // -----------------------------------------------------------------------------
+  void drop_cached_base();
+  // -----------------------------------------------------------------------------
   // Initialize a system-only Base when no Base exists yet.
   // -----------------------------------------------------------------------------
   void ensure_system_only_initialized_if_needed();

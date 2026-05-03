@@ -598,8 +598,6 @@ package_table_refresh_statuses(SearchWidgets *widgets)
 void
 package_table_fill_package_view(SearchWidgets *widgets, const std::vector<PackageRow> &items)
 {
-  widgets->results.current_packages = items;
-
   PackageColumnKind sort_kind = PackageColumnKind::STATUS;
   GtkSortType sort_order = GTK_SORT_ASCENDING;
   bool have_sort_state = get_package_view_sort_state(widgets, sort_kind, sort_order);
