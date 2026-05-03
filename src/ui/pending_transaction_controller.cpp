@@ -6,6 +6,7 @@
 // -----------------------------------------------------------------------------
 #include "widgets.hpp"
 
+#include "base_manager.hpp"
 #include "dnf_backend/dnf_backend.hpp"
 #include "i18n.hpp"
 #include "package_info_controller.hpp"
@@ -29,12 +30,20 @@ struct PreviewTaskData {
   TransactionRequest request;
   TransactionPreview preview;
   std::string transaction_path;
+  bool transaction_path_transferred = false;
 };
 
 // Button payload used to jump from one pending action back to its package row.
 struct PendingJumpButtonData {
   SearchWidgets *widgets;
   PendingAction action;
+};
+
+struct PendingBackendBaseDropGuard {
+  ~PendingBackendBaseDropGuard()
+  {
+    BaseManager::instance().drop_cached_base();
+  }
 };
 
 static void update_apply_button(SearchWidgets *widgets);
@@ -50,6 +59,10 @@ apply_task_data_free(gpointer p)
     return;
   }
 
+  if (!d->transaction_path.empty()) {
+    transaction_service_client_release_request(d->transaction_path);
+  }
+
   // Drop the apply task reference kept while progress callbacks may still queue UI updates.
   transaction_progress_release(d->progress_window);
   delete d;
@@ -62,6 +75,9 @@ static void
 preview_task_data_free(gpointer p)
 {
   PreviewTaskData *d = static_cast<PreviewTaskData *>(p);
+  if (d && !d->transaction_path.empty() && !d->transaction_path_transferred) {
+    transaction_service_client_release_request(d->transaction_path);
+  }
   delete d;
 }
 
@@ -160,6 +176,8 @@ show_pending_action_package(SearchWidgets *widgets, const PendingAction &action)
   if (!widgets) {
     return;
   }
+
+  PendingBackendBaseDropGuard base_drop_guard;
 
   std::vector<PackageRow> rows;
   switch (action.type) {
@@ -320,9 +338,8 @@ rebuild_after_tx_finished(GObject *, GAsyncResult *res, gpointer user_data)
   // cached search result rows must be discarded before the next search.
   package_query_clear_search_cache();
 
-  // Refresh installed state, then repopulate the currently visible package
-  // view so rows removed by the transaction disappear without a manual reload.
-  dnf_backend_refresh_installed_nevras();
+  // Repopulate the currently visible package view so rows removed by the
+  // transaction disappear without a manual reload.
   package_query_reload_current_view(widgets);
 }
 
@@ -392,6 +409,9 @@ start_apply_transaction(SearchWidgets *widgets)
 
         if (success) {
           invalidate_service_preview(widgets);
+          if (td) {
+            td->transaction_path.clear();
+          }
           // Clear pending actions and refresh the tab.
           widgets->transaction.actions.clear();
           refresh_pending_tab(widgets);
@@ -402,6 +422,9 @@ start_apply_transaction(SearchWidgets *widgets)
           rebuild_after_tx_async(widgets);
         } else {
           invalidate_service_preview(widgets);
+          if (td) {
+            td->transaction_path.clear();
+          }
           std::string details = error ? error->message : _("Transaction failed.");
           ui_helpers_set_status(widgets->query.status_label, details.c_str(), "red");
           // Show the full backend error in a copyable dialog instead of only in the status bar.
@@ -647,6 +670,7 @@ start_preview_request(SearchWidgets *widgets, TransactionRequest request)
         if (td->preview.empty()) {
           if (!td->transaction_path.empty()) {
             transaction_service_client_release_request(td->transaction_path);
+            td->transaction_path.clear();
           }
           widgets->transaction.preview_transaction_path.clear();
           widgets->transaction.preview_upgrade_all = false;
@@ -656,6 +680,7 @@ start_preview_request(SearchWidgets *widgets, TransactionRequest request)
 
         widgets->transaction.preview_transaction_path = td->transaction_path;
         widgets->transaction.preview_upgrade_all = td->request.upgrade_all;
+        td->transaction_path_transferred = true;
         transaction_progress_show_summary_dialog(
             widgets, td->preview, start_apply_transaction, invalidate_service_preview);
       });

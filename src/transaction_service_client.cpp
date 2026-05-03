@@ -653,6 +653,7 @@ transaction_service_client_preview_request(const TransactionRequest &request,
   }
 
   if (!wait_for_started_transaction_preview(connection, transaction_path_out, preview_out, error_out)) {
+    transaction_path_out.clear();
     g_object_unref(connection);
     return false;
   }
@@ -687,6 +688,7 @@ transaction_service_client_preview_upgrade_all_request(TransactionPreview &previ
   }
 
   if (!wait_for_started_transaction_preview(connection, transaction_path_out, preview_out, error_out)) {
+    transaction_path_out.clear();
     g_object_unref(connection);
     return false;
   }

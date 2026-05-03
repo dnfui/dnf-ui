@@ -144,9 +144,18 @@ update_selected_package_actions(SearchWidgets *widgets, const PackageRow &select
 // -----------------------------------------------------------------------------
 // Load package notebook text on a worker thread.
 // -----------------------------------------------------------------------------
+struct InfoBackendBaseDropGuard {
+  ~InfoBackendBaseDropGuard()
+  {
+    BaseManager::instance().drop_cached_base();
+  }
+};
+
 static void
 on_package_info_task(GTask *task, gpointer, gpointer task_data, GCancellable *cancellable)
 {
+  InfoBackendBaseDropGuard base_drop_guard;
+
   if (cancellable && g_cancellable_is_cancelled(cancellable)) {
     return_package_info_task_cancelled(task);
     return;

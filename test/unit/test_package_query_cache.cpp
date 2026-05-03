@@ -106,3 +106,26 @@ TEST_CASE("Package query cache clear removes stored rows")
 
   REQUIRE_FALSE(package_query_cache_lookup(key, 7, loaded));
 }
+
+// -----------------------------------------------------------------------------
+// Verify that cached rows cannot grow without bound across many search terms.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package query cache evicts oldest entries")
+{
+  package_query_cache_clear();
+
+  std::vector<PackageRow> stored = {
+    make_cache_row("demo-1-1.x86_64", "demo"),
+  };
+  std::vector<PackageRow> loaded;
+
+  package_query_cache_store("name:contains:one", 7, stored);
+  package_query_cache_store("name:contains:two", 7, stored);
+  package_query_cache_store("name:contains:three", 7, stored);
+  package_query_cache_store("name:contains:four", 7, stored);
+
+  REQUIRE_FALSE(package_query_cache_lookup("name:contains:one", 7, loaded));
+  REQUIRE(package_query_cache_lookup("name:contains:two", 7, loaded));
+  REQUIRE(package_query_cache_lookup("name:contains:three", 7, loaded));
+  REQUIRE(package_query_cache_lookup("name:contains:four", 7, loaded));
+}

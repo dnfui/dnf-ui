@@ -6,8 +6,20 @@
 // -----------------------------------------------------------------------------
 #include "pending_transaction_request.hpp"
 
+#include "base_manager.hpp"
 #include "dnf_backend/dnf_backend.hpp"
 #include "i18n.hpp"
+
+namespace {
+
+struct PendingRequestBaseDropGuard {
+  ~PendingRequestBaseDropGuard()
+  {
+    BaseManager::instance().drop_cached_base();
+  }
+};
+
+}
 
 // -----------------------------------------------------------------------------
 // Split the pending queue into install, remove, and reinstall transaction specs.
@@ -55,6 +67,8 @@ pending_transaction_build_request(const std::vector<PendingAction> &actions, Tra
 bool
 pending_transaction_validate_request(const TransactionRequest &request, std::string &error_out)
 {
+  PendingRequestBaseDropGuard base_drop_guard;
+
   for (const auto &spec : request.remove) {
     // Re-check remove specs at apply time so self-protection still holds even
     // if outdated UI state or future code paths bypass button sensitivity.

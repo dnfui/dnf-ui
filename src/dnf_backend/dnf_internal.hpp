@@ -80,7 +80,7 @@ void annotate_installed_rows_with_repo_candidates_best_effort(std::vector<Packag
 // Merge available and installed row maps into the visible package list.
 // -----------------------------------------------------------------------------
 std::vector<PackageRow> visible_rows_from_maps(std::map<std::string, PackageRow> available_rows,
-                                               std::map<std::string, PackageRow> installed_rows);
+                                               const std::map<std::string, PackageRow> &installed_rows);
 
 // -----------------------------------------------------------------------------
 // State-cache helpers owned by dnf_state.cpp and used by query refresh paths.

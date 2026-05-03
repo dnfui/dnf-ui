@@ -6,19 +6,45 @@
 // -----------------------------------------------------------------------------
 #include "package_query_cache.hpp"
 
+#include <cstddef>
 #include <map>
 #include <mutex>
+
+namespace {
+
+constexpr size_t kMaxSearchCacheEntries = 3;
 
 // Cache one visible result set per search term and search option combination.
 // Entries are tied to the BaseManager generation that produced them so a Base
 // rebuild cannot serve outdated package metadata back into the UI.
 struct CachedSearchResults {
   uint64_t generation;
+  uint64_t last_used;
   std::vector<PackageRow> packages;
 };
 
 static std::map<std::string, CachedSearchResults> g_search_cache;
 static std::mutex g_cache_mutex; // Protects g_search_cache
+static uint64_t g_cache_use_counter = 0;
+
+// -----------------------------------------------------------------------------
+// Drop the oldest cached search rows when the cache reaches its entry limit.
+// -----------------------------------------------------------------------------
+static void
+package_query_cache_prune_locked()
+{
+  while (g_search_cache.size() > kMaxSearchCacheEntries) {
+    auto oldest = g_search_cache.begin();
+    for (auto it = g_search_cache.begin(); it != g_search_cache.end(); ++it) {
+      if (it->second.last_used < oldest->second.last_used) {
+        oldest = it;
+      }
+    }
+    g_search_cache.erase(oldest);
+  }
+}
+
+}
 
 // -----------------------------------------------------------------------------
 // Build a unique cache key from search options and the search term.
@@ -43,6 +69,7 @@ package_query_cache_clear()
 {
   std::lock_guard<std::mutex> lock(g_cache_mutex);
   g_search_cache.clear();
+  g_cache_use_counter = 0;
 }
 
 // -----------------------------------------------------------------------------
@@ -64,6 +91,7 @@ package_query_cache_lookup(const std::string &key, uint64_t generation, std::vec
     return false;
   }
 
+  it->second.last_used = ++g_cache_use_counter;
   out_packages = it->second.packages;
   return true;
 }
@@ -77,7 +105,8 @@ void
 package_query_cache_store(const std::string &key, uint64_t generation, const std::vector<PackageRow> &packages)
 {
   std::lock_guard<std::mutex> lock(g_cache_mutex);
-  g_search_cache[key] = CachedSearchResults { generation, packages };
+  g_search_cache[key] = CachedSearchResults { generation, ++g_cache_use_counter, packages };
+  package_query_cache_prune_locked();
 }
 
 // -----------------------------------------------------------------------------

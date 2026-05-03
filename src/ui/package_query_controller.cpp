@@ -291,12 +291,21 @@ cancel_active_package_list_request(SearchWidgets *widgets)
 // worker thread so the window stays responsive.
 // -----------------------------------------------------------------------------
 
+struct QueryBackendBaseDropGuard {
+  ~QueryBackendBaseDropGuard()
+  {
+    BaseManager::instance().drop_cached_base();
+  }
+};
+
 // -----------------------------------------------------------------------------
 // Query installed packages on a worker thread.
 // -----------------------------------------------------------------------------
 static void
 on_list_task(GTask *task, gpointer, gpointer, GCancellable *cancellable)
 {
+  QueryBackendBaseDropGuard base_drop_guard;
+
   try {
     // Query all installed packages.
     auto *results = new std::vector<PackageRow>(dnf_backend_get_installed_package_rows_interruptible(cancellable));
@@ -378,6 +387,8 @@ on_list_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
 static void
 on_list_available_task(GTask *task, gpointer, gpointer, GCancellable *cancellable)
 {
+  QueryBackendBaseDropGuard base_drop_guard;
+
   try {
     auto *results = new std::vector<PackageRow>(dnf_backend_get_browse_package_rows_interruptible(cancellable));
     g_task_return_pointer(task, results, [](gpointer p) { delete static_cast<std::vector<PackageRow> *>(p); });
@@ -427,8 +438,6 @@ on_list_available_task_finished(GObject *, GAsyncResult *res, gpointer user_data
   if (packages) {
     set_displayed_query_kind(widgets, DisplayedPackageQueryKind::LIST_AVAILABLE);
 
-    dnf_backend_refresh_installed_nevras();
-
     if (widgets->query_state.preserve_selection_on_reload) {
       widgets->results.selected_nevra = widgets->query_state.reload_selected_nevra;
     } else {
@@ -455,6 +464,8 @@ on_list_available_task_finished(GObject *, GAsyncResult *res, gpointer user_data
 static void
 on_list_upgradeable_task(GTask *task, gpointer, gpointer, GCancellable *cancellable)
 {
+  QueryBackendBaseDropGuard base_drop_guard;
+
   try {
     auto *results = new std::vector<PackageRow>(dnf_backend_get_upgradeable_package_rows_interruptible(cancellable));
     g_task_return_pointer(task, results, [](gpointer p) { delete static_cast<std::vector<PackageRow> *>(p); });
@@ -504,8 +515,6 @@ on_list_upgradeable_task_finished(GObject *, GAsyncResult *res, gpointer user_da
   if (packages) {
     set_displayed_query_kind(widgets, DisplayedPackageQueryKind::LIST_UPGRADEABLE);
 
-    dnf_backend_refresh_installed_nevras();
-
     if (widgets->query_state.preserve_selection_on_reload) {
       widgets->results.selected_nevra = widgets->query_state.reload_selected_nevra;
     } else {
@@ -534,6 +543,8 @@ on_list_upgradeable_task_finished(GObject *, GAsyncResult *res, gpointer user_da
 static void
 on_search_task(GTask *task, gpointer, gpointer task_data, GCancellable *cancellable)
 {
+  QueryBackendBaseDropGuard base_drop_guard;
+
   const SearchTaskData *td = static_cast<const SearchTaskData *>(task_data);
   const char *pattern = td ? td->term : "";
   try {
@@ -597,8 +608,6 @@ on_search_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
     if (td) {
       set_displayed_search_query(widgets, *td);
     }
-
-    dnf_backend_refresh_installed_nevras();
 
     // Fill the package table and display the result count.
     if (widgets->query_state.preserve_selection_on_reload) {
@@ -882,7 +891,6 @@ package_query_on_clear_button_clicked(GtkButton *, gpointer user_data)
   widgets->query_state.displayed_query = DisplayedPackageQueryState();
   widgets->query_state.preserve_selection_on_reload = false;
   widgets->query_state.reload_selected_nevra.clear();
-  widgets->results.current_packages.clear();
   widgets->results.selected_nevra.clear();
   package_table_fill_package_view(widgets, {});
 
@@ -914,6 +922,7 @@ package_query_reload_current_view(SearchWidgets *widgets)
     if (view_state.search_term.empty()) {
       widgets->query_state.preserve_selection_on_reload = false;
       widgets->query_state.reload_selected_nevra.clear();
+      BaseManager::instance().drop_cached_base();
       return;
     }
 
@@ -942,8 +951,13 @@ package_query_reload_current_view(SearchWidgets *widgets)
   if (widgets->results.selected_nevra.empty()) {
     widgets->query_state.preserve_selection_on_reload = false;
     widgets->query_state.reload_selected_nevra.clear();
+    BaseManager::instance().drop_cached_base();
     return;
   }
+
+  QueryBackendBaseDropGuard base_drop_guard;
+
+  dnf_backend_refresh_installed_nevras();
 
   std::vector<PackageRow> rows = dnf_backend_get_installed_package_rows_by_nevra(widgets->results.selected_nevra);
   if (rows.empty()) {

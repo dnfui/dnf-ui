@@ -37,6 +37,13 @@ std::map<std::string, PackageRow> g_installed_rows_by_name_arch;
 // Installed package names that own the running GUI binary.
 std::set<std::string> g_self_protected_package_names;
 
+struct StateBackendBaseDropGuard {
+  ~StateBackendBaseDropGuard()
+  {
+    BaseManager::instance().drop_cached_base();
+  }
+};
+
 // -----------------------------------------------------------------------------
 // Resolve the current GUI executable path so the app can block self-removal
 // without hard-coding the RPM package name.
@@ -260,11 +267,18 @@ dnf_backend_can_reinstall_package(const PackageRow &row)
     return false;
   }
 
-  auto [base, guard, generation] = BaseManager::instance().acquire_read();
-  libdnf5::rpm::PackageQuery query(base);
-  query.filter_nevra(row.nevra);
-  query.filter_available();
-  return !query.empty();
+  StateBackendBaseDropGuard base_drop_guard;
+
+  bool can_reinstall = false;
+  {
+    auto [base, guard, generation] = BaseManager::instance().acquire_read();
+    libdnf5::rpm::PackageQuery query(base);
+    query.filter_nevra(row.nevra);
+    query.filter_available();
+    can_reinstall = !query.empty();
+  }
+
+  return can_reinstall;
 }
 
 // -----------------------------------------------------------------------------

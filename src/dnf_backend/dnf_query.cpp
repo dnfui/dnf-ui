@@ -235,9 +235,10 @@ annotate_installed_rows_with_repo_candidates_best_effort(std::vector<PackageRow>
 // -----------------------------------------------------------------------------
 std::vector<PackageRow>
 visible_rows_from_maps(std::map<std::string, PackageRow> available_rows,
-                       std::map<std::string, PackageRow> installed_rows)
+                       const std::map<std::string, PackageRow> &installed_rows)
 {
-  for (auto &[key, installed_row] : installed_rows) {
+  for (const auto &[key, stored_installed_row] : installed_rows) {
+    PackageRow installed_row = stored_installed_row;
     annotate_installed_row_with_repo_candidate(installed_row, available_rows);
 
     auto visible_it = available_rows.find(key);
@@ -272,18 +273,33 @@ dnf_backend_search_package_rows_interruptible(const std::string &pattern, GCance
 {
   const DnfBackendSearchOptions search_options = dnf_backend_get_search_options();
 
-  auto [base, guard, generation] = BaseManager::instance().acquire_read();
-  auto available_rows = collect_available_rows_by_name_arch(base, cancellable, search_options, &pattern);
-  if (package_query_cancelled(cancellable)) {
-    return {};
+  std::vector<PackageRow> rows;
+  InstalledQueryResult installed_snapshot;
+  std::set<std::string> protected_names;
+  {
+    auto [base, guard, generation] = BaseManager::instance().acquire_read();
+    auto available_rows = collect_available_rows_by_name_arch(base, cancellable, search_options, &pattern);
+    if (package_query_cancelled(cancellable)) {
+      return {};
+    }
+
+    InstalledQueryResult filtered_installed = collect_installed_rows(base, cancellable, search_options, &pattern);
+    if (package_query_cancelled(cancellable)) {
+      return {};
+    }
+
+    const DnfBackendSearchOptions snapshot_search_options {};
+    installed_snapshot = collect_installed_rows(base, cancellable, snapshot_search_options);
+    if (package_query_cancelled(cancellable)) {
+      return {};
+    }
+
+    protected_names = collect_self_protected_package_names(base);
+    rows = visible_rows_from_maps(std::move(available_rows), filtered_installed.rows_by_name_arch);
   }
 
-  InstalledQueryResult installed = collect_installed_rows(base, cancellable, search_options, &pattern);
-  if (package_query_cancelled(cancellable)) {
-    return {};
-  }
-
-  return visible_rows_from_maps(std::move(available_rows), std::move(installed.rows_by_name_arch));
+  publish_installed_snapshot(std::move(installed_snapshot), std::move(protected_names));
+  return rows;
 }
 
 // -----------------------------------------------------------------------------
@@ -332,18 +348,27 @@ dnf_backend_get_browse_package_rows_interruptible(GCancellable *cancellable)
 {
   const DnfBackendSearchOptions search_options {};
 
-  auto [base, guard, generation] = BaseManager::instance().acquire_read();
-  auto available_rows = collect_available_rows_by_name_arch(base, cancellable, search_options);
-  if (package_query_cancelled(cancellable)) {
-    return {};
+  std::vector<PackageRow> rows;
+  InstalledQueryResult installed;
+  std::set<std::string> protected_names;
+  {
+    auto [base, guard, generation] = BaseManager::instance().acquire_read();
+    auto available_rows = collect_available_rows_by_name_arch(base, cancellable, search_options);
+    if (package_query_cancelled(cancellable)) {
+      return {};
+    }
+
+    installed = collect_installed_rows(base, cancellable, search_options);
+    if (package_query_cancelled(cancellable)) {
+      return {};
+    }
+
+    protected_names = collect_self_protected_package_names(base);
+    rows = visible_rows_from_maps(std::move(available_rows), installed.rows_by_name_arch);
   }
 
-  InstalledQueryResult installed = collect_installed_rows(base, cancellable, search_options);
-  if (package_query_cancelled(cancellable)) {
-    return {};
-  }
-
-  return visible_rows_from_maps(std::move(available_rows), std::move(installed.rows_by_name_arch));
+  publish_installed_snapshot(std::move(installed), std::move(protected_names));
+  return rows;
 }
 
 // -----------------------------------------------------------------------------
@@ -354,30 +379,41 @@ dnf_backend_get_browse_package_rows_interruptible(GCancellable *cancellable)
 std::vector<PackageRow>
 dnf_backend_get_upgradeable_package_rows_interruptible(GCancellable *cancellable)
 {
-  auto [base, guard, generation] = BaseManager::instance().acquire_read();
+  std::vector<PackageRow> rows;
+  InstalledQueryResult installed;
+  std::set<std::string> protected_names;
+  {
+    auto [base, guard, generation] = BaseManager::instance().acquire_read();
 
-  libdnf5::rpm::PackageQuery query(base);
-  query.filter_available();
-  query.filter_upgrades();
-  query.filter_latest_evr();
+    libdnf5::rpm::PackageQuery query(base);
+    query.filter_available();
+    query.filter_upgrades();
+    query.filter_latest_evr();
 
-  std::map<std::string, PackageRow> rows_by_name_arch;
-  for (auto pkg : query) {
-    if (package_query_cancelled(cancellable)) {
-      rows_by_name_arch.clear();
-      break;
+    std::map<std::string, PackageRow> rows_by_name_arch;
+    for (auto pkg : query) {
+      if (package_query_cancelled(cancellable)) {
+        return {};
+      }
+
+      PackageRow row = make_package_row(pkg, PackageRepoCandidateRelation::UNKNOWN);
+      remember_newest_row(rows_by_name_arch, row);
     }
 
-    PackageRow row = make_package_row(pkg, PackageRepoCandidateRelation::UNKNOWN);
-    remember_newest_row(rows_by_name_arch, row);
+    installed = collect_installed_rows(base, cancellable, DnfBackendSearchOptions {});
+    if (package_query_cancelled(cancellable)) {
+      return {};
+    }
+
+    protected_names = collect_self_protected_package_names(base);
+
+    rows.reserve(rows_by_name_arch.size());
+    for (auto &[key, row] : rows_by_name_arch) {
+      rows.push_back(row);
+    }
   }
 
-  std::vector<PackageRow> rows;
-  rows.reserve(rows_by_name_arch.size());
-  for (auto &[key, row] : rows_by_name_arch) {
-    rows.push_back(row);
-  }
-
+  publish_installed_snapshot(std::move(installed), std::move(protected_names));
   return rows;
 }
 
