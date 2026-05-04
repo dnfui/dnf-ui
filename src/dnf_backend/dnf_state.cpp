@@ -37,13 +37,6 @@ std::map<std::string, PackageRow> g_installed_rows_by_name_arch;
 // Installed package names that own the running GUI binary.
 std::set<std::string> g_self_protected_package_names;
 
-struct StateBackendBaseDropGuard {
-  ~StateBackendBaseDropGuard()
-  {
-    BaseManager::instance().drop_cached_base();
-  }
-};
-
 // -----------------------------------------------------------------------------
 // Resolve the current GUI executable path so the app can block self-removal
 // without hard-coding the RPM package name.
@@ -266,8 +259,6 @@ dnf_backend_can_reinstall_package(const PackageRow &row)
   if (!dnf_backend_is_package_installed_exact(row)) {
     return false;
   }
-
-  StateBackendBaseDropGuard base_drop_guard;
 
   bool can_reinstall = false;
   {
