@@ -44,6 +44,42 @@
           "ignoreFailures": true
         }
       ]
+    },
+    {
+      "name": "DEBUG DOCKER",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "/workspace/build/docker/debug/src/dnfui",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "/workspace",
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "miDebuggerServerAddress": "localhost:2345",
+      "pipeTransport": {
+        "pipeProgram": "docker",
+        "pipeArgs": [
+          "exec",
+          "-i",
+          "dnfui-gdb",
+          "sh",
+          "-c"
+        ],
+        "pipeCwd": "${workspaceFolder}",
+        "debuggerPath": "/usr/bin/gdb"
+      },
+      "sourceFileMap": {
+        "/workspace": "${workspaceFolder}"
+      },
+      "preLaunchTask": "DOCKER GDB SERVER",
+      "postDebugTask": "DOCKER GDB STOP",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ]
     }
   ]
 }

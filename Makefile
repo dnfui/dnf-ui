@@ -337,6 +337,16 @@ dockerservicesystemapplytest:
 dockerservicesystemdisconnecttest:
 	@DEBUG_TRACE="$(DEBUG_TRACE)" ./docker/docker_service_system_bus_disconnect_test.sh
 
+# Run the app in Docker under GDB server:
+.PHONY: dockergdb
+dockergdb:
+	@THEME="$(THEME)" DEBUG_TRACE="$(DEBUG_TRACE)" GDB_PORT="$(GDB_PORT)" ./docker/docker_gdb.sh
+
+# Stop the Docker GDB container:
+.PHONY: dockergdbstop
+dockergdbstop:
+	@./docker/docker_gdb_stop.sh
+
 # -----------------------------------------------------------------------------
 # RPM packaging targets
 # -----------------------------------------------------------------------------

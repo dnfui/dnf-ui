@@ -2,14 +2,21 @@
   // See https://go.microsoft.com/fwlink/?LinkId=733558
   // for the documentation about the tasks.json format
   "version": "2.0.0",
+  "options": {
+    "cwd": "${workspaceFolder}",
+    "shell": {
+      "executable": "/usr/bin/bash",
+      "args": [
+        "-c"
+      ]
+    }
+  },
   "tasks": [
     {
       "label": "BUILD",
       "detail": "Build the app",
       "type": "shell",
-      "command": [
-        "make"
-      ],
+      "command": "make",
       "group": "build",
       "presentation": {
         "echo": true,
@@ -33,9 +40,7 @@
       "label": "CLEAN",
       "detail": "Clean the app",
       "type": "shell",
-      "command": [
-        "make clean"
-      ],
+      "command": "make clean",
       "group": "build",
       "presentation": {
         "echo": true,
@@ -45,23 +50,13 @@
         "showReuseMessage": false,
         "clear": true
       },
-      "problemMatcher": [
-        {
-          "base": "$gcc",
-          "fileLocation": [
-            "relative",
-            "${workspaceFolder}"
-          ]
-        }
-      ]
+      "problemMatcher": []
     },
     {
       "label": "CLEAN+BUILD",
       "detail": "Clean and build the app",
       "type": "shell",
-      "command": [
-        "make clean && make"
-      ],
+      "command": "make clean && make",
       "group": "build",
       "presentation": {
         "echo": true,
@@ -85,9 +80,7 @@
       "label": "CLEAN+BUILD+RUN",
       "detail": "Clean, build and run the app",
       "type": "shell",
-      "command": [
-        "make clean && make && ./build/debug/src/dnfui"
-      ],
+      "command": "make clean && make && ./build/debug/src/dnfui",
       "group": "build",
       "presentation": {
         "echo": true,
@@ -111,9 +104,7 @@
       "label": "RUN",
       "detail": "Run the app",
       "type": "shell",
-      "command": [
-        "./build/debug/src/dnfui"
-      ],
+      "command": "./build/debug/src/dnfui",
       "group": "build",
       "presentation": {
         "echo": true,
@@ -123,23 +114,13 @@
         "showReuseMessage": true,
         "clear": true
       },
-      "problemMatcher": [
-        {
-          "base": "$gcc",
-          "fileLocation": [
-            "relative",
-            "${workspaceFolder}"
-          ]
-        }
-      ]
+      "problemMatcher": []
     },
     {
       "label": "VALGRIND",
       "detail": "Memcheck the app",
       "type": "shell",
-      "command": [
-        "valgrind --tool=memcheck --leak-check=yes --show-reachable=yes --num-callers=20 --track-fds=yes ./build/debug/src/dnfui"
-      ],
+      "command": "valgrind --tool=memcheck --leak-check=yes --show-reachable=yes --num-callers=20 --track-fds=yes ./build/debug/src/dnfui",
       "group": "build",
       "presentation": {
         "echo": true,
@@ -149,15 +130,37 @@
         "showReuseMessage": true,
         "clear": true
       },
-      "problemMatcher": [
-        {
-          "base": "$gcc",
-          "fileLocation": [
-            "relative",
-            "${workspaceFolder}"
-          ]
-        }
-      ]
+      "problemMatcher": []
+    },
+    {
+      "label": "DOCKER GDB SERVER",
+      "detail": "Start the Docker GDB server",
+      "type": "shell",
+      "command": "make dockergdb",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "dedicated",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "DOCKER GDB STOP",
+      "detail": "Stop the Docker GDB container",
+      "type": "shell",
+      "command": "make dockergdbstop",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": false,
+        "clear": false
+      },
+      "problemMatcher": []
     }
   ]
 }
