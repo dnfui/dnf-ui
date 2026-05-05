@@ -2,7 +2,7 @@
 set -e
 
 # Docker GDB run helper that starts the app under gdbserver and starts the
-# transaction service on the same session bus inside the container.
+# transaction service on a private session bus inside the container.
 
 # Make this script work from any directory:
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -15,6 +15,7 @@ BUILD_DIR="$("$PROJECT_ROOT/utils/meson_build.sh" build-dir)"
 SERVICE_BIN="$BUILD_DIR/src/service/$TRANSACTION_SERVICE_BIN_NAME"
 APP_BIN="$BUILD_DIR/src/dnfui"
 GDB_PORT="${GDB_PORT:-2345}"
+SESSION_BUS_ADDRESS="unix:path=/tmp/dnfui-gdb-session-bus"
 
 echo "*** Building app and transaction service ***"
 "$PROJECT_ROOT/utils/meson_build.sh" all
@@ -29,26 +30,33 @@ done
 echo "*** Starting session bus transaction service for Docker GDB debugging ***"
 
 export DNFUI_TRANSACTION_BUS=session
+export DBUS_SESSION_BUS_ADDRESS="$SESSION_BUS_ADDRESS"
 export SERVICE_BIN
 export TRANSACTION_SERVICE_NAME
 export APP_BIN
 export GDB_PORT
 
-dbus-run-session -- bash <<'EOF'
-set -e
+rm -f /tmp/dnfui-gdb-session-bus
 
-# Start the transaction service on the session bus:
+dbus_info="$(dbus-daemon --session --fork --nopidfile --print-address=1 --print-pid=1 --address="$DBUS_SESSION_BUS_ADDRESS")"
+DBUS_SESSION_BUS_ADDRESS="$(printf "%s\n" "$dbus_info" | sed -n '1p')"
+dbus_pid="$(printf "%s\n" "$dbus_info" | sed -n '2p')"
+export DBUS_SESSION_BUS_ADDRESS
+
+# Start the transaction service on the private session bus:
 "$SERVICE_BIN" --session >/tmp/dnfui-service.log 2>&1 &
-
-# Save the service process ID so it can be stopped when GDB exits:
 service_pid=$!
 
-# Stop the transaction service when GDB exits:
-trap 'kill "$service_pid" >/dev/null 2>&1 || true; wait "$service_pid" >/dev/null 2>&1 || true' EXIT
+cleanup() {
+  kill "$service_pid" >/dev/null 2>&1 || true
+  wait "$service_pid" >/dev/null 2>&1 || true
+  kill "$dbus_pid" >/dev/null 2>&1 || true
+  wait "$dbus_pid" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
 
 # Wait until the transaction service has claimed its D-Bus name:
 gdbus wait --session "$TRANSACTION_SERVICE_NAME" >/dev/null
 
 # Start the UI under gdbserver in the same session bus environment:
-exec gdbserver --once "0.0.0.0:$GDB_PORT" "$APP_BIN"
-EOF
+gdbserver --once "0.0.0.0:$GDB_PORT" "$APP_BIN"

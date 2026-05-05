@@ -53,6 +53,16 @@
       "args": [],
       "stopAtEntry": false,
       "cwd": "/workspace",
+      "environment": [
+        {
+          "name": "DNFUI_TRANSACTION_BUS",
+          "value": "session"
+        },
+        {
+          "name": "DBUS_SESSION_BUS_ADDRESS",
+          "value": "unix:path=/tmp/dnfui-gdb-session-bus"
+        }
+      ],
       "externalConsole": false,
       "MIMode": "gdb",
       "miDebuggerServerAddress": "localhost:2345",

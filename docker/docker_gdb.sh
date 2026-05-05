@@ -21,6 +21,7 @@ THEME_MODE="${THEME:-default}"
 GDB_PORT="${GDB_PORT:-2345}"
 CACHE_MODE="${CACHE_MODE:-persistent}"
 CACHE_VOLUME_NAME="${CACHE_VOLUME_NAME:-dnfui-repo-cache}"
+SESSION_BUS_ADDRESS="unix:path=/tmp/dnfui-gdb-session-bus"
 
 # Configure the optional GTK theme override:
 THEME_OPTS=()
@@ -114,6 +115,8 @@ color_print "$FMT_GREEN" "*** Starting Docker GDB debug server... ***"
   -e ASAN \
   -e DEBUG_TRACE \
   -e GDB_PORT="$GDB_PORT" \
+  -e DNFUI_TRANSACTION_BUS=session \
+  -e DBUS_SESSION_BUS_ADDRESS="$SESSION_BUS_ADDRESS" \
   -v "$HOST_DIR:/workspace" \
   "${CACHE_OPTS[@]}" \
   "$IMAGE_NAME" \
