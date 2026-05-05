@@ -10,7 +10,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 # shellcheck disable=SC1091
 source "$PROJECT_ROOT/utils/transaction_service_paths.conf"
 
-export DNFUI_MESON_BUILD_ROOT="/workspace/build/docker"
+export DNFUI_MESON_BUILD_ROOT="/tmp/dnfui-build"
 BUILD_DIR="$("$PROJECT_ROOT/utils/meson_build.sh" build-dir)"
 SERVICE_BIN="$BUILD_DIR/src/service/$TRANSACTION_SERVICE_BIN_NAME"
 APP_BIN="$BUILD_DIR/src/dnfui"

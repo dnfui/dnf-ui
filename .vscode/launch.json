@@ -49,7 +49,7 @@
       "name": "DEBUG DOCKER",
       "type": "cppdbg",
       "request": "launch",
-      "program": "/workspace/build/docker/debug/src/dnfui",
+      "program": "/tmp/dnfui-build/debug/src/dnfui",
       "args": [],
       "stopAtEntry": false,
       "cwd": "/workspace",
