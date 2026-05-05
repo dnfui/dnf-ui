@@ -24,6 +24,10 @@ class BaseGuard {
       : lock(std::move(l))
   {
   }
+  BaseGuard(BaseGuard &&) noexcept = default;
+  BaseGuard &operator=(BaseGuard &&) noexcept = default;
+  BaseGuard(const BaseGuard &) = delete;
+  BaseGuard &operator=(const BaseGuard &) = delete;
 
   private:
   std::unique_lock<std::shared_mutex> lock;
@@ -50,6 +54,21 @@ struct BaseRead {
   libdnf5::Base &base;
   BaseGuard guard;
   uint64_t generation;
+};
+
+// -----------------------------------------------------------------------------
+// Serialized access bundle for a short-lived Base that is not cached globally.
+// -----------------------------------------------------------------------------
+struct TemporaryBaseRead {
+  std::shared_ptr<libdnf5::Base> base;
+  BaseGuard guard;
+
+  TemporaryBaseRead(std::shared_ptr<libdnf5::Base> &&base_ptr, BaseGuard &&base_guard);
+  TemporaryBaseRead(TemporaryBaseRead &&) noexcept = default;
+  TemporaryBaseRead &operator=(TemporaryBaseRead &&) noexcept = default;
+  TemporaryBaseRead(const TemporaryBaseRead &) = delete;
+  TemporaryBaseRead &operator=(const TemporaryBaseRead &) = delete;
+  ~TemporaryBaseRead();
 };
 
 // Result of one repository rebuild attempt.
@@ -80,6 +99,10 @@ class BaseManager {
   // Return write access to the cached Base with its lock guard.
   // -----------------------------------------------------------------------------
   std::pair<libdnf5::Base &, BaseWriteGuard> acquire_write();
+  // -----------------------------------------------------------------------------
+  // Return serialized access to a temporary Base that includes changelog metadata.
+  // -----------------------------------------------------------------------------
+  TemporaryBaseRead acquire_changelog_read();
 
   // -----------------------------------------------------------------------------
   // Return the current Base generation counter.

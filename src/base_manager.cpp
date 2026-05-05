@@ -35,7 +35,7 @@ struct BuiltBase {
 // Build one fully configured Base before any repo metadata is loaded.
 // -----------------------------------------------------------------------------
 static std::shared_ptr<libdnf5::Base>
-create_configured_base(RepoLoadMode mode)
+create_configured_base(RepoLoadMode mode, bool load_changelog_metadata)
 {
   DNFUI_TRACE("BaseManager initialize start");
 
@@ -51,8 +51,8 @@ create_configured_base(RepoLoadMode mode)
     base->get_config().get_cachedir_option().set(base->get_config().get_system_cachedir_option().get_value());
   }
 
-  if (mode == RepoLoadMode::FULL) {
-    // Changelog lookups for available packages need repo "other" metadata.
+  if (load_changelog_metadata && mode != RepoLoadMode::SYSTEM_ONLY) {
+    // Available-package changelog lookups need repo "other" metadata.
     base->get_config().get_optional_metadata_types_option().add_item(libdnf5::Option::Priority::RUNTIME,
                                                                      libdnf5::METADATA_TYPE_OTHER);
   }
@@ -106,10 +106,10 @@ load_repo_data(libdnf5::Base &base, RepoLoadMode mode)
 // Build one Base and load repository data for the requested mode.
 // -----------------------------------------------------------------------------
 static BuiltBase
-build_base_for_mode(RepoLoadMode mode)
+build_base_for_mode(RepoLoadMode mode, bool load_changelog_metadata)
 {
   BuiltBase result;
-  result.base = create_configured_base(mode);
+  result.base = create_configured_base(mode, load_changelog_metadata);
   load_repo_data(*result.base, mode);
   if (mode == RepoLoadMode::CACHE_ONLY_METADATA) {
     result.repo_state = BaseRepoState::CACHED_METADATA;
@@ -125,10 +125,10 @@ build_base_for_mode(RepoLoadMode mode)
 // installed-package-only mode so the app stays usable when the network is down.
 // -----------------------------------------------------------------------------
 static BuiltBase
-build_base_with_offline_fallback()
+build_base_with_offline_fallback(bool load_changelog_metadata = false)
 {
   try {
-    return build_base_for_mode(RepoLoadMode::FULL);
+    return build_base_for_mode(RepoLoadMode::FULL, load_changelog_metadata);
   } catch (const std::exception &repo_error) {
     std::cerr << "Warning: repo load failed: " << repo_error.what() << std::endl;
     DNFUI_TRACE("BaseManager load repos failed: %s", repo_error.what());
@@ -136,13 +136,13 @@ build_base_with_offline_fallback()
     DNFUI_TRACE("BaseManager live repo load failed, trying cached metadata fallback: %s", repo_error.what());
 
     try {
-      return build_base_for_mode(RepoLoadMode::CACHE_ONLY_METADATA);
+      return build_base_for_mode(RepoLoadMode::CACHE_ONLY_METADATA, load_changelog_metadata);
     } catch (const std::exception &cache_error) {
       std::cerr << "Warning: cached repo metadata load failed: " << cache_error.what() << std::endl;
       DNFUI_TRACE("BaseManager cached repo load failed, trying system-only fallback: %s", cache_error.what());
 
       try {
-        return build_base_for_mode(RepoLoadMode::SYSTEM_ONLY);
+        return build_base_for_mode(RepoLoadMode::SYSTEM_ONLY, load_changelog_metadata);
       } catch (const std::exception &fallback_error) {
         throw std::runtime_error(
             "DNF backend initialization failed after repo load error: " + std::string(repo_error.what()) +
@@ -151,6 +151,35 @@ build_base_with_offline_fallback()
       }
     }
   }
+}
+
+// -----------------------------------------------------------------------------
+// Ask glibc to return free heap pages after dropping large libdnf metadata.
+// -----------------------------------------------------------------------------
+static void
+trim_free_heap()
+{
+#ifdef __GLIBC__
+  malloc_trim(0);
+#endif
+}
+
+// -----------------------------------------------------------------------------
+// Keep one temporary Base alive while its serialized lock guard is held.
+// -----------------------------------------------------------------------------
+TemporaryBaseRead::TemporaryBaseRead(std::shared_ptr<libdnf5::Base> &&base_ptr, BaseGuard &&base_guard)
+    : base(std::move(base_ptr))
+    , guard(std::move(base_guard))
+{
+}
+
+TemporaryBaseRead::~TemporaryBaseRead()
+{
+  if (!base) {
+    return;
+  }
+  base.reset();
+  trim_free_heap();
 }
 
 // -----------------------------------------------------------------------------
@@ -191,6 +220,21 @@ BaseManager::acquire_read()
   }
 
   return { *base_ptr, BaseGuard(std::move(lock)), generation.load(std::memory_order_relaxed) };
+}
+
+// -----------------------------------------------------------------------------
+// Return serialized access to a temporary Base that loads changelog metadata.
+// -----------------------------------------------------------------------------
+TemporaryBaseRead
+BaseManager::acquire_changelog_read()
+{
+  std::unique_lock<std::shared_mutex> lock(base_mutex);
+  BuiltBase built = build_base_with_offline_fallback(true);
+  if (!built.base) {
+    throw std::runtime_error("Changelog backend initialization failed (Base is null).");
+  }
+
+  return TemporaryBaseRead(std::move(built.base), BaseGuard(std::move(lock)));
 }
 
 // -----------------------------------------------------------------------------
@@ -273,11 +317,7 @@ BaseManager::drop_cached_base()
     dropped_base = std::move(base_ptr);
   }
   dropped_base.reset();
-
-#ifdef __GLIBC__
-  // NOTE: Ask glibc malloc to release free heap pages after dropping the Base.
-  malloc_trim(0);
-#endif
+  trim_free_heap();
 }
 
 // -----------------------------------------------------------------------------
@@ -301,7 +341,7 @@ BaseManager::ensure_system_only_initialized_if_needed()
 std::shared_ptr<libdnf5::Base>
 BaseManager::build_initialized_system_only_base()
 {
-  return build_base_for_mode(RepoLoadMode::SYSTEM_ONLY).base;
+  return build_base_for_mode(RepoLoadMode::SYSTEM_ONLY, false).base;
 }
 
 // -----------------------------------------------------------------------------

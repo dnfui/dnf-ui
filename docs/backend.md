@@ -122,6 +122,10 @@ It provides:
 These helpers perform read-only libdnf5 queries and do not mutate the installed
 snapshot.
 
+Normal package details use the shared Base. Changelog lookups use a short-lived
+temporary Base that requests repo `other` metadata, so normal list and search
+queries do not keep changelog metadata resident.
+
 ## Transactions
 
 [src/dnf_backend/dnf_transaction.cpp](../src/dnf_backend/dnf_transaction.cpp)

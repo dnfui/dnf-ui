@@ -127,6 +127,8 @@ Assumptions:
   concurrent access has been verified against the local libdnf5 version.
 - Transaction preview and apply take `BaseManager::acquire_write()` because
   transaction resolution and apply operate on shared libdnf5 state.
+- Changelog lookups use `BaseManager::acquire_changelog_read()` so repo `other`
+  metadata is loaded only for the short-lived changelog query.
 - The backend installed snapshot mutex must not be held at the same time as a
   `BaseManager` read or write guard.
 

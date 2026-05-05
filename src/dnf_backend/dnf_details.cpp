@@ -268,8 +268,8 @@ dnf_backend_get_package_deps(const std::string &pkg_nevra)
 std::string
 dnf_backend_get_package_changelog(const std::string &pkg_nevra)
 {
-  auto [base, guard, generation] = BaseManager::instance().acquire_read();
-  libdnf5::rpm::PackageQuery query(base);
+  auto changelog_base = BaseManager::instance().acquire_changelog_read();
+  libdnf5::rpm::PackageQuery query(*changelog_base.base);
 
   query.filter_nevra(pkg_nevra);
 
