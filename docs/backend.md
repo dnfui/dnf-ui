@@ -31,8 +31,10 @@ The Base can be in one of three repository states:
 - `CACHED_METADATA`: live repository refresh failed, cached metadata loaded
 - `INSTALLED_ONLY`: only the local installed package database is available
 
-Most UI queries use read access through `BaseManager::acquire_read`.
-Transaction preview and apply use write access through `BaseManager::acquire_write`.
+Most UI queries use serialized read access through `BaseManager::acquire_read`.
+The access is serialized because read-only `PackageQuery` work can still touch
+shared libdnf5 `Base` internals. Transaction preview and apply use write access
+through `BaseManager::acquire_write`.
 
 The Base has a generation counter. When the Base is rebuilt, the generation is
 incremented. UI tasks and search caches use that value to reject outdated

@@ -122,6 +122,9 @@ Assumptions:
 
 - DNF UI owns synchronization around its shared `libdnf5::Base`.
 - Read-only package queries take `BaseManager::acquire_read()`.
+- `BaseManager::acquire_read()` is serialized with an exclusive guard. Do not
+  change it back to shared locking unless libdnf5 `Base` and `PackageQuery`
+  concurrent access has been verified against the local libdnf5 version.
 - Transaction preview and apply take `BaseManager::acquire_write()` because
   transaction resolution and apply operate on shared libdnf5 state.
 - The backend installed snapshot mutex must not be held at the same time as a

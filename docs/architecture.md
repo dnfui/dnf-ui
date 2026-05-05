@@ -122,9 +122,11 @@ The backend implementation is split by responsibility:
 - [src/dnf_backend/dnf_state.cpp](../src/dnf_backend/dnf_state.cpp) owns installed-package snapshot state and package status classification.
 - [src/dnf_backend/dnf_transaction.cpp](../src/dnf_backend/dnf_transaction.cpp) resolves previews and applies transactions.
 
-Most query and details calls take read access to the shared Base. Transaction
-preview and apply take write access because libdnf5 transaction work changes
-Base state while it is being resolved or run.
+Most query and details calls take serialized read access to the shared Base.
+That access is exclusive inside `BaseManager` because read-only `PackageQuery`
+work can still touch shared libdnf5 `Base` internals. Transaction preview and
+apply take write access because libdnf5 transaction work changes Base state
+while it is being resolved or run.
 
 ## Package List Model
 

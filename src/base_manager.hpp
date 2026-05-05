@@ -11,22 +11,22 @@
 #include <libdnf5/base/base.hpp>
 
 // -----------------------------------------------------------------------------
-// Lock guard helpers for thread-safe Base access
-// These small classes automatically hold a shared (read) or unique (write)
-// lock on the BaseManager mutex for the duration of a backend operation.
+// Lock guard helpers for thread-safe Base access.
+// libdnf Base queries are serialized because PackageQuery work can touch
+// shared Base internals even for read-only UI operations.
 // -----------------------------------------------------------------------------
 class BaseGuard {
   public:
   // -----------------------------------------------------------------------------
-  // Take ownership of a shared BaseManager lock.
+  // Take ownership of a BaseManager lock.
   // -----------------------------------------------------------------------------
-  explicit BaseGuard(std::shared_lock<std::shared_mutex> &&l)
+  explicit BaseGuard(std::unique_lock<std::shared_mutex> &&l)
       : lock(std::move(l))
   {
   }
 
   private:
-  std::shared_lock<std::shared_mutex> lock;
+  std::unique_lock<std::shared_mutex> lock;
 };
 
 class BaseWriteGuard {
@@ -44,7 +44,7 @@ class BaseWriteGuard {
 };
 
 // -----------------------------------------------------------------------------
-// Read access bundle with Base reference, lock guard, and generation snapshot.
+// Serialized read access bundle with Base reference, lock guard, and generation snapshot.
 // -----------------------------------------------------------------------------
 struct BaseRead {
   libdnf5::Base &base;
@@ -73,7 +73,7 @@ class BaseManager {
   static BaseManager &instance();
 
   // -----------------------------------------------------------------------------
-  // Return read access to the cached Base with its lock guard.
+  // Return serialized read access to the cached Base with its lock guard.
   // -----------------------------------------------------------------------------
   BaseRead acquire_read();
   // -----------------------------------------------------------------------------

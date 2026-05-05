@@ -174,38 +174,23 @@ BaseManager::current_repo_state() const
 }
 
 // -----------------------------------------------------------------------------
-// Return read access to the current Base.
+// Return serialized read access to the current Base.
 // -----------------------------------------------------------------------------
 BaseRead
 BaseManager::acquire_read()
 {
-  // Use the existing Base when it is already available.
-  {
-    std::shared_lock<std::shared_mutex> shared(base_mutex);
-    if (base_ptr) {
-      return { *base_ptr, BaseGuard(std::move(shared)), generation.load(std::memory_order_relaxed) };
-    }
-  }
-
-  // Build the Base while holding the write lock.
-  {
-    std::unique_lock<std::shared_mutex> unique(base_mutex);
-    if (!base_ptr) {
-      ensure_base_initialized();
-    }
-    if (!base_ptr) {
-      // Never return a null Base reference.
-      throw std::runtime_error("DNF backend not initialized (Base is null).");
-    }
-  }
-
-  // Take the read lock again for the returned guard.
-  std::shared_lock<std::shared_mutex> shared(base_mutex);
+  // Keep the lock exclusive for the whole libdnf Base operation. PackageQuery
+  // work can touch shared Base internals even when the caller only reads data.
+  std::unique_lock<std::shared_mutex> lock(base_mutex);
   if (!base_ptr) {
-    // The Base should not disappear while this lock is held.
+    ensure_base_initialized();
+  }
+  if (!base_ptr) {
+    // Never return a null Base reference.
     throw std::runtime_error("DNF backend not initialized (Base is null).");
   }
-  return { *base_ptr, BaseGuard(std::move(shared)), generation.load(std::memory_order_relaxed) };
+
+  return { *base_ptr, BaseGuard(std::move(lock)), generation.load(std::memory_order_relaxed) };
 }
 
 // -----------------------------------------------------------------------------

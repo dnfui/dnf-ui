@@ -152,7 +152,7 @@ Refreshing repositories or applying a transaction can change package metadata.
 When that happens, the UI should:
 
 - clear cached package search results
-- refresh the installed-package snapshot
+- refresh or republish the installed-package snapshot
 - reload the current package view
 - keep pending action state consistent with the visible rows
 
