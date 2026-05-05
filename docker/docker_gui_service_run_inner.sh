@@ -7,6 +7,7 @@ set -e
 # Make this script work from any directory:
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+# shellcheck disable=SC1091
 source "$PROJECT_ROOT/utils/transaction_service_paths.conf"
 
 export DNFUI_MESON_BUILD_ROOT="/tmp/dnfui-build"
@@ -27,12 +28,26 @@ done
 echo "*** Starting session bus transaction service for Docker GUI testing ***"
 echo "*** System bus Polkit tests remain available through the dockerservicesystem targets ***"
 
-dbus-run-session -- bash -lc '
-  set -e
-  export DNFUI_TRANSACTION_BUS=session
-  "'"$SERVICE_BIN"'" --session >/tmp/dnfui-service.log 2>&1 &
-  service_pid=$!
-  trap "kill $service_pid >/dev/null 2>&1 || true; wait $service_pid >/dev/null 2>&1 || true" EXIT
-  gdbus wait --session "'"$TRANSACTION_SERVICE_NAME"'" >/dev/null
-  "'"$APP_BIN"'"
-'
+export DNFUI_TRANSACTION_BUS=session
+export SERVICE_BIN
+export TRANSACTION_SERVICE_NAME
+export APP_BIN
+
+dbus-run-session -- bash <<'EOF'
+set -e
+
+# Start the transaction service on the session bus:
+"$SERVICE_BIN" --session >/tmp/dnfui-service.log 2>&1 &
+
+# Save the service process ID so it can be stopped when the UI exits:
+service_pid=$!
+
+# Stop the transaction service when the UI exits:
+trap 'kill "$service_pid" >/dev/null 2>&1 || true; wait "$service_pid" >/dev/null 2>&1 || true' EXIT
+
+# Wait until the transaction service has claimed its D-Bus name:
+gdbus wait --session "$TRANSACTION_SERVICE_NAME" >/dev/null
+
+# Start the UI in the same session bus environment:
+"$APP_BIN"
+EOF
