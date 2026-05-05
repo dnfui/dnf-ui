@@ -10,6 +10,8 @@ RUN dnf install -y \
     polkit-devel \
     polkit \
     gcc-c++ \
+    gdb \
+    gdb-gdbserver \
     make \
     meson \
     ninja-build \
