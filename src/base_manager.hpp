@@ -169,7 +169,7 @@ class BaseManager {
 
   std::atomic<uint64_t> generation { 0 };
 
-  // Shared mutex allows many readers but only one writer
+  // Serializes Base queries, rebuilds, transactions, and Base destruction.
   mutable std::shared_mutex base_mutex;
 };
 
