@@ -157,7 +157,11 @@ Search, browsing, and details stay inside the GUI process.
 Preview and apply go through the transaction service:
 
 - GUI client: [src/transaction_service_client.cpp](../src/transaction_service_client.cpp)
-- service runtime: [src/service/transaction_service.cpp](../src/service/transaction_service.cpp)
+- service runtime and shutdown: [src/service/transaction_service.cpp](../src/service/transaction_service.cpp)
+- service request objects: [src/service/transaction_service_request_objects.cpp](../src/service/transaction_service_request_objects.cpp)
+- service preview and apply workers: [src/service/transaction_service_workers.cpp](../src/service/transaction_service_workers.cpp)
+- service authorization: [src/service/transaction_service_authorization.cpp](../src/service/transaction_service_authorization.cpp)
+- service signals: [src/service/transaction_service_signals.cpp](../src/service/transaction_service_signals.cpp)
 - shared D-Bus names: [src/service/transaction_service_dbus.hpp](../src/service/transaction_service_dbus.hpp)
 - shared request model: [src/transaction_request.hpp](../src/transaction_request.hpp)
 
@@ -206,4 +210,7 @@ A practical reading order for new contributors:
 8. [src/base_manager.cpp](../src/base_manager.cpp)
 9. [src/dnf_backend/dnf_query.cpp](../src/dnf_backend/dnf_query.cpp)
 10. [src/transaction_service_client.cpp](../src/transaction_service_client.cpp)
-11. [src/service/transaction_service.cpp](../src/service/transaction_service.cpp)
+11. [docs/transactions.md](transactions.md)
+12. [src/service/transaction_service.cpp](../src/service/transaction_service.cpp)
+13. [src/service/transaction_service_request_objects.cpp](../src/service/transaction_service_request_objects.cpp)
+14. [src/service/transaction_service_workers.cpp](../src/service/transaction_service_workers.cpp)

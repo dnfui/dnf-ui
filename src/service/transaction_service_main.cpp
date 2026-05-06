@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// src/service/transaction_service_main.cpp
+// transaction_service_main.cpp
 // Transaction service process entrypoint
 // Parses the requested bus mode for the privileged transaction service and then
 // hands control to the shared service runtime.

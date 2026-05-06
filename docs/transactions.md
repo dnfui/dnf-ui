@@ -19,7 +19,24 @@ Important files:
 - [src/transaction_request.hpp](../src/transaction_request.hpp)
 - [src/transaction_service_client.cpp](../src/transaction_service_client.cpp)
 - [src/service/transaction_service.cpp](../src/service/transaction_service.cpp)
+- [src/service/transaction_service_authorization.cpp](../src/service/transaction_service_authorization.cpp)
+- [src/service/transaction_service_manager.cpp](../src/service/transaction_service_manager.cpp)
+- [src/service/transaction_service_request_objects.cpp](../src/service/transaction_service_request_objects.cpp)
+- [src/service/transaction_service_signals.cpp](../src/service/transaction_service_signals.cpp)
+- [src/service/transaction_service_workers.cpp](../src/service/transaction_service_workers.cpp)
 - [src/service/transaction_service_introspection.cpp](../src/service/transaction_service_introspection.cpp)
+
+The transaction service implementation is split by responsibility:
+
+- `transaction_service.cpp` owns the service process runtime and shutdown.
+- `transaction_service_manager.cpp` handles the manager object and creates request objects.
+- `transaction_service_request_objects.cpp` handles methods on one request object.
+- `transaction_service_authorization.cpp` handles Apply authorization.
+- `transaction_service_workers.cpp` runs preview and apply backend work.
+- `transaction_service_signals.cpp` emits Progress and Finished signals from the service main loop.
+- `transaction_service_format.cpp` converts service state into D-Bus reply values.
+- `transaction_service_limits.cpp` enforces live request limits.
+- `transaction_service_internal.hpp` is the private shared state for these files.
 
 ## Request Model
 

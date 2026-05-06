@@ -79,7 +79,7 @@ Maintenance check:
 Code:
 
 - [src/dnf_backend/dnf_transaction.cpp](../src/dnf_backend/dnf_transaction.cpp)
-- [src/service/transaction_service.cpp](../src/service/transaction_service.cpp)
+- [src/service/transaction_service_workers.cpp](../src/service/transaction_service_workers.cpp)
 
 Assumption:
 
@@ -202,6 +202,9 @@ Maintenance check:
 Code:
 
 - [src/service/transaction_service.cpp](../src/service/transaction_service.cpp)
+- [src/service/transaction_service_manager.cpp](../src/service/transaction_service_manager.cpp)
+- [src/service/transaction_service_request_objects.cpp](../src/service/transaction_service_request_objects.cpp)
+- [src/service/transaction_service_signals.cpp](../src/service/transaction_service_signals.cpp)
 - [src/service/transaction_service_introspection.cpp](../src/service/transaction_service_introspection.cpp)
 - [src/transaction_service_client.cpp](../src/transaction_service_client.cpp)
 
@@ -238,7 +241,7 @@ Maintenance check:
 
 Code:
 
-- [src/service/transaction_service.cpp](../src/service/transaction_service.cpp)
+- [src/service/transaction_service_authorization.cpp](../src/service/transaction_service_authorization.cpp)
 - [packaging/com.fedora.dnfui.policy](../packaging/com.fedora.dnfui.policy)
 
 Assumptions:
