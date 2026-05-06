@@ -449,6 +449,31 @@ TEST_CASE("Exact installed checks use the cached installed NEVRA snapshot")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that available upgrade candidates can resolve their installed row.
+// -----------------------------------------------------------------------------
+TEST_CASE("Installed row lookup resolves upgrade candidates by name and architecture")
+{
+  reset_backend_globals();
+
+  PackageRow installed_row;
+  installed_row.nevra = "demo-1.0-1.x86_64";
+  installed_row.name = "demo";
+  installed_row.version = "1.0";
+  installed_row.release = "1";
+  installed_row.arch = "x86_64";
+
+  PackageRow upgrade_row = installed_row;
+  upgrade_row.nevra = "demo-2.0-1.x86_64";
+  upgrade_row.version = "2.0";
+
+  dnf_backend_testonly_replace_installed_snapshot_rows({ installed_row });
+
+  PackageRow resolved_row;
+  REQUIRE(dnf_backend_get_installed_package_row_by_name_arch(upgrade_row, resolved_row));
+  REQUIRE(resolved_row.nevra == installed_row.nevra);
+}
+
+// -----------------------------------------------------------------------------
 // Verify that failed repo annotation does not make installed rows unusable.
 // -----------------------------------------------------------------------------
 TEST_CASE("Annotation fallback keeps installed rows usable when repo lookup fails")

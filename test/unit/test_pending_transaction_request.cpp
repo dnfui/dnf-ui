@@ -17,6 +17,7 @@ TEST_CASE("Pending transaction request builder splits actions by operation type"
 {
   std::vector<PendingAction> actions = {
     { PendingAction::INSTALL, "demo-install-1-1.x86_64" },
+    { PendingAction::UPGRADE, "demo-upgrade-2-1.x86_64" },
     { PendingAction::REMOVE, "demo-remove-1-1.x86_64" },
     { PendingAction::REINSTALL, "demo-reinstall-1-1.x86_64" },
     { PendingAction::INSTALL, "demo-install-libs-1-1.x86_64" },
@@ -29,6 +30,7 @@ TEST_CASE("Pending transaction request builder splits actions by operation type"
   REQUIRE(request.install ==
           std::vector<std::string> {
               "demo-install-1-1.x86_64",
+              "demo-upgrade-2-1.x86_64",
               "demo-install-libs-1-1.x86_64",
           });
   REQUIRE(request.remove ==

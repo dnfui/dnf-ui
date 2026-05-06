@@ -172,9 +172,11 @@ annotate_installed_row_with_repo_candidate(PackageRow &installed_row,
   auto it = available_rows.find(installed_row.name_arch_key());
   if (it == available_rows.end()) {
     installed_row.repo_candidate_relation = PackageRepoCandidateRelation::NONE;
+    installed_row.repo_candidate_nevra.clear();
     return;
   }
 
+  installed_row.repo_candidate_nevra = it->second.nevra;
   int cmp = libdnf5::rpm::evrcmp(it->second, installed_row);
   if (cmp > 0) {
     installed_row.repo_candidate_relation = PackageRepoCandidateRelation::NEWER;

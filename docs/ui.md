@@ -109,7 +109,7 @@ owns package actions before they are applied.
 
 It is responsible for:
 
-- marking packages for install, remove, or reinstall
+- marking packages for install, upgrade, remove, or reinstall
 - rebuilding the Pending Actions tab
 - validating self-protected package rules
 - asking the transaction service for a preview
@@ -121,6 +121,16 @@ It is responsible for:
 The pending action data model lives in [src/ui/pending_transaction_state.hpp](../src/ui/pending_transaction_state.hpp).
 Conversion from pending actions to a shared `TransactionRequest` lives in
 [src/ui/pending_transaction_request.cpp](../src/ui/pending_transaction_request.cpp).
+
+Upgradable rows are visible as repository candidates, but they represent an
+installed package with a newer version available. The UI treats the main action
+as `Upgrade`, using the visible update NEVRA. Remove and reinstall act on the
+currently installed NEVRA for the same package name and architecture.
+
+[src/ui/package_action_rows.cpp](../src/ui/package_action_rows.cpp) keeps those
+row-selection rules in one place. This is needed because an update can be shown
+from either the installed package list or the upgradable package list. The helper
+must not run libdnf queries because it is called while updating GTK controls.
 
 ### Transaction Progress
 

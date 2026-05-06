@@ -70,6 +70,8 @@ struct PackageRow {
   std::string summary;
   PackageInstallReason install_reason = PackageInstallReason::UNKNOWN;
   PackageRepoCandidateRelation repo_candidate_relation = PackageRepoCandidateRelation::UNKNOWN;
+  // Available package ID for the newest repo candidate matching this installed row.
+  std::string repo_candidate_nevra;
 
   // -----------------------------------------------------------------------------
   // Return the package epoch field.
@@ -205,6 +207,13 @@ std::string dnf_backend_install_reason_to_string(PackageInstallReason reason);
 bool dnf_backend_is_package_installed_exact(const PackageRow &row);
 
 // -----------------------------------------------------------------------------
+// Return the installed row with the same package name and architecture as one
+// visible row. This lets the UI act on the installed package when the selected
+// row is an available upgrade candidate.
+// -----------------------------------------------------------------------------
+bool dnf_backend_get_installed_package_row_by_name_arch(const PackageRow &row, PackageRow &installed_out);
+
+// -----------------------------------------------------------------------------
 // Return true when the exact installed NEVRA can be reinstalled from currently
 // available package sources. Local-only packages therefore return false.
 // -----------------------------------------------------------------------------
@@ -299,6 +308,11 @@ void dnf_backend_testonly_clear_installed_snapshot();
 // Replace the installed snapshot with test data.
 // -----------------------------------------------------------------------------
 void dnf_backend_testonly_replace_installed_snapshot(const std::set<std::string> &nevras);
+// -----------------------------------------------------------------------------
+// Replace the installed snapshot with full package rows for tests that need
+// name and architecture lookups.
+// -----------------------------------------------------------------------------
+void dnf_backend_testonly_replace_installed_snapshot_rows(const std::vector<PackageRow> &rows);
 // -----------------------------------------------------------------------------
 // Test-only hook: force the optional repo annotation path to fail and return
 // whether all rows kept UNKNOWN repo-candidate relation afterwards.

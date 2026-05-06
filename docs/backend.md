@@ -73,6 +73,16 @@ It stores:
 The installed snapshot lets the UI classify package rows without doing a fresh
 libdnf5 query for every table update.
 
+The same snapshot also lets the UI resolve the installed package behind an
+upgradable repository candidate. Upgrade actions use the visible update NEVRA,
+while remove and reinstall use the currently installed NEVRA for the same
+package name and architecture.
+
+If the visible row is the installed package and its status is update available,
+the query row carries the matching available upgrade NEVRA. The UI uses that
+stored package ID for the upgrade action without doing another package query
+from the GTK thread.
+
 The snapshot is updated only after a complete installed-package scan. Cancelled
 queries do not publish partial installed state.
 

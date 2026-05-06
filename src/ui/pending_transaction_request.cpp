@@ -39,7 +39,7 @@ build_pending_transaction_specs(const std::vector<PendingAction> &actions,
   reinstall.reserve(actions.size());
 
   for (const auto &action : actions) {
-    if (action.type == PendingAction::INSTALL) {
+    if (action.type == PendingAction::INSTALL || action.type == PendingAction::UPGRADE) {
       install.push_back(action.nevra);
     } else if (action.type == PendingAction::REINSTALL) {
       reinstall.push_back(action.nevra);

@@ -9,6 +9,7 @@
 #include "base_manager.hpp"
 #include "debug_trace.hpp"
 #include "i18n.hpp"
+#include "package_action_rows.hpp"
 #include "ui_helpers.hpp"
 #include "widgets.hpp"
 #include "widgets_internal.hpp"
@@ -124,21 +125,25 @@ package_info_clear_selected_package_state(SearchWidgets *widgets)
 static void
 update_selected_package_actions(SearchWidgets *widgets, const PackageRow &selected)
 {
-  // Install stays available for repo candidates. Remove remains tied to the
-  // exact installed row, and reinstall is only enabled when the same NEVRA is
-  // still available from a repository.
-  // Gate destructive actions on the exact installed row so merged browse and
-  // search results do not enable remove or reinstall for a merely related candidate.
-  bool installed_exact = dnf_backend_is_package_installed_exact(selected);
+  PackageActionRows action_rows = package_action_rows_for_selection(selected);
+
+  // Install and upgrade use the available package row.
+  // Remove and reinstall use the installed package row.
   // Self-protected packages stay viewable, but the running app must not remove
   // or reinstall the RPM that owns its current executable.
-  bool self_protected = installed_exact && dnf_backend_is_package_self_protected(selected);
+  bool self_protected =
+      action_rows.has_installed_row && dnf_backend_is_package_self_protected(action_rows.installed_row);
 
-  gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.install_button), !installed_exact);
-  gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.remove_button), installed_exact && !self_protected);
+  gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.install_button), action_rows.has_install_row);
+  gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.remove_button),
+                           action_rows.has_installed_row && !self_protected);
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.reinstall_button),
-                           installed_exact && !self_protected && dnf_backend_can_reinstall_package(selected));
-  ui_helpers_update_action_button_labels(widgets, selected.nevra);
+                           action_rows.can_try_reinstall && !self_protected);
+
+  const std::string install_nevra = action_rows.has_install_row ? action_rows.install_row.nevra : selected.nevra;
+  const std::string installed_nevra = action_rows.has_installed_row ? action_rows.installed_row.nevra : selected.nevra;
+  ui_helpers_update_action_button_labels_for_selection(
+      widgets, install_nevra, installed_nevra, installed_nevra, action_rows.install_is_upgrade);
 }
 
 // -----------------------------------------------------------------------------

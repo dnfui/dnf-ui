@@ -184,6 +184,24 @@ dnf_backend_is_package_installed_exact(const PackageRow &row)
 }
 
 // -----------------------------------------------------------------------------
+// Return the installed package row for the same name and architecture as one
+// visible row.
+// -----------------------------------------------------------------------------
+bool
+dnf_backend_get_installed_package_row_by_name_arch(const PackageRow &row, PackageRow &installed_out)
+{
+  std::lock_guard<std::mutex> lock(g_installed_mutex);
+  auto it = g_installed_rows_by_name_arch.find(row.name_arch_key());
+  if (it == g_installed_rows_by_name_arch.end()) {
+    installed_out = PackageRow();
+    return false;
+  }
+
+  installed_out = it->second;
+  return true;
+}
+
+// -----------------------------------------------------------------------------
 // Classify a package row as available, upgradeable, exact-installed,
 // local-only, or installed-newer-than-repo. Exact-installed rows prefer the row
 // provenance annotation; available rows fall back to the installed name and architecture
@@ -349,6 +367,24 @@ dnf_backend_testonly_replace_installed_snapshot(const std::set<std::string> &nev
   g_installed_nevras = nevras;
   g_installed_rows_by_name_arch.clear();
   g_self_protected_package_names.clear();
+}
+
+// -----------------------------------------------------------------------------
+// Replace the installed-package snapshot with full rows for name and
+// architecture lookup tests.
+// -----------------------------------------------------------------------------
+void
+dnf_backend_testonly_replace_installed_snapshot_rows(const std::vector<PackageRow> &rows)
+{
+  std::lock_guard<std::mutex> lock(g_installed_mutex);
+  g_installed_nevras.clear();
+  g_installed_rows_by_name_arch.clear();
+  g_self_protected_package_names.clear();
+
+  for (const auto &row : rows) {
+    g_installed_nevras.insert(row.nevra);
+    g_installed_rows_by_name_arch[row.name_arch_key()] = row;
+  }
 }
 #endif
 

@@ -66,6 +66,9 @@ fill_package_item_status(SearchWidgets *widgets, PackageItem &item)
       case PendingAction::INSTALL:
         item.status_text = _("Pending Install");
         break;
+      case PendingAction::UPGRADE:
+        item.status_text = _("Pending Upgrade");
+        break;
       case PendingAction::REINSTALL:
         item.status_text = _("Pending Reinstall");
         break;

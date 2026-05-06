@@ -16,7 +16,7 @@
 // Pending actions for mark --> review --> apply workflow
 // -----------------------------------------------------------------------------
 struct PendingAction {
-  enum Type { INSTALL, REMOVE, REINSTALL } type;
+  enum Type { INSTALL, UPGRADE, REMOVE, REINSTALL } type;
   std::string nevra;
 };
 
