@@ -261,30 +261,11 @@ dnf_backend_get_package_deps(const std::string &pkg_nevra)
 }
 
 // -----------------------------------------------------------------------------
-// Retrieve and format changelog entries for one exact NEVRA. Installed package
-// metadata is preferred because rpmdb entries often contain a fuller local
-// history than repository metadata.
+// Format changelog entries for display in the details pane.
 // -----------------------------------------------------------------------------
-std::string
-dnf_backend_get_package_changelog(const std::string &pkg_nevra)
+static std::string
+format_changelog_entries(libdnf5::rpm::Package pkg)
 {
-  auto changelog_base = BaseManager::instance().acquire_changelog_read();
-  libdnf5::rpm::PackageQuery query(*changelog_base.base);
-
-  query.filter_nevra(pkg_nevra);
-
-  if (query.empty()) {
-    return "No changelog available.";
-  }
-
-  // Prefer the installed copy: repo metadata often omits older changelog
-  // entries while the rpmdb retains the full history. Fall back to any
-  // available repo match if the package is not installed.
-  libdnf5::rpm::PackageQuery installed(query);
-  installed.filter_installed();
-  libdnf5::rpm::PackageQuery &best = installed.empty() ? query : installed;
-  auto pkg = *best.begin();
-
   std::ostringstream out;
 
   auto entries = pkg.get_changelogs();
@@ -303,6 +284,49 @@ dnf_backend_get_package_changelog(const std::string &pkg_nevra)
   }
 
   return out.str();
+}
+
+// -----------------------------------------------------------------------------
+// Retrieve and format changelog entries for one exact NEVRA. Installed package
+// metadata is preferred because rpmdb entries often contain a fuller local
+// history than repository metadata. If the package is not installed, fall back
+// to a temporary Base with repo "other" metadata so normal queries do not keep
+// changelog metadata resident.
+// -----------------------------------------------------------------------------
+std::string
+dnf_backend_get_package_changelog(const std::string &pkg_nevra)
+{
+  {
+    auto read = BaseManager::instance().acquire_read();
+    libdnf5::rpm::PackageQuery installed(read.base);
+
+    // Try the installed rpmdb first: it does not need repo "other" metadata.
+    installed.filter_nevra(pkg_nevra);
+    installed.filter_installed();
+
+    if (!installed.empty()) {
+      // Keep the newest installed match if more than one package matches.
+      installed.filter_latest_evr();
+      auto pkg = *installed.begin();
+      return format_changelog_entries(pkg);
+    }
+  }
+
+  // Load repo "other" metadata only when no installed package was found.
+  auto changelog_base = BaseManager::instance().acquire_changelog_read();
+  libdnf5::rpm::PackageQuery query(*changelog_base.base);
+
+  query.filter_nevra(pkg_nevra);
+
+  if (query.empty()) {
+    return "No changelog available.";
+  }
+
+  // Keep the newest available match if more than one package matches.
+  query.filter_latest_evr();
+  auto pkg = *query.begin();
+
+  return format_changelog_entries(pkg);
 }
 
 // -----------------------------------------------------------------------------
