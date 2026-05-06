@@ -308,15 +308,14 @@ BaseManager::rebuild_system_only()
 void
 BaseManager::drop_cached_base()
 {
-  std::shared_ptr<libdnf5::Base> dropped_base;
   {
     std::unique_lock<std::shared_mutex> lock(base_mutex);
     if (!base_ptr) {
       return;
     }
-    dropped_base = std::move(base_ptr);
+    base_ptr.reset();
   }
-  dropped_base.reset();
+
   trim_free_heap();
 }
 
