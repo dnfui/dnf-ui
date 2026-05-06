@@ -7,6 +7,7 @@
 #include "package_table_status.hpp"
 
 #include "i18n.hpp"
+#include "package_action_rows.hpp"
 #include "widgets.hpp"
 
 #include <string>
@@ -66,12 +67,13 @@ package_table_status_tooltip_text(const PackageRow &row)
 // Return the CSS class for a pending action, if the row is currently marked.
 // -----------------------------------------------------------------------------
 static const char *
-pending_css_class(SearchWidgets *widgets, const std::string &nevra)
+pending_css_class(SearchWidgets *widgets, const std::string &nevra, const std::string &alternate_nevra)
 {
   for (const auto &a : widgets->transaction.actions) {
-    if (a.nevra == nevra) {
+    if (a.nevra == nevra || (!alternate_nevra.empty() && a.nevra == alternate_nevra)) {
       switch (a.type) {
       case PendingAction::INSTALL:
+      case PendingAction::UPGRADE:
         return "package-status-pending-install";
       case PendingAction::REINSTALL:
         return "package-status-pending-reinstall";
@@ -106,13 +108,21 @@ void
 package_table_update_status_label(GtkWidget *label, SearchWidgets *widgets, const PackageRow &row)
 {
   PackageInstallState install_state = dnf_backend_get_package_install_state(row);
+  PackageActionRows action_rows;
+  if (install_state == PackageInstallState::UPGRADEABLE) {
+    action_rows = package_action_rows_for_selection(row);
+  }
 
   const char *text = package_table_status_text(install_state);
   for (const auto &a : widgets->transaction.actions) {
-    if (a.nevra == row.nevra) {
+    bool action_matches_visible_row = a.nevra == row.nevra;
+    bool action_matches_install_row = action_rows.has_install_row && a.nevra == action_rows.install_row.nevra;
+    bool action_matches_installed_row = action_rows.has_installed_row && a.nevra == action_rows.installed_row.nevra;
+    if (action_matches_visible_row || action_matches_install_row || action_matches_installed_row) {
       switch (a.type) {
       case PendingAction::INSTALL:
-        text = _("Pending Install");
+      case PendingAction::UPGRADE:
+        text = install_state == PackageInstallState::UPGRADEABLE ? _("Pending Upgrade") : _("Pending Install");
         break;
       case PendingAction::REINSTALL:
         text = _("Pending Reinstall");
@@ -128,7 +138,17 @@ package_table_update_status_label(GtkWidget *label, SearchWidgets *widgets, cons
   gtk_label_set_text(GTK_LABEL(label), text);
 
   package_table_clear_status_css(label);
-  if (const char *pending_class = pending_css_class(widgets, row.nevra)) {
+  std::string alternate_nevra;
+
+  // Upgradable rows can show one package ID while the pending action uses the
+  // matching installed or available package ID.
+  if (action_rows.has_install_row && action_rows.install_row.nevra != row.nevra) {
+    alternate_nevra = action_rows.install_row.nevra;
+  } else if (action_rows.has_installed_row && action_rows.installed_row.nevra != row.nevra) {
+    alternate_nevra = action_rows.installed_row.nevra;
+  }
+
+  if (const char *pending_class = pending_css_class(widgets, row.nevra, alternate_nevra)) {
     gtk_widget_add_css_class(label, pending_class);
   } else {
     if (install_state == PackageInstallState::LOCAL_ONLY) {

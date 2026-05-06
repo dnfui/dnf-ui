@@ -6,6 +6,7 @@
 #include "package_table_context_menu.hpp"
 
 #include "i18n.hpp"
+#include "package_action_rows.hpp"
 #include "pending_transaction_controller.hpp"
 #include "ui/pending_transaction_state.hpp"
 #include "ui/widgets.hpp"
@@ -77,28 +78,42 @@ package_table_show_context_menu(GtkWidget *anchor,
   GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
   gtk_popover_set_child(GTK_POPOVER(popover), box);
 
-  // Match the main action buttons: remove and reinstall are only valid for the
-  // exact installed NEVRA represented by this row.
-  bool installed_exact = dnf_backend_is_package_installed_exact(row);
+  PackageActionRows action_rows = package_action_rows_for_selection(row);
+
+  // Match the main action buttons: install and upgrade use the available row,
+  // while remove and reinstall use the installed row.
   // Keep the running app visible in the table, but block context-menu actions
   // that would modify the package currently owning this executable.
-  bool self_protected = installed_exact && dnf_backend_is_package_self_protected(row);
-  bool can_reinstall = installed_exact && !self_protected && dnf_backend_can_reinstall_package(row);
+  bool self_protected =
+      action_rows.has_installed_row && dnf_backend_is_package_self_protected(action_rows.installed_row);
+  bool can_reinstall = action_rows.can_try_reinstall && !self_protected;
 
-  PendingAction::Type pending_type;
-  bool has_pending = get_context_menu_pending_action(widgets, row.nevra, pending_type);
+  PendingAction::Type pending_install_type;
+  bool has_pending_install = action_rows.has_install_row &&
+      get_context_menu_pending_action(widgets, action_rows.install_row.nevra, pending_install_type);
+
+  PendingAction::Type pending_destructive_type;
+  bool has_pending_destructive = action_rows.has_installed_row &&
+      get_context_menu_pending_action(widgets, action_rows.installed_row.nevra, pending_destructive_type);
 
   // Keep context menu actions aligned with the normal package action buttons.
-  const char *install_label =
-      has_pending && pending_type == PendingAction::INSTALL ? _("Unmark Install") : _("Mark for Install");
-  const char *remove_label =
-      has_pending && pending_type == PendingAction::REMOVE ? _("Unmark Removal") : _("Mark for Removal");
-  const char *reinstall_label =
-      has_pending && pending_type == PendingAction::REINSTALL ? _("Unmark Reinstall") : _("Mark for Reinstall");
+  const char *install_label = nullptr;
+  if (has_pending_install &&
+      (pending_install_type == PendingAction::INSTALL || pending_install_type == PendingAction::UPGRADE)) {
+    install_label = action_rows.install_is_upgrade ? _("Unmark Upgrade") : _("Unmark Install");
+  } else {
+    install_label = action_rows.install_is_upgrade ? _("Mark for Upgrade") : _("Mark for Install");
+  }
+  const char *remove_label = has_pending_destructive && pending_destructive_type == PendingAction::REMOVE
+      ? _("Unmark Removal")
+      : _("Mark for Removal");
+  const char *reinstall_label = has_pending_destructive && pending_destructive_type == PendingAction::REINSTALL
+      ? _("Unmark Reinstall")
+      : _("Mark for Reinstall");
 
   append_context_menu_action(GTK_BOX(box),
                              install_label,
-                             !installed_exact,
+                             action_rows.has_install_row,
                              G_CALLBACK(+[](GtkButton *button, gpointer user_data) {
                                if (GtkWidget *popover = gtk_widget_get_ancestor(GTK_WIDGET(button), GTK_TYPE_POPOVER)) {
                                  gtk_popover_popdown(GTK_POPOVER(popover));
@@ -109,7 +124,7 @@ package_table_show_context_menu(GtkWidget *anchor,
 
   append_context_menu_action(GTK_BOX(box),
                              remove_label,
-                             installed_exact && !self_protected,
+                             action_rows.has_installed_row && !self_protected,
                              G_CALLBACK(+[](GtkButton *button, gpointer user_data) {
                                if (GtkWidget *popover = gtk_widget_get_ancestor(GTK_WIDGET(button), GTK_TYPE_POPOVER)) {
                                  gtk_popover_popdown(GTK_POPOVER(popover));

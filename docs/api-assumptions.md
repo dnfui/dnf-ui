@@ -63,6 +63,12 @@ Why this matters:
 - The upgradable package list is a read-only candidate view. The transaction
   preview remains the source of truth for what would actually be installed,
   upgraded, downgraded, reinstalled, or removed.
+- Upgradable rows are available package candidates. UI actions that remove or
+  reinstall such a row must resolve the matching installed row by package name
+  and architecture before building the pending action.
+- Installed rows can also be classified as upgradable after repo annotation.
+  Those rows carry the matching available upgrade NEVRA so UI action handling
+  does not need a fresh libdnf query on the GTK thread.
 
 Tests:
 

@@ -91,41 +91,64 @@ ui_helpers_set_status(GtkLabel *label, const std::string &text, const std::strin
 }
 
 // -----------------------------------------------------------------------------
+// Return true when one pending action matches the requested package and type.
+// -----------------------------------------------------------------------------
+static bool
+has_pending_action(SearchWidgets *widgets, const std::string &nevra, PendingAction::Type type)
+{
+  for (const auto &a : widgets->transaction.actions) {
+    if (a.nevra == nevra && a.type == type) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// -----------------------------------------------------------------------------
 // Update transaction action button labels based on pending actions.
+// -----------------------------------------------------------------------------
+void
+ui_helpers_update_action_button_labels_for_selection(SearchWidgets *widgets,
+                                                     const std::string &install_nevra,
+                                                     const std::string &remove_nevra,
+                                                     const std::string &reinstall_nevra,
+                                                     bool install_is_upgrade)
+{
+  bool pending_install = has_pending_action(widgets, install_nevra, PendingAction::INSTALL);
+  bool pending_upgrade = has_pending_action(widgets, install_nevra, PendingAction::UPGRADE);
+  bool pending_remove = has_pending_action(widgets, remove_nevra, PendingAction::REMOVE);
+  bool pending_reinstall = has_pending_action(widgets, reinstall_nevra, PendingAction::REINSTALL);
+
+  const char *mark_install = install_is_upgrade ? _("Mark for Upgrade") : _("Mark for Install");
+  const char *unmark_install = install_is_upgrade ? _("Unmark Upgrade") : _("Unmark Install");
+
+  if (pending_install || pending_upgrade) {
+    ui_helpers_set_icon_button(widgets->transaction.install_button, "edit-clear-symbolic", unmark_install);
+    ui_helpers_set_icon_button(widgets->transaction.remove_button, "list-remove-symbolic", _("Mark for Removal"));
+    ui_helpers_set_icon_button(widgets->transaction.reinstall_button, "view-refresh-symbolic", _("Mark for Reinstall"));
+  } else if (pending_reinstall) {
+    ui_helpers_set_icon_button(widgets->transaction.install_button, "list-add-symbolic", mark_install);
+    ui_helpers_set_icon_button(widgets->transaction.remove_button, "list-remove-symbolic", _("Mark for Removal"));
+    ui_helpers_set_icon_button(widgets->transaction.reinstall_button, "edit-clear-symbolic", _("Unmark Reinstall"));
+  } else if (pending_remove) {
+    ui_helpers_set_icon_button(widgets->transaction.install_button, "list-add-symbolic", mark_install);
+    ui_helpers_set_icon_button(widgets->transaction.remove_button, "edit-clear-symbolic", _("Unmark Removal"));
+    ui_helpers_set_icon_button(widgets->transaction.reinstall_button, "view-refresh-symbolic", _("Mark for Reinstall"));
+  } else {
+    ui_helpers_set_icon_button(widgets->transaction.install_button, "list-add-symbolic", mark_install);
+    ui_helpers_set_icon_button(widgets->transaction.remove_button, "list-remove-symbolic", _("Mark for Removal"));
+    ui_helpers_set_icon_button(widgets->transaction.reinstall_button, "view-refresh-symbolic", _("Mark for Reinstall"));
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Update transaction action button labels when all actions use one package ID.
 // -----------------------------------------------------------------------------
 void
 ui_helpers_update_action_button_labels(SearchWidgets *widgets, const std::string &pkg)
 {
-  bool pending_install = false;
-  bool pending_remove = false;
-  bool pending_reinstall = false;
-
-  for (const auto &a : widgets->transaction.actions) {
-    if (a.nevra == pkg) {
-      pending_install = (a.type == PendingAction::INSTALL);
-      pending_remove = (a.type == PendingAction::REMOVE);
-      pending_reinstall = (a.type == PendingAction::REINSTALL);
-      break;
-    }
-  }
-
-  if (pending_install) {
-    ui_helpers_set_icon_button(widgets->transaction.install_button, "edit-clear-symbolic", _("Unmark Install"));
-    ui_helpers_set_icon_button(widgets->transaction.remove_button, "list-remove-symbolic", _("Mark for Removal"));
-    ui_helpers_set_icon_button(widgets->transaction.reinstall_button, "view-refresh-symbolic", _("Mark for Reinstall"));
-  } else if (pending_reinstall) {
-    ui_helpers_set_icon_button(widgets->transaction.install_button, "list-add-symbolic", _("Mark for Install"));
-    ui_helpers_set_icon_button(widgets->transaction.remove_button, "list-remove-symbolic", _("Mark for Removal"));
-    ui_helpers_set_icon_button(widgets->transaction.reinstall_button, "edit-clear-symbolic", _("Unmark Reinstall"));
-  } else if (pending_remove) {
-    ui_helpers_set_icon_button(widgets->transaction.install_button, "list-add-symbolic", _("Mark for Install"));
-    ui_helpers_set_icon_button(widgets->transaction.remove_button, "edit-clear-symbolic", _("Unmark Removal"));
-    ui_helpers_set_icon_button(widgets->transaction.reinstall_button, "view-refresh-symbolic", _("Mark for Reinstall"));
-  } else {
-    ui_helpers_set_icon_button(widgets->transaction.install_button, "list-add-symbolic", _("Mark for Install"));
-    ui_helpers_set_icon_button(widgets->transaction.remove_button, "list-remove-symbolic", _("Mark for Removal"));
-    ui_helpers_set_icon_button(widgets->transaction.reinstall_button, "view-refresh-symbolic", _("Mark for Reinstall"));
-  }
+  ui_helpers_update_action_button_labels_for_selection(widgets, pkg, pkg, pkg, false);
 }
 
 // -----------------------------------------------------------------------------

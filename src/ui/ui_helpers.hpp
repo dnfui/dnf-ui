@@ -28,6 +28,14 @@ void ui_helpers_set_status(GtkLabel *label, const std::string &text, const std::
 // Update action button labels for the selected package.
 // -----------------------------------------------------------------------------
 void ui_helpers_update_action_button_labels(SearchWidgets *widgets, const std::string &pkg);
+// -----------------------------------------------------------------------------
+// Update action button labels when the visible row and installed row differ.
+// -----------------------------------------------------------------------------
+void ui_helpers_update_action_button_labels_for_selection(SearchWidgets *widgets,
+                                                          const std::string &install_nevra,
+                                                          const std::string &remove_nevra,
+                                                          const std::string &reinstall_nevra,
+                                                          bool install_is_upgrade);
 
 // -----------------------------------------------------------------------------
 // EOF
