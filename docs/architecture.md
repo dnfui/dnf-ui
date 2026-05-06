@@ -129,8 +129,10 @@ apply take write access because libdnf5 transaction work changes Base state
 while it is being resolved or run.
 
 The shared Base does not request changelog `other` metadata. Changelog details
-use a short-lived temporary Base so that normal list, search, and transaction
-paths do not keep that optional metadata resident.
+read installed packages from the shared Base first because rpmdb changelog
+metadata is local. Available-package changelogs use a short-lived temporary Base
+so that normal list, search, and transaction paths do not keep that optional
+metadata resident.
 
 ## Package List Model
 
