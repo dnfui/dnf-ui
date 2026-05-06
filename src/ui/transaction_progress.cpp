@@ -210,7 +210,8 @@ transaction_progress_create_window(SearchWidgets *widgets, size_t pending_count)
 }
 
 // -----------------------------------------------------------------------------
-// Queue one transaction log line onto the GTK main loop
+// Queue one progress line onto the GTK main loop. The caller may be a worker
+// thread, but GTK widgets must only be touched by the main thread.
 // -----------------------------------------------------------------------------
 static void
 append_transaction_progress_line(TransactionProgressWindow *progress, const std::string &message)
@@ -253,7 +254,7 @@ append_transaction_progress_line(TransactionProgressWindow *progress, const std:
 }
 
 // -----------------------------------------------------------------------------
-// Queue one or more transaction log lines onto the GTK main loop
+// Split a message into lines and queue each line for the GTK main thread.
 // -----------------------------------------------------------------------------
 void
 transaction_progress_append(TransactionProgressWindow *progress, const std::string &message)
@@ -273,7 +274,7 @@ transaction_progress_append(TransactionProgressWindow *progress, const std::stri
 }
 
 // -----------------------------------------------------------------------------
-// Update the popup when the package transaction finishes
+// Mark the popup finished. After this the user may close it.
 // -----------------------------------------------------------------------------
 void
 transaction_progress_finish(TransactionProgressWindow *progress, bool success, const std::string &summary)

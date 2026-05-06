@@ -86,7 +86,8 @@ format_specs(const std::vector<std::string> &specs)
 }
 
 // -----------------------------------------------------------------------------
-// Forward one progress line to the UI callback when a callback is installed.
+// Send one progress line to the caller. In normal UI use the caller is the
+// transaction service, which turns this line into a D-Bus Progress signal.
 // -----------------------------------------------------------------------------
 static void
 emit_progress_line(const TransactionProgressCallback &progress_cb, const std::string &message)
@@ -99,8 +100,8 @@ emit_progress_line(const TransactionProgressCallback &progress_cb, const std::st
 }
 
 // -----------------------------------------------------------------------------
-// Forward a multi-line diagnostic block as individual progress lines so the
-// transaction dialog can stream readable status updates.
+// Split a multi-line error into separate progress lines. The progress window
+// appends one line at a time.
 // -----------------------------------------------------------------------------
 static void
 emit_progress_block(const TransactionProgressCallback &progress_cb, const std::string &message)
@@ -157,20 +158,17 @@ transaction_package_label(const libdnf5::base::TransactionPackage &item)
   return item.get_package().get_nevra();
 }
 
-// libdnf5 download callbacks that stream package download progress to the UI.
+// libdnf calls this object during transaction downloads. Each callback creates
+// a plain text progress line and sends it through progress_cb.
 class StreamingDownloadCallbacks final : public libdnf5::repo::DownloadCallbacks {
   public:
-  // -----------------------------------------------------------------------------
-  // Store the callback used to report download progress.
-  // -----------------------------------------------------------------------------
   explicit StreamingDownloadCallbacks(TransactionProgressCallback progress_cb)
       : progress_cb(std::move(progress_cb))
   {
   }
 
-  // -----------------------------------------------------------------------------
-  // Start progress reporting for one package download.
-  // -----------------------------------------------------------------------------
+  // One package download has started. libdnf keeps the returned DownloadState
+  // pointer and passes it back to progress and end for the same package.
   void *add_new_download(void *, const char *description, double) override
   {
     auto *state = new DownloadState;
@@ -179,9 +177,8 @@ class StreamingDownloadCallbacks final : public libdnf5::repo::DownloadCallbacks
     return state;
   }
 
-  // -----------------------------------------------------------------------------
-  // Report package download progress in ten percent steps.
-  // -----------------------------------------------------------------------------
+  // libdnf may call this often. Report only ten percent steps so the progress
+  // window gets useful updates without being flooded.
   int progress(void *user_cb_data, double total_to_download, double downloaded) override
   {
     auto *state = static_cast<DownloadState *>(user_cb_data);
@@ -202,9 +199,8 @@ class StreamingDownloadCallbacks final : public libdnf5::repo::DownloadCallbacks
     return OK;
   }
 
-  // -----------------------------------------------------------------------------
-  // Finish progress reporting for one package download.
-  // -----------------------------------------------------------------------------
+  // One package download has finished. The unique_ptr frees the DownloadState
+  // allocated in add_new_download.
   int end(void *user_cb_data, TransferStatus status, const char *msg) override
   {
     std::unique_ptr<DownloadState> state(static_cast<DownloadState *>(user_cb_data));
@@ -502,6 +498,8 @@ dnf_backend_apply_transaction(const std::vector<std::string> &install_nevras,
                          transaction_action_label(item.get_action()) + ": " + transaction_package_label(item));
     }
 
+    // Register download callbacks before transaction download starts. libdnf
+    // calls them while packages are downloaded, and they feed progress_cb.
     base.set_download_callbacks(std::make_unique<StreamingDownloadCallbacks>(progress_cb));
     DownloadCallbacksReset download_callbacks_reset(base);
     emit_progress_line(progress_cb, "Starting package downloads...");

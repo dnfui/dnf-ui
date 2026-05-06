@@ -542,7 +542,8 @@ wait_for_transaction_stage(GDBusConnection *connection,
 }
 
 // -----------------------------------------------------------------------------
-// Forward transaction progress signals from the service to the GUI callback
+// Receive one Progress signal from the service and pass its text to the UI
+// callback supplied by the apply task.
 // -----------------------------------------------------------------------------
 static void
 on_transaction_progress_signal(GDBusConnection *,
@@ -699,7 +700,9 @@ transaction_service_client_preview_upgrade_all_request(TransactionPreview &previ
 }
 
 // -----------------------------------------------------------------------------
-// Apply a previously previewed transaction request through the service
+// Apply a previously previewed transaction request through the service.
+// Progress is not returned by Apply itself. Progress arrives as D-Bus signals
+// on the request object while this function waits for the final result.
 // -----------------------------------------------------------------------------
 bool
 transaction_service_client_apply_started_request(const std::string &transaction_path,
@@ -737,6 +740,7 @@ transaction_service_client_apply_started_request(const std::string &transaction_
 
   do {
     DNFUI_TRACE("Transaction service client start path=%s", transaction_path.c_str());
+    // Listen before calling Apply so early service messages are not missed.
     progress_subscription_id = g_dbus_connection_signal_subscribe(connection,
                                                                   kTransactionServiceName,
                                                                   kTransactionServiceRequestInterface,

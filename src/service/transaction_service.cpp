@@ -390,7 +390,8 @@ dispatch_transaction_release(gpointer user_data)
 }
 
 // -----------------------------------------------------------------------------
-// Emit one progress line for a live transaction request object.
+// Send one progress line to the GUI. The GUI subscribed to Progress on this
+// request object before it called Apply.
 // -----------------------------------------------------------------------------
 static void
 emit_transaction_progress(TransactionSession *session, const std::string &line)
@@ -445,7 +446,8 @@ emit_transaction_finished(TransactionSession *session, TransactionStage stage, b
 }
 
 // -----------------------------------------------------------------------------
-// Queue one transaction progress line back onto the service main loop.
+// Backend work runs on a worker thread. D-Bus signals are emitted from the
+// service main loop, so progress lines are queued here first.
 // -----------------------------------------------------------------------------
 static void
 queue_transaction_progress(TransactionSession *session, const std::string &line)
@@ -813,6 +815,8 @@ run_transaction_preview(TransactionSession *session)
     TransactionPreview preview;
     std::string error_out;
     queue_transaction_progress(session, _("Loading package base..."));
+    // The backend knows only about this callback. The service callback turns
+    // backend progress text into Progress signals for the GUI.
     auto progress_cb = [session](const std::string &line) { queue_transaction_progress(session, line); };
 
     DNFUI_TRACE("Transaction service preview start path=%s", session->object_path.c_str());
