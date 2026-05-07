@@ -4,7 +4,7 @@ Release:        1%{?dist}
 Summary:        GTK frontend for DNF5 with a privileged transaction service
 
 License:        MIT
-URL:            https://github.com/ErikMN/dnf_ui
+URL:            https://github.com/ErikMN/dnf-ui
 Source0:        %{name}-%{version}.tar.gz
 
 BuildRequires:  appstream

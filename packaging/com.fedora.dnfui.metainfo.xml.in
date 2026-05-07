@@ -8,7 +8,7 @@
   <developer id="com.fedora">
     <name>ErikMN</name>
   </developer>
-  <url type="homepage">https://github.com/ErikMN/dnf_ui</url>
+  <url type="homepage">https://github.com/ErikMN/dnf-ui</url>
   <launchable type="desktop-id">com.fedora.dnfui.desktop</launchable>
   <description>
     <p>
