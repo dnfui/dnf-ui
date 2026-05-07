@@ -5,19 +5,18 @@
 </p>
 
 DNF UI is a graphical frontend for Fedora's DNF (Dandified YUM) package manager, inspired by [Synaptic](https://github.com/mvo5/synaptic).
-It is built with GTK 4 and libdnf5 and aims to provide a **fast** and **dependable** package management workflow for Fedora.
+It is built with GTK 4 and [libdnf5](https://github.com/rpm-software-management/dnf5) and aims to provide a **fast** and **dependable** package management workflow for Fedora.
 
 ## Status
 
-DNF UI is in early development.
-The project is active, usable for testing, and becoming more mature with each
-release.
+DNF UI is in active early development.
+The project is usable for testing and is becoming more mature with each release.
 Some interfaces, behavior, and features may still change while the application
 continues to stabilize.
 
-## Goals and development principles
+## Goals and principles
 
-- User experience first
+- User experience first!
 - Stability, reliability and predictability
 - Strong focus on code quality and maintainability
 - No unnecessary complexity or bloat
@@ -31,19 +30,19 @@ explicit transaction review, and applying DNF package transactions through Polki
 
 DNF UI does **NOT** aim to manage Flatpaks, firmware updates, ratings, featured
 applications, or software-center discovery workflows.
+There are other applications for this like [GNOME Software](https://apps.gnome.org/Software/).
 
 ## Current features
 
 - Search repo packages together with installed-only local RPMs
-- List installed packages, upgradable packages, or browse the merged package view
+- List available, installed and upgradable packages
 - View package details, files, dependencies, and changelog information
 - Mark packages for install, reinstall, and removal
 - Upgrade all installed packages with available updates
 - Review a transaction summary before applying changes
 - Apply transactions through a privileged system service with Polkit authorization
 - Cancel long-running package queries
-- Show search history
-- Hide or show the history and information panes
+- Search history
 
 The main browse and search views keep one visible row per package name and
 architecture. Repo candidates stay visible as usual, and locally installed RPMs
