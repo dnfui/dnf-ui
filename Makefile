@@ -272,6 +272,11 @@ servicesystemdisconnecttest:
 dockersetup:
 	@./docker/docker_setup.sh
 
+# Login to the Docker container:
+.PHONY: dockerlogin
+dockerlogin:
+	@./docker/docker_login.sh
+
 # Run the app in Docker:
 .PHONY: dockerrun
 dockerrun:
