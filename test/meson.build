@@ -8,6 +8,7 @@ dnfui_tests = executable(
   files(
     'unit/test_backend.cpp',
     'unit/test_offline.cpp',
+    'unit/test_package_action_rows.cpp',
     'unit/test_package_query_cache.cpp',
     'unit/test_pending_transaction_request.cpp',
     'unit/test_search.cpp',
@@ -19,6 +20,7 @@ dnfui_tests = executable(
     '../src/i18n.cpp',
     '../src/service/transaction_service_preview_formatter.cpp',
     '../src/transaction_service_client.cpp',
+    '../src/ui/package_action_rows.cpp',
     '../src/ui/package_query_cache.cpp',
     '../src/ui/pending_transaction_request.cpp',
   ),
