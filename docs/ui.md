@@ -135,7 +135,11 @@ must not run libdnf queries because it is called while updating GTK controls.
 ### Transaction Progress
 
 [src/ui/transaction_progress.cpp](../src/ui/transaction_progress.cpp) owns the
-transaction review dialog and progress window.
+live progress window shown while apply is running.
+
+[src/ui/transaction_review_dialog.cpp](../src/ui/transaction_review_dialog.cpp)
+owns the confirmation dialog shown before apply and the error dialog shown when
+preview or apply fails.
 
 The progress window can receive progress messages after the apply request has
 started. The code keeps the progress state alive while queued GTK callbacks are

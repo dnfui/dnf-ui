@@ -24,6 +24,7 @@ app_sources = files(
   'ui/pending_transaction_controller.cpp',
   'ui/pending_transaction_request.cpp',
   'ui/transaction_progress.cpp',
+  'ui/transaction_review_dialog.cpp',
   'transaction_service_client.cpp',
   'ui/ui_helpers.cpp',
   'ui/widgets.cpp',

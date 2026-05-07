@@ -16,6 +16,8 @@ Important files:
 
 - [src/ui/pending_transaction_controller.cpp](../src/ui/pending_transaction_controller.cpp)
 - [src/ui/pending_transaction_request.cpp](../src/ui/pending_transaction_request.cpp)
+- [src/ui/transaction_review_dialog.cpp](../src/ui/transaction_review_dialog.cpp)
+- [src/ui/transaction_progress.cpp](../src/ui/transaction_progress.cpp)
 - [src/transaction_request.hpp](../src/transaction_request.hpp)
 - [src/transaction_service_client.cpp](../src/transaction_service_client.cpp)
 - [src/service/transaction_service.cpp](../src/service/transaction_service.cpp)

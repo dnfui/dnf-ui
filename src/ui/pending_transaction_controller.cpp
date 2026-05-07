@@ -16,6 +16,7 @@
 #include "pending_transaction_controller.hpp"
 #include "pending_transaction_request.hpp"
 #include "transaction_progress.hpp"
+#include "transaction_review_dialog.hpp"
 #include "transaction_service_client.hpp"
 #include "ui_helpers.hpp"
 #include "widgets_internal.hpp"
@@ -437,10 +438,10 @@ start_apply_transaction(SearchWidgets *widgets)
           std::string details = error ? error->message : _("Transaction failed.");
           ui_helpers_set_status(widgets->query.status_label, details.c_str(), "red");
           // Show the full backend error in a copyable dialog instead of only in the status bar.
-          transaction_progress_show_error_dialog(widgets,
-                                                 _("Transaction Failed"),
-                                                 _("The transaction could not be completed. Review the details below."),
-                                                 details);
+          transaction_review_show_error_dialog(widgets,
+                                               _("Transaction Failed"),
+                                               _("The transaction could not be completed. Review the details below."),
+                                               details);
           if (error) {
             g_error_free(error);
           }
@@ -728,10 +729,10 @@ start_preview_request(SearchWidgets *widgets, TransactionRequest request)
               error && error->message ? error->message : _("Unable to prepare transaction preview.");
           widgets->transaction.preview_upgrade_all = false;
           ui_helpers_set_status(widgets->query.status_label, status_message, "red");
-          transaction_progress_show_error_dialog(widgets,
-                                                 _("Transaction Preview Failed"),
-                                                 _("The transaction could not be prepared. Review the details below."),
-                                                 status_message);
+          transaction_review_show_error_dialog(widgets,
+                                               _("Transaction Preview Failed"),
+                                               _("The transaction could not be prepared. Review the details below."),
+                                               status_message);
           if (error) {
             g_error_free(error);
           }
@@ -752,7 +753,7 @@ start_preview_request(SearchWidgets *widgets, TransactionRequest request)
         widgets->transaction.preview_transaction_path = td->transaction_path;
         widgets->transaction.preview_upgrade_all = td->request.upgrade_all;
         td->transaction_path_transferred = true;
-        transaction_progress_show_summary_dialog(
+        transaction_review_show_summary_dialog(
             widgets, td->preview, start_apply_transaction, invalidate_service_preview);
       });
 

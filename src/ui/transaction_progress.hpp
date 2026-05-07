@@ -1,5 +1,4 @@
 // -----------------------------------------------------------------------------
-// src/ui/transaction_progress.hpp
 // Transaction progress window helpers
 //
 // Creates the apply progress dialog and keeps it alive while service progress
@@ -11,10 +10,7 @@
 #include <string>
 
 struct SearchWidgets;
-struct TransactionPreview;
 struct TransactionProgressWindow;
-
-using TransactionApplyCallback = void (*)(SearchWidgets *widgets);
 
 // -----------------------------------------------------------------------------
 // Create a transaction progress window for the pending action count.
@@ -36,20 +32,6 @@ void transaction_progress_append(TransactionProgressWindow *progress, const std:
 // Mark the transaction progress window as finished.
 // -----------------------------------------------------------------------------
 void transaction_progress_finish(TransactionProgressWindow *progress, bool success, const std::string &summary);
-// -----------------------------------------------------------------------------
-// Show a transaction error dialog with optional details.
-// -----------------------------------------------------------------------------
-void transaction_progress_show_error_dialog(SearchWidgets *widgets,
-                                            const char *title,
-                                            const char *intro,
-                                            const std::string &details);
-// -----------------------------------------------------------------------------
-// Show the resolved transaction summary before apply.
-// -----------------------------------------------------------------------------
-void transaction_progress_show_summary_dialog(SearchWidgets *widgets,
-                                              const TransactionPreview &preview,
-                                              TransactionApplyCallback on_apply,
-                                              TransactionApplyCallback on_cancel);
 
 // -----------------------------------------------------------------------------
 // EOF

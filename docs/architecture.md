@@ -92,7 +92,8 @@ The main window is built once and the controller files own behavior.
 - [src/ui/package_info_controller.cpp](../src/ui/package_info_controller.cpp) owns selection handling and details loading.
 - [src/ui/package_table_view.cpp](../src/ui/package_table_view.cpp) owns the package table.
 - [src/ui/pending_transaction_controller.cpp](../src/ui/pending_transaction_controller.cpp) owns marking actions, preview, apply, and post-apply refresh.
-- [src/ui/transaction_progress.cpp](../src/ui/transaction_progress.cpp) owns the review and progress dialogs.
+- [src/ui/transaction_review_dialog.cpp](../src/ui/transaction_review_dialog.cpp) owns the review and error dialogs.
+- [src/ui/transaction_progress.cpp](../src/ui/transaction_progress.cpp) owns the live progress window.
 
 The UI controller pattern follows this shape:
 
