@@ -65,84 +65,145 @@ collect_installed_reverse_dependency_nevras(libdnf5::Base &base, const libdnf5::
 }
 
 // -----------------------------------------------------------------------------
-// Fetch and format detailed info for one exact NEVRA, including package
-// identity, repo, size, install reason, summary, and description. Installed
-// matches are preferred because rpmdb metadata is authoritative for the current
-// system.
+// Fetch and format details for one exact NEVRA.
+//
+// If the package is installed, show the installed package as the main package.
+// That keeps the details pane consistent when the user selects either the
+// installed row or the available upgrade row.
+//
+// Upgrade details are added from the cheapest source we already have:
+//
+//   Case 1: the selected row is the available upgrade.
+//     Use that package directly for the new version and download size.
+//
+//   Case 2: the selected row is installed.
+//     Use the installed-package cache to find the known upgrade candidate, then
+//     do one exact NEVRA lookup to get its download size.
+//
+// Do not hold the Base lock while reading the installed-package cache. The cache
+// uses g_installed_mutex and those two locks must not be held together.
 // -----------------------------------------------------------------------------
 std::string
 dnf_backend_get_package_info(const std::string &pkg_nevra)
 {
-  auto [base, guard, generation] = BaseManager::instance().acquire_read();
-  libdnf5::rpm::PackageQuery query(base);
-
-  // Exact NEVRA match only; the UI passes full package identifiers.
-  query.filter_nevra(pkg_nevra);
-
-  if (query.empty()) {
-    return "No details found for " + pkg_nevra;
-  }
-
-  // Prefer installed package if available.
-  libdnf5::rpm::PackageQuery installed(query);
-  installed.filter_installed();
-
-  // Select installed if found, otherwise use available.
-  libdnf5::rpm::PackageQuery best_candidate = installed.empty() ? query : installed;
-
-  // Keep only the latest version (highest EVR).
-  best_candidate.filter_latest_evr();
-
-  auto pkg = *best_candidate.begin();
-  PackageRow selected_row = make_package_row(pkg);
-
-  // Show the installed version when the selected row is an update candidate.
-  libdnf5::rpm::PackageQuery installed_by_name(base);
-  installed_by_name.filter_name(pkg.get_name(), libdnf5::sack::QueryCmp::EQ);
-  installed_by_name.filter_installed();
+  // Collect everything needed from libdnf5.
+  // String and integer values are copied so we can release the Base lock.
+  PackageRow selected_row;
+  unsigned long long selected_install_size = 0;
+  std::string selected_summary, selected_description;
 
   PackageRow installed_row;
   bool have_installed_counterpart = false;
-  for (auto installed_pkg : installed_by_name) {
-    if (installed_pkg.get_arch() != pkg.get_arch()) {
-      continue;
+  unsigned long long installed_install_size = 0;
+  std::string installed_summary, installed_description;
+
+  PackageRow upgrade_row;
+  bool have_upgrade = false;
+  unsigned long long upgrade_download_size = 0;
+
+  {
+    auto [base, guard, generation] = BaseManager::instance().acquire_read();
+    libdnf5::rpm::PackageQuery query(base);
+    query.filter_nevra(pkg_nevra);
+
+    if (query.empty()) {
+      return "No details found for " + pkg_nevra;
     }
 
-    PackageRow row = make_package_row(installed_pkg);
-    if (!have_installed_counterpart || libdnf5::rpm::evrcmp(row, installed_row) > 0) {
-      installed_row = row;
-      have_installed_counterpart = true;
+    libdnf5::rpm::PackageQuery installed_q(query);
+    installed_q.filter_installed();
+    libdnf5::rpm::PackageQuery best_candidate = installed_q.empty() ? query : installed_q;
+    best_candidate.filter_latest_evr();
+    auto pkg = *best_candidate.begin();
+
+    selected_row = make_package_row(pkg);
+    selected_install_size = static_cast<unsigned long long>(pkg.get_install_size());
+    selected_summary = pkg.get_summary();
+    selected_description = pkg.get_description();
+
+    // Find the installed package with the same name and architecture.
+    // This is needed whether the selected row is installed or available.
+    libdnf5::rpm::PackageQuery installed_by_name(base);
+    installed_by_name.filter_name(pkg.get_name(), libdnf5::sack::QueryCmp::EQ);
+    installed_by_name.filter_installed();
+    for (auto installed_pkg : installed_by_name) {
+      if (installed_pkg.get_arch() != pkg.get_arch()) {
+        continue;
+      }
+      PackageRow row = make_package_row(installed_pkg);
+      if (!have_installed_counterpart || libdnf5::rpm::evrcmp(row, installed_row) > 0) {
+        installed_row = row;
+        installed_install_size = static_cast<unsigned long long>(installed_pkg.get_install_size());
+        installed_summary = installed_pkg.get_summary();
+        installed_description = installed_pkg.get_description();
+        have_installed_counterpart = true;
+      }
+    }
+
+    // Case 1: the clicked row is the upgrade candidate.
+    if (have_installed_counterpart && !pkg.is_installed() && libdnf5::rpm::evrcmp(selected_row, installed_row) > 0) {
+      upgrade_row = selected_row;
+      upgrade_download_size = static_cast<unsigned long long>(pkg.get_download_size());
+      have_upgrade = true;
+    }
+  } // Base lock released: safe to read g_installed_mutex below.
+
+  // Case 2: the clicked row is the installed package.
+  // Check the annotated cache (written by List Installed) for a known upgrade
+  // candidate, then look it up by its exact NEVRA.
+  if (!have_upgrade && have_installed_counterpart) {
+    PackageRow cached_row;
+    if (dnf_backend_get_installed_package_row_by_name_arch(installed_row, cached_row) &&
+        cached_row.repo_candidate_relation == PackageRepoCandidateRelation::NEWER &&
+        !cached_row.repo_candidate_nevra.empty()) {
+      auto [base, guard, generation] = BaseManager::instance().acquire_read();
+      libdnf5::rpm::PackageQuery q(base);
+      q.filter_nevra(cached_row.repo_candidate_nevra);
+      q.filter_available();
+      if (!q.empty()) {
+        auto avail_pkg = *q.begin();
+        upgrade_row = make_package_row(avail_pkg);
+        upgrade_download_size = static_cast<unsigned long long>(avail_pkg.get_download_size());
+        have_upgrade = true;
+      }
     }
   }
+
+  // Show installed metadata in the header so the info pane is consistent
+  // whether the user clicked an installed row or an upgrade-candidate row.
+  const PackageRow display_row = have_installed_counterpart ? installed_row : selected_row;
+  const unsigned long long display_install_size =
+      have_installed_counterpart ? installed_install_size : selected_install_size;
+  const std::string &display_summary = have_installed_counterpart ? installed_summary : selected_summary;
+  const std::string &display_description = have_installed_counterpart ? installed_description : selected_description;
 
   std::ostringstream oss;
-  oss << "Name: " << pkg.get_name() << "\n"
-      << "Package ID: " << pkg.get_nevra() << "\n"
-      << "Version: " << pkg.get_version() << "\n"
-      << "Release: " << pkg.get_release() << "\n"
-      << "Arch: " << pkg.get_arch() << "\n"
-      << "Repo: " << pkg.get_repo_id() << "\n"
-      << "Install Size: " << format_package_size(static_cast<unsigned long long>(pkg.get_install_size())) << "\n";
+  oss << "Name: " << display_row.name << "\n"
+      << "Package ID: " << display_row.nevra << "\n"
+      << "Version: " << display_row.version << "\n"
+      << "Release: " << display_row.release << "\n"
+      << "Arch: " << display_row.arch << "\n"
+      << "Repo: " << display_row.repo << "\n"
+      << "Install Size: " << format_package_size(display_install_size) << "\n";
 
-  if (pkg.is_installed()) {
-    oss << "Install Reason: " << dnf_backend_install_reason_to_string(selected_row.install_reason) << "\n";
+  if (have_installed_counterpart) {
+    oss << "Install Reason: " << dnf_backend_install_reason_to_string(installed_row.install_reason) << "\n";
   }
 
-  unsigned long long download_size = static_cast<unsigned long long>(pkg.get_download_size());
-  if (download_size > 0) {
-    oss << "Download Size: " << format_package_size(download_size) << "\n";
+  if (upgrade_download_size > 0) {
+    oss << "Download Size: " << format_package_size(upgrade_download_size) << "\n";
   }
 
-  if (have_installed_counterpart && installed_row.nevra != selected_row.nevra) {
-    oss << "Installed Version: " << installed_row.display_version() << "\n";
-    oss << "Upgradable Version: " << selected_row.display_version() << "\n";
+  if (have_upgrade) {
+    oss << "Installed Version:  " << installed_row.display_version() << "\n";
+    oss << "Upgradable Version: " << upgrade_row.display_version() << "\n";
   }
 
   oss << "\n"
       << "Summary:\n"
-      << pkg.get_summary() << "\n\n"
+      << display_summary << "\n\n"
       << "Description:\n"
-      << pkg.get_description();
+      << display_description;
 
   return oss.str();
 }

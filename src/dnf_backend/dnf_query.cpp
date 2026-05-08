@@ -335,6 +335,17 @@ dnf_backend_get_installed_package_rows_interruptible(GCancellable *cancellable)
     protected_names = collect_self_protected_package_names(base);
   }
 
+  // Keep the cached installed row annotated for the details pane. The cache only
+  // stores the newest installed row for each name and architecture, so copy the
+  // annotation only from the row that matches that cached NEVRA.
+  for (const auto &row : installed.rows) {
+    auto it = installed.rows_by_name_arch.find(row.name_arch_key());
+    if (it != installed.rows_by_name_arch.end() && it->second.nevra == row.nevra) {
+      it->second.repo_candidate_relation = row.repo_candidate_relation;
+      it->second.repo_candidate_nevra = row.repo_candidate_nevra;
+    }
+  }
+
   // Publish the new installed-package cache only after a complete uncancelled scan.
   publish_installed_snapshot(installed, protected_names);
   return installed.rows;
