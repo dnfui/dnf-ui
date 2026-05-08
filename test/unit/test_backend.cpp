@@ -246,6 +246,41 @@ TEST_CASE("Package info formatting contains expected fields")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that package details show the same upgrade information from either the
+// installed row or the available update row.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package info formatting shows upgrade details consistently")
+{
+  reset_backend_globals();
+
+  auto upgrade_rows = dnf_backend_get_upgradeable_package_rows_interruptible(nullptr);
+  if (upgrade_rows.empty()) {
+    SUCCEED("No upgradeable packages in the test environment.");
+    return;
+  }
+
+  const PackageRow &upgrade_row = upgrade_rows.front();
+  PackageRow installed_row;
+  REQUIRE(dnf_backend_get_installed_package_row_by_name_arch(upgrade_row, installed_row));
+
+  auto installed_info = dnf_backend_get_package_info(installed_row.nevra);
+  auto upgrade_info = dnf_backend_get_package_info(upgrade_row.nevra);
+
+  const std::string installed_line = "Installed Version: " + installed_row.display_version();
+  const std::string upgrade_line = "Upgradable Version: " + upgrade_row.display_version();
+
+  REQUIRE(installed_info.find("Package ID: " + installed_row.nevra) != std::string::npos);
+  REQUIRE(installed_info.find(installed_line) != std::string::npos);
+  REQUIRE(installed_info.find(upgrade_line) != std::string::npos);
+  REQUIRE(installed_info.find("Download Size: ") != std::string::npos);
+
+  REQUIRE(upgrade_info.find("Package ID: " + installed_row.nevra) != std::string::npos);
+  REQUIRE(upgrade_info.find(installed_line) != std::string::npos);
+  REQUIRE(upgrade_info.find(upgrade_line) != std::string::npos);
+  REQUIRE(upgrade_info.find("Download Size: ") != std::string::npos);
+}
+
+// -----------------------------------------------------------------------------
 // Structured package row metadata tests
 // -----------------------------------------------------------------------------
 
