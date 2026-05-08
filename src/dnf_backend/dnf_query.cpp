@@ -38,6 +38,21 @@ remember_newest_row(std::map<std::string, PackageRow> &rows_by_name_arch, const 
 }
 
 // -----------------------------------------------------------------------------
+// Return each installed package name once.
+// Repo annotation only needs candidates for names that are already installed.
+// -----------------------------------------------------------------------------
+static std::vector<std::string>
+installed_package_names(const std::vector<PackageRow> &installed_rows)
+{
+  std::set<std::string> names;
+  for (const auto &row : installed_rows) {
+    names.insert(row.name);
+  }
+
+  return { names.begin(), names.end() };
+}
+
+// -----------------------------------------------------------------------------
 // Fold UTF-8 package search text before comparing it against libdnf5 metadata
 // fields. This keeps manual name and description matching aligned with GTK's
 // case-insensitive text handling for non-ASCII package summaries.
@@ -116,6 +131,39 @@ collect_available_rows_by_name_arch(libdnf5::Base &base,
 
     // Provenance is UNKNOWN until compared against the installed set. The
     // merge or annotation helpers resolve it when installed rows are available.
+    PackageRow row = make_package_row(pkg, PackageRepoCandidateRelation::UNKNOWN);
+    remember_newest_row(rows_by_name_arch, row);
+  }
+
+  return rows_by_name_arch;
+}
+
+// -----------------------------------------------------------------------------
+// Collect repo candidates only for package names that are installed locally.
+// This keeps installed-list annotation from scanning unrelated repo packages.
+// -----------------------------------------------------------------------------
+static std::map<std::string, PackageRow>
+collect_available_rows_for_installed_names(libdnf5::Base &base,
+                                           GCancellable *cancellable,
+                                           const std::vector<PackageRow> &installed_rows)
+{
+  std::map<std::string, PackageRow> rows_by_name_arch;
+  std::vector<std::string> names = installed_package_names(installed_rows);
+  if (names.empty()) {
+    return rows_by_name_arch;
+  }
+
+  libdnf5::rpm::PackageQuery query(base);
+  query.filter_available();
+  query.filter_name(names, libdnf5::sack::QueryCmp::EQ);
+  query.filter_latest_evr();
+
+  for (auto pkg : query) {
+    if (package_query_cancelled(cancellable)) {
+      rows_by_name_arch.clear();
+      return rows_by_name_arch;
+    }
+
     PackageRow row = make_package_row(pkg, PackageRepoCandidateRelation::UNKNOWN);
     remember_newest_row(rows_by_name_arch, row);
   }
@@ -328,9 +376,8 @@ dnf_backend_get_installed_package_rows_interruptible(GCancellable *cancellable)
     }
 
     annotate_installed_rows_with_repo_candidates_best_effort(
-        installed.rows, cancellable, [&base](GCancellable *annotation_cancellable) {
-          const DnfBackendSearchOptions annotation_search_options {};
-          return collect_available_rows_by_name_arch(base, annotation_cancellable, annotation_search_options);
+        installed.rows, cancellable, [&base, &installed](GCancellable *annotation_cancellable) {
+          return collect_available_rows_for_installed_names(base, annotation_cancellable, installed.rows);
         });
     protected_names = collect_self_protected_package_names(base);
   }
