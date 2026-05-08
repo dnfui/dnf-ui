@@ -151,8 +151,14 @@ column_text(const PackageItem &item, PackageColumnKind kind)
     return item.status_text;
   case PackageColumnKind::PACKAGE:
     return item.row.name;
-  case PackageColumnKind::VERSION:
+  case PackageColumnKind::VERSION: {
+    PackageRow installed_row;
+    if (dnf_backend_get_installed_package_row_by_name_arch(item.row, installed_row) &&
+        installed_row.nevra != item.row.nevra) {
+      return installed_row.display_version();
+    }
     return item.row.display_version();
+  }
   case PackageColumnKind::ARCH:
     return item.row.arch;
   case PackageColumnKind::REPO:
@@ -213,7 +219,7 @@ compare_package_items(const PackageItem &lhs, const PackageItem &rhs, PackageCol
     result = compare_text(lhs.row.name, rhs.row.name);
     break;
   case PackageColumnKind::VERSION:
-    result = compare_text(lhs.row.display_version(), rhs.row.display_version());
+    result = compare_text(column_text(lhs, PackageColumnKind::VERSION), column_text(rhs, PackageColumnKind::VERSION));
     break;
   case PackageColumnKind::ARCH:
     result = compare_text(lhs.row.arch, rhs.row.arch);

@@ -135,6 +135,7 @@ dnf_backend_get_package_info(const std::string &pkg_nevra)
 
   if (have_installed_counterpart && installed_row.nevra != selected_row.nevra) {
     oss << "Installed Version: " << installed_row.display_version() << "\n";
+    oss << "Upgradable Version: " << selected_row.display_version() << "\n";
   }
 
   oss << "\n"
