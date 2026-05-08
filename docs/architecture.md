@@ -88,7 +88,9 @@ The main window is built once and the controller files own behavior.
 - [src/ui/widgets.hpp](../src/ui/widgets.hpp) groups the widget pointers and shared UI state.
 - [src/ui/widgets.cpp](../src/ui/widgets.cpp) owns repository refresh callbacks and task helpers shared by controllers.
 - [src/ui/main_menu.cpp](../src/ui/main_menu.cpp) owns top menu actions.
-- [src/ui/package_query_controller.cpp](../src/ui/package_query_controller.cpp) owns search, browsing, list cancellation, history, and package-list refresh.
+- [src/ui/package_query_controller.cpp](../src/ui/package_query_controller.cpp) owns the public search, list, history, clear, and reload callbacks.
+- [src/ui/package_query_controls.cpp](../src/ui/package_query_controls.cpp) owns active package-query request state, Stop button handling, cancellation, and refresh completion.
+- [src/ui/package_query_tasks.cpp](../src/ui/package_query_tasks.cpp) owns package-query worker tasks and completion handlers.
 - [src/ui/package_info_controller.cpp](../src/ui/package_info_controller.cpp) owns selection handling and details loading.
 - [src/ui/package_table_view.cpp](../src/ui/package_table_view.cpp) owns the package table.
 - [src/ui/pending_transaction_controller.cpp](../src/ui/pending_transaction_controller.cpp) owns marking actions, preview, apply, and post-apply refresh.

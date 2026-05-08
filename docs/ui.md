@@ -53,16 +53,26 @@ GTK pointers that several controllers need.
 ### Package Query Controller
 
 [src/ui/package_query_controller.cpp](../src/ui/package_query_controller.cpp)
-owns the package list workflows:
+owns the public GTK callbacks for package list workflows:
 
 - list installed packages
 - browse available and installed packages together
 - list installed packages that have available updates
 - search packages
-- stop the active list request
 - restore a search from history
 - clear the package list
 - reload the current view after package state changes
+
+The supporting package query files keep the slower and more stateful parts out
+of the public callback file:
+
+- [src/ui/package_query_controls.cpp](../src/ui/package_query_controls.cpp)
+  owns active request state, Stop button handling, cancellation, and refresh
+  completion.
+- [src/ui/package_query_tasks.cpp](../src/ui/package_query_tasks.cpp)
+  owns the `GTask` workers and completion handlers for package queries.
+- [src/ui/package_query_controller_internal.hpp](../src/ui/package_query_controller_internal.hpp)
+  declares the small shared helpers used by those files.
 
 Long-running package queries run on worker threads through `GTask`. Completion
 callbacks run on the GTK thread before they update widgets.
