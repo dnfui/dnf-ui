@@ -420,6 +420,31 @@ TEST_CASE("File list query is safe and returns valid state")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that the Files tab can use an available update row to show the files
+// from the currently installed package.
+// -----------------------------------------------------------------------------
+TEST_CASE("File list query uses installed package for update rows")
+{
+  reset_backend_globals();
+
+  auto upgrade_rows = dnf_backend_get_upgradeable_package_rows_interruptible(nullptr);
+  if (upgrade_rows.empty()) {
+    SUCCEED("No upgradeable packages in the test environment.");
+    return;
+  }
+
+  const PackageRow &upgrade_row = upgrade_rows.front();
+  PackageRow installed_row;
+  REQUIRE(dnf_backend_get_installed_package_row_by_name_arch(upgrade_row, installed_row));
+
+  auto installed_files = dnf_backend_get_installed_package_files(installed_row.nevra, 1500);
+  auto upgrade_files = dnf_backend_get_installed_package_files(upgrade_row.nevra, 1500);
+
+  REQUIRE(upgrade_files.find("File list available only for installed packages.") == std::string::npos);
+  REQUIRE(upgrade_files == installed_files);
+}
+
+// -----------------------------------------------------------------------------
 // Verify that exact installed rows use repo relation to distinguish states.
 // -----------------------------------------------------------------------------
 TEST_CASE("Exact installed rows distinguish local-only and repo-backed states")

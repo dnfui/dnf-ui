@@ -189,8 +189,11 @@ dnf_backend_get_package_info(const std::string &pkg_nevra)
 }
 
 // -----------------------------------------------------------------------------
-// Return newline-separated file paths for an installed package. Large file
-// lists can overwhelm GTK clipboard transfer, so callers can pass a
+// Return newline-separated file paths for the installed package behind one
+// selected NEVRA. If the selected NEVRA is an available update, use the
+// currently installed package with the same name and architecture.
+//
+// Large file lists can overwhelm GTK clipboard transfer, so callers can pass a
 // positive max_files_for_display to append a truncation notice after that many
 // visible entries. Passing 0 returns the full list.
 // -----------------------------------------------------------------------------
@@ -202,15 +205,72 @@ dnf_backend_get_installed_package_files(const std::string &pkg_nevra, size_t max
   libdnf5::rpm::PackageQuery query(base);
 
   query.filter_nevra(pkg_nevra);
-  query.filter_installed();
-
   if (query.empty()) {
+    DNFUI_TRACE("Backend file list package not found nevra=%s", pkg_nevra.c_str());
+    return "File list available only for installed packages.";
+  }
+
+  std::string installed_nevra;
+
+  // If the selected NEVRA is already installed, use it directly.
+  libdnf5::rpm::PackageQuery exact_installed(query);
+  exact_installed.filter_installed();
+
+  if (!exact_installed.empty()) {
+    exact_installed.filter_latest_evr();
+    auto installed_pkg = *exact_installed.begin();
+    installed_nevra = installed_pkg.get_nevra();
+  } else {
+    libdnf5::rpm::PackageQuery selected_query(query);
+    selected_query.filter_latest_evr();
+    auto selected_pkg = *selected_query.begin();
+
+    // Available update packages do not own the installed file list. Look up the
+    // installed package with the same name and architecture instead.
+    libdnf5::rpm::PackageQuery installed_by_name(base);
+    installed_by_name.filter_name(selected_pkg.get_name(), libdnf5::sack::QueryCmp::EQ);
+    installed_by_name.filter_installed();
+
+    // Match the selected package architecture and keep the newest installed
+    // package if more than one installed row exists.
+    PackageRow installed_row;
+    bool have_installed_row = false;
+
+    for (auto installed_pkg : installed_by_name) {
+      if (installed_pkg.get_arch() != selected_pkg.get_arch()) {
+        continue;
+      }
+
+      PackageRow row = make_package_row(installed_pkg);
+      if (!have_installed_row || libdnf5::rpm::evrcmp(row, installed_row) > 0) {
+        installed_row = row;
+        installed_nevra = row.nevra;
+        have_installed_row = true;
+      }
+    }
+  }
+
+  if (installed_nevra.empty()) {
     DNFUI_TRACE("Backend file list not installed nevra=%s", pkg_nevra.c_str());
     return "File list available only for installed packages.";
   }
 
-  query.filter_latest_evr();
-  auto pkg = *query.begin();
+  // Load the resolved installed package before reading its recorded file list.
+  libdnf5::rpm::PackageQuery installed_files_query(base);
+  installed_files_query.filter_nevra(installed_nevra);
+  installed_files_query.filter_installed();
+
+  // This should still find the installed package. If it does not, show the
+  // normal message for packages without an installed file list.
+  if (installed_files_query.empty()) {
+    DNFUI_TRACE("Backend file list installed package not found nevra=%s installed_nevra=%s",
+                pkg_nevra.c_str(),
+                installed_nevra.c_str());
+    return "File list available only for installed packages.";
+  }
+
+  installed_files_query.filter_latest_evr();
+  auto pkg = *installed_files_query.begin();
 
   std::ostringstream files;
   size_t file_count = 0;
