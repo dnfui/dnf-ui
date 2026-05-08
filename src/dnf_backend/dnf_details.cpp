@@ -305,9 +305,11 @@ dnf_backend_get_installed_package_files(const std::string &pkg_nevra, size_t max
 }
 
 // -----------------------------------------------------------------------------
-// Retrieve dependency information for one exact NEVRA and format it for the
-// package details Dependencies tab. Installed packages also include a narrow
-// "Required By" section based on installed reverse dependencies.
+// Retrieve dependency information for the installed package behind one selected
+// NEVRA and format it for the package details Dependencies tab.
+//
+// If the selected NEVRA is an available update, use the currently installed
+// package with the same name and architecture.
 // -----------------------------------------------------------------------------
 std::string
 dnf_backend_get_package_deps(const std::string &pkg_nevra)
@@ -321,12 +323,60 @@ dnf_backend_get_package_deps(const std::string &pkg_nevra)
     return "No dependency information found for this package.";
   }
 
-  // Prefer the installed copy: its rpmdb metadata is always present and
-  // authoritative. Fall back to any available repo match if not installed.
-  libdnf5::rpm::PackageQuery installed(query);
-  installed.filter_installed();
-  libdnf5::rpm::PackageQuery &best = installed.empty() ? query : installed;
-  auto pkg = *best.begin();
+  std::string dependency_nevra;
+  bool dependency_nevra_is_installed = false;
+
+  // If the selected NEVRA is already installed, use it directly.
+  libdnf5::rpm::PackageQuery exact_installed(query);
+  exact_installed.filter_installed();
+  if (!exact_installed.empty()) {
+    exact_installed.filter_latest_evr();
+    auto installed_pkg = *exact_installed.begin();
+    dependency_nevra = installed_pkg.get_nevra();
+    dependency_nevra_is_installed = true;
+  } else {
+    libdnf5::rpm::PackageQuery selected_query(query);
+    selected_query.filter_latest_evr();
+    auto selected_pkg = *selected_query.begin();
+    dependency_nevra = selected_pkg.get_nevra();
+
+    // Available update packages do not describe the current system state.
+    // Look up the installed package with the same name and architecture instead.
+    libdnf5::rpm::PackageQuery installed_by_name(base);
+    installed_by_name.filter_name(selected_pkg.get_name(), libdnf5::sack::QueryCmp::EQ);
+    installed_by_name.filter_installed();
+
+    // Match the selected package architecture and keep the newest installed
+    // package if more than one installed row exists.
+    PackageRow installed_row;
+    bool have_installed_row = false;
+    for (auto installed_pkg : installed_by_name) {
+      if (installed_pkg.get_arch() != selected_pkg.get_arch()) {
+        continue;
+      }
+
+      PackageRow row = make_package_row(installed_pkg);
+      if (!have_installed_row || libdnf5::rpm::evrcmp(row, installed_row) > 0) {
+        installed_row = row;
+        dependency_nevra = row.nevra;
+        dependency_nevra_is_installed = true;
+        have_installed_row = true;
+      }
+    }
+  }
+
+  libdnf5::rpm::PackageQuery dependency_query(base);
+  dependency_query.filter_nevra(dependency_nevra);
+  if (dependency_nevra_is_installed) {
+    dependency_query.filter_installed();
+  }
+
+  if (dependency_query.empty()) {
+    return "No dependency information found for this package.";
+  }
+
+  dependency_query.filter_latest_evr();
+  auto pkg = *dependency_query.begin();
   std::set<std::string> required_by_nevras = collect_installed_reverse_dependency_nevras(base, pkg);
 
   std::ostringstream out;

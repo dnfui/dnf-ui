@@ -398,6 +398,31 @@ TEST_CASE("Dependency info contains expected section headers")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that dependency details for an update row describe the currently
+// installed package.
+// -----------------------------------------------------------------------------
+TEST_CASE("Dependency info uses installed package for update rows")
+{
+  reset_backend_globals();
+
+  auto upgrade_rows = dnf_backend_get_upgradeable_package_rows_interruptible(nullptr);
+  if (upgrade_rows.empty()) {
+    SUCCEED("No upgradeable packages in the test environment.");
+    return;
+  }
+
+  const PackageRow &upgrade_row = upgrade_rows.front();
+  PackageRow installed_row;
+  REQUIRE(dnf_backend_get_installed_package_row_by_name_arch(upgrade_row, installed_row));
+
+  auto installed_deps = dnf_backend_get_package_deps(installed_row.nevra);
+  auto upgrade_deps = dnf_backend_get_package_deps(upgrade_row.nevra);
+
+  REQUIRE(upgrade_deps == installed_deps);
+  REQUIRE(upgrade_deps.find("(installed packages only)") == std::string::npos);
+}
+
+// -----------------------------------------------------------------------------
 // Verify that file list lookup returns either content or a friendly state.
 // -----------------------------------------------------------------------------
 TEST_CASE("File list query is safe and returns valid state")
