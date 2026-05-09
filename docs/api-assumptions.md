@@ -224,6 +224,10 @@ Assumptions:
   ownership of the invocation.
 - Signal subscriptions invoke callbacks in the subscribing thread's
   thread-default main context.
+- On the system bus, a transaction request object belongs to the unique bus name
+  that created it.
+- The installed D-Bus policy allows standard introspection and only the
+  transaction manager and request methods the service exposes.
 
 Why this matters:
 
@@ -231,6 +235,8 @@ Why this matters:
   but each D-Bus method call must still receive exactly one final reply.
 - The GUI client can wait for `Finished` signals while also handling service
   disappearance as a normal error path.
+- Another local process should not be able to read, cancel, apply, or release a
+  request object it did not create.
 
 Tests:
 
@@ -243,6 +249,8 @@ Maintenance check:
 
 - If a method stores `GDBusMethodInvocation`, verify every success, failure,
   shutdown, and release path returns or clears it exactly once.
+- If request object methods are added, update the D-Bus policy and the owner
+  check together.
 
 ## Polkit Authorization
 

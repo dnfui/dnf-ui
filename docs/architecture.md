@@ -185,7 +185,8 @@ flowchart TD
 
 The service creates one D-Bus request object for each transaction request. The
 GUI reads preview and final result state from that object and releases it when it
-is no longer needed.
+is no longer needed. On the system bus, request object methods are accepted only
+from the client that created the request.
 
 ## Packaging
 

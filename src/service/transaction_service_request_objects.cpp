@@ -11,6 +11,54 @@
 // -----------------------------------------------------------------------------
 // Per transaction object handling
 // -----------------------------------------------------------------------------
+static bool
+request_owner_check_disabled_for_tests()
+{
+  // The Docker system bus smoke tests use one gdbus process per method.
+  // That test mode sets SERVICE_TEST_DISABLE_AUTO_RELEASE.
+  const char *disable_auto_release = g_getenv("SERVICE_TEST_DISABLE_AUTO_RELEASE");
+  return disable_auto_release && g_strcmp0(disable_auto_release, "1") == 0;
+}
+
+// -----------------------------------------------------------------------------
+// Check whether a request object method call comes from the client that created
+// that request object.
+// -----------------------------------------------------------------------------
+static bool
+request_call_is_from_owner(TransactionSession *session, GDBusMethodInvocation *invocation, std::string &error_out)
+{
+  error_out.clear();
+
+  if (!session || !session->service) {
+    error_out = _("Transaction session is not available.");
+    return false;
+  }
+
+  // The installed system bus service gives each request object to the client
+  // that created it. Other clients may know the object path, but they must not
+  // be allowed to read, cancel, apply, or release that request.
+  //
+  // The session bus path is only used for local service tests. Some system bus
+  // smoke tests also use short lived gdbus calls and opt out with the same test
+  // switch that disables automatic release.
+  if (session->service->bus_type != G_BUS_TYPE_SYSTEM || request_owner_check_disabled_for_tests()) {
+    return true;
+  }
+
+  std::string sender;
+  if (!get_invocation_sender(invocation, sender, error_out)) {
+    return false;
+  }
+
+  if (sender != session->owner_name) {
+    error_out = _("Transaction request belongs to another client.");
+    return false;
+  }
+
+  return true;
+}
+
+// -----------------------------------------------------------------------------
 // Handle one D-Bus method call for a live transaction request object.
 // -----------------------------------------------------------------------------
 static void
@@ -35,6 +83,14 @@ on_transaction_method_call(GDBusConnection *,
   if (g_strcmp0(interface_name, kTransactionInterface) != 0) {
     g_dbus_method_invocation_return_error(
         invocation, G_DBUS_ERROR, G_DBUS_ERROR_UNKNOWN_METHOD, "%s", _("Unknown method."));
+    return;
+  }
+
+  // Check ownership before any request state can be read or changed.
+  std::string owner_error;
+  if (!request_call_is_from_owner(session, invocation, owner_error)) {
+    g_dbus_method_invocation_return_error(
+        invocation, G_DBUS_ERROR, G_DBUS_ERROR_ACCESS_DENIED, "%s", owner_error.c_str());
     return;
   }
 

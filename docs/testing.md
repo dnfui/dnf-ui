@@ -71,6 +71,12 @@ These tests protect:
 - system bus authorization path
 - disconnect cleanup
 
+The Docker system bus preview and apply tests use `gdbus` as a short-lived
+client for each method call. They set `SERVICE_TEST_DISABLE_AUTO_RELEASE=1` so
+the shell tests can inspect the request object after the start call exits and
+keep request ownership checks compatible with that test shape. The installed
+service unit does not set this variable.
+
 ## Common Commands
 
 Run the native test suite:

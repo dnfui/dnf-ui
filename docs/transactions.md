@@ -121,6 +121,14 @@ The exact D-Bus shape is declared in
 Shared names live in
 [src/service/transaction_service_dbus.hpp](../src/service/transaction_service_dbus.hpp).
 
+On the system bus, request object methods must be called by the same client that
+created the request. This keeps another local process from reading, cancelling,
+applying, or releasing someone else's transaction request.
+
+The D-Bus policy allows standard introspection and only the manager and request
+methods listed above. `Apply` still has its own Polkit check before packages can
+be changed.
+
 ## Request Lifecycle
 
 One transaction request normally moves through these states:

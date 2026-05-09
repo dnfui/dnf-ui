@@ -96,12 +96,25 @@ wait_for_release() {
           printf "%s\n" "$result"
           return 0
           ;;
+        *"AccessDenied"* )
+          # A different gdbus process is not the request owner, so it may be
+          # denied until cleanup removes the request object.
+          ;;
         * )
           printf "%s\n" "$result"
           echo "*** Transaction request did not fail with the expected release error ***" >&2
           return 1
           ;;
       esac
+
+      if [ "$SECONDS" -ge "$deadline" ]; then
+        echo "*** Timed out waiting for released transaction request to disappear after ${TIMEOUT_SECONDS} seconds ***" >&2
+        echo "*** Last observed result: $result ***" >&2
+        return 1
+      fi
+
+      sleep 1
+      continue
     fi
 
     if printf "%s\n" "$result" | grep -Fq "'preview-running'"; then
