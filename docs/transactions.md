@@ -182,6 +182,16 @@ After authorization succeeds, the service runs backend apply work on a worker
 thread. Progress lines are emitted through the request object's `Progress`
 signal. Final state is emitted through `Finished`.
 
+The apply progress stream comes from two libdnf5 callback paths:
+
+- `libdnf5::repo::DownloadCallbacks` reports package download progress and
+  mirror failures.
+- `libdnf5::rpm::TransactionCallbacks` reports rpm verification, transaction
+  preparation, one line per package action, script errors, and unpack errors.
+
+The D-Bus signal still carries plain text progress lines. The structure stays
+simple so the GUI can append messages without knowing libdnf5 callback types.
+
 Only one apply operation is allowed at a time inside the service.
 
 ## Cancellation and Release
