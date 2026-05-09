@@ -543,6 +543,18 @@ append_preview_item(TransactionPreview &preview, const libdnf5::base::Transactio
 }
 
 // -----------------------------------------------------------------------------
+// Compare the package actions the user approved with the actions resolved at apply time.
+// Any difference means the package state changed after preview.
+// -----------------------------------------------------------------------------
+static bool
+transaction_previews_match(const TransactionPreview &left, const TransactionPreview &right)
+{
+  return left.install == right.install && left.upgrade == right.upgrade && left.downgrade == right.downgrade &&
+      left.reinstall == right.reinstall && left.remove == right.remove &&
+      left.disk_space_delta == right.disk_space_delta;
+}
+
+// -----------------------------------------------------------------------------
 // Resolve the final transaction and group the resulting package actions for
 // the confirmation dialog. This deliberately shares resolve_transaction_plan
 // with apply so the preview and actual transaction use identical dependency
@@ -600,7 +612,8 @@ dnf_backend_apply_transaction(const std::vector<std::string> &install_nevras,
                               const std::vector<std::string> &reinstall_nevras,
                               std::string &error_out,
                               const TransactionProgressCallback &progress_cb,
-                              bool upgrade_all)
+                              bool upgrade_all,
+                              const TransactionPreview *approved_preview)
 {
   error_out.clear();
 
@@ -618,6 +631,23 @@ dnf_backend_apply_transaction(const std::vector<std::string> &install_nevras,
             base, install_nevras, remove_nevras, reinstall_nevras, error_out, progress_cb, transaction, upgrade_all)) {
       DNFUI_TRACE("Transaction apply resolve failed: %s", error_out.c_str());
       return false;
+    }
+
+    // The user approved the preview shown by the service.
+    // If the package state changed before Apply, stop before downloads or RPM transaction work starts.
+    if (approved_preview) {
+      TransactionPreview resolved_preview;
+      for (const auto &item : transaction->get_transaction_packages()) {
+        append_preview_item(resolved_preview, item);
+      }
+
+      if (!transaction_previews_match(*approved_preview, resolved_preview)) {
+        error_out =
+            "Package state changed after the preview was prepared. Review the transaction again before applying.";
+        DNFUI_TRACE("Transaction apply rejected because resolved preview changed");
+        emit_progress_line(progress_cb, error_out);
+        return false;
+      }
     }
 
     if (transaction->get_transaction_packages().empty()) {

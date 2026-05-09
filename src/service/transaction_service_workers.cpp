@@ -362,8 +362,24 @@ run_transaction_apply(TransactionSession *session)
 
   try {
     std::string error_out;
+    TransactionPreview approved_preview;
     queue_transaction_progress(session, _("Loading package base..."));
     auto progress_cb = [session](const std::string &line) { queue_transaction_progress(session, line); };
+
+    // Keep a copy of the approved preview so the backend can refuse apply if a
+    // later resolve produces different package actions.
+    {
+      std::lock_guard<std::mutex> lock(session->state_mutex);
+      approved_preview = session->preview;
+    }
+
+    if (transaction_request_needs_available_repos(session->request)) {
+      queue_transaction_progress(session, _("Refreshing backend state..."));
+      BaseManager::instance().rebuild();
+    } else {
+      queue_transaction_progress(session, _("Refreshing installed package state..."));
+      BaseManager::instance().rebuild_system_only();
+    }
 
     DNFUI_TRACE("Transaction service apply start path=%s", session->object_path.c_str());
     bool ok = dnf_backend_apply_transaction(session->request.install,
@@ -371,7 +387,8 @@ run_transaction_apply(TransactionSession *session)
                                             session->request.reinstall,
                                             error_out,
                                             progress_cb,
-                                            session->request.upgrade_all);
+                                            session->request.upgrade_all,
+                                            &approved_preview);
 
     std::string details;
     TransactionStage stage = TransactionStage::APPLY_FAILED;

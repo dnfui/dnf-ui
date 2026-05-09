@@ -182,6 +182,10 @@ After authorization succeeds, the service runs backend apply work on a worker
 thread. Progress lines are emitted through the request object's `Progress`
 signal. Final state is emitted through `Finished`.
 
+Before applying, the service refreshes package state again. The backend then
+resolves the transaction and compares it with the preview the user approved. If
+the result changed, apply is refused and the user must review a new preview.
+
 The apply progress stream comes from two libdnf5 callback paths:
 
 - `libdnf5::repo::DownloadCallbacks` reports package download progress and

@@ -143,6 +143,30 @@ TEST_CASE("Transaction apply rejects empty upgrade-all results")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that apply refuses to run when the resolved transaction no longer
+// matches the preview that was shown to the user.
+// -----------------------------------------------------------------------------
+TEST_CASE("Transaction apply rejects changed approved preview")
+{
+  reset_backend_globals();
+  ScopedEnvVar force_empty_upgrade_all("DNFUI_TEST_SKIP_UPGRADE_ALL_GOAL_JOB", "1");
+
+  TransactionPreview approved_preview;
+  approved_preview.install.push_back("package-from-old-preview");
+
+  std::string error;
+  std::vector<std::string> progress_lines;
+
+  bool ok = dnf_backend_apply_transaction(
+      {}, {}, {}, error, [&](const std::string &line) { progress_lines.push_back(line); }, true, &approved_preview);
+
+  REQUIRE_FALSE(ok);
+  REQUIRE(error ==
+          "Package state changed after the preview was prepared. Review the transaction again before applying.");
+  REQUIRE(progress_contains(progress_lines, "Package state changed after the preview was prepared."));
+}
+
+// -----------------------------------------------------------------------------
 // Transaction preview success path tests
 // -----------------------------------------------------------------------------
 

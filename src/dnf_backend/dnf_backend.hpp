@@ -296,7 +296,8 @@ bool dnf_backend_apply_transaction(const std::vector<std::string> &install_nevra
                                    const std::vector<std::string> &reinstall_nevras,
                                    std::string &error_out,
                                    const TransactionProgressCallback &progress_cb = {},
-                                   bool upgrade_all = false);
+                                   bool upgrade_all = false,
+                                   const TransactionPreview *approved_preview = nullptr);
 
 #ifdef DNFUI_BUILD_TESTS
 // -----------------------------------------------------------------------------
