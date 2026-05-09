@@ -141,7 +141,13 @@ not keep changelog metadata resident.
 ## Transactions
 
 [src/dnf_backend/dnf_transaction.cpp](../src/dnf_backend/dnf_transaction.cpp)
-contains the backend transaction logic.
+contains the backend transaction resolver and apply entry points.
+
+[src/dnf_backend/dnf_transaction_callbacks.cpp](../src/dnf_backend/dnf_transaction_callbacks.cpp)
+contains the libdnf download and rpm progress callback adapters.
+
+[src/dnf_backend/dnf_transaction_format.cpp](../src/dnf_backend/dnf_transaction_format.cpp)
+contains shared transaction text formatting.
 
 It resolves a preview before apply, then applies the transaction if the service
 authorizes it. Download progress is reported through a callback so the service
@@ -155,8 +161,9 @@ transaction service so Polkit can authorize it.
 
 ## Internal Helpers
 
-[src/dnf_backend/dnf_internal.hpp](../src/dnf_backend/dnf_internal.hpp) is
-shared only by backend implementation files.
+[src/dnf_backend/dnf_internal.hpp](../src/dnf_backend/dnf_internal.hpp) and
+[src/dnf_backend/dnf_transaction_internal.hpp](../src/dnf_backend/dnf_transaction_internal.hpp)
+are shared only by backend implementation files.
 
 It is not a public UI contract. New UI code should include
 `dnf_backend.hpp` instead.

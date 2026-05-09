@@ -193,6 +193,9 @@ The apply progress stream comes from two libdnf5 callback paths:
 - `libdnf5::rpm::TransactionCallbacks` reports rpm verification, transaction
   preparation, one line per package action, script errors, and unpack errors.
 
+The callback adapters live in
+[src/dnf_backend/dnf_transaction_callbacks.cpp](../src/dnf_backend/dnf_transaction_callbacks.cpp).
+
 The D-Bus signal still carries plain text progress lines. The structure stays
 simple so the GUI can append messages without knowing libdnf5 callback types.
 

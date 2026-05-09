@@ -85,6 +85,7 @@ Maintenance check:
 Code:
 
 - [src/dnf_backend/dnf_transaction.cpp](../src/dnf_backend/dnf_transaction.cpp)
+- [src/dnf_backend/dnf_transaction_callbacks.cpp](../src/dnf_backend/dnf_transaction_callbacks.cpp)
 - [src/service/transaction_service_workers.cpp](../src/service/transaction_service_workers.cpp)
 
 Assumption:

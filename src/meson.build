@@ -4,6 +4,8 @@ backend_sources = files(
   'dnf_backend/dnf_details.cpp',
   'dnf_backend/dnf_query.cpp',
   'dnf_backend/dnf_state.cpp',
+  'dnf_backend/dnf_transaction_callbacks.cpp',
+  'dnf_backend/dnf_transaction_format.cpp',
   'dnf_backend/dnf_transaction.cpp',
 )
 
