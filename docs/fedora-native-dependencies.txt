@@ -1,0 +1,26 @@
+# Fedora packages needed for native DNF UI development.
+# This file is read by the installer script in utils.
+# Keep this list in sync with dnf-ui.spec and the Dockerfile.
+#
+# The list covers native builds, unit tests, package validation, RPM builds,
+# translations, and local transaction service smoke tests.
+
+appstream
+catch-devel
+dbus-daemon
+desktop-file-utils
+gcc-c++
+gettext
+git
+glib2-devel
+gtk4-devel
+libdnf5-devel
+make
+meson
+ninja-build
+pkgconf
+polkit
+polkit-devel
+rpm-build
+systemd-devel
+systemd-rpm-macros

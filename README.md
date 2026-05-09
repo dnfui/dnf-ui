@@ -62,21 +62,14 @@ The goal is not to experiment for its own sake, but to build something genuinely
 
 ### Native build
 
-Build dependencies:
+Fedora build dependencies are listed in
+[docs/fedora-native-dependencies.txt](docs/fedora-native-dependencies.txt).
 
-- gcc-c++
-- make
-- meson
-- ninja-build
-- pkgconf
-- libdnf5-devel
-- gtk4-devel
-- polkit-devel
-- rpm-build
+Install them with:
 
-Test dependency:
-
-- catch-devel
+```sh
+./utils/install_fedora_dependencies.sh
+```
 
 Meson handles the real build and install logic.
 The `Makefile` is a thin task runner for the common developer commands.
