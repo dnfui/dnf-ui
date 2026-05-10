@@ -228,6 +228,12 @@ Notes:
 - `make srpm` includes files tracked by Git in the generated source tarball
 - The Docker RPM targets use the existing Fedora development image and write artifacts into the same `./rpmbuild/` tree
 
+Run `rpmlint` on the source RPM and binary RPMs:
+
+```sh
+rpmlint dnf-ui-latest.src.rpm rpmbuild/RPMS/*/*.rpm
+```
+
 To check that the package builds without depending on files or packages from your
 own system, rebuild the generated source RPM in an isolated Fedora build
 environment with `mock`:

@@ -191,6 +191,34 @@ MEMCHECK_GEN_SUPPRESSIONS=yes make memcheck-tests
 - Use the `dockerservicesystem*` targets to test the real system bus authorization flow
 - Use native Fedora to test the real desktop Polkit prompt
 
+## Fedora review checks
+
+Fedora package review expects `rpmlint` output for the source RPM and all binary
+RPMs produced by the build. It is also normal to check that the source RPM builds
+in `mock`.
+
+Build RPMs and run `rpmlint`:
+
+```sh
+make rpm
+rpmlint dnf-ui-latest.src.rpm rpmbuild/RPMS/*/*.rpm
+```
+
+Keep the `rpmlint` output so it can be included in the Fedora package review.
+
+Build the source RPM in a clean Fedora build environment:
+
+```sh
+make srpm
+mock -r fedora-rawhide-x86_64 --rebuild dnf-ui-latest.src.rpm
+```
+
+Use the Fedora release and architecture that match the package review you are
+preparing. Running `mock` may require the user to be a member of the `mock`
+group.
+
+Reference: <https://docs.fedoraproject.org/en-US/packaging-guidelines/ReviewGuidelines/>
+
 ## What to test after changes
 
 For documentation-only changes, run `git diff --check`.

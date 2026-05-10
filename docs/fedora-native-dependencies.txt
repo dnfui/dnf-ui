@@ -17,10 +17,12 @@ gtk4-devel
 libdnf5-devel
 make
 meson
+mock
 ninja-build
 pkgconf
 polkit
 polkit-devel
+rpmlint
 rpm-build
 systemd-devel
 systemd-rpm-macros
