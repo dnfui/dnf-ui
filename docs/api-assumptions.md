@@ -214,6 +214,8 @@ Code:
 - [src/service/transaction_service_signals.cpp](../src/service/transaction_service_signals.cpp)
 - [src/service/transaction_service_introspection.cpp](../src/service/transaction_service_introspection.cpp)
 - [src/transaction_service_client.cpp](../src/transaction_service_client.cpp)
+- [src/transaction_service_client_dbus.cpp](../src/transaction_service_client_dbus.cpp)
+- [src/transaction_service_client_wait.cpp](../src/transaction_service_client_wait.cpp)
 
 Assumptions:
 

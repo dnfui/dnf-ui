@@ -162,6 +162,8 @@ Search, browsing, and details stay inside the GUI process.
 Preview and apply go through the transaction service:
 
 - GUI client: [src/transaction_service_client.cpp](../src/transaction_service_client.cpp)
+- GUI client D-Bus calls: [src/transaction_service_client_dbus.cpp](../src/transaction_service_client_dbus.cpp)
+- GUI client wait handling: [src/transaction_service_client_wait.cpp](../src/transaction_service_client_wait.cpp)
 - service runtime and shutdown: [src/service/transaction_service.cpp](../src/service/transaction_service.cpp)
 - service request objects: [src/service/transaction_service_request_objects.cpp](../src/service/transaction_service_request_objects.cpp)
 - service preview and apply workers: [src/service/transaction_service_workers.cpp](../src/service/transaction_service_workers.cpp)

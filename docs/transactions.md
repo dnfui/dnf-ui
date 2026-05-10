@@ -20,6 +20,8 @@ Important files:
 - [src/ui/transaction_progress.cpp](../src/ui/transaction_progress.cpp)
 - [src/transaction_request.hpp](../src/transaction_request.hpp)
 - [src/transaction_service_client.cpp](../src/transaction_service_client.cpp)
+- [src/transaction_service_client_dbus.cpp](../src/transaction_service_client_dbus.cpp)
+- [src/transaction_service_client_wait.cpp](../src/transaction_service_client_wait.cpp)
 - [src/service/transaction_service.cpp](../src/service/transaction_service.cpp)
 - [src/service/transaction_service_authorization.cpp](../src/service/transaction_service_authorization.cpp)
 - [src/service/transaction_service_manager.cpp](../src/service/transaction_service_manager.cpp)
