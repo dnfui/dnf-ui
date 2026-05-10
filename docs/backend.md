@@ -1,11 +1,11 @@
-# Backend Internals
+# Backend internals
 
 This document explains how DNF UI talks to libdnf5.
 
 For source-backed libdnf5 assumptions, see
 [External API assumptions](api-assumptions.md).
 
-## Public Backend Contract
+## Public backend contract
 
 The UI uses [src/dnf_backend/dnf_backend.hpp](../src/dnf_backend/dnf_backend.hpp).
 
@@ -40,7 +40,7 @@ The Base has a generation counter. When the Base is rebuilt, the generation is
 incremented. UI tasks and search caches use that value to reject outdated
 results.
 
-## Query Flow
+## Query flow
 
 [src/dnf_backend/dnf_query.cpp](../src/dnf_backend/dnf_query.cpp) builds the
 package rows used by search, browse, and installed-list views.
@@ -58,7 +58,7 @@ The browse and search views merge repository candidates with installed-only
 packages. The visible result keeps one row for each package name and
 architecture pair.
 
-## Installed Snapshot
+## Installed snapshot
 
 [src/dnf_backend/dnf_state.cpp](../src/dnf_backend/dnf_state.cpp) owns cached
 state about installed packages.
@@ -86,7 +86,7 @@ from the GTK thread.
 The snapshot is updated only after a complete installed-package scan. Cancelled
 queries do not publish partial installed state.
 
-## Package Status
+## Package status
 
 `dnf_backend_get_package_install_state` classifies one visible row as:
 
@@ -100,7 +100,7 @@ Exact installed rows prefer the repository-candidate relation recorded on the
 row. Available rows fall back to the installed snapshot so upgrade badges can be
 shown without duplicating rows.
 
-## Self Protection
+## Self protection
 
 DNF UI blocks removing or reinstalling the package that owns the running GUI
 executable from inside the app.
@@ -117,7 +117,7 @@ The relevant functions are:
 - `pending_transaction_validate_request`
 - `validate_transaction_request_for_service`
 
-## Package Details
+## Package details
 
 [src/dnf_backend/dnf_details.cpp](../src/dnf_backend/dnf_details.cpp) formats
 text for the package details notebook.
@@ -159,7 +159,7 @@ expanding the request into many package specs in the GUI.
 The GUI should not call transaction apply directly. Apply should go through the
 transaction service so Polkit can authorize it.
 
-## Internal Helpers
+## Internal helpers
 
 [src/dnf_backend/dnf_internal.hpp](../src/dnf_backend/dnf_internal.hpp) and
 [src/dnf_backend/dnf_transaction_internal.hpp](../src/dnf_backend/dnf_transaction_internal.hpp)

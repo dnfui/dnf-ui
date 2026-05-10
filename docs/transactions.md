@@ -1,4 +1,4 @@
-# Transaction Service Internals
+# Transaction service internals
 
 This document explains how package preview and apply work.
 
@@ -40,7 +40,7 @@ The transaction service implementation is split by responsibility:
 - `transaction_service_limits.cpp` enforces live request limits.
 - `transaction_service_internal.hpp` is the private shared state for these files.
 
-## Request Model
+## Request model
 
 `TransactionRequest` is shared by the GUI and the service.
 
@@ -61,7 +61,7 @@ method and resolved by libdnf5 as one upgrade job for all installed packages.
 The GUI builds this request from pending actions in
 [src/ui/pending_transaction_request.cpp](../src/ui/pending_transaction_request.cpp).
 
-## GUI Flow
+## GUI flow
 
 When the user clicks Apply:
 
@@ -96,7 +96,7 @@ flowchart TD
     Refresh --> Release[Release request object]
 ```
 
-## D-Bus Objects
+## D-Bus objects
 
 The service exposes one manager object and one request object per transaction.
 
@@ -129,7 +129,7 @@ The D-Bus policy allows standard introspection and only the manager and request
 methods listed above. `Apply` still has its own Polkit check before packages can
 be changed.
 
-## Request Lifecycle
+## Request lifecycle
 
 One transaction request normally moves through these states:
 
@@ -209,7 +209,7 @@ simple so the GUI can append messages without knowing libdnf5 callback types.
 
 Only one apply operation is allowed at a time inside the service.
 
-## Cancellation and Release
+## Cancellation and release
 
 Preview can be cancelled before apply starts.
 
@@ -224,7 +224,7 @@ objects so abandoned requests do not accumulate. If this happens before package
 apply work starts, the service marks the request cancelled and stops before
 package work begins.
 
-## After Apply
+## After apply
 
 After successful apply, both the service and GUI refresh package state:
 

@@ -1,4 +1,4 @@
-# DNF UI Architecture
+# DNF UI architecture
 
 This is the overview document for DNF UI.
 
@@ -19,7 +19,7 @@ details, lets the user mark package actions, and shows a review step. Package
 apply work is sent to a small D-Bus transaction service, where Polkit can
 authorize the privileged step.
 
-## Key Terms
+## Key terms
 
 - GTK is the user interface toolkit used to build the window.
 - libdnf5 is the Fedora package management library used for package queries and
@@ -37,7 +37,7 @@ authorize the privileged step.
 - GTask is the GLib helper used to run slow work away from the GTK thread and
   return results safely.
 
-## Main Parts
+## Main parts
 
 The application is split into five main areas:
 
@@ -80,7 +80,7 @@ flowchart TD
     Activate --> Refresh[periodic installed refresh]
 ```
 
-## UI Structure
+## UI structure
 
 The main window is built once and the controller files own behavior.
 
@@ -109,7 +109,7 @@ flowchart TD
     Finish --> UI[Refresh visible widgets]
 ```
 
-## Backend Structure
+## Backend structure
 
 The UI does not use libdnf5 types directly.
 
@@ -139,7 +139,7 @@ metadata is local. Available-package changelogs use a short-lived temporary Base
 so that normal list, search, and transaction paths do not keep that optional
 metadata resident.
 
-## Package List Model
+## Package list model
 
 The main list shows one row for each package name and architecture pair.
 
@@ -155,7 +155,7 @@ is important because it lets the UI answer:
 - whether a row is available, installed, local-only, or upgradeable
 - whether a package owns the running GUI executable and must be protected from removal inside the app
 
-## Transaction Boundary
+## Transaction boundary
 
 Search, browsing, and details stay inside the GUI process.
 
@@ -199,10 +199,13 @@ The important files are:
 - [packaging/com.fedora.dnfui.policy](../packaging/com.fedora.dnfui.policy)
 - [packaging/dnfui-service.service](../packaging/dnfui-service.service)
 
+Systemd hardening decisions for the transaction service are documented in
+[docs/systemd-hardening.md](systemd-hardening.md).
+
 Meson owns the real build and install rules. The `Makefile` is a task runner for
 common developer commands.
 
-## Reading Order
+## Reading order
 
 A practical reading order for new contributors:
 

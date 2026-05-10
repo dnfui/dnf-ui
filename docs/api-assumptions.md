@@ -1,4 +1,4 @@
-# External API Assumptions
+# External API assumptions
 
 This document records external API behavior that DNF UI relies on.
 
@@ -7,7 +7,7 @@ Polkit behavior instead of unverified assumptions. When a critical flow changes,
 update the matching entry here and make sure the linked source still supports
 the code.
 
-## Source Priority
+## Source priority
 
 Use sources in this order:
 
@@ -29,7 +29,7 @@ Useful checks in the target build environment:
 Inside the Docker image, critical libdnf5 declarations can be checked under
 `/usr/include/libdnf5`.
 
-## Source Links
+## Source links
 
 - libdnf5 C++ API overview: <https://dnf5.readthedocs.io/en/latest/api/c%2B%2B/libdnf5.html>
 - GIO `GTask`: <https://docs.gtk.org/gio/class.Task.html>
@@ -39,7 +39,7 @@ Inside the Docker image, critical libdnf5 declarations can be checked under
 - GIO `GDBusMethodInvocation`: <https://docs.gtk.org/gio/class.DBusMethodInvocation.html>
 - Polkit `PolkitAuthority`: <https://polkit.pages.freedesktop.org/polkit/PolkitAuthority.html>
 
-## libdnf5 Package Queries
+## libdnf5 package queries
 
 Code:
 
@@ -80,7 +80,7 @@ Maintenance check:
 - If the upgradable list changes, verify `package_query.hpp` in the build image
   and rerun the backend tests.
 
-## libdnf5 Upgrade All
+## libdnf5 upgrade all
 
 Code:
 
@@ -118,7 +118,7 @@ Maintenance check:
 - If upgrade-all behavior changes, verify `goal.hpp`, then test preview and
   apply in Docker before any native system test.
 
-## Shared libdnf5 Base Access
+## Shared libdnf5 Base access
 
 Code:
 
@@ -164,7 +164,7 @@ Maintenance check:
 - Any change that touches `BaseManager`, `dnf_state.cpp`, or transaction
   resolution should be reviewed for lock ordering.
 
-## GTK and GIO Background Work
+## GTK and GIO background work
 
 Code:
 
@@ -204,7 +204,7 @@ Maintenance check:
   have either cancellation coverage or a clear reason why cancellation is not
   supported.
 
-## GDBus Transaction Objects
+## GDBus transaction objects
 
 Code:
 
@@ -252,7 +252,7 @@ Maintenance check:
 - If request object methods are added, update the D-Bus policy and the owner
   check together.
 
-## Polkit Authorization
+## Polkit authorization
 
 Code:
 
@@ -288,7 +288,7 @@ Maintenance check:
   changes need the matching system-bus tests and a native prompt check when
   possible.
 
-## Dependency Update Checklist
+## Dependency update checklist
 
 When updating Fedora base images, libdnf5, GTK, GLib, GIO, or Polkit, revalidate
 the affected entries in this document.
@@ -301,7 +301,7 @@ Minimum checks:
 - run the matching Docker service tests for transaction-service changes
 - run a native Polkit prompt test for authorization changes when possible
 
-## Documentation and Test Gaps
+## Documentation and test gaps
 
 Some behavior is intentionally hard to prove in unit tests:
 

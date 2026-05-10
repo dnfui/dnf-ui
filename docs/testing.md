@@ -5,7 +5,7 @@ This document explains the test layout and what each group protects.
 For the external API behavior these tests help protect, see
 [External API assumptions](api-assumptions.md).
 
-## Test Types
+## Test types
 
 The project uses:
 
@@ -16,7 +16,7 @@ The project uses:
 The Catch2 tests are the fastest place to check backend and client behavior.
 The shell smoke tests exercise the transaction service through D-Bus.
 
-## Test Dependencies
+## Test dependencies
 
 The test build needs:
 
@@ -25,7 +25,7 @@ The test build needs:
 
 On Fedora, `catch-devel` provides `pkgconfig(catch2-with-main)`.
 
-## Catch2 Tests
+## Catch2 tests
 
 Key files:
 
@@ -50,7 +50,7 @@ These tests protect:
 - service client error handling
 - offline and cached metadata behavior
 
-## Service Smoke Tests
+## Service smoke tests
 
 The service tests run the transaction service through D-Bus.
 
@@ -77,7 +77,7 @@ the shell tests can inspect the request object after the start call exits and
 keep request ownership checks compatible with that test shape. The installed
 service unit does not set this variable.
 
-## Common Commands
+## Common commands
 
 Run the native test suite:
 
@@ -146,7 +146,7 @@ DOCKER_NETWORK_MODE=none make dockerrun
 The Makefile is a task runner. Meson owns build configuration and test
 definitions.
 
-## Memory Checks
+## Memory checks
 
 Run a quick smoke test under Valgrind Memcheck:
 
@@ -185,13 +185,13 @@ MEMCHECK_TRACK_FDS=yes make memcheck-tests
 MEMCHECK_GEN_SUPPRESSIONS=yes make memcheck-tests
 ```
 
-## Docker Notes
+## Docker notes
 
 - `make dockerrun` uses the session bus service path for convenience
 - Use the `dockerservicesystem*` targets to test the real system bus authorization flow
 - Use native Fedora to test the real desktop Polkit prompt
 
-## What To Test After Changes
+## What to test after changes
 
 For documentation-only changes, run `git diff --check`.
 

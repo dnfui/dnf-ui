@@ -1,11 +1,11 @@
-# UI Internals
+# UI internals
 
 This document explains how the GTK user interface is organized.
 
 For source-backed GTK and GIO assumptions, see
 [External API assumptions](api-assumptions.md).
 
-## Main Idea
+## Main idea
 
 `main_window.cpp` builds the widgets. Controller files own behavior.
 
@@ -16,7 +16,7 @@ parts of the window they own.
 This keeps widget construction, package query behavior, package details, and
 pending transaction behavior in separate files.
 
-## Window Construction
+## Window construction
 
 [src/ui/main_window.cpp](../src/ui/main_window.cpp) creates the main window.
 
@@ -34,7 +34,7 @@ It is responsible for:
 It should not contain package query logic or transaction apply logic. Those
 belong in the controller files.
 
-## Shared Widget State
+## Shared widget state
 
 [src/ui/widgets.hpp](../src/ui/widgets.hpp) groups the widget pointers into
 smaller structs:
@@ -48,9 +48,9 @@ smaller structs:
 This state is not meant to hide ownership. It is a practical place to store
 GTK pointers that several controllers need.
 
-## Controller Files
+## Controller files
 
-### Package Query Controller
+### Package query controller
 
 [src/ui/package_query_controller.cpp](../src/ui/package_query_controller.cpp)
 owns the public GTK callbacks for package list workflows:
@@ -81,7 +81,7 @@ Search results are cached in [src/ui/package_query_cache.cpp](../src/ui/package_
 The cache is tied to the current backend Base generation, so a repository
 refresh or transaction rebuild cannot reuse outdated package rows.
 
-### Package Info Controller
+### Package info controller
 
 [src/ui/package_info_controller.cpp](../src/ui/package_info_controller.cpp)
 owns the details pane for the selected package.
@@ -98,7 +98,7 @@ Details are loaded in the background. The controller records the selected NEVRA
 and backend generation when the task starts. If the selected package changes or
 the backend generation changes, the old result is ignored.
 
-### Package Table View
+### Package table view
 
 [src/ui/package_table_view.cpp](../src/ui/package_table_view.cpp) owns the
 package table model and columns.
@@ -112,7 +112,7 @@ status text, tooltip text, and CSS classes separate from table construction.
 [src/ui/package_table_context_menu.cpp](../src/ui/package_table_context_menu.cpp)
 owns right-click actions for package rows.
 
-### Pending Transaction Controller
+### Pending transaction controller
 
 [src/ui/pending_transaction_controller.cpp](../src/ui/pending_transaction_controller.cpp)
 owns package actions before they are applied.
@@ -142,7 +142,7 @@ row-selection rules in one place. This is needed because an update can be shown
 from either the installed package list or the upgradable package list. The helper
 must not run libdnf queries because it is called while updating GTK controls.
 
-### Transaction Progress
+### Transaction progress
 
 [src/ui/transaction_progress.cpp](../src/ui/transaction_progress.cpp) owns the
 live progress window shown while apply is running.
@@ -155,7 +155,7 @@ The progress window can receive progress messages after the apply request has
 started. The code keeps the progress state alive while queued GTK callbacks are
 still pending.
 
-## Background Work Pattern
+## Background work pattern
 
 UI code follows this pattern for slow work:
 
@@ -169,7 +169,7 @@ UI code follows this pattern for slow work:
 This keeps the window responsive and prevents old results from replacing newer
 state.
 
-## Refresh Rules
+## Refresh rules
 
 Refreshing repositories or applying a transaction can change package metadata.
 
