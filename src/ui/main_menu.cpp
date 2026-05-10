@@ -89,7 +89,7 @@ on_menu_about(GSimpleAction *, GVariant *, gpointer user_data)
                         "comments",
                         _("Graphical package manager frontend for Fedora."),
                         "website",
-                        "https://github.com/ErikMN/dnf_ui",
+                        "https://github.com/ErikMN/dnf-ui",
                         "website-label",
                         _("GitHub repository"),
                         "authors",
