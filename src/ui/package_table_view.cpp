@@ -39,7 +39,7 @@ refresh_model_status_values(GtkColumnView *view, SearchWidgets *widgets)
     GObject *obj = G_OBJECT(g_list_model_get_item(items_model, i));
     PackageItem *item = mutable_package_item_from_object(obj);
     if (item) {
-      fill_package_item_status(widgets, *item);
+      package_table_fill_item_status(widgets, *item);
     }
     g_object_unref(obj);
   }
@@ -201,7 +201,7 @@ create_text_column(SearchWidgets *widgets, const char *title, PackageColumnKind 
                      if (kind == PackageColumnKind::STATUS) {
                        package_table_update_status_label(label, widgets, package_item->row);
                      } else {
-                       std::string text = column_text(*package_item, kind);
+                       std::string text = package_table_column_text(*package_item, kind);
                        gtk_label_set_text(GTK_LABEL(label), text.c_str());
                      }
                    }),
@@ -215,8 +215,8 @@ create_text_column(SearchWidgets *widgets, const char *title, PackageColumnKind 
   gtk_column_view_column_set_resizable(column, TRUE);
   gtk_column_view_column_set_expand(column, expand);
 
-  GtkSorter *sorter =
-      GTK_SORTER(gtk_custom_sorter_new(column_sorter_compare, new ColumnSorterData { kind }, column_sorter_data_free));
+  GtkSorter *sorter = GTK_SORTER(gtk_custom_sorter_new(
+      package_table_column_sorter_compare, new ColumnSorterData { kind }, package_table_column_sorter_data_free));
   gtk_column_view_column_set_sorter(column, sorter);
   g_object_unref(sorter);
 

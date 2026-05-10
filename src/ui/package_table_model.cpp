@@ -28,7 +28,7 @@ package_row_quark()
 // Snapshot the visible status text and its sort order for one package row.
 // -----------------------------------------------------------------------------
 void
-fill_package_item_status(SearchWidgets *widgets, PackageItem &item)
+package_table_fill_item_status(SearchWidgets *widgets, PackageItem &item)
 {
   // Keep Status sorting tied to the stable package state so marking a pending
   // action does not move the row away from the user in the current view.
@@ -66,7 +66,7 @@ make_package_object(SearchWidgets *widgets, const PackageRow &row)
 {
   GObject *obj = G_OBJECT(g_object_new(G_TYPE_OBJECT, nullptr));
   auto *item = new PackageItem { row, {}, 0 };
-  fill_package_item_status(widgets, *item);
+  package_table_fill_item_status(widgets, *item);
   g_object_set_qdata_full(obj, package_row_quark(), item, +[](gpointer p) { delete static_cast<PackageItem *>(p); });
   return obj;
 }

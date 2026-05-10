@@ -9,7 +9,7 @@
 // Return the visible text for one package table cell.
 // -----------------------------------------------------------------------------
 std::string
-column_text(const PackageItem &item, PackageColumnKind kind)
+package_table_column_text(const PackageItem &item, PackageColumnKind kind)
 {
   switch (kind) {
   case PackageColumnKind::STATUS:
@@ -39,7 +39,7 @@ column_text(const PackageItem &item, PackageColumnKind kind)
 // Free data owned by one package table column sorter.
 // -----------------------------------------------------------------------------
 void
-column_sorter_data_free(gpointer p)
+package_table_column_sorter_data_free(gpointer p)
 {
   delete static_cast<ColumnSorterData *>(p);
 }
@@ -79,7 +79,8 @@ compare_package_items(const PackageItem &lhs, const PackageItem &rhs, PackageCol
     result = compare_text(lhs.row.name, rhs.row.name);
     break;
   case PackageColumnKind::VERSION:
-    result = compare_text(column_text(lhs, PackageColumnKind::VERSION), column_text(rhs, PackageColumnKind::VERSION));
+    result = compare_text(package_table_column_text(lhs, PackageColumnKind::VERSION),
+                          package_table_column_text(rhs, PackageColumnKind::VERSION));
     break;
   case PackageColumnKind::ARCH:
     result = compare_text(lhs.row.arch, rhs.row.arch);
@@ -108,7 +109,7 @@ compare_package_items(const PackageItem &lhs, const PackageItem &rhs, PackageCol
 // Adapter from GTK's custom sorter callback to the package item comparator.
 // -----------------------------------------------------------------------------
 int
-column_sorter_compare(gconstpointer item1, gconstpointer item2, gpointer user_data)
+package_table_column_sorter_compare(gconstpointer item1, gconstpointer item2, gpointer user_data)
 {
   const auto *data = static_cast<const ColumnSorterData *>(user_data);
   const PackageItem *lhs = package_item_from_object(G_OBJECT(const_cast<gpointer>(item1)));
