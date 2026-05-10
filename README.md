@@ -5,7 +5,12 @@
 </p>
 
 DNF UI is a graphical frontend for Fedora's DNF (Dandified YUM) package manager, inspired by [Synaptic](https://github.com/mvo5/synaptic).
-It is built with GTK 4 and [libdnf5](https://github.com/rpm-software-management/dnf5) and aims to provide a **fast** and **dependable** package management workflow for Fedora.
+It is built with GTK 4 and [libdnf5](https://github.com/rpm-software-management/dnf5) and aims to provide a **fast** and
+**dependable** package management workflow for Fedora.
+
+## Supported platform
+
+DNF UI targets Fedora systems using DNF5, which was introduced in Fedora 38.
 
 ## Status
 
@@ -51,10 +56,10 @@ only)`.
 
 ## Why?
 
-I started DNF UI because I am not satisfied with the current graphical package management options on Fedora.
-I want a package manager frontend that feels fast, reliable, and easy to understand in daily use.
+As a long-time user of Synaptic I wanted a similar tool on Fedora.
+I want a package manager frontend which is fast, reliable, and easy to use.
 
-This project is also a practical way for me to learn more about libdnf5, GTK 4, and building a
+This project is also a practical way for me to learn more about DNF, GTK 4, and building a
 maintainable desktop application.
 The goal is not to experiment for its own sake, but to build something genuinely useful for me and others.
 
