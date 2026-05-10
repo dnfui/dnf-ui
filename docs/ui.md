@@ -100,11 +100,14 @@ the backend generation changes, the old result is ignored.
 
 ### Package table view
 
-[src/ui/package_table_view.cpp](../src/ui/package_table_view.cpp) owns the
-package table model and columns.
+[src/ui/package_table_view.cpp](../src/ui/package_table_view.cpp) owns package
+table assembly, column setup, selection, and status refresh.
 
-It wraps each `PackageRow` in a GTK object so the column view can sort and
-select rows. It also refreshes status badges when pending actions change.
+[src/ui/package_table_model.cpp](../src/ui/package_table_model.cpp) owns the
+GTK object wrapper used to store package rows in the table model.
+
+[src/ui/package_table_sort.cpp](../src/ui/package_table_sort.cpp) owns package
+table cell text and sorting rules.
 
 [src/ui/package_table_status.cpp](../src/ui/package_table_status.cpp) keeps the
 status text, tooltip text, and CSS classes separate from table construction.
