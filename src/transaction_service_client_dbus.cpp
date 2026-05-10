@@ -373,6 +373,8 @@ transaction_service_client_start_apply_request(GDBusConnection *connection,
   error_out.clear();
 
   GError *error = nullptr;
+  // NOTE: Polkit prompts can outlive the default D-Bus method timeout.
+  // Wait for the real Apply reply so the service and UI stay in the same state.
   GVariant *reply = g_dbus_connection_call_sync(connection,
                                                 kTransactionServiceName,
                                                 transaction_path.c_str(),
@@ -381,7 +383,7 @@ transaction_service_client_start_apply_request(GDBusConnection *connection,
                                                 nullptr,
                                                 nullptr,
                                                 G_DBUS_CALL_FLAGS_NONE,
-                                                -1,
+                                                G_MAXINT, /* no timeout */
                                                 nullptr,
                                                 &error);
   if (!reply) {
