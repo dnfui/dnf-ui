@@ -126,6 +126,7 @@ It provides:
 
 - package summary and metadata
 - installed file list
+- manual repository file metadata lookup for packages that are not installed
 - dependencies
 - changelog
 
@@ -137,6 +138,12 @@ installed packages from the shared Base because the rpmdb provides that metadata
 If the selected package is not installed, the lookup uses a short-lived temporary
 Base that requests repo `other` metadata, so normal list and search queries do
 not keep changelog metadata resident.
+
+File lists normally describe the installed package. For packages that are not
+installed, the UI can ask for repository file metadata manually from the Files
+tab. This is not loaded during normal package selection. Repository file
+metadata can be incomplete, so the UI does not present it as a guaranteed full
+package contents list.
 
 ## Transactions
 

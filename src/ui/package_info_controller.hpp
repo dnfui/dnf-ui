@@ -8,6 +8,8 @@
 
 #include "dnf_backend/dnf_backend.hpp"
 
+#include <gtk/gtk.h>
+
 struct SearchWidgets;
 
 // -----------------------------------------------------------------------------
@@ -22,6 +24,10 @@ void package_info_load_selected_package_info(SearchWidgets *widgets, const Packa
 // Reset the package details notebook to its empty state.
 // -----------------------------------------------------------------------------
 void package_info_reset_details_view(SearchWidgets *widgets);
+// -----------------------------------------------------------------------------
+// Load repository file metadata for the selected package when requested.
+// -----------------------------------------------------------------------------
+void package_info_on_load_file_list_clicked(GtkButton *, gpointer user_data);
 
 // -----------------------------------------------------------------------------
 // EOF

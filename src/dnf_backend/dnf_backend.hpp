@@ -271,6 +271,14 @@ std::string dnf_backend_get_package_info(const std::string &pkg_nevra);
 // -----------------------------------------------------------------------------
 std::string dnf_backend_get_installed_package_files(const std::string &pkg_nevra, size_t max_files_for_display = 1500);
 // -----------------------------------------------------------------------------
+// Return true when an available package can offer a manual file metadata lookup.
+// -----------------------------------------------------------------------------
+bool dnf_backend_can_load_available_package_files(const std::string &pkg_nevra);
+// -----------------------------------------------------------------------------
+// Return the available package file metadata for one NEVRA.
+// -----------------------------------------------------------------------------
+std::string dnf_backend_get_available_package_files(const std::string &pkg_nevra, size_t max_files_for_display = 1500);
+// -----------------------------------------------------------------------------
 // Return formatted dependency details for one NEVRA.
 // -----------------------------------------------------------------------------
 std::string dnf_backend_get_package_deps(const std::string &pkg_nevra);

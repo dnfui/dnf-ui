@@ -9,6 +9,7 @@
 #include "config.hpp"
 #include "i18n.hpp"
 #include "main_menu.hpp"
+#include "package_info_controller.hpp"
 #include "package_query_controller.hpp"
 #include "package_table_view.hpp"
 #include "pending_transaction_controller.hpp"
@@ -58,6 +59,7 @@ struct AppWidgets {
 
   GtkTextBuffer *details_buffer = NULL;
   GtkTextBuffer *files_buffer = NULL;
+  GtkWidget *files_load_button = NULL;
   GtkTextBuffer *deps_buffer = NULL;
   GtkTextBuffer *changelog_buffer = NULL;
   GtkWidget *pending_list = NULL;
@@ -371,8 +373,22 @@ build_main_ui(AppWidgets *ui)
       create_scrolled_text_view(_("Select an installed package to view its file list."), GTK_WRAP_NONE, &files_buffer);
   ui->files_buffer = files_buffer;
 
+  GtkWidget *files_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
+  GtkWidget *files_button_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
+  GtkWidget *files_load_button = ui_helpers_create_icon_button("document-open-symbolic", _("Load Repository Files"));
+  gtk_widget_set_halign(files_button_box, GTK_ALIGN_START);
+  gtk_widget_set_margin_start(files_button_box, 6);
+  gtk_widget_set_margin_end(files_button_box, 6);
+  gtk_widget_set_margin_top(files_button_box, 6);
+  gtk_box_append(GTK_BOX(files_button_box), files_load_button);
+  gtk_box_append(GTK_BOX(files_box), files_button_box);
+  gtk_box_append(GTK_BOX(files_box), scrolled_files);
+  gtk_widget_set_visible(files_load_button, FALSE);
+  gtk_widget_set_visible(files_button_box, FALSE);
+  ui->files_load_button = files_load_button;
+
   GtkWidget *tab_label_files = gtk_label_new(_("Files"));
-  gtk_notebook_append_page(GTK_NOTEBOOK(notebook), scrolled_files, tab_label_files);
+  gtk_notebook_append_page(GTK_NOTEBOOK(notebook), files_box, tab_label_files);
 
   // --- Tab 3: Dependencies ---
   GtkTextBuffer *deps_buffer = NULL;
@@ -450,6 +466,7 @@ create_search_widgets(const AppWidgets *ui)
   widgets->results.inner_paned = GTK_PANED(ui->inner_paned);
   widgets->results.details_buffer = ui->details_buffer;
   widgets->results.files_buffer = ui->files_buffer;
+  widgets->results.files_load_button = GTK_BUTTON(ui->files_load_button);
   widgets->results.deps_buffer = ui->deps_buffer;
   widgets->results.changelog_buffer = ui->changelog_buffer;
   widgets->results.count_label = GTK_LABEL(ui->count_label);
@@ -604,6 +621,7 @@ connect_signals(const AppWidgets *ui, SearchWidgets *widgets)
       ui->clear_pending_button, "clicked", G_CALLBACK(pending_transaction_on_clear_pending_button_clicked), widgets);
 
   g_signal_connect(ui->refresh_button, "clicked", G_CALLBACK(widgets_on_refresh_button_clicked), widgets);
+  g_signal_connect(ui->files_load_button, "clicked", G_CALLBACK(package_info_on_load_file_list_clicked), widgets);
 
   // Intercept window close so unapplied marked changes can be confirmed first.
   g_signal_connect(ui->window, "close-request", G_CALLBACK(on_main_window_close_request), widgets);

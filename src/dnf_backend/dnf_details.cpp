@@ -37,6 +37,49 @@ format_package_size(unsigned long long size_bytes)
 }
 
 // -----------------------------------------------------------------------------
+// Format the file paths recorded on one package.
+// -----------------------------------------------------------------------------
+static std::string
+format_package_files(const libdnf5::rpm::Package &pkg,
+                     size_t max_files_for_display,
+                     const char *empty_message,
+                     const char *intro_message = nullptr)
+{
+  std::ostringstream files;
+  size_t file_count = 0;
+  size_t displayed_count = 0;
+  const bool should_truncate = max_files_for_display > 0;
+
+  for (const auto &f : pkg.get_files()) {
+    ++file_count;
+    if (!should_truncate || displayed_count < max_files_for_display) {
+      files << f << "\n";
+      ++displayed_count;
+    }
+  }
+
+  std::string result = files.str();
+  if (result.empty()) {
+    return empty_message;
+  }
+
+  if (should_truncate && file_count > max_files_for_display) {
+    const size_t hidden_count = file_count - displayed_count;
+    files << "\n--- " << hidden_count << " more file" << (hidden_count == 1 ? "" : "s") << " not shown ---\n"
+          << "--- Use the package manager CLI for complete list ---\n";
+    result = files.str();
+  }
+
+  if (intro_message && intro_message[0] != '\0') {
+    std::ostringstream text;
+    text << intro_message << "\n\n" << result;
+    result = text.str();
+  }
+
+  return result;
+}
+
+// -----------------------------------------------------------------------------
 // Collect installed packages whose requires match capabilities provided by the
 // selected installed package. This keeps reverse dependency reporting narrow
 // and focused on the current system state.
@@ -272,35 +315,71 @@ dnf_backend_get_installed_package_files(const std::string &pkg_nevra, size_t max
   installed_files_query.filter_latest_evr();
   auto pkg = *installed_files_query.begin();
 
-  std::ostringstream files;
-  size_t file_count = 0;
-  size_t displayed_count = 0;
-  const bool should_truncate = max_files_for_display > 0;
+  std::string result =
+      format_package_files(pkg, max_files_for_display, "No files recorded for this installed package.");
 
-  for (const auto &f : pkg.get_files()) {
-    ++file_count;
-    if (!should_truncate || displayed_count < max_files_for_display) {
-      files << f << "\n";
-      ++displayed_count;
+  DNFUI_TRACE("Backend file list done nevra=%s bytes=%zu", pkg_nevra.c_str(), result.size());
+
+  return result;
+}
+
+// -----------------------------------------------------------------------------
+// Return true when the selected NEVRA is available and no matching installed
+// package already provides the normal installed file list.
+// -----------------------------------------------------------------------------
+bool
+dnf_backend_can_load_available_package_files(const std::string &pkg_nevra)
+{
+  auto [base, guard, generation] = BaseManager::instance().acquire_read();
+  libdnf5::rpm::PackageQuery query(base);
+  query.filter_nevra(pkg_nevra);
+  query.filter_available();
+
+  if (query.empty()) {
+    return false;
+  }
+
+  query.filter_latest_evr();
+  auto selected_pkg = *query.begin();
+
+  libdnf5::rpm::PackageQuery installed_by_name(base);
+  installed_by_name.filter_name(selected_pkg.get_name(), libdnf5::sack::QueryCmp::EQ);
+  installed_by_name.filter_installed();
+
+  for (auto installed_pkg : installed_by_name) {
+    if (installed_pkg.get_arch() == selected_pkg.get_arch()) {
+      return false;
     }
   }
 
-  std::string result = files.str();
-  if (result.empty()) {
-    result = "No files recorded for this installed package.";
-  } else if (should_truncate && file_count > max_files_for_display) {
-    const size_t hidden_count = file_count - displayed_count;
-    files << "\n--- " << hidden_count << " more file" << (hidden_count == 1 ? "" : "s") << " not shown ---\n"
-          << "--- Use the package manager CLI for complete list ---\n";
-    result = files.str();
+  return true;
+}
+
+// -----------------------------------------------------------------------------
+// Return repository file metadata for an available package.
+// This is only used after the user asks for it manually.
+// -----------------------------------------------------------------------------
+std::string
+dnf_backend_get_available_package_files(const std::string &pkg_nevra, size_t max_files_for_display)
+{
+  DNFUI_TRACE("Backend available file list start nevra=%s max_display=%zu", pkg_nevra.c_str(), max_files_for_display);
+  auto [base, guard, generation] = BaseManager::instance().acquire_read();
+  libdnf5::rpm::PackageQuery query(base);
+  query.filter_nevra(pkg_nevra);
+  query.filter_available();
+
+  if (query.empty()) {
+    DNFUI_TRACE("Backend available file list package not found nevra=%s", pkg_nevra.c_str());
+    return "Repository file metadata is available only for repository packages.";
   }
 
-  DNFUI_TRACE("Backend file list done nevra=%s total=%zu displayed=%zu bytes=%zu",
-              pkg_nevra.c_str(),
-              file_count,
-              displayed_count,
-              result.size());
-
+  query.filter_latest_evr();
+  auto pkg = *query.begin();
+  std::string result = format_package_files(pkg,
+                                            max_files_for_display,
+                                            "No repository file metadata is available for this package.",
+                                            "Repository file metadata may not list every file in the package.");
+  DNFUI_TRACE("Backend available file list done nevra=%s bytes=%zu", pkg_nevra.c_str(), result.size());
   return result;
 }
 

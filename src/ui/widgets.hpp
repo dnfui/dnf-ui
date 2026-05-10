@@ -43,6 +43,7 @@ struct PackageResultsWidgets {
   // Text buffers owned by the details notebook text views.
   GtkTextBuffer *details_buffer = nullptr;
   GtkTextBuffer *files_buffer = nullptr;
+  GtkButton *files_load_button = nullptr;
   GtkTextBuffer *deps_buffer = nullptr;
   GtkTextBuffer *changelog_buffer = nullptr;
   GtkLabel *count_label = nullptr;

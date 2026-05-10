@@ -90,6 +90,7 @@ It updates:
 
 - package details text
 - installed file list
+- manual repository file metadata lookup for packages that are not installed
 - dependencies
 - changelog
 - install, remove, and reinstall button sensitivity

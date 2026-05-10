@@ -139,6 +139,9 @@ Assumptions:
 - Changelog lookups use `BaseManager::acquire_changelog_read()` only when no
   installed package matches, so repo `other` metadata is loaded only for the
   short-lived available-package changelog query.
+- Available package file metadata is read only after the user asks for it in the
+  Files tab. Normal package selection keeps using the installed file list.
+  Repository file metadata can be incomplete.
 - The backend installed snapshot mutex must not be held at the same time as a
   `BaseManager` read or write guard.
 

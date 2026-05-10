@@ -30,6 +30,7 @@ struct InfoTaskResult {
   char *files;
   char *deps;
   char *changelog;
+  bool can_load_available_files;
 };
 
 // -----------------------------------------------------------------------------
@@ -87,6 +88,37 @@ set_notebook_text(GtkTextBuffer *buffer, const char *text)
 }
 
 // -----------------------------------------------------------------------------
+// Show or hide the manual file metadata button when the Files tab can use it.
+// -----------------------------------------------------------------------------
+static void
+set_files_load_button_visible(SearchWidgets *widgets, bool visible)
+{
+  if (!widgets || !widgets->results.files_load_button) {
+    return;
+  }
+
+  GtkWidget *button = GTK_WIDGET(widgets->results.files_load_button);
+  GtkWidget *button_box = gtk_widget_get_parent(button);
+  gtk_widget_set_visible(button, visible);
+  if (button_box) {
+    gtk_widget_set_visible(button_box, visible);
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Enable or disable the manual file metadata button.
+// -----------------------------------------------------------------------------
+static void
+set_files_load_button_sensitive(SearchWidgets *widgets, bool sensitive)
+{
+  if (!widgets || !widgets->results.files_load_button) {
+    return;
+  }
+
+  gtk_widget_set_sensitive(GTK_WIDGET(widgets->results.files_load_button), sensitive);
+}
+
+// -----------------------------------------------------------------------------
 // Reset the details notebook after repopulating the main package view.
 // -----------------------------------------------------------------------------
 void
@@ -100,6 +132,7 @@ package_info_reset_details_view(SearchWidgets *widgets)
   set_notebook_text(widgets->results.files_buffer, _("Select an installed package to view its file list."));
   set_notebook_text(widgets->results.deps_buffer, _("Select a package to view dependencies."));
   set_notebook_text(widgets->results.changelog_buffer, _("Select a package to view its changelog."));
+  set_files_load_button_visible(widgets, false);
 }
 
 // -----------------------------------------------------------------------------
@@ -113,6 +146,7 @@ package_info_clear_selected_package_state(SearchWidgets *widgets)
   }
 
   widgets->results.selected_nevra.clear();
+  set_files_load_button_visible(widgets, false);
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.install_button), FALSE);
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.remove_button), FALSE);
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.reinstall_button), FALSE);
@@ -177,6 +211,7 @@ on_package_info_task(GTask *task, gpointer, gpointer task_data, GCancellable *ca
       DNFUI_TRACE("Package info files load start nevra=%s", td ? td->nevra : "");
       // NOTE: Limit displayed files so very large file lists can still be copied.
       result->files = g_strdup(dnf_backend_get_installed_package_files(td->nevra, 1500).c_str());
+      result->can_load_available_files = dnf_backend_can_load_available_package_files(td->nevra);
       DNFUI_TRACE("Package info files loaded nevra=%s bytes=%zu",
                   td ? td->nevra : "",
                   result->files ? std::strlen(result->files) : 0);
@@ -277,6 +312,8 @@ on_package_info_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
   // Display the file list fetched by the background task.
   set_notebook_text(widgets->results.files_buffer,
                     result->files ? result->files : _("Select an installed package to view its file list."));
+  set_files_load_button_visible(widgets, result->can_load_available_files);
+  set_files_load_button_sensitive(widgets, true);
 
   // Display dependencies fetched by the background task.
   set_notebook_text(widgets->results.deps_buffer,
@@ -302,6 +339,7 @@ package_info_load_selected_package_info(SearchWidgets *widgets, const PackageRow
 
   widgets->results.selected_nevra = selected.nevra;
   ui_helpers_set_status(widgets->query.status_label, _("Fetching package info..."), "blue");
+  set_files_load_button_visible(widgets, false);
   update_selected_package_actions(widgets, selected);
 
   GCancellable *c = widgets_make_task_cancellable_for(GTK_WIDGET(widgets->query.entry));
@@ -315,6 +353,85 @@ package_info_load_selected_package_info(SearchWidgets *widgets, const PackageRow
 
   // Run background task to fetch metadata using dnf_backend
   g_task_run_in_thread(task, on_package_info_task);
+
+  g_object_unref(task);
+  g_object_unref(c);
+}
+
+// -----------------------------------------------------------------------------
+// Load available package file metadata after the user asks for it.
+// -----------------------------------------------------------------------------
+void
+package_info_on_load_file_list_clicked(GtkButton *, gpointer user_data)
+{
+  SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
+  if (!widgets || widgets->results.selected_nevra.empty()) {
+    return;
+  }
+
+  set_files_load_button_sensitive(widgets, false);
+  set_notebook_text(widgets->results.files_buffer, _("Loading repository file metadata..."));
+  ui_helpers_set_status(widgets->query.status_label, _("Loading repository file metadata..."), "blue");
+
+  GCancellable *c = widgets_make_task_cancellable_for(GTK_WIDGET(widgets->query.entry));
+  GTask *task = widgets_task_new_for_search_widgets(
+      widgets, c, +[](GObject *, GAsyncResult *res, gpointer user_data) {
+        GTask *task = G_TASK(res);
+        SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
+        if (widgets_task_should_skip_completion(task, widgets)) {
+          return;
+        }
+
+        const InfoTaskData *td = static_cast<const InfoTaskData *>(g_task_get_task_data(task));
+        GError *error = nullptr;
+        char *files = static_cast<char *>(g_task_propagate_pointer(task, &error));
+
+        if (!td || td->generation != BaseManager::instance().current_generation() ||
+            widgets->results.selected_nevra != td->nevra) {
+          g_free(files);
+          if (error) {
+            g_error_free(error);
+          }
+          return;
+        }
+
+        if (files) {
+          set_notebook_text(widgets->results.files_buffer, files);
+          set_files_load_button_visible(widgets, false);
+          ui_helpers_set_status(widgets->query.status_label, _("Repository file metadata loaded."), "green");
+          g_free(files);
+        } else {
+          std::string details = error ? error->message : _("Could not load repository file metadata.");
+          set_notebook_text(widgets->results.files_buffer, details.c_str());
+          set_files_load_button_visible(widgets, true);
+          set_files_load_button_sensitive(widgets, true);
+          ui_helpers_set_status(widgets->query.status_label, details, "red");
+          if (error) {
+            g_error_free(error);
+          }
+        }
+      });
+
+  InfoTaskData *td = static_cast<InfoTaskData *>(g_malloc0(sizeof *td));
+  td->nevra = g_strdup(widgets->results.selected_nevra.c_str());
+  td->generation = BaseManager::instance().current_generation();
+  g_task_set_task_data(task, td, info_task_data_free);
+
+  g_task_run_in_thread(
+      task, +[](GTask *task, gpointer, gpointer task_data, GCancellable *cancellable) {
+        InfoTaskData *td = static_cast<InfoTaskData *>(task_data);
+        if (cancellable && g_cancellable_is_cancelled(cancellable)) {
+          return_package_info_task_cancelled(task);
+          return;
+        }
+
+        try {
+          std::string files = dnf_backend_get_available_package_files(td->nevra, 1500);
+          g_task_return_pointer(task, g_strdup(files.c_str()), g_free);
+        } catch (const std::exception &e) {
+          g_task_return_error(task, g_error_new_literal(G_IO_ERROR, G_IO_ERROR_FAILED, e.what()));
+        }
+      });
 
   g_object_unref(task);
   g_object_unref(c);
