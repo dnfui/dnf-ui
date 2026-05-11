@@ -15,6 +15,7 @@ apply go through the D-Bus service.
 Important files:
 
 - [src/ui/pending_transaction_controller.cpp](../src/ui/pending_transaction_controller.cpp)
+- [src/ui/pending_transaction_apply.cpp](../src/ui/pending_transaction_apply.cpp)
 - [src/ui/pending_transaction_request.cpp](../src/ui/pending_transaction_request.cpp)
 - [src/ui/transaction_review_dialog.cpp](../src/ui/transaction_review_dialog.cpp)
 - [src/ui/transaction_progress.cpp](../src/ui/transaction_progress.cpp)

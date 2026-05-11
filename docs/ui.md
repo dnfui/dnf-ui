@@ -118,13 +118,28 @@ owns right-click actions for package rows.
 ### Pending transaction controller
 
 [src/ui/pending_transaction_controller.cpp](../src/ui/pending_transaction_controller.cpp)
-owns package actions before they are applied.
+owns the package action buttons.
 
 It is responsible for:
 
 - marking packages for install, upgrade, remove, or reinstall
-- rebuilding the Pending Actions tab
 - validating self-protected package rules
+- clearing pending actions
+
+[src/ui/pending_transaction_view.cpp](../src/ui/pending_transaction_view.cpp)
+owns the Pending Actions tab.
+
+It is responsible for:
+
+- rebuilding the Pending Actions tab
+- jumping from a pending action back to its package row
+- enabling the Apply button only when actions are pending
+
+[src/ui/pending_transaction_apply.cpp](../src/ui/pending_transaction_apply.cpp)
+owns preview and apply work.
+
+It is responsible for:
+
 - asking the transaction service for a preview
 - showing the review dialog
 - starting apply after confirmation

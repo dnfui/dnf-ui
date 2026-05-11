@@ -95,7 +95,9 @@ The main window is built once and the controller files own behavior.
 - [src/ui/package_table_view.cpp](../src/ui/package_table_view.cpp) owns package table assembly.
 - [src/ui/package_table_model.cpp](../src/ui/package_table_model.cpp) stores package rows in GTK objects.
 - [src/ui/package_table_sort.cpp](../src/ui/package_table_sort.cpp) owns package table sorting.
-- [src/ui/pending_transaction_controller.cpp](../src/ui/pending_transaction_controller.cpp) owns marking actions, preview, apply, and post-apply refresh.
+- [src/ui/pending_transaction_controller.cpp](../src/ui/pending_transaction_controller.cpp) owns package action buttons.
+- [src/ui/pending_transaction_view.cpp](../src/ui/pending_transaction_view.cpp) owns the Pending Actions tab.
+- [src/ui/pending_transaction_apply.cpp](../src/ui/pending_transaction_apply.cpp) owns preview, apply, and post-apply refresh.
 - [src/ui/transaction_review_dialog.cpp](../src/ui/transaction_review_dialog.cpp) owns the review and error dialogs.
 - [src/ui/transaction_progress.cpp](../src/ui/transaction_progress.cpp) owns the live progress window.
 
@@ -219,11 +221,13 @@ A practical reading order for new contributors:
 4. [src/ui/widgets.hpp](../src/ui/widgets.hpp)
 5. [src/ui/package_query_controller.cpp](../src/ui/package_query_controller.cpp)
 6. [src/ui/pending_transaction_controller.cpp](../src/ui/pending_transaction_controller.cpp)
-7. [src/dnf_backend/dnf_backend.hpp](../src/dnf_backend/dnf_backend.hpp)
-8. [src/base_manager.cpp](../src/base_manager.cpp)
-9. [src/dnf_backend/dnf_query.cpp](../src/dnf_backend/dnf_query.cpp)
-10. [src/transaction_service_client.cpp](../src/transaction_service_client.cpp)
-11. [docs/transactions.md](transactions.md)
-12. [src/service/transaction_service.cpp](../src/service/transaction_service.cpp)
-13. [src/service/transaction_service_request_objects.cpp](../src/service/transaction_service_request_objects.cpp)
-14. [src/service/transaction_service_workers.cpp](../src/service/transaction_service_workers.cpp)
+7. [src/ui/pending_transaction_view.cpp](../src/ui/pending_transaction_view.cpp)
+8. [src/ui/pending_transaction_apply.cpp](../src/ui/pending_transaction_apply.cpp)
+9. [src/dnf_backend/dnf_backend.hpp](../src/dnf_backend/dnf_backend.hpp)
+10. [src/base_manager.cpp](../src/base_manager.cpp)
+11. [src/dnf_backend/dnf_query.cpp](../src/dnf_backend/dnf_query.cpp)
+12. [src/transaction_service_client.cpp](../src/transaction_service_client.cpp)
+13. [docs/transactions.md](transactions.md)
+14. [src/service/transaction_service.cpp](../src/service/transaction_service.cpp)
+15. [src/service/transaction_service_request_objects.cpp](../src/service/transaction_service_request_objects.cpp)
+16. [src/service/transaction_service_workers.cpp](../src/service/transaction_service_workers.cpp)

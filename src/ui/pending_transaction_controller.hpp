@@ -2,8 +2,8 @@
 // src/ui/pending_transaction_controller.hpp
 // Public pending transaction controller entry points
 //
-// Owns the GTK callbacks for marking packages, clearing pending actions, and
-// applying the prepared transaction through the transaction service.
+// Declares the GTK callbacks used by the main window for pending transactions.
+// The implementations are split by concern in the matching source files.
 // -----------------------------------------------------------------------------
 #pragma once
 
