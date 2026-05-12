@@ -107,6 +107,9 @@ collect_available_rows_by_name_arch(libdnf5::Base &base,
   query.filter_available();
   query.filter_latest_evr();
 
+  // If description search is disabled, let libdnf narrow the package set by
+  // name before we iterate it. Description search is handled below because it
+  // needs both package names and descriptions.
   if (pattern && !search_options.search_in_description) {
     if (search_options.exact_match) {
       query.filter_name(*pattern, libdnf5::sack::QueryCmp::EQ);
@@ -129,6 +132,9 @@ collect_available_rows_by_name_arch(libdnf5::Base &base,
       continue;
     }
 
+    // The visible table shows one row per package name and architecture.
+    // Repositories can contain more than one EVR, so keep only the newest row
+    // before installed rows are merged in.
     // Provenance is UNKNOWN until compared against the installed set. The
     // merge or annotation helpers resolve it when installed rows are available.
     PackageRow row = make_package_row(pkg, PackageRepoCandidateRelation::UNKNOWN);
@@ -201,6 +207,9 @@ collect_installed_rows(libdnf5::Base &base,
     }
 
     PackageRow row = make_package_row(pkg);
+    // The exact NEVRA set answers "is this precise package installed".
+    // The name and architecture map answers "which installed package matches
+    // this available update candidate".
     result.nevras.insert(row.nevra);
     remember_newest_row(result.rows_by_name_arch, row);
     result.rows.push_back(row);
@@ -333,11 +342,17 @@ dnf_backend_search_package_rows_interruptible(const std::string &pattern, GCance
       return {};
     }
 
+    // This scan is only for installed rows that match the search term. Those
+    // rows can still appear in the visible search result when no repo candidate
+    // is shown for the same package name and architecture.
     InstalledQueryResult filtered_installed = collect_installed_rows(base, cancellable, search_options, &pattern);
     if (package_query_cancelled(cancellable)) {
       return {};
     }
 
+    // The shared installed snapshot must contain every installed package, not
+    // only the rows that matched this search. The UI uses it later for package
+    // status, action buttons, and pending action handling.
     const DnfBackendSearchOptions snapshot_search_options {};
     installed_snapshot = collect_installed_rows(base, cancellable, snapshot_search_options);
     if (package_query_cancelled(cancellable)) {
@@ -375,6 +390,9 @@ dnf_backend_get_installed_package_rows_interruptible(GCancellable *cancellable)
       return {};
     }
 
+    // Installed listing is allowed to work from the local rpmdb alone. Repo
+    // annotation adds upgrade and local-only status when repo metadata is
+    // available, but it must not make the installed list fail.
     annotate_installed_rows_with_repo_candidates_best_effort(
         installed.rows, cancellable, [&base, &installed](GCancellable *annotation_cancellable) {
           return collect_available_rows_for_installed_names(base, annotation_cancellable, installed.rows);
@@ -407,6 +425,8 @@ dnf_backend_get_browse_package_rows_interruptible(GCancellable *cancellable)
       return {};
     }
 
+    // Browse uses the full installed set because installed-only packages must
+    // still be visible even when no enabled repo contains them.
     installed = collect_installed_rows(base, cancellable, search_options);
     if (package_query_cancelled(cancellable)) {
       return {};
@@ -439,6 +459,9 @@ dnf_backend_get_upgradeable_package_rows_interruptible(GCancellable *cancellable
     query.filter_upgrades();
     query.filter_latest_evr();
 
+    // libdnf returns the available package that would satisfy each upgrade.
+    // That is the correct row to show here because the main action installs
+    // this newer package over the currently installed one.
     std::map<std::string, PackageRow> rows_by_name_arch;
     for (auto pkg : query) {
       if (package_query_cancelled(cancellable)) {
@@ -449,6 +472,9 @@ dnf_backend_get_upgradeable_package_rows_interruptible(GCancellable *cancellable
       remember_newest_row(rows_by_name_arch, row);
     }
 
+    // Even though the visible rows are available update candidates, the UI still
+    // needs the installed snapshot to resolve remove and reinstall actions back
+    // to the currently installed package.
     installed = collect_installed_rows(base, cancellable, DnfBackendSearchOptions {});
     if (package_query_cancelled(cancellable)) {
       return {};
