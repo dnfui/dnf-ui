@@ -148,45 +148,6 @@ struct BackendBaseDropGuard {
 static bool transaction_apply_should_stop_before_work(TransactionSession *session, std::string &details_out);
 
 // -----------------------------------------------------------------------------
-// Transaction execution
-// -----------------------------------------------------------------------------
-// Reject requests that passed shared validation but are unsafe for the service to run.
-// -----------------------------------------------------------------------------
-bool
-validate_transaction_request_for_service(const TransactionRequest &request, std::string &error_out)
-{
-  if (request.remove.empty() && request.reinstall.empty()) {
-    return true;
-  }
-
-  BackendBaseDropGuard base_drop_guard;
-
-  try {
-    BaseManager::instance().ensure_system_only_initialized_if_needed();
-    dnf_backend_refresh_installed_nevras();
-  } catch (const std::exception &e) {
-    error_out = std::string(_("Unable to validate protected installed packages: ")) + e.what();
-    return false;
-  }
-
-  for (const auto &spec : request.remove) {
-    if (dnf_backend_is_self_protected_transaction_spec(spec)) {
-      error_out = _("DNF UI cannot remove the package that owns the running application.");
-      return false;
-    }
-  }
-
-  for (const auto &spec : request.reinstall) {
-    if (dnf_backend_is_self_protected_transaction_spec(spec)) {
-      error_out = _("DNF UI cannot reinstall the package that owns the running application while it is running.");
-      return false;
-    }
-  }
-
-  return true;
-}
-
-// -----------------------------------------------------------------------------
 // Return true when the transaction may need available-repo metadata instead of
 // the local rpmdb alone.
 // -----------------------------------------------------------------------------

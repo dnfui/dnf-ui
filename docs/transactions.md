@@ -28,6 +28,7 @@ Important files:
 - [src/service/transaction_service_manager.cpp](../src/service/transaction_service_manager.cpp)
 - [src/service/transaction_service_request_objects.cpp](../src/service/transaction_service_request_objects.cpp)
 - [src/service/transaction_service_signals.cpp](../src/service/transaction_service_signals.cpp)
+- [src/service/transaction_service_validation.cpp](../src/service/transaction_service_validation.cpp)
 - [src/service/transaction_service_workers.cpp](../src/service/transaction_service_workers.cpp)
 - [src/service/transaction_service_introspection.cpp](../src/service/transaction_service_introspection.cpp)
 
@@ -37,6 +38,7 @@ The transaction service implementation is split by responsibility:
 - `transaction_service_manager.cpp` handles the manager object and creates request objects.
 - `transaction_service_request_objects.cpp` handles methods on one request object.
 - `transaction_service_authorization.cpp` handles Apply authorization.
+- `transaction_service_validation.cpp` checks request safety before backend work starts.
 - `transaction_service_workers.cpp` runs preview and apply backend work.
 - `transaction_service_signals.cpp` emits Progress and Finished signals from the service main loop.
 - `transaction_service_format.cpp` converts service state into D-Bus reply values.

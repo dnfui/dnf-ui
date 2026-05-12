@@ -10,6 +10,7 @@ service_sources = files(
   'transaction_service_request_objects.cpp',
   'transaction_service_request_parser.cpp',
   'transaction_service_signals.cpp',
+  'transaction_service_validation.cpp',
   'transaction_service_workers.cpp',
   'transaction_service_main.cpp',
 )

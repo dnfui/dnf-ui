@@ -18,6 +18,10 @@
 #include <string>
 #include <vector>
 
+#ifdef DNFUI_BUILD_TESTS
+#include <glib.h>
+#endif
+
 #include <libdnf5/rpm/package_query.hpp>
 
 namespace {
@@ -77,6 +81,15 @@ collect_self_protected_package_names(libdnf5::Base &base)
       protected_names.insert(pkg.get_name());
     }
   }
+
+#ifdef DNFUI_BUILD_TESTS
+  // Let tests exercise self-protection with an installed package chosen by the
+  // test case. Production builds only use the running executable owner above.
+  const char *test_name = g_getenv("DNFUI_TEST_SELF_PROTECTED_PACKAGE_NAME");
+  if (test_name && *test_name) {
+    protected_names.insert(test_name);
+  }
+#endif
 
   return protected_names;
 }
