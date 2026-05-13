@@ -4,20 +4,20 @@
   <img src="img/logo.png" width="220" alt="DNF UI logo"/>
 </p>
 
-DNF UI is a graphical frontend for Fedora's DNF (Dandified YUM) package manager, inspired by [Synaptic](https://github.com/mvo5/synaptic).
+DNF UI is a graphical frontend for Fedora's DNF5 (Dandified YUM) package manager, inspired by [Synaptic](https://github.com/mvo5/synaptic).
 It is built with GTK 4 and [libdnf5](https://github.com/rpm-software-management/dnf5) and aims to provide a **fast** and
 **dependable** package management workflow for Fedora.
 
 ## Supported platform
 
-DNF UI targets Fedora systems using DNF5, which was introduced in Fedora 38.
+DNF UI targets Fedora systems using modern DNF5, which was introduced in Fedora 38.
 
 ## Status
 
 DNF UI is in active early development.
-The project is usable for testing and is becoming more mature with each release.
+The project is **usable for testing** and is becoming more mature with each release.
 Some interfaces, behavior, and features may still change while the application
-continues to stabilize.
+continues to evolve.
 
 ## Goals and principles
 
@@ -57,11 +57,17 @@ only)`.
 ## Why?
 
 As a long-time user of Synaptic I wanted a similar tool on Fedora.
-I want a package manager frontend which is fast, reliable, and easy to use.
+I want a package manager frontend which is native, fast, reliable, and easy to use.
 
-This project is also a practical way for me to learn more about DNF, GTK 4, and building a
+This project is also a practical way for me to learn more about DNF, GTK, and building a
 maintainable desktop application.
-The goal is not to experiment for its own sake, but to build something genuinely useful for me and others.
+The goal is not to experiment for its own sake, but to also build something genuinely useful for me and others.
+
+If you are looking for other graphical package managers with a longer track-record there are among others:
+
+- [dnfdragora](https://github.com/manatools/dnfdragora)
+- [yumex-ng](https://github.com/timlau/yumex-ng)
+- [gnome-software](https://gitlab.gnome.org/GNOME/gnome-software)
 
 ## Build
 
@@ -101,9 +107,9 @@ meson compile -C build/debug
 
 ## Polkit integration
 
-DNF UI uses a small privileged transaction service for package apply operations.
+DNF UI uses a small privileged transaction service called `dnfui-service` for package apply operations.
 
-The GUI runs as the regular desktop user, while the service runs on D-Bus and is
+`dnfui` runs as the regular desktop user, while the service runs on D-Bus and is
 responsible for the privileged transaction step.
 
 [Polkit](https://github.com/polkit-org/polkit) is used only for the apply step:
@@ -140,13 +146,12 @@ sudo make serviceuninstall
 
 **NOTE:**
 
-- `serviceinstall` is a development helper, not the final packaging flow
 - Choose a non critical installed package for native apply tests
-- `sudo make serviceinstall` installs the already built Meson service files from the current build tree and does not rebuild
+- `serviceinstall` is just a development helper for installing the app without RPM packaging
 
 ### Tests
 
-Run the test suite:
+Run the native test suite:
 
 ```sh
 make test
@@ -161,8 +166,7 @@ For architecture notes and source-backed external API assumptions, start with
 ### Docker
 
 [Docker](https://www.docker.com/) is the default container runtime. The container targets also support
-[Podman](https://podman.io/) by setting `CONTAINER_RUNTIME=podman`. The target names stay unchanged
-for compatibility.
+[Podman](https://podman.io/) by setting `CONTAINER_RUNTIME=podman`. The target names still says Docker though.
 
 Running the application in a container is useful for testing and developing without affecting the
 host system.
@@ -199,7 +203,7 @@ make dockerruncoldoffline
 
 ## RPM packaging
 
-Fedora RPM packaging is included in this repository.
+Fedora RPM packaging is included for this application.
 
 Build a source RPM from the current tracked working tree:
 
@@ -229,7 +233,7 @@ Artifacts are written under `./rpmbuild/`.
 
 Notes:
 
-- The RPM package is built from `dnf-ui.spec`, using Fedora's normal Meson RPM macros
+- The RPM package is built from `dnf-ui.spec`
 - `make srpm` includes files tracked by Git in the generated source tarball
 - The Docker RPM targets use the existing Fedora development image and write artifacts into the same `./rpmbuild/` tree
 
