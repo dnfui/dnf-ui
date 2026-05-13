@@ -60,6 +60,11 @@ package_table_status_tooltip_text(const PackageRow &row)
     tooltip += dnf_backend_install_reason_to_string(row.install_reason);
   }
 
+  if (row.upgrade_blocked) {
+    tooltip += "\n";
+    tooltip += _("A newer version exists, but the upgrade cannot be resolved right now.");
+  }
+
   return tooltip;
 }
 
@@ -95,6 +100,7 @@ package_table_clear_status_css(GtkWidget *label)
   gtk_widget_remove_css_class(label, "package-status-installed");
   gtk_widget_remove_css_class(label, "package-status-local-only");
   gtk_widget_remove_css_class(label, "package-status-upgradeable");
+  gtk_widget_remove_css_class(label, "package-status-upgrade-blocked");
   gtk_widget_remove_css_class(label, "package-status-installed-newer");
   gtk_widget_remove_css_class(label, "package-status-pending-install");
   gtk_widget_remove_css_class(label, "package-status-pending-reinstall");
@@ -113,7 +119,7 @@ package_table_update_status_label(GtkWidget *label, SearchWidgets *widgets, cons
     action_rows = package_action_rows_for_selection(row);
   }
 
-  const char *text = package_table_status_text(install_state);
+  const char *text = row.upgrade_blocked ? _("Update blocked") : package_table_status_text(install_state);
   for (const auto &a : widgets->transaction.actions) {
     bool action_matches_visible_row = a.nevra == row.nevra;
     bool action_matches_install_row = action_rows.has_install_row && a.nevra == action_rows.install_row.nevra;
@@ -157,6 +163,8 @@ package_table_update_status_label(GtkWidget *label, SearchWidgets *widgets, cons
       gtk_widget_add_css_class(label, "package-status-installed");
     } else if (install_state == PackageInstallState::INSTALLED_NEWER_THAN_REPO) {
       gtk_widget_add_css_class(label, "package-status-installed-newer");
+    } else if (row.upgrade_blocked) {
+      gtk_widget_add_css_class(label, "package-status-upgrade-blocked");
     } else if (install_state == PackageInstallState::UPGRADEABLE) {
       gtk_widget_add_css_class(label, "package-status-upgradeable");
     } else {

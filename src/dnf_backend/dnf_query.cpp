@@ -21,6 +21,7 @@
 #include <gio/gio.h>
 
 #include <libdnf5/base/base.hpp>
+#include <libdnf5/base/goal.hpp>
 #include <libdnf5/rpm/package_query.hpp>
 
 namespace dnf_backend_internal {
@@ -34,6 +35,52 @@ remember_newest_row(std::map<std::string, PackageRow> &rows_by_name_arch, const 
   auto [it, inserted] = rows_by_name_arch.emplace(row.name_arch_key(), row);
   if (!inserted && libdnf5::rpm::evrcmp(row, it->second) > 0) {
     it->second = row;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Return true when the visible upgrade action for one package candidate
+// resolves against the current system state.
+// -----------------------------------------------------------------------------
+static bool
+candidate_upgrade_action_resolves(libdnf5::Base &base, const std::string &candidate_nevra)
+{
+  libdnf5::Goal goal(base);
+  goal.add_rpm_install(candidate_nevra);
+
+  auto transaction = goal.resolve();
+  if (transaction.get_problems() != libdnf5::GoalProblem::NO_PROBLEM) {
+    return false;
+  }
+
+  return !transaction.get_transaction_packages().empty();
+}
+
+// -----------------------------------------------------------------------------
+// Mark upgrade candidates whose visible upgrade action does not currently
+// resolve.
+// -----------------------------------------------------------------------------
+static void
+annotate_blocked_upgrade_candidates(libdnf5::Base &base,
+                                    std::vector<PackageRow> &rows,
+                                    const std::map<std::string, PackageRow> &installed_rows_by_name_arch,
+                                    GCancellable *cancellable)
+{
+  for (auto &row : rows) {
+    if (package_query_cancelled(cancellable)) {
+      return;
+    }
+
+    auto installed_it = installed_rows_by_name_arch.find(row.name_arch_key());
+    if (installed_it == installed_rows_by_name_arch.end()) {
+      continue;
+    }
+
+    if (libdnf5::rpm::evrcmp(row, installed_it->second) <= 0) {
+      continue;
+    }
+
+    row.upgrade_blocked = !candidate_upgrade_action_resolves(base, row.nevra);
   }
 }
 
@@ -485,6 +532,10 @@ dnf_backend_get_upgradeable_package_rows_interruptible(GCancellable *cancellable
     rows.reserve(rows_by_name_arch.size());
     for (auto &[key, row] : rows_by_name_arch) {
       rows.push_back(row);
+    }
+    annotate_blocked_upgrade_candidates(base, rows, installed.rows_by_name_arch, cancellable);
+    if (package_query_cancelled(cancellable)) {
+      return {};
     }
   }
 

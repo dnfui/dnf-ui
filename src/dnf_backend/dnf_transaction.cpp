@@ -139,7 +139,7 @@ resolve_transaction_plan(libdnf5::Base &base,
 
   if (transaction.get_transaction_packages().empty()) {
     if (upgrade_all) {
-      tx::emit_progress_line(progress_cb, "No package updates are available.");
+      tx::emit_progress_line(progress_cb, "No package updates can be applied.");
       transaction_out = std::make_unique<libdnf5::base::Transaction>(std::move(transaction));
       return true;
     }
@@ -307,7 +307,7 @@ dnf_backend_apply_transaction(const std::vector<std::string> &install_nevras,
     }
 
     if (transaction->get_transaction_packages().empty()) {
-      error_out = "No package updates are available.";
+      error_out = "No package updates can be applied.";
       tx::emit_progress_line(progress_cb, error_out);
       return false;
     }

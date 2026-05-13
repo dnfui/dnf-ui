@@ -183,7 +183,7 @@ run_transaction_preview(TransactionSession *session)
 
     if (test_force_empty_upgrade_all_preview_requested(session->request)) {
       // Finish with an empty preview so tests can cover the no-updates path.
-      queue_transaction_progress(session, _("No package updates are available."));
+      queue_transaction_progress(session, _("No package updates can be applied."));
       {
         std::lock_guard<std::mutex> lock(session->state_mutex);
         session->preview = preview;

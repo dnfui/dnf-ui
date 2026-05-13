@@ -72,6 +72,8 @@ struct PackageRow {
   PackageRepoCandidateRelation repo_candidate_relation = PackageRepoCandidateRelation::UNKNOWN;
   // Available package ID for the newest repo candidate matching this installed row.
   std::string repo_candidate_nevra;
+  // True when this update candidate cannot currently be resolved as a transaction.
+  bool upgrade_blocked = false;
 
   // -----------------------------------------------------------------------------
   // Return the package epoch field.

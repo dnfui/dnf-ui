@@ -338,7 +338,7 @@ start_preview_request(SearchWidgets *widgets, TransactionRequest request)
           }
           widgets->transaction.preview_transaction_path.clear();
           widgets->transaction.preview_upgrade_all = false;
-          ui_helpers_set_status(widgets->query.status_label, _("All packages are already up to date."), "green");
+          ui_helpers_set_status(widgets->query.status_label, _("No package updates can be applied."), "green");
           return;
         }
 

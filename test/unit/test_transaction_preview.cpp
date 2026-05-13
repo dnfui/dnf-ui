@@ -103,7 +103,7 @@ TEST_CASE("Transaction preview accepts empty upgrade-all results")
   REQUIRE(ok);
   REQUIRE(error.empty());
   REQUIRE(preview.empty());
-  REQUIRE(progress_contains(progress_lines, "No package updates are available."));
+  REQUIRE(progress_contains(progress_lines, "No package updates can be applied."));
 }
 
 // -----------------------------------------------------------------------------
@@ -138,8 +138,8 @@ TEST_CASE("Transaction apply rejects empty upgrade-all results")
       {}, {}, {}, error, [&](const std::string &line) { progress_lines.push_back(line); }, true);
 
   REQUIRE_FALSE(ok);
-  REQUIRE(error == "No package updates are available.");
-  REQUIRE(progress_contains(progress_lines, "No package updates are available."));
+  REQUIRE(error == "No package updates can be applied.");
+  REQUIRE(progress_contains(progress_lines, "No package updates can be applied."));
 }
 
 // -----------------------------------------------------------------------------
