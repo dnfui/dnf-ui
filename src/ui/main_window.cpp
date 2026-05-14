@@ -214,15 +214,14 @@ build_main_ui(AppWidgets *ui)
   GtkWidget *vbox_history = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
   gtk_widget_set_vexpand(vbox_history, TRUE);
   gtk_widget_set_hexpand(vbox_history, TRUE);
+  gtk_widget_add_css_class(vbox_history, "history-sidebar");
   gtk_paned_set_start_child(GTK_PANED(outer_paned), vbox_history);
   ui->vbox_history = vbox_history;
 
   GtkWidget *history_label = gtk_label_new(_("Search History"));
   gtk_label_set_xalign(GTK_LABEL(history_label), 0.0);
+  gtk_widget_add_css_class(history_label, "history-heading");
   gtk_box_append(GTK_BOX(vbox_history), history_label);
-
-  // Separator below the Search History label.
-  gtk_box_append(GTK_BOX(vbox_history), create_thin_separator());
 
   GtkWidget *scrolled_history = gtk_scrolled_window_new();
   gtk_widget_set_vexpand(scrolled_history, TRUE);
@@ -230,6 +229,7 @@ build_main_ui(AppWidgets *ui)
   gtk_box_append(GTK_BOX(vbox_history), scrolled_history);
 
   GtkWidget *history_list = gtk_list_box_new();
+  gtk_widget_add_css_class(history_list, "history-list");
   gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled_history), history_list);
   ui->history_list = history_list;
 
@@ -496,6 +496,17 @@ setup_css(SearchWidgets *widgets)
                                     "} "
                                     ".control-row { "
                                     "  border-spacing: 5px; "
+                                    "} "
+                                    ".history-sidebar { "
+                                    "  padding: 8px; "
+                                    "  border-right: 1px solid @borders; "
+                                    "} "
+                                    ".history-heading { "
+                                    "  margin: 2px 4px 6px 4px; "
+                                    "  font-weight: 700; "
+                                    "} "
+                                    ".history-list { "
+                                    "  background: transparent; "
                                     "} "
                                     ".bottom-bar { padding: 5px; border-top: 1px solid #666; } "
                                     ".package-status { "
