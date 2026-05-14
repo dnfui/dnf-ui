@@ -54,7 +54,7 @@ struct AppWidgets {
 
   GtkWidget *scrolled_list = NULL;
   GtkWidget *listbox = NULL;
-  GtkWidget *notebook = NULL;
+  GtkWidget *details_panel = NULL;
 
   GtkTextBuffer *details_buffer = NULL;
   GtkTextBuffer *files_buffer = NULL;
@@ -347,12 +347,23 @@ build_main_ui(AppWidgets *ui)
   gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled_list), listbox);
   ui->listbox = listbox;
 
-  // Details notebook.
-  GtkWidget *notebook = gtk_notebook_new();
-  gtk_widget_set_hexpand(notebook, TRUE);
-  gtk_widget_set_vexpand(notebook, TRUE);
-  gtk_paned_set_end_child(GTK_PANED(inner_paned), notebook);
-  ui->notebook = notebook;
+  // Details panel.
+  GtkWidget *details_panel = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+  gtk_widget_set_hexpand(details_panel, TRUE);
+  gtk_widget_set_vexpand(details_panel, TRUE);
+  gtk_paned_set_end_child(GTK_PANED(inner_paned), details_panel);
+  ui->details_panel = details_panel;
+
+  GtkWidget *details_stack = gtk_stack_new();
+  gtk_stack_set_transition_type(GTK_STACK(details_stack), GTK_STACK_TRANSITION_TYPE_CROSSFADE);
+  gtk_widget_set_hexpand(details_stack, TRUE);
+  gtk_widget_set_vexpand(details_stack, TRUE);
+
+  GtkWidget *details_switcher = gtk_stack_switcher_new();
+  gtk_stack_switcher_set_stack(GTK_STACK_SWITCHER(details_switcher), GTK_STACK(details_stack));
+  gtk_widget_add_css_class(details_switcher, "details-switcher");
+  gtk_box_append(GTK_BOX(details_panel), details_switcher);
+  gtk_box_append(GTK_BOX(details_panel), details_stack);
 
   // Package info tab.
   GtkTextBuffer *details_buffer = NULL;
@@ -360,8 +371,7 @@ build_main_ui(AppWidgets *ui)
       create_scrolled_text_view(_("Select a package for details."), GTK_WRAP_WORD, &details_buffer);
   ui->details_buffer = details_buffer;
 
-  GtkWidget *tab_label_info = gtk_label_new(_("Info"));
-  gtk_notebook_append_page(GTK_NOTEBOOK(notebook), scrolled_details, tab_label_info);
+  gtk_stack_add_titled(GTK_STACK(details_stack), scrolled_details, "info", _("Info"));
 
   // File list tab.
   GtkTextBuffer *files_buffer = NULL;
@@ -369,8 +379,7 @@ build_main_ui(AppWidgets *ui)
       create_scrolled_text_view(_("Select an installed package to view its file list."), GTK_WRAP_NONE, &files_buffer);
   ui->files_buffer = files_buffer;
 
-  GtkWidget *tab_label_files = gtk_label_new(_("Files"));
-  gtk_notebook_append_page(GTK_NOTEBOOK(notebook), scrolled_files, tab_label_files);
+  gtk_stack_add_titled(GTK_STACK(details_stack), scrolled_files, "files", _("Files"));
 
   // Dependencies tab.
   GtkTextBuffer *deps_buffer = NULL;
@@ -378,8 +387,7 @@ build_main_ui(AppWidgets *ui)
       create_scrolled_text_view(_("Select a package to view dependencies."), GTK_WRAP_WORD, &deps_buffer);
   ui->deps_buffer = deps_buffer;
 
-  GtkWidget *tab_label_deps = gtk_label_new(_("Dependencies"));
-  gtk_notebook_append_page(GTK_NOTEBOOK(notebook), scrolled_deps, tab_label_deps);
+  gtk_stack_add_titled(GTK_STACK(details_stack), scrolled_deps, "dependencies", _("Dependencies"));
 
   // Changelog tab.
   GtkTextBuffer *changelog_buffer = NULL;
@@ -387,8 +395,7 @@ build_main_ui(AppWidgets *ui)
       create_scrolled_text_view(_("Select a package to view its changelog."), GTK_WRAP_WORD, &changelog_buffer);
   ui->changelog_buffer = changelog_buffer;
 
-  GtkWidget *tab_label_changelog = gtk_label_new(_("Changelog"));
-  gtk_notebook_append_page(GTK_NOTEBOOK(notebook), scrolled_changelog, tab_label_changelog);
+  gtk_stack_add_titled(GTK_STACK(details_stack), scrolled_changelog, "changelog", _("Changelog"));
 
   // Pending actions tab.
   GtkWidget *pending_scrolled = gtk_scrolled_window_new();
@@ -401,8 +408,7 @@ build_main_ui(AppWidgets *ui)
   gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(pending_scrolled), pending_list);
   ui->pending_list = pending_list;
 
-  GtkWidget *tab_label_pending = gtk_label_new(_("Pending"));
-  gtk_notebook_append_page(GTK_NOTEBOOK(notebook), pending_scrolled, tab_label_pending);
+  gtk_stack_add_titled(GTK_STACK(details_stack), pending_scrolled, "pending", _("Pending"));
 
   // Item count bar.
   GtkWidget *bottom_bar = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
@@ -541,6 +547,9 @@ setup_css(SearchWidgets *widgets)
                                     "  margin: 0; "
                                     "  padding: 0; "
                                     "  min-height: 1px; "
+                                    "} "
+                                    ".details-switcher { "
+                                    "  margin: 6px; "
                                     "} ");
   gtk_style_context_add_provider_for_display(
       gdk_display_get_default(), GTK_STYLE_PROVIDER(css), GTK_STYLE_PROVIDER_PRIORITY_USER);
@@ -571,7 +580,7 @@ connect_signals(const AppWidgets *ui, SearchWidgets *widgets)
   MainMenuWidgets menu_widgets;
   menu_widgets.window = ui->window;
   menu_widgets.history_panel = ui->vbox_history;
-  menu_widgets.info_panel = ui->notebook;
+  menu_widgets.info_panel = ui->details_panel;
   main_menu_connect_actions(menu_widgets, widgets);
 
   g_signal_connect(ui->list_button, "clicked", G_CALLBACK(package_query_on_list_button_clicked), widgets);

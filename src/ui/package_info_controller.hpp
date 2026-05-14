@@ -19,7 +19,7 @@ void package_info_clear_selected_package_state(SearchWidgets *widgets);
 // -----------------------------------------------------------------------------
 void package_info_load_selected_package_info(SearchWidgets *widgets, const PackageRow &selected);
 // -----------------------------------------------------------------------------
-// Reset the package details notebook to its empty state.
+// Reset the package details panel to its empty state.
 // -----------------------------------------------------------------------------
 void package_info_reset_details_view(SearchWidgets *widgets);
 
