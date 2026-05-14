@@ -145,12 +145,14 @@ transaction_progress_create_window(SearchWidgets *widgets, size_t pending_count)
 
   progress->stage_label = GTK_LABEL(gtk_label_new(_("Resolving dependency changes...")));
   gtk_label_set_xalign(progress->stage_label, 0.0f);
+  gtk_label_set_ellipsize(progress->stage_label, PANGO_ELLIPSIZE_END);
   gtk_widget_set_hexpand(GTK_WIDGET(progress->stage_label), TRUE);
   gtk_box_append(GTK_BOX(stage_box), GTK_WIDGET(progress->stage_label));
 
   GtkWidget *scroller = gtk_scrolled_window_new();
   gtk_widget_set_hexpand(scroller, TRUE);
   gtk_widget_set_vexpand(scroller, TRUE);
+  gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroller), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
   gtk_box_append(GTK_BOX(outer), scroller);
 
   progress->view = GTK_TEXT_VIEW(gtk_text_view_new());
@@ -158,6 +160,8 @@ transaction_progress_create_window(SearchWidgets *widgets, size_t pending_count)
   gtk_text_view_set_cursor_visible(progress->view, FALSE);
   gtk_text_view_set_monospace(progress->view, TRUE);
   gtk_text_view_set_wrap_mode(progress->view, GTK_WRAP_WORD_CHAR);
+  gtk_widget_set_hexpand(GTK_WIDGET(progress->view), TRUE);
+  gtk_widget_set_vexpand(GTK_WIDGET(progress->view), TRUE);
   gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scroller), GTK_WIDGET(progress->view));
   progress->buffer = gtk_text_view_get_buffer(progress->view);
 
