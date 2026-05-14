@@ -200,6 +200,10 @@ build_main_ui(AppWidgets *ui)
   GtkWidget *menu_bar = main_menu_create();
   gtk_box_append(GTK_BOX(vbox_root), menu_bar);
 
+  GtkWidget *controls_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
+  gtk_widget_add_css_class(controls_box, "top-controls");
+  gtk_box_append(GTK_BOX(vbox_root), controls_box);
+
   GtkWidget *outer_paned = gtk_paned_new(GTK_ORIENTATION_HORIZONTAL);
   gtk_paned_set_position(GTK_PANED(outer_paned), 200);
 
@@ -231,7 +235,8 @@ build_main_ui(AppWidgets *ui)
 
   // Search controls.
   GtkWidget *hbox_search = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-  gtk_box_append(GTK_BOX(vbox_root), hbox_search);
+  gtk_widget_add_css_class(hbox_search, "control-row");
+  gtk_box_append(GTK_BOX(controls_box), hbox_search);
 
   GtkWidget *entry = gtk_entry_new();
   gtk_entry_set_placeholder_text(GTK_ENTRY(entry), _("Search packages..."));
@@ -256,12 +261,10 @@ build_main_ui(AppWidgets *ui)
   gtk_box_append(GTK_BOX(hbox_search), spinner);
   ui->spinner = spinner;
 
-  // Separator below the search controls.
-  gtk_box_append(GTK_BOX(vbox_root), create_thin_separator());
-
   // Package query buttons.
   GtkWidget *hbox_buttons = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-  gtk_box_append(GTK_BOX(vbox_root), hbox_buttons);
+  gtk_widget_add_css_class(hbox_buttons, "control-row");
+  gtk_box_append(GTK_BOX(controls_box), hbox_buttons);
 
   GtkWidget *list_button = ui_helpers_create_icon_button("view-list-symbolic", _("List Installed"));
   gtk_box_append(GTK_BOX(hbox_buttons), list_button);
@@ -282,7 +285,8 @@ build_main_ui(AppWidgets *ui)
 
   // Transaction buttons row for marking and applying package actions.
   GtkWidget *hbox_tx_buttons = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-  gtk_box_append(GTK_BOX(vbox_root), hbox_tx_buttons);
+  gtk_widget_add_css_class(hbox_tx_buttons, "control-row");
+  gtk_box_append(GTK_BOX(controls_box), hbox_tx_buttons);
 
   GtkWidget *install_button = ui_helpers_create_icon_button("list-add-symbolic", _("Mark for Install"));
   gtk_box_append(GTK_BOX(hbox_tx_buttons), install_button);
@@ -308,14 +312,11 @@ build_main_ui(AppWidgets *ui)
   gtk_box_append(GTK_BOX(hbox_tx_buttons), clear_pending_button);
   ui->clear_pending_button = clear_pending_button;
 
-  // Separator below transaction actions.
-  gtk_box_append(GTK_BOX(vbox_root), create_thin_separator());
-
   GtkWidget *status_label = gtk_label_new(_("Ready."));
   gtk_label_set_xalign(GTK_LABEL(status_label), 0.0);
   gtk_label_set_selectable(GTK_LABEL(status_label), TRUE);
   gtk_label_set_wrap(GTK_LABEL(status_label), TRUE);
-  gtk_box_append(GTK_BOX(vbox_root), status_label);
+  gtk_box_append(GTK_BOX(controls_box), status_label);
   ui->status_label = status_label;
 
   gtk_box_append(GTK_BOX(vbox_root), create_thin_separator());
@@ -489,6 +490,13 @@ setup_css(SearchWidgets *widgets)
   // The few custom style rules are kept next to the widgets they style.
   gtk_css_provider_load_from_string(css,
                                     "label.status-bar { padding: 4px; border-radius: 4px; } "
+                                    ".top-controls { "
+                                    "  padding: 8px 10px 6px 10px; "
+                                    "  border-bottom: 1px solid @borders; "
+                                    "} "
+                                    ".control-row { "
+                                    "  border-spacing: 5px; "
+                                    "} "
                                     ".bottom-bar { padding: 5px; border-top: 1px solid #666; } "
                                     ".package-status { "
                                     "  padding: 3px 10px; "
