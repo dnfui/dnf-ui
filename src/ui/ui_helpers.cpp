@@ -1,8 +1,8 @@
 // -----------------------------------------------------------------------------
 // src/ui/ui_helpers.cpp
-// Generic UI utility helpers
-// Provides small shared helpers for status feedback and transaction action label
-// updates used across the split widget controller modules.
+// Shared UI helpers
+// Creates icon buttons, updates status text, and keeps transaction action labels
+// in sync with pending actions.
 // -----------------------------------------------------------------------------
 #include "ui_helpers.hpp"
 

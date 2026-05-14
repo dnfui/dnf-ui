@@ -171,7 +171,7 @@ pending_transaction_on_reinstall_button_clicked(GtkButton *, gpointer user_data)
 
   PackageActionRows action_rows = package_action_rows_for_selection(pkg);
 
-  // Mirror the remove path and block reinstall for the installed package that owns the running GUI executable.
+  // Reinstall must check the installed package, not the visible update row.
   if (!action_rows.has_installed_row) {
     ui_helpers_set_status(widgets->query.status_label, _("Package is not installed."), "gray");
     return;

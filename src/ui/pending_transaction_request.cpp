@@ -70,8 +70,8 @@ pending_transaction_validate_request(const TransactionRequest &request, std::str
   PendingRequestBaseDropGuard base_drop_guard;
 
   for (const auto &spec : request.remove) {
-    // Re-check remove specs at apply time so self-protection still holds even
-    // if outdated UI state or future code paths bypass button sensitivity.
+    // Re-check remove specs so stale UI state or bypassed button sensitivity
+    // cannot remove the running app.
     if (dnf_backend_is_self_protected_transaction_spec(spec)) {
       error_out = _("DNF UI cannot remove the package that owns the running application. Close DNF UI and remove it "
                     "from another tool.");
@@ -80,8 +80,8 @@ pending_transaction_validate_request(const TransactionRequest &request, std::str
   }
 
   for (const auto &spec : request.reinstall) {
-    // Re-check reinstall specs for the same reason: the running app must never
-    // ask the backend to modify the RPM that owns the current executable.
+    // Re-check reinstall specs so stale UI state or bypassed button sensitivity
+    // cannot reinstall the running app.
     if (dnf_backend_is_self_protected_transaction_spec(spec)) {
       error_out = _("DNF UI cannot reinstall the package that owns the running application while it is running.");
       return false;

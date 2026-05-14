@@ -217,7 +217,7 @@ build_main_ui(AppWidgets *ui)
   gtk_label_set_xalign(GTK_LABEL(history_label), 0.0);
   gtk_box_append(GTK_BOX(vbox_history), history_label);
 
-  // --- Flat line separator below Search History label ---
+  // Separator below the Search History label.
   gtk_box_append(GTK_BOX(vbox_history), create_thin_separator());
 
   GtkWidget *scrolled_history = gtk_scrolled_window_new();
@@ -229,7 +229,7 @@ build_main_ui(AppWidgets *ui)
   gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled_history), history_list);
   ui->history_list = history_list;
 
-  // --- Search bar row ---
+  // Search controls.
   GtkWidget *hbox_search = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
   gtk_box_append(GTK_BOX(vbox_root), hbox_search);
 
@@ -256,10 +256,10 @@ build_main_ui(AppWidgets *ui)
   gtk_box_append(GTK_BOX(hbox_search), spinner);
   ui->spinner = spinner;
 
-  // --- Flat line separator below Search bar ---
+  // Separator below the search controls.
   gtk_box_append(GTK_BOX(vbox_root), create_thin_separator());
 
-  // --- Buttons row ---
+  // Package query buttons.
   GtkWidget *hbox_buttons = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
   gtk_box_append(GTK_BOX(vbox_root), hbox_buttons);
 
@@ -275,9 +275,7 @@ build_main_ui(AppWidgets *ui)
   gtk_box_append(GTK_BOX(hbox_buttons), list_upgradeable_button);
   ui->list_upgradeable_button = list_upgradeable_button;
 
-  // --- Refresh Repositories button ---
-  // Triggers an asynchronous repository rebuild using BaseManager::rebuild()
-  // Runs in a background thread to keep the GTK UI responsive
+  // Starts repository refresh on a background task.
   GtkWidget *refresh_button = ui_helpers_create_icon_button("view-refresh-symbolic", _("Refresh Repositories"));
   gtk_box_append(GTK_BOX(hbox_buttons), refresh_button);
   ui->refresh_button = refresh_button;
@@ -310,7 +308,7 @@ build_main_ui(AppWidgets *ui)
   gtk_box_append(GTK_BOX(hbox_tx_buttons), clear_pending_button);
   ui->clear_pending_button = clear_pending_button;
 
-  // --- Flat line separator ---
+  // Separator below transaction actions.
   gtk_box_append(GTK_BOX(vbox_root), create_thin_separator());
 
   GtkWidget *status_label = gtk_label_new(_("Ready."));
@@ -338,7 +336,7 @@ build_main_ui(AppWidgets *ui)
   gtk_paned_set_position(GTK_PANED(inner_paned), pos);
   ui->inner_paned = inner_paned;
 
-  // --- Top: package list ---
+  // Package table.
   GtkWidget *scrolled_list = gtk_scrolled_window_new();
   gtk_widget_set_hexpand(scrolled_list, TRUE);
   gtk_widget_set_vexpand(scrolled_list, TRUE);
@@ -349,14 +347,14 @@ build_main_ui(AppWidgets *ui)
   gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled_list), listbox);
   ui->listbox = listbox;
 
-  // --- Bottom: notebook with tabs ---
+  // Details notebook.
   GtkWidget *notebook = gtk_notebook_new();
   gtk_widget_set_hexpand(notebook, TRUE);
   gtk_widget_set_vexpand(notebook, TRUE);
   gtk_paned_set_end_child(GTK_PANED(inner_paned), notebook);
   ui->notebook = notebook;
 
-  // --- Tab 1: Package Info ---
+  // Package info tab.
   GtkTextBuffer *details_buffer = NULL;
   GtkWidget *scrolled_details =
       create_scrolled_text_view(_("Select a package for details."), GTK_WRAP_WORD, &details_buffer);
@@ -365,7 +363,7 @@ build_main_ui(AppWidgets *ui)
   GtkWidget *tab_label_info = gtk_label_new(_("Info"));
   gtk_notebook_append_page(GTK_NOTEBOOK(notebook), scrolled_details, tab_label_info);
 
-  // --- Tab 2: File List ---
+  // File list tab.
   GtkTextBuffer *files_buffer = NULL;
   GtkWidget *scrolled_files =
       create_scrolled_text_view(_("Select an installed package to view its file list."), GTK_WRAP_NONE, &files_buffer);
@@ -374,7 +372,7 @@ build_main_ui(AppWidgets *ui)
   GtkWidget *tab_label_files = gtk_label_new(_("Files"));
   gtk_notebook_append_page(GTK_NOTEBOOK(notebook), scrolled_files, tab_label_files);
 
-  // --- Tab 3: Dependencies ---
+  // Dependencies tab.
   GtkTextBuffer *deps_buffer = NULL;
   GtkWidget *scrolled_deps =
       create_scrolled_text_view(_("Select a package to view dependencies."), GTK_WRAP_WORD, &deps_buffer);
@@ -383,7 +381,7 @@ build_main_ui(AppWidgets *ui)
   GtkWidget *tab_label_deps = gtk_label_new(_("Dependencies"));
   gtk_notebook_append_page(GTK_NOTEBOOK(notebook), scrolled_deps, tab_label_deps);
 
-  // --- Tab 4: Changelog ---
+  // Changelog tab.
   GtkTextBuffer *changelog_buffer = NULL;
   GtkWidget *scrolled_changelog =
       create_scrolled_text_view(_("Select a package to view its changelog."), GTK_WRAP_WORD, &changelog_buffer);
@@ -392,7 +390,7 @@ build_main_ui(AppWidgets *ui)
   GtkWidget *tab_label_changelog = gtk_label_new(_("Changelog"));
   gtk_notebook_append_page(GTK_NOTEBOOK(notebook), scrolled_changelog, tab_label_changelog);
 
-  // --- Tab 5: Pending actions ---
+  // Pending actions tab.
   GtkWidget *pending_scrolled = gtk_scrolled_window_new();
   gtk_widget_set_hexpand(pending_scrolled, TRUE);
   gtk_widget_set_vexpand(pending_scrolled, TRUE);
@@ -406,7 +404,7 @@ build_main_ui(AppWidgets *ui)
   GtkWidget *tab_label_pending = gtk_label_new(_("Pending"));
   gtk_notebook_append_page(GTK_NOTEBOOK(notebook), pending_scrolled, tab_label_pending);
 
-  // --- Bottom bar with item count ---
+  // Item count bar.
   GtkWidget *bottom_bar = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
   gtk_widget_set_hexpand(bottom_bar, TRUE);
   gtk_widget_add_css_class(bottom_bar, "bottom-bar");
@@ -743,7 +741,7 @@ on_main_window_close_request(GtkWindow *window, gpointer user_data)
 }
 
 // -----------------------------------------------------------------------------
-// Connect window destroy callback for SearchWidgets cleanup
+// Connect window cleanup.
 // -----------------------------------------------------------------------------
 static void
 connect_cleanup(GtkWidget *window, std::shared_ptr<SearchWidgets> widgets, GCancellable *startup_cancellable)
