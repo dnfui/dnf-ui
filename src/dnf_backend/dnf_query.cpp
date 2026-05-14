@@ -219,6 +219,20 @@ collect_installed_rows(libdnf5::Base &base,
 }
 
 // -----------------------------------------------------------------------------
+// Rebuild the installed name and architecture lookup from the current row data.
+// Call this after changing installed rows so the published lookup matches the
+// rows returned to the UI.
+// -----------------------------------------------------------------------------
+static void
+refresh_installed_row_lookup(InstalledQueryResult &installed)
+{
+  installed.rows_by_name_arch.clear();
+  for (const auto &row : installed.rows) {
+    remember_newest_row(installed.rows_by_name_arch, row);
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Compare one installed row against the newest visible repo candidate for the
 // same name and architecture tuple and annotate the row with the resolved relationship.
 // -----------------------------------------------------------------------------
@@ -245,9 +259,9 @@ annotate_installed_row_with_repo_candidate(PackageRow &installed_row,
 }
 
 // -----------------------------------------------------------------------------
-// Best-effort repo annotation for installed rows. Installed queries should keep
-// working from the local rpmdb even when repository metadata is unavailable, so
-// failures here only leave repo provenance as UNKNOWN.
+// Add repo-candidate state to installed rows when repo metadata is available.
+// Installed queries must keep working from the local rpmdb, so failures here
+// leave repo provenance as UNKNOWN instead of failing the installed list.
 // -----------------------------------------------------------------------------
 void
 annotate_installed_rows_with_repo_candidates_best_effort(std::vector<PackageRow> &installed_rows,
@@ -397,6 +411,11 @@ dnf_backend_get_installed_package_rows_interruptible(GCancellable *cancellable)
         installed.rows, cancellable, [&base, &installed](GCancellable *annotation_cancellable) {
           return collect_available_rows_for_installed_names(base, annotation_cancellable, installed.rows);
         });
+    if (package_query_cancelled(cancellable)) {
+      return {};
+    }
+
+    refresh_installed_row_lookup(installed);
     protected_names = collect_self_protected_package_names(base);
   }
 
