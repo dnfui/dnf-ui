@@ -152,6 +152,7 @@ help:
 	@printf '%-36s %s\n' 'dockerrunoffline' 'Run the desktop app in Docker without networking.'
 	@printf '%-36s %s\n' 'dockerruncoldoffline' 'Run the desktop app in Docker without networking or repo cache.'
 	@printf '%-36s %s\n' 'dockertest' 'Run the backend test suite in Docker.'
+	@printf '%-36s %s\n' 'dockermemcheck' 'Run Valgrind memory checks in Docker.'
 	@printf '%-36s %s\n' 'dockerofflinetest' 'Run the Docker offline smoke tests.'
 	@printf '%-36s %s\n' 'dockertests' 'Run the full Docker test matrix.'
 	@printf '%-36s %s\n' 'dockerservicetest' 'Run the Docker session bus preview service test.'
@@ -362,6 +363,11 @@ dockerruncoldoffline:
 .PHONY: dockertest
 dockertest:
 	@./docker/docker_test.sh
+
+# Run Valgrind memory checks in Docker:
+.PHONY: dockermemcheck
+dockermemcheck:
+	@./docker/docker_memcheck.sh
 
 # Run the offline Docker smoke tests after priming the repo cache online:
 .PHONY: dockerofflinetest
