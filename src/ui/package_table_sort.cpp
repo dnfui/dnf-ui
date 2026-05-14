@@ -26,8 +26,16 @@ package_table_column_text(const PackageItem &item, PackageColumnKind kind)
   }
   case PackageColumnKind::ARCH:
     return item.row.arch;
-  case PackageColumnKind::REPO:
+  case PackageColumnKind::REPO: {
+    PackageRow installed_row;
+    // A repository name such as "fedora" means the row is available from that repo.
+    // "@System" means the row comes from the local installed rpmdb.
+    // Match the info tab by showing the installed package source when one exists.
+    if (dnf_backend_get_installed_package_row_by_name_arch(item.row, installed_row)) {
+      return installed_row.repo;
+    }
     return item.row.repo;
+  }
   case PackageColumnKind::SUMMARY:
     return item.row.summary;
   }
@@ -86,7 +94,8 @@ compare_package_items(const PackageItem &lhs, const PackageItem &rhs, PackageCol
     result = compare_text(lhs.row.arch, rhs.row.arch);
     break;
   case PackageColumnKind::REPO:
-    result = compare_text(lhs.row.repo, rhs.row.repo);
+    result = compare_text(package_table_column_text(lhs, PackageColumnKind::REPO),
+                          package_table_column_text(rhs, PackageColumnKind::REPO));
     break;
   case PackageColumnKind::SUMMARY:
     result = compare_text(lhs.row.summary, rhs.row.summary);
