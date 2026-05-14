@@ -48,9 +48,8 @@ make_package_row(const libdnf5::rpm::Package &pkg,
 bool package_query_cancelled(GCancellable *cancellable);
 
 // -----------------------------------------------------------------------------
-// Collect query rows keyed by package name and architecture. These helpers intentionally
-// require a caller-supplied Base reference so the caller controls the Base lock
-// while related libdnf5 queries run.
+// Collect query rows keyed by package name and architecture. The caller supplies
+// the Base so related libdnf5 queries stay under the same Base lock.
 // -----------------------------------------------------------------------------
 std::map<std::string, PackageRow> collect_available_rows_by_name_arch(libdnf5::Base &base,
                                                                       GCancellable *cancellable,
@@ -65,8 +64,7 @@ InstalledQueryResult collect_installed_rows(libdnf5::Base &base,
                                             const std::string *pattern = nullptr);
 
 // -----------------------------------------------------------------------------
-// Repo-candidate annotation and browse and search merge helpers shared by query and
-// test-only fallback paths.
+// Repo-candidate annotation and row merge helpers used by query code and tests.
 // -----------------------------------------------------------------------------
 void annotate_installed_row_with_repo_candidate(PackageRow &installed_row,
                                                 const std::map<std::string, PackageRow> &available_rows);

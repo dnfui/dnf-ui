@@ -149,8 +149,9 @@ dnf_backend_get_package_info(const std::string &pkg_nevra)
     }
   }
 
-  // Use installed metadata for the header. This keeps the version, repo, install size, and install reason
-  // stable when the user opens the package from any list.
+  // Use installed metadata for the header when the package is installed.
+  // This keeps version, repo, install size, and install reason consistent
+  // when the user opens the package from different lists.
   const PackageRow &display_row = have_installed_counterpart ? installed_row : selected_row;
   const unsigned long long display_install_size =
       have_installed_counterpart ? installed_install_size : selected_install_size;
@@ -260,8 +261,8 @@ dnf_backend_get_installed_package_files(const std::string &pkg_nevra, size_t max
   installed_files_query.filter_nevra(installed_nevra);
   installed_files_query.filter_installed();
 
-  // This should still find the installed package. If it does not, show the
-  // normal message for packages without an installed file list.
+  // If the installed package cannot be found here, use the same message as for
+  // packages without an installed file list.
   if (installed_files_query.empty()) {
     DNFUI_TRACE("Backend file list installed package not found nevra=%s installed_nevra=%s",
                 pkg_nevra.c_str(),

@@ -96,8 +96,7 @@ collect_self_protected_package_names(libdnf5::Base &base)
 
 // -----------------------------------------------------------------------------
 // Publish installed-package state only after callers have finished all libdnf
-// Base reads. Holding the Base lock while taking g_installed_mutex would make
-// future UI cache callers vulnerable to lock-order deadlocks.
+// Base reads. Do not hold the Base lock while taking g_installed_mutex.
 // -----------------------------------------------------------------------------
 void
 publish_installed_snapshot(InstalledQueryResult installed, std::set<std::string> protected_names)
@@ -113,7 +112,7 @@ publish_installed_snapshot(InstalledQueryResult installed, std::set<std::string>
 using namespace dnf_backend_internal;
 
 // -----------------------------------------------------------------------------
-// Publish the search options used by future backend search workers.
+// Publish the search options used by new backend search workers.
 // -----------------------------------------------------------------------------
 void
 dnf_backend_set_search_options(const DnfBackendSearchOptions &options)
