@@ -34,13 +34,13 @@ struct PackageQueryWidgets {
 };
 
 // -----------------------------------------------------------------------------
-// Package list view, details notebook, and current selection state
+// Package list view, details panel, and current selection state
 // -----------------------------------------------------------------------------
 struct PackageResultsWidgets {
   GtkListBox *listbox = nullptr;
   GtkScrolledWindow *list_scroller = nullptr;
   GtkPaned *inner_paned = nullptr;
-  // Text buffers owned by the details notebook text views.
+  // Text buffers owned by the details panel text views.
   GtkTextBuffer *details_buffer = nullptr;
   GtkTextBuffer *files_buffer = nullptr;
   GtkTextBuffer *deps_buffer = nullptr;

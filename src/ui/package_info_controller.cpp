@@ -1,8 +1,8 @@
 // -----------------------------------------------------------------------------
 // src/ui/package_info_controller.cpp
-// Package selection and details notebook controller
+// Package selection and details panel controller
 // Handles package selection state, action-button sensitivity, and the async
-// package info load that updates the details notebook.
+// package info load that updates the details panel.
 // -----------------------------------------------------------------------------
 #include "package_info_controller.hpp"
 
@@ -74,10 +74,10 @@ return_package_info_task_cancelled(GTask *task)
 }
 
 // -----------------------------------------------------------------------------
-// Replace text in a details notebook buffer.
+// Replace text in a details panel buffer.
 // -----------------------------------------------------------------------------
 static void
-set_notebook_text(GtkTextBuffer *buffer, const char *text)
+set_details_text(GtkTextBuffer *buffer, const char *text)
 {
   if (!buffer) {
     return;
@@ -87,7 +87,7 @@ set_notebook_text(GtkTextBuffer *buffer, const char *text)
 }
 
 // -----------------------------------------------------------------------------
-// Reset the details notebook after repopulating the main package view.
+// Reset the details panel after repopulating the main package view.
 // -----------------------------------------------------------------------------
 void
 package_info_reset_details_view(SearchWidgets *widgets)
@@ -96,10 +96,10 @@ package_info_reset_details_view(SearchWidgets *widgets)
     return;
   }
 
-  set_notebook_text(widgets->results.details_buffer, _("Select a package for details."));
-  set_notebook_text(widgets->results.files_buffer, _("Select an installed package to view its file list."));
-  set_notebook_text(widgets->results.deps_buffer, _("Select a package to view dependencies."));
-  set_notebook_text(widgets->results.changelog_buffer, _("Select a package to view its changelog."));
+  set_details_text(widgets->results.details_buffer, _("Select a package for details."));
+  set_details_text(widgets->results.files_buffer, _("Select an installed package to view its file list."));
+  set_details_text(widgets->results.deps_buffer, _("Select a package to view dependencies."));
+  set_details_text(widgets->results.changelog_buffer, _("Select a package to view its changelog."));
 }
 
 // -----------------------------------------------------------------------------
@@ -147,7 +147,7 @@ update_selected_package_actions(SearchWidgets *widgets, const PackageRow &select
 }
 
 // -----------------------------------------------------------------------------
-// Load package notebook text on a worker thread.
+// Load package detail text on a worker thread.
 // -----------------------------------------------------------------------------
 static void
 on_package_info_task(GTask *task, gpointer, gpointer task_data, GCancellable *cancellable)
@@ -228,7 +228,7 @@ on_package_info_task(GTask *task, gpointer, gpointer task_data, GCancellable *ca
 }
 
 // -----------------------------------------------------------------------------
-// Update the details notebook after package text has loaded.
+// Update the details panel after package text has loaded.
 // -----------------------------------------------------------------------------
 static void
 on_package_info_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
@@ -272,19 +272,19 @@ on_package_info_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
   }
 
   // Display general package information
-  set_notebook_text(widgets->results.details_buffer, result->info ? result->info : _("No details found."));
+  set_details_text(widgets->results.details_buffer, result->info ? result->info : _("No details found."));
 
   // Display the file list fetched by the background task.
-  set_notebook_text(widgets->results.files_buffer,
-                    result->files ? result->files : _("Select an installed package to view its file list."));
+  set_details_text(widgets->results.files_buffer,
+                   result->files ? result->files : _("Select an installed package to view its file list."));
 
   // Display dependencies fetched by the background task.
-  set_notebook_text(widgets->results.deps_buffer,
-                    result->deps ? result->deps : _("Select a package to view dependencies."));
+  set_details_text(widgets->results.deps_buffer,
+                   result->deps ? result->deps : _("Select a package to view dependencies."));
 
   // Display changelog fetched by the background task.
-  set_notebook_text(widgets->results.changelog_buffer,
-                    result->changelog ? result->changelog : _("Select a package to view its changelog."));
+  set_details_text(widgets->results.changelog_buffer,
+                   result->changelog ? result->changelog : _("Select a package to view its changelog."));
 
   ui_helpers_set_status(widgets->query.status_label, _("Package info loaded."), "green");
   info_task_result_free(result);

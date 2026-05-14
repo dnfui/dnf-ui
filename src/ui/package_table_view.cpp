@@ -2,7 +2,7 @@
 // package_table_view.cpp
 // Package table view
 // Builds the GTK4 ColumnView and keeps package selection wired into the details
-// notebook controller.
+// details panel controller.
 // -----------------------------------------------------------------------------
 #include "ui_helpers.hpp"
 
