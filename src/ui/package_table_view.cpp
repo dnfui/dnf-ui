@@ -2,7 +2,7 @@
 // package_table_view.cpp
 // Package table view
 // Builds the GTK4 ColumnView and keeps package selection wired into the details
-// details panel controller.
+// panel controller.
 // -----------------------------------------------------------------------------
 #include "ui_helpers.hpp"
 
@@ -380,7 +380,7 @@ package_table_fill_package_view(SearchWidgets *widgets, const std::vector<Packag
   gtk_widget_set_vexpand(GTK_WIDGET(view), TRUE);
   gtk_column_view_set_single_click_activate(view, FALSE);
   gtk_column_view_set_show_row_separators(view, TRUE);
-  gtk_column_view_set_show_column_separators(view, TRUE);
+  gtk_column_view_set_show_column_separators(view, FALSE);
 
   append_package_column(view, create_text_column(widgets, _("Status"), PackageColumnKind::STATUS, 160, FALSE));
   append_package_column(view, create_text_column(widgets, _("Package"), PackageColumnKind::PACKAGE, 180, FALSE));
