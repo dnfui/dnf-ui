@@ -120,7 +120,7 @@ The relevant functions are:
 ## Package details
 
 [src/dnf_backend/dnf_details.cpp](../src/dnf_backend/dnf_details.cpp) formats
-text for the package details notebook.
+text for the package details panel.
 
 It provides:
 

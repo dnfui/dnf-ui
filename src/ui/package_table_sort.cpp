@@ -20,9 +20,11 @@ package_table_column_text(const PackageItem &item, PackageColumnKind kind)
     PackageRow installed_row;
     if (dnf_backend_get_installed_package_row_by_name_arch(item.row, installed_row) &&
         installed_row.nevra != item.row.nevra) {
-      return installed_row.display_version();
+      // The table column is named Version, so keep it aligned with the
+      // Info tab Version field. Release remains available in the details pane.
+      return installed_row.version;
     }
-    return item.row.display_version();
+    return item.row.version;
   }
   case PackageColumnKind::ARCH:
     return item.row.arch;

@@ -25,7 +25,7 @@ It is responsible for:
 - creating the top menu
 - creating search and list buttons
 - creating the package table
-- creating the package details notebook
+- creating the package details panel
 - creating the pending actions tab
 - creating transaction action buttons
 - connecting GTK signals to controller callbacks
@@ -40,9 +40,9 @@ belong in the controller files.
 smaller structs:
 
 - `PackageQueryWidgets` for search controls and status
-- `PackageResultWidgets` for the package table and details notebook
+- `PackageResultsWidgets` for the package table and details panel
 - `PendingTransactionWidgets` for marked actions and apply controls
-- `WindowStateWidgets` for window-level state
+- `MainWindowState` for window-level state
 - `SearchWidgets` as the top-level shared state passed to controllers
 
 This state is not meant to hide ownership. It is a practical place to store
