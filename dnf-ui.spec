@@ -1,5 +1,5 @@
 Name:           dnf-ui
-Version:        0.1.4
+Version:        0.1.5
 Release:        1%{?dist}
 Summary:        GTK frontend for DNF5 with a privileged transaction service
 
@@ -74,6 +74,13 @@ appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/com.fedora.dnfui
 %{_unitdir}/dnfui-service.service
 
 %changelog
+* Fri May 15 2026 ErikMN <erik@example.invalid> - 0.1.5-1
+- Polish the package list, history panel, details tabs, and status markers
+- Keep long transaction messages from widening the progress window
+- Show plain package versions in the package table
+- Reduce memory kept after installed package listing
+- Improve Stop feedback while package queries are shutting down
+
 * Sun May 10 2026 ErikMN <erik@example.invalid> - 0.1.4-1
 - Harden transaction service request ownership checks
 - Improve transaction progress reporting during apply
