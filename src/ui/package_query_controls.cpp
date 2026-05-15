@@ -83,8 +83,7 @@ package_query_finish_results_refresh(SearchWidgets *widgets)
 bool
 package_query_has_active_package_list_request(const SearchWidgets *widgets)
 {
-  return widgets && widgets->query_state.package_list_cancellable &&
-      !g_cancellable_is_cancelled(widgets->query_state.package_list_cancellable);
+  return widgets && widgets->query_state.package_list_cancellable;
 }
 
 // -----------------------------------------------------------------------------
@@ -129,6 +128,28 @@ package_list_cancelled_status(PackageListRequestKind kind)
   case PackageListRequestKind::NONE:
   default:
     return _("Operation cancelled.");
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Human-readable status shown after the user asks a background request to stop.
+// The worker may still need a moment to leave libdnf query code.
+// -----------------------------------------------------------------------------
+static const char *
+package_list_stopping_status(PackageListRequestKind kind)
+{
+  switch (kind) {
+  case PackageListRequestKind::SEARCH:
+    return _("Stopping search...");
+  case PackageListRequestKind::LIST_INSTALLED:
+    return _("Stopping installed package listing...");
+  case PackageListRequestKind::LIST_AVAILABLE:
+    return _("Stopping package listing...");
+  case PackageListRequestKind::LIST_UPGRADEABLE:
+    return _("Stopping upgradable package listing...");
+  case PackageListRequestKind::NONE:
+  default:
+    return _("Stopping operation...");
   }
 }
 
@@ -205,6 +226,9 @@ package_query_end_package_list_request(SearchWidgets *widgets, uint64_t request_
     return;
   }
 
+  bool request_cancelled = widgets->query_state.package_list_cancellable &&
+      g_cancellable_is_cancelled(widgets->query_state.package_list_cancellable);
+
   if (widgets->query_state.package_list_cancellable) {
     g_object_unref(widgets->query_state.package_list_cancellable);
     widgets->query_state.package_list_cancellable = nullptr;
@@ -212,6 +236,10 @@ package_query_end_package_list_request(SearchWidgets *widgets, uint64_t request_
   widgets->query_state.current_package_list_request_id = 0;
   widgets->query_state.current_package_list_request_kind = PackageListRequestKind::NONE;
   restore_package_list_controls(widgets);
+
+  if (request_cancelled) {
+    ui_helpers_set_status(widgets->query.status_label, package_list_cancelled_status(kind), "gray");
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -224,21 +252,20 @@ package_query_cancel_active_package_list_request(SearchWidgets *widgets)
     return;
   }
 
-  uint64_t request_id = widgets->query_state.current_package_list_request_id;
   PackageListRequestKind kind = widgets->query_state.current_package_list_request_kind;
   GCancellable *c = widgets->query_state.package_list_cancellable;
-  if (!g_cancellable_is_cancelled(c)) {
-    g_cancellable_cancel(c);
+  if (g_cancellable_is_cancelled(c)) {
+    ui_helpers_set_status(widgets->query.status_label, package_list_stopping_status(kind), "gray");
+    return;
   }
+
+  g_cancellable_cancel(c);
 
   // Release only the spinner slot owned by this request so other running tasks
   // can keep their progress indication visible.
   widgets_spinner_release(widgets->query.spinner);
 
-  // Clear the active request after its controls have been restored.
-  package_query_end_package_list_request(widgets, request_id, kind);
-
-  ui_helpers_set_status(widgets->query.status_label, package_list_cancelled_status(kind), "gray");
+  ui_helpers_set_status(widgets->query.status_label, package_list_stopping_status(kind), "gray");
 }
 
 // -----------------------------------------------------------------------------
