@@ -69,6 +69,8 @@ struct QueryBackendBaseDropGuard {
 static void
 on_list_task(GTask *task, gpointer, gpointer, GCancellable *cancellable)
 {
+  QueryBackendBaseDropGuard base_drop_guard;
+
   try {
     // Query all installed packages.
     auto *results = new std::vector<PackageRow>(dnf_backend_get_installed_package_rows_interruptible(cancellable));
