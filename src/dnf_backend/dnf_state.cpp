@@ -332,7 +332,8 @@ dnf_backend_is_self_protected_transaction_spec(const std::string &spec)
     return false;
   }
 
-  auto [base, guard, generation] = BaseManager::instance().acquire_read();
+  auto read = BaseManager::instance().acquire_system_only_read();
+  libdnf5::Base &base = *read.base;
   libdnf5::rpm::PackageQuery query(base);
   query.filter_installed();
   query.filter_nevra(spec);

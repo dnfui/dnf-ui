@@ -4,6 +4,7 @@
 // -----------------------------------------------------------------------------
 #include <catch2/catch_test_macros.hpp>
 
+#include "base_manager.hpp"
 #include "dnf_backend/dnf_backend.hpp"
 #include "service/transaction_service_internal.hpp"
 #include "test_utils.hpp"
@@ -74,6 +75,28 @@ TEST_CASE("Transaction service validation rejects self-protected removals")
 
   REQUIRE_FALSE(validate_transaction_request_for_service(request, error));
   REQUIRE(error == "DNF UI cannot remove the package that owns the running application.");
+}
+
+// -----------------------------------------------------------------------------
+// Verify that self-protection validation does not leave a cached Base behind.
+// -----------------------------------------------------------------------------
+TEST_CASE("Transaction service validation keeps self-protection lookup local-only")
+{
+  reset_backend_globals();
+  PackageRow row = first_installed_package_row();
+  ScopedEnvVar protected_name("DNFUI_TEST_SELF_PROTECTED_PACKAGE_NAME", row.name.c_str());
+
+  auto &mgr = BaseManager::instance();
+  mgr.reset_for_tests();
+  REQUIRE_FALSE(mgr.has_cached_base_for_tests());
+
+  TransactionRequest request;
+  request.remove.push_back(row.nevra);
+  std::string error;
+
+  REQUIRE_FALSE(validate_transaction_request_for_service(request, error));
+  REQUIRE(error == "DNF UI cannot remove the package that owns the running application.");
+  REQUIRE_FALSE(mgr.has_cached_base_for_tests());
 }
 
 // -----------------------------------------------------------------------------
