@@ -163,7 +163,8 @@ dnf_backend_installed_snapshot_size()
 // -----------------------------------------------------------------------------
 // Refresh the exact-installed and self-protection snapshots used by UI state
 // classification. This path is intentionally local-first: it does not require
-// repository metadata and should keep working from the rpmdb alone.
+// repository metadata and should keep working from the rpmdb alone. It uses a
+// short-lived system-only Base so future queries do not inherit that mode.
 //
 // Thread-safety:
 //   The Base read lock and g_installed_mutex must never be held simultaneously.
@@ -176,8 +177,8 @@ dnf_backend_refresh_installed_nevras()
   InstalledQueryResult installed;
   std::set<std::string> protected_names;
   {
-    BaseManager::instance().ensure_system_only_initialized_if_needed();
-    auto [base, guard, generation] = BaseManager::instance().acquire_read();
+    auto read = BaseManager::instance().acquire_system_only_read();
+    libdnf5::Base &base = *read.base;
     const DnfBackendSearchOptions search_options {};
     installed = collect_installed_rows(base, nullptr, search_options);
     protected_names = collect_self_protected_package_names(base);

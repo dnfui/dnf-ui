@@ -39,7 +39,6 @@ validate_transaction_request_for_service(const TransactionRequest &request, std:
   BackendBaseDropGuard base_drop_guard;
 
   try {
-    BaseManager::instance().ensure_system_only_initialized_if_needed();
     dnf_backend_refresh_installed_nevras();
   } catch (const std::exception &e) {
     error_out = std::string(_("Unable to validate protected installed packages: ")) + e.what();

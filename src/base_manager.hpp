@@ -103,6 +103,10 @@ class BaseManager {
   // Return serialized access to a temporary Base that includes changelog metadata.
   // -----------------------------------------------------------------------------
   TemporaryBaseRead acquire_changelog_read();
+  // -----------------------------------------------------------------------------
+  // Return serialized access to a temporary Base that reads only the local rpmdb.
+  // -----------------------------------------------------------------------------
+  TemporaryBaseRead acquire_system_only_read();
 
   // -----------------------------------------------------------------------------
   // Return the current Base generation counter.
@@ -135,6 +139,10 @@ class BaseManager {
   void ensure_system_only_initialized_if_needed();
 
 #ifdef DNFUI_BUILD_TESTS
+  // -----------------------------------------------------------------------------
+  // Return true when a cached Base exists.
+  // -----------------------------------------------------------------------------
+  bool has_cached_base_for_tests() const;
   // -----------------------------------------------------------------------------
   // Drop cached backend state for test setup.
   // -----------------------------------------------------------------------------

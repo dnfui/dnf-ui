@@ -238,6 +238,21 @@ BaseManager::acquire_changelog_read()
 }
 
 // -----------------------------------------------------------------------------
+// Return serialized access to a temporary Base that reads only the local rpmdb.
+// -----------------------------------------------------------------------------
+TemporaryBaseRead
+BaseManager::acquire_system_only_read()
+{
+  std::unique_lock<std::shared_mutex> lock(base_mutex);
+  auto built_base = build_initialized_system_only_base();
+  if (!built_base) {
+    throw std::runtime_error("System-only backend initialization failed (Base is null).");
+  }
+
+  return TemporaryBaseRead(std::move(built_base), BaseGuard(std::move(lock)));
+}
+
+// -----------------------------------------------------------------------------
 // Return write access to the current Base.
 // -----------------------------------------------------------------------------
 std::pair<libdnf5::Base &, BaseWriteGuard>
@@ -357,6 +372,16 @@ BaseManager::ensure_base_initialized()
 }
 
 #ifdef DNFUI_BUILD_TESTS
+// -----------------------------------------------------------------------------
+// Return true when a cached Base exists.
+// -----------------------------------------------------------------------------
+bool
+BaseManager::has_cached_base_for_tests() const
+{
+  std::shared_lock<std::shared_mutex> shared(base_mutex);
+  return base_ptr != nullptr;
+}
+
 // -----------------------------------------------------------------------------
 // Clear cached Base state between tests.
 // -----------------------------------------------------------------------------

@@ -36,6 +36,10 @@ The access is serialized because read-only `PackageQuery` work can still touch
 shared libdnf5 `Base` internals. Transaction preview and apply use write access
 through `BaseManager::acquire_write`.
 
+Installed-package snapshot refresh uses `BaseManager::acquire_system_only_read`.
+That creates a short-lived Base for the local rpm database and does not replace
+the shared cached Base used by later package queries.
+
 The Base has a generation counter. When the Base is rebuilt, the generation is
 incremented. UI tasks and search caches use that value to reject outdated
 results.
