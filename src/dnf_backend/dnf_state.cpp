@@ -176,6 +176,7 @@ dnf_backend_refresh_installed_nevras()
   InstalledQueryResult installed;
   std::set<std::string> protected_names;
   {
+    BaseManager::instance().ensure_system_only_initialized_if_needed();
     auto [base, guard, generation] = BaseManager::instance().acquire_read();
     const DnfBackendSearchOptions search_options {};
     installed = collect_installed_rows(base, nullptr, search_options);

@@ -131,6 +131,28 @@ TEST_CASE("dnf_backend_refresh_installed_nevras populates installed NEVRA cache"
 }
 
 // -----------------------------------------------------------------------------
+// Verify that installed-only refresh does not require repository metadata.
+// -----------------------------------------------------------------------------
+TEST_CASE("Installed package refresh uses system-only Base when no Base is cached")
+{
+  reset_backend_globals();
+
+  auto &mgr = BaseManager::instance();
+  mgr.reset_for_tests();
+
+  {
+    ScopedEnvVar force_failure("DNFUI_TEST_FORCE_FULL_REPO_LOAD_FAILURE", "1");
+    ScopedEnvVar force_cache_failure("DNFUI_TEST_FORCE_CACHEONLY_REPO_LOAD_FAILURE", "1");
+
+    REQUIRE_NOTHROW(dnf_backend_refresh_installed_nevras());
+    REQUIRE(dnf_backend_installed_snapshot_size() > 0);
+    REQUIRE(mgr.current_repo_state() == BaseRepoState::INSTALLED_ONLY);
+  }
+
+  mgr.reset_for_tests();
+}
+
+// -----------------------------------------------------------------------------
 // Search behavior tests (read-only repo metadata)
 // -----------------------------------------------------------------------------
 
