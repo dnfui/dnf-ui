@@ -147,6 +147,13 @@ Run the Docker app target with networking disabled:
 DOCKER_NETWORK_MODE=none make dockerrun
 ```
 
+Run the Docker app target with the Swedish translation:
+
+```sh
+LANG=sv_SE.UTF-8 LANGUAGE=sv make dockerrun
+CONTAINER_RUNTIME=podman LANG=sv_SE.UTF-8 LANGUAGE=sv make dockerrun
+```
+
 The Makefile is a task runner. Meson owns build configuration and test
 definitions.
 

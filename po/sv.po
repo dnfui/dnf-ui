@@ -1,0 +1,337 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: dnf-ui 0.1.5\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-05-16 00:00+0200\n"
+"PO-Revision-Date: 2026-05-16 00:00+0200\n"
+"Last-Translator: ErikMN <erik@example.invalid>\n"
+"Language-Team: Swedish\n"
+"Language: sv\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Browse packages and apply DNF transactions"
+msgstr "Bläddra bland paket och verkställ DNF-transaktioner"
+
+msgid "Graphical package manager frontend for Fedora"
+msgstr "Grafiskt gränssnitt för Fedors pakethanterare"
+
+msgid "Search"
+msgstr "Sök"
+
+msgid "Search packages..."
+msgstr "Sök paket..."
+
+msgid "Search in description"
+msgstr "Sök i beskrivning"
+
+msgid "Exact match"
+msgstr "Exakt träff"
+
+msgid "Search History"
+msgstr "Sökhistorik"
+
+msgid "History Panel"
+msgstr "Historikpanel"
+
+msgid "Package Info Panel"
+msgstr "Paketinfopanel"
+
+msgid "Package"
+msgstr "Paket"
+
+msgid "File"
+msgstr "Arkiv"
+
+msgid "Help"
+msgstr "Hjälp"
+
+msgid "Quit"
+msgstr "Avsluta"
+
+msgid "About DNF UI"
+msgstr "Om DNF UI"
+
+msgid "Credits"
+msgstr "Tack"
+
+msgid "Summary"
+msgstr "Sammanfattning"
+
+msgid "Description"
+msgstr "Beskrivning"
+
+msgid "Version"
+msgstr "Version"
+
+msgid "Repo"
+msgstr "Förråd"
+
+msgid "Info"
+msgstr "Info"
+
+msgid "Files"
+msgstr "Filer"
+
+msgid "Dependencies"
+msgstr "Beroenden"
+
+msgid "Changelog"
+msgstr "Ändringslogg"
+
+msgid "Pending"
+msgstr "Väntande"
+
+msgid "Installed"
+msgstr "Installerat"
+
+msgid "Installed (local only)"
+msgstr "Installerat (endast lokalt)"
+
+msgid "Installed (newer than repo)"
+msgstr "Installerat (nyare än förrådet)"
+
+msgid "Available"
+msgstr "Tillgängligt"
+
+msgid "Pending Install"
+msgstr "Väntande installation"
+
+msgid "Pending Upgrade"
+msgstr "Väntande uppgradering"
+
+msgid "Pending Reinstall"
+msgstr "Väntande ominstallation"
+
+msgid "Pending Removal"
+msgstr "Väntande borttagning"
+
+msgid "Mark for Install"
+msgstr "Markera för installation"
+
+msgid "Mark for Upgrade"
+msgstr "Markera för uppgradering"
+
+msgid "Mark for Reinstall"
+msgstr "Markera för ominstallation"
+
+msgid "Mark for Removal"
+msgstr "Markera för borttagning"
+
+msgid "List Installed"
+msgstr "Lista installerade"
+
+msgid "List Packages"
+msgstr "Lista paket"
+
+msgid "List Upgradable"
+msgstr "Lista uppgraderbara"
+
+msgid "Refresh Repositories"
+msgstr "Uppdatera förråd"
+
+msgid "Upgrade All"
+msgstr "Uppgradera alla"
+
+msgid "Apply Transactions"
+msgstr "Verkställ transaktioner"
+
+msgid "Clear Transactions"
+msgstr "Rensa transaktioner"
+
+msgid "Clear List"
+msgstr "Rensa lista"
+
+msgid "Clear Search Cache"
+msgstr "Rensa sökcache"
+
+msgid "Stop"
+msgstr "Stoppa"
+
+msgid "Cancel"
+msgstr "Avbryt"
+
+msgid "Close"
+msgstr "Stäng"
+
+msgid "Apply"
+msgstr "Verkställ"
+
+msgid "Apply the following changes?"
+msgstr "Verkställ följande ändringar?"
+
+msgid "This is your last opportunity to look through the list of marked changes before they are applied."
+msgstr "Detta är din sista möjlighet att gå igenom listan med markerade ändringar innan de verkställs."
+
+msgid "To be installed"
+msgstr "Kommer att installeras"
+
+msgid "To be upgraded"
+msgstr "Kommer att uppgraderas"
+
+msgid "To be removed"
+msgstr "Kommer att tas bort"
+
+msgid "Disk space usage will be unchanged."
+msgstr "Diskanvändningen ändras inte."
+
+msgid "Applying package transaction"
+msgstr "Verkställer pakettransaktion"
+
+msgid "Searching for '%s'..."
+msgstr "Söker efter '%s'..."
+
+msgid "Listing installed packages..."
+msgstr "Listar installerade paket..."
+
+msgid "Listing packages..."
+msgstr "Listar paket..."
+
+msgid "Listing upgradable packages..."
+msgstr "Listar uppgraderbara paket..."
+
+msgid "Stopping search..."
+msgstr "Stoppar sökning..."
+
+msgid "Stopping installed package listing..."
+msgstr "Stoppar listning av installerade paket..."
+
+msgid "Stopping package listing..."
+msgstr "Stoppar paketlistning..."
+
+msgid "Stopping upgradable package listing..."
+msgstr "Stoppar listning av uppgraderbara paket..."
+
+msgid "Stopping operation..."
+msgstr "Stoppar åtgärd..."
+
+msgid "Search cancelled."
+msgstr "Sökning avbröts."
+
+msgid "Listing installed packages cancelled."
+msgstr "Listning av installerade paket avbröts."
+
+msgid "Listing packages cancelled."
+msgstr "Paketlistning avbröts."
+
+msgid "Listing upgradable packages cancelled."
+msgstr "Listning av uppgraderbara paket avbröts."
+
+msgid "Repositories refreshed."
+msgstr "Förråd uppdaterade."
+
+msgid "Refreshing repositories..."
+msgstr "Uppdaterar förråd..."
+
+msgid "Repository refresh is already running."
+msgstr "Förrådsuppdatering körs redan."
+
+msgid "Repo refresh failed."
+msgstr "Förrådsuppdatering misslyckades."
+
+msgid "Package info loaded."
+msgstr "Paketinfo lästes in."
+
+msgid "Package info load was cancelled."
+msgstr "Inläsning av paketinfo avbröts."
+
+msgid "No install or upgrade action is available."
+msgstr "Ingen installation eller uppgradering är tillgänglig."
+
+msgid "Package is not installed."
+msgstr "Paketet är inte installerat."
+
+msgid "Package cannot be reinstalled from current repositories."
+msgstr "Paketet kan inte ominstalleras från nuvarande förråd."
+
+msgid "Apply authorization is already in progress."
+msgstr "Behörighetskontroll för verkställning pågår redan."
+
+msgid "Package state changed after the preview was prepared. Review the transaction again before applying."
+msgstr "Paketläget ändrades efter att förhandsgranskningen skapades. Granska transaktionen igen innan du verkställer den."
+
+msgid "Queued transaction request."
+msgstr "Transaktionsbegäran köades."
+
+msgid "Connecting to transaction service..."
+msgstr "Ansluter till transaktionstjänsten..."
+
+msgid "Privileged transaction preview ready."
+msgstr "Privilegierad transaktionsgranskning är klar."
+
+msgid "Requesting authorization and starting apply..."
+msgstr "Begär behörighet och startar verkställning..."
+
+msgid "Waiting for privileged apply to finish..."
+msgstr "Väntar på att privilegierad verkställning ska bli klar..."
+
+msgid "Refreshing backend state..."
+msgstr "Uppdaterar backend-läge..."
+
+msgid "Refreshing installed package state..."
+msgstr "Uppdaterar läge för installerade paket..."
+
+msgid "Transaction applied successfully."
+msgstr "Transaktionen verkställdes."
+
+msgid "Applying pending changes. See transaction window for details."
+msgstr "Verkställer väntande ändringar. Se transaktionsfönstret för detaljer."
+
+msgid "Applying package upgrades. See transaction window for details."
+msgstr "Verkställer paketuppgraderingar. Se transaktionsfönstret för detaljer."
+
+#, c-format
+msgid "Found %zu package."
+msgid_plural "Found %zu packages."
+msgstr[0] "Hittade %zu paket."
+msgstr[1] "Hittade %zu paket."
+
+#, c-format
+msgid "Found %zu installed package."
+msgid_plural "Found %zu installed packages."
+msgstr[0] "Hittade %zu installerat paket."
+msgstr[1] "Hittade %zu installerade paket."
+
+#, c-format
+msgid "Found %zu upgradable package."
+msgid_plural "Found %zu upgradable packages."
+msgstr[0] "Hittade %zu uppgraderbart paket."
+msgstr[1] "Hittade %zu uppgraderbara paket."
+
+#, c-format
+msgid "Item: %zu"
+msgid_plural "Items: %zu"
+msgstr[0] "Objekt: %zu"
+msgstr[1] "Objekt: %zu"
+
+#, c-format
+msgid "Loaded %zu cached result."
+msgid_plural "Loaded %zu cached results."
+msgstr[0] "Läste in %zu cachat resultat."
+msgstr[1] "Läste in %zu cachade resultat."
+
+#, c-format
+msgid "Cleared %zu pending action."
+msgid_plural "Cleared %zu pending actions."
+msgstr[0] "Rensade %zu väntande åtgärd."
+msgstr[1] "Rensade %zu väntande åtgärder."
+
+#, c-format
+msgid "%zu package will be installed."
+msgid_plural "%zu packages will be installed."
+msgstr[0] "%zu paket kommer att installeras."
+msgstr[1] "%zu paket kommer att installeras."
+
+#, c-format
+msgid "%zu package will be upgraded."
+msgid_plural "%zu packages will be upgraded."
+msgstr[0] "%zu paket kommer att uppgraderas."
+msgstr[1] "%zu paket kommer att uppgraderas."
+
+#, c-format
+msgid "%zu package will be removed."
+msgid_plural "%zu packages will be removed."
+msgstr[0] "%zu paket kommer att tas bort."
+msgstr[1] "%zu paket kommer att tas bort."

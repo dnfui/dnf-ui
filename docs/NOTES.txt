@@ -100,6 +100,9 @@ make dockerservicesystemapplytest DEBUG_TRACE=y
 make dockerservicesystemdisconnecttest DEBUG_TRACE=y
 make dockerrun DEBUG_TRACE=y
 
+Docker Swedish translation test:
+LANG=sv_SE.UTF-8 LANGUAGE=sv make dockerrun
+
 Use native Fedora to test the real desktop Polkit prompt.
 Use Docker to test the service boundary and package transactions.
 

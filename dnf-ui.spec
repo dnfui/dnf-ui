@@ -40,6 +40,7 @@ system service with Polkit authorization.
 
 %install
 %meson_install
+%find_lang %{name}
 
 %check
 desktop-file-validate %{buildroot}%{_datadir}/applications/com.fedora.dnfui.desktop
@@ -55,7 +56,7 @@ appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/com.fedora.dnfui
 %postun
 %systemd_postun_with_restart dnfui-service.service
 
-%files
+%files -f %{name}.lang
 %license LICENSE
 %doc README.md
 %{_bindir}/dnfui

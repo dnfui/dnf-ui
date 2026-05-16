@@ -10,6 +10,7 @@ RUN dnf install -y \
     polkit-devel \
     polkit \
     gcc-c++ \
+    glibc-langpack-sv \
     gdb \
     gdb-gdbserver \
     make \

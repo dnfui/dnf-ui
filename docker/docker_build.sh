@@ -43,8 +43,17 @@ case "$THEME_MODE" in
   ;;
 esac
 
+# Pass locale variables through so the Docker app target can test translations:
+LOCALE_OPTS=()
+for locale_var in LANG LANGUAGE LC_ALL; do
+  if [ -n "${!locale_var:-}" ]; then
+    LOCALE_OPTS+=(-e "$locale_var=${!locale_var}")
+  fi
+done
+
 # Make this script work from any directory:
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
 . "$SCRIPT_DIR/container_runtime.sh"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 HOST_DIR="$PROJECT_ROOT"
@@ -107,6 +116,7 @@ color_print "$FMT_GREEN" "*** Running build inside container... ***"
   -w /workspace \
   "${DISPLAY_OPTS[@]}" \
   "${THEME_OPTS[@]}" \
+  "${LOCALE_OPTS[@]}" \
   --device /dev/dri \
   -e GSETTINGS_BACKEND=memory \
   -e FINAL \

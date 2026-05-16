@@ -17,6 +17,15 @@ APP_BIN="$BUILD_DIR/src/dnfui"
 
 echo "*** Building app and transaction service ***"
 "$PROJECT_ROOT/utils/meson_build.sh" all
+meson compile -C "$BUILD_DIR" dnf-ui-gmo
+
+# Normal packages install translation catalogs into the system locale directory.
+# The Docker GUI target runs the build tree binary, so copy built
+# catalogs into the container locale directory before starting GTK.
+find "$BUILD_DIR/po" -path "*/LC_MESSAGES/dnf-ui.mo" -print0 | while IFS= read -r -d '' mo_file; do
+  locale_dir="$(basename "$(dirname "$(dirname "$mo_file")")")"
+  install -Dm0644 "$mo_file" "/usr/share/locale/$locale_dir/LC_MESSAGES/dnf-ui.mo"
+done
 
 for path in "$SERVICE_BIN" "$APP_BIN"; do
   if [ ! -x "$path" ]; then
