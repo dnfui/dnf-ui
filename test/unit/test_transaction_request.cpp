@@ -154,6 +154,36 @@ TEST_CASE("Transaction request validation rejects package specs that are too lon
 }
 
 // -----------------------------------------------------------------------------
+// Verify that validation rejects the same package spec repeated in one action list.
+// -----------------------------------------------------------------------------
+TEST_CASE("Transaction request validation rejects duplicate package specs")
+{
+  TransactionRequest request;
+  std::string error;
+
+  request.install.push_back("example-install-spec");
+  request.install.push_back("example-install-spec");
+
+  REQUIRE_FALSE(request.validate(error));
+  REQUIRE(error == "Transaction request contains a duplicate install package spec.");
+}
+
+// -----------------------------------------------------------------------------
+// Verify that validation rejects the same package spec in different action lists.
+// -----------------------------------------------------------------------------
+TEST_CASE("Transaction request validation rejects conflicting package actions")
+{
+  TransactionRequest request;
+  std::string error;
+
+  request.install.push_back("example-package-spec");
+  request.remove.push_back("example-package-spec");
+
+  REQUIRE_FALSE(request.validate(error));
+  REQUIRE(error == "Transaction request contains conflicting package actions.");
+}
+
+// -----------------------------------------------------------------------------
 // Verify that validation accepts normal mixed package action requests.
 // -----------------------------------------------------------------------------
 TEST_CASE("Transaction request validation accepts mixed non empty package specs")

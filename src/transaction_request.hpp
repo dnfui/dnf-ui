@@ -7,6 +7,7 @@
 #pragma once
 
 #include <cstddef>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -43,7 +44,7 @@ struct TransactionRequest {
   }
 
   // -----------------------------------------------------------------------------
-  // Reject empty or oversized requests before they reach the service.
+  // Reject empty, oversized, duplicate, or conflicting requests before they reach the service.
   // -----------------------------------------------------------------------------
   bool validate(std::string &error_out) const
   {
@@ -54,17 +55,21 @@ struct TransactionRequest {
       return false;
     }
 
+    // Upgrade all is a separate request type and must not include selected packages.
     if (upgrade_all && (!install.empty() || !remove.empty() || !reinstall.empty())) {
       error_out = "Upgrade all cannot be combined with other package actions.";
       return false;
     }
 
+    // Keep request size limited before passing it to DNF.
     if (item_count() > kTransactionRequestMaxItems) {
       error_out = "Transaction request contains too many package actions.";
       return false;
     }
 
+    // Validate one action list and reject repeated specs in that list.
     auto validate_specs = [&](const std::vector<std::string> &specs, const char *kind) {
+      std::set<std::string> seen;
       for (const auto &spec : specs) {
         if (spec.empty()) {
           error_out = std::string("Transaction request contains an empty ") + kind + " package spec.";
@@ -74,11 +79,37 @@ struct TransactionRequest {
           error_out = std::string("Transaction request contains a package spec that is too long.");
           return false;
         }
+        if (!seen.insert(spec).second) {
+          error_out = std::string("Transaction request contains a duplicate ") + kind + " package spec.";
+          return false;
+        }
       }
       return true;
     };
 
-    return validate_specs(install, "install") && validate_specs(remove, "remove") &&
-        validate_specs(reinstall, "reinstall");
+    // Check each action list before comparing the lists with each other.
+    if (!validate_specs(install, "install") || !validate_specs(remove, "remove") ||
+        !validate_specs(reinstall, "reinstall")) {
+      return false;
+    }
+
+    // A package spec must not appear in more than one action list.
+    auto has_conflict = [](const std::vector<std::string> &left, const std::vector<std::string> &right) {
+      std::set<std::string> left_specs(left.begin(), left.end());
+      for (const auto &spec : right) {
+        if (left_specs.count(spec) > 0) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    // Reject requests that ask for two different actions for the same package spec.
+    if (has_conflict(install, remove) || has_conflict(install, reinstall) || has_conflict(remove, reinstall)) {
+      error_out = "Transaction request contains conflicting package actions.";
+      return false;
+    }
+
+    return true;
   }
 };
