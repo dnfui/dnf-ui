@@ -38,6 +38,7 @@ Key files:
 - [test/unit/test_transaction_preview.cpp](../test/unit/test_transaction_preview.cpp)
 - [test/unit/test_transaction_request.cpp](../test/unit/test_transaction_request.cpp)
 - [test/unit/test_transaction_service_preview_formatter.cpp](../test/unit/test_transaction_service_preview_formatter.cpp)
+- [test/unit/test_transaction_service_request_parser.cpp](../test/unit/test_transaction_service_request_parser.cpp)
 - [test/unit/test_transaction_service_validation.cpp](../test/unit/test_transaction_service_validation.cpp)
 - [test/unit/test_transaction_service_client.cpp](../test/unit/test_transaction_service_client.cpp)
 - [test/unit/test_offline.cpp](../test/unit/test_offline.cpp)
@@ -50,6 +51,7 @@ These tests protect:
 - package action row selection for install, upgrade, remove, and reinstall
 - transaction preview behavior
 - transaction request validation
+- transaction service D-Bus request parsing
 - transaction service request validation
 - service client error handling
 - offline and cached metadata behavior
