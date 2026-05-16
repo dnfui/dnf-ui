@@ -167,6 +167,58 @@ TEST_CASE("Transaction apply rejects changed approved preview")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that the check before apply compares action sets, not resolver order.
+// -----------------------------------------------------------------------------
+TEST_CASE("Transaction preview comparison accepts matching package actions in different order")
+{
+  TransactionPreview approved_preview;
+  approved_preview.install = { "b-package-1-1.x86_64", "a-package-1-1.x86_64" };
+  approved_preview.upgrade = { "z-package-2-1.x86_64", "c-package-2-1.x86_64" };
+  approved_preview.remove = { "old-package-1-1.x86_64" };
+  approved_preview.disk_space_delta = 4096;
+
+  TransactionPreview resolved_preview;
+  resolved_preview.install = { "a-package-1-1.x86_64", "b-package-1-1.x86_64" };
+  resolved_preview.upgrade = { "c-package-2-1.x86_64", "z-package-2-1.x86_64" };
+  resolved_preview.remove = { "old-package-1-1.x86_64" };
+  resolved_preview.disk_space_delta = 4096;
+
+  REQUIRE(dnf_backend_testonly_transaction_previews_match(approved_preview, resolved_preview));
+}
+
+// -----------------------------------------------------------------------------
+// Verify that the check before apply still rejects changed package actions.
+// -----------------------------------------------------------------------------
+TEST_CASE("Transaction preview comparison rejects changed package actions")
+{
+  TransactionPreview approved_preview;
+  approved_preview.install = { "a-package-1-1.x86_64" };
+  approved_preview.disk_space_delta = 4096;
+
+  TransactionPreview resolved_preview;
+  resolved_preview.install = { "different-package-1-1.x86_64" };
+  resolved_preview.disk_space_delta = 4096;
+
+  REQUIRE_FALSE(dnf_backend_testonly_transaction_previews_match(approved_preview, resolved_preview));
+}
+
+// -----------------------------------------------------------------------------
+// Verify that the check before apply still rejects changed disk usage.
+// -----------------------------------------------------------------------------
+TEST_CASE("Transaction preview comparison rejects changed disk space")
+{
+  TransactionPreview approved_preview;
+  approved_preview.install = { "a-package-1-1.x86_64" };
+  approved_preview.disk_space_delta = 4096;
+
+  TransactionPreview resolved_preview;
+  resolved_preview.install = { "a-package-1-1.x86_64" };
+  resolved_preview.disk_space_delta = 8192;
+
+  REQUIRE_FALSE(dnf_backend_testonly_transaction_previews_match(approved_preview, resolved_preview));
+}
+
+// -----------------------------------------------------------------------------
 // Transaction preview success path tests
 // -----------------------------------------------------------------------------
 

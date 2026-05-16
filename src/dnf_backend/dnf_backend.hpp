@@ -319,6 +319,10 @@ void dnf_backend_testonly_replace_installed_snapshot_rows(const std::vector<Pack
 // whether all rows kept UNKNOWN repo-candidate relation afterwards.
 // -----------------------------------------------------------------------------
 bool dnf_backend_testonly_annotation_fallback_leaves_rows_unknown(std::vector<PackageRow> &rows);
+// -----------------------------------------------------------------------------
+// Compare transaction previews using the same check the backend runs before apply.
+// -----------------------------------------------------------------------------
+bool dnf_backend_testonly_transaction_previews_match(const TransactionPreview &left, const TransactionPreview &right);
 #endif
 
 // -----------------------------------------------------------------------------

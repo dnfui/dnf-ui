@@ -12,6 +12,7 @@
 #include "debug_trace.hpp"
 #include "dnf_backend/dnf_transaction_internal.hpp"
 
+#include <algorithm>
 #include <cstdlib>
 #include <memory>
 #include <sstream>
@@ -205,10 +206,28 @@ append_preview_item(TransactionPreview &preview, const libdnf5::base::Transactio
 static bool
 transaction_previews_match(const TransactionPreview &left, const TransactionPreview &right)
 {
-  return left.install == right.install && left.upgrade == right.upgrade && left.downgrade == right.downgrade &&
-      left.reinstall == right.reinstall && left.remove == right.remove &&
-      left.disk_space_delta == right.disk_space_delta;
+  // libdnf may return the same resolved packages in a different order.
+  // Compare sorted copies so Apply only rejects real package changes.
+  auto sorted = [](std::vector<std::string> values) {
+    std::sort(values.begin(), values.end());
+    return values;
+  };
+
+  return sorted(left.install) == sorted(right.install) && sorted(left.upgrade) == sorted(right.upgrade) &&
+      sorted(left.downgrade) == sorted(right.downgrade) && sorted(left.reinstall) == sorted(right.reinstall) &&
+      sorted(left.remove) == sorted(right.remove) && left.disk_space_delta == right.disk_space_delta;
 }
+
+#ifdef DNFUI_BUILD_TESTS
+// -----------------------------------------------------------------------------
+// Test-only access to the preview comparison used before apply.
+// -----------------------------------------------------------------------------
+bool
+dnf_backend_testonly_transaction_previews_match(const TransactionPreview &left, const TransactionPreview &right)
+{
+  return transaction_previews_match(left, right);
+}
+#endif
 
 // -----------------------------------------------------------------------------
 // Resolve the final transaction and group the resulting package actions for
