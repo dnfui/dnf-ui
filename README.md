@@ -261,7 +261,7 @@ architecture.
 </p>
 
 <p align="center">
-DNF UI running on GNOME.
+Dark theme.
 </p>
 
 <p align="center">
@@ -269,5 +269,5 @@ DNF UI running on GNOME.
 </p>
 
 <p align="center">
-DNF UI running on KDE.
+Light theme.
 </p>
