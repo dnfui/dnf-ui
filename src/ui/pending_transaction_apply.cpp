@@ -47,7 +47,7 @@ apply_task_data_free(gpointer p)
   }
 
   if (!d->transaction_path.empty()) {
-    transaction_service_client_release_request(d->transaction_path);
+    transaction_service_client_release_request_async(d->transaction_path);
   }
 
   // Drop the task reference. Queued progress callbacks retain the window state
@@ -64,7 +64,7 @@ preview_task_data_free(gpointer p)
 {
   PreviewTaskData *d = static_cast<PreviewTaskData *>(p);
   if (d && !d->transaction_path.empty() && !d->transaction_path_transferred) {
-    transaction_service_client_release_request(d->transaction_path);
+    transaction_service_client_release_request_async(d->transaction_path);
   }
   delete d;
 }
@@ -80,8 +80,8 @@ pending_transaction_invalidate_service_preview(SearchWidgets *widgets)
   }
 
   if (!widgets->transaction.preview_transaction_path.empty()) {
-    // Drop the prepared service request when the pending transaction changes or is dismissed.
-    transaction_service_client_release_request(widgets->transaction.preview_transaction_path);
+    // Drop the prepared service request without waiting on D-Bus from GTK.
+    transaction_service_client_release_request_async(widgets->transaction.preview_transaction_path);
   }
 
   widgets->transaction.preview_transaction_path.clear();
@@ -333,7 +333,7 @@ start_preview_request(SearchWidgets *widgets, TransactionRequest request)
 
         if (td->preview.empty()) {
           if (!td->transaction_path.empty()) {
-            transaction_service_client_release_request(td->transaction_path);
+            transaction_service_client_release_request_async(td->transaction_path);
             td->transaction_path.clear();
           }
           widgets->transaction.preview_transaction_path.clear();

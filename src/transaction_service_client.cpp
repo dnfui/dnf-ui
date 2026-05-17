@@ -12,6 +12,33 @@
 #include "transaction_request.hpp"
 #include "transaction_service_client_internal.hpp"
 
+namespace {
+
+// -----------------------------------------------------------------------------
+// Free data owned by one queued release task.
+// -----------------------------------------------------------------------------
+void
+release_request_task_data_free(gpointer p)
+{
+  delete static_cast<std::string *>(p);
+}
+
+// -----------------------------------------------------------------------------
+// Run the blocking Release call away from the GTK thread.
+// -----------------------------------------------------------------------------
+void
+release_request_task(GTask *task, gpointer, gpointer task_data, GCancellable *)
+{
+  std::string *transaction_path = static_cast<std::string *>(task_data);
+  if (transaction_path) {
+    transaction_service_client_release_request(*transaction_path);
+  }
+
+  g_task_return_boolean(task, TRUE);
+}
+
+} // namespace
+
 // -----------------------------------------------------------------------------
 // Resolve a service-backed transaction preview and return its request path.
 // -----------------------------------------------------------------------------
@@ -205,6 +232,22 @@ transaction_service_client_release_request(const std::string &transaction_path)
   }
 
   g_object_unref(connection);
+}
+
+// -----------------------------------------------------------------------------
+// Queue request release on a worker thread so GTK cleanup does not wait on D-Bus.
+// -----------------------------------------------------------------------------
+void
+transaction_service_client_release_request_async(const std::string &transaction_path)
+{
+  if (transaction_path.empty()) {
+    return;
+  }
+
+  GTask *task = g_task_new(nullptr, nullptr, nullptr, nullptr);
+  g_task_set_task_data(task, new std::string(transaction_path), release_request_task_data_free);
+  g_task_run_in_thread(task, release_request_task);
+  g_object_unref(task);
 }
 
 // -----------------------------------------------------------------------------

@@ -37,6 +37,10 @@ bool transaction_service_client_apply_started_request(const std::string &transac
 // Release one finished transaction request that is no longer needed.
 // -----------------------------------------------------------------------------
 void transaction_service_client_release_request(const std::string &transaction_path);
+// -----------------------------------------------------------------------------
+// Queue request release on a worker thread so GTK cleanup does not wait on D-Bus.
+// -----------------------------------------------------------------------------
+void transaction_service_client_release_request_async(const std::string &transaction_path);
 
 #ifdef DNFUI_BUILD_TESTS
 // -----------------------------------------------------------------------------

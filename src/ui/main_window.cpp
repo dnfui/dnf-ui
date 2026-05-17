@@ -804,7 +804,7 @@ connect_cleanup(GtkWidget *window, std::shared_ptr<SearchWidgets> widgets, GCanc
                        widgets->query_state.package_list_cancellable = nullptr;
                      }
                      if (!widgets->transaction.preview_transaction_path.empty()) {
-                       transaction_service_client_release_request(widgets->transaction.preview_transaction_path);
+                       transaction_service_client_release_request_async(widgets->transaction.preview_transaction_path);
                        widgets->transaction.preview_transaction_path.clear();
                      }
                      delete cleanup_data;

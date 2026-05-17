@@ -222,6 +222,8 @@ Apply is not cancelled once package work is running.
 
 `Release` is a client cleanup call. It is allowed only after work has reached a
 final state and no authorization request is waiting for a Polkit answer.
+GTK cleanup paths queue `Release` on a worker thread so closing or replacing a
+prepared preview does not block the UI while D-Bus responds.
 
 On the system bus, the service watches the client's bus name. If the client
 disconnects, the service starts internal cleanup for that client's transaction
