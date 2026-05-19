@@ -6,14 +6,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 source "$PROJECT_ROOT/utils/transaction_service_paths.conf"
 
-SERVICE_BIN="${SERVICE_BIN:-$PROJECT_ROOT/$TRANSACTION_SERVICE_BIN_NAME}"
+SERVICE_BIN="${SERVICE_BIN:-$PROJECT_ROOT/$TRANSACTION_SERVICE_TEST_BIN_NAME}"
 INSTALL_SPEC="${SERVICE_TEST_INSTALL_SPEC:-}"
 REINSTALL_SPEC="${SERVICE_TEST_REINSTALL_NEVRA:-}"
 TIMEOUT_SECONDS="${SERVICE_TEST_TIMEOUT_SECONDS:-180}"
 
 if [ ! -x "$SERVICE_BIN" ]; then
   echo "*** Missing service binary: $SERVICE_BIN ***" >&2
-  echo "*** Build it first with: ./utils/meson_build.sh service ***" >&2
+  echo "*** Build it first with: ./utils/meson_build.sh service-tests ***" >&2
   exit 1
 fi
 

@@ -15,16 +15,10 @@ service_sources = files(
   'transaction_service_main.cpp',
 )
 
-service_cpp_args = []
-if get_option('build_tests')
-  service_cpp_args += ['-DDNFUI_BUILD_TESTS=1']
-endif
-
 dnfui_service = executable(
   'dnfui-service',
   backend_sources + service_sources,
   include_directories: src_inc,
-  cpp_args: service_cpp_args,
   dependencies: [
     libdnf5_dep,
     polkit_dep,
@@ -33,3 +27,17 @@ dnfui_service = executable(
   install_dir: get_option('libexecdir'),
   install_tag: 'transaction-service',
 )
+
+if get_option('build_tests')
+  dnfui_service_tests = executable(
+    'dnfui-service-tests',
+    backend_sources + service_sources,
+    include_directories: src_inc,
+    cpp_args: ['-DDNFUI_BUILD_TESTS=1'],
+    dependencies: [
+      libdnf5_dep,
+      polkit_dep,
+    ],
+    install: false,
+  )
+endif

@@ -47,4 +47,4 @@ color_print "$FMT_GREEN" "*** Running transaction service cancel test inside con
   -e SERVICE_TEST_INSTALL_SPEC=cowsay \
   -v "$HOST_DIR:/workspace" \
   "$IMAGE_NAME" \
-  bash -c 'BUILD_DIR="$(./utils/meson_build.sh build-dir)" && ./utils/meson_build.sh service && SERVICE_BIN="$BUILD_DIR/src/service/dnfui-service" ./test/functional/test_transaction_service_cancel.sh'
+  bash -c 'BUILD_DIR="$(./utils/meson_build.sh build-dir)" && ./utils/meson_build.sh service-tests && SERVICE_BIN="$BUILD_DIR/src/service/dnfui-service-tests" ./test/functional/test_transaction_service_cancel.sh'

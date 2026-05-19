@@ -60,6 +60,11 @@ These tests protect:
 
 The service tests run the transaction service through D-Bus.
 
+Automated service tests use a separate `dnfui-service-tests` binary. That
+binary is compiled with the service test hooks enabled. The installed
+`dnfui-service` binary is built without those hooks and is the only service
+binary that gets installed.
+
 Important scripts:
 
 - [test/functional/test_transaction_service_preview.sh](../test/functional/test_transaction_service_preview.sh)
@@ -67,6 +72,7 @@ Important scripts:
 - [test/functional/test_transaction_service_apply.sh](../test/functional/test_transaction_service_apply.sh)
 - [test/functional/test_transaction_service_preview_failure.sh](../test/functional/test_transaction_service_preview_failure.sh)
 - [test/functional/test_transaction_service_system_bus.sh](../test/functional/test_transaction_service_system_bus.sh)
+- [test/transaction_service_system_bus_client.cpp](../test/transaction_service_system_bus_client.cpp)
 
 These tests protect:
 
@@ -77,11 +83,17 @@ These tests protect:
 - system bus authorization path
 - disconnect cleanup
 
-The Docker system bus preview and apply tests use `gdbus` as a short-lived
-client for each method call. They set `SERVICE_TEST_DISABLE_AUTO_RELEASE=1` so
-the shell tests can inspect the request object after the start call exits and
-keep request ownership checks compatible with that test shape. The installed
-service unit does not set this variable.
+The native installed-service smoke tests use a dedicated
+`dnfui-service-smoke-client` helper. That helper keeps one real system bus
+connection alive across `StartTransaction`, preview reads, `Apply`, and
+`Release`, so the installed service keeps its normal request ownership checks.
+
+The Docker system bus preview and apply tests still use `gdbus` as a
+short-lived client for each method call. They set
+`SERVICE_TEST_DISABLE_AUTO_RELEASE=1` on the test-only service binary so the
+shell tests can inspect the request object after the start call exits and keep
+request ownership checks compatible with that test shape. The installed service
+binary is built without that test-only escape hatch.
 
 ## Common commands
 

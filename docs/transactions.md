@@ -130,6 +130,14 @@ On the system bus, request object methods must be called by the same client that
 created the request. This keeps another local process from reading, cancelling,
 applying, or releasing someone else's transaction request.
 
+The native installed-service smoke tests keep those ownership checks enabled by
+using a dedicated helper client that holds one system bus connection across the
+whole request lifecycle.
+
+The Docker smoke tests use a separate test-only service build when they need to
+relax request lifetime rules for short-lived `gdbus` calls. The installed
+service build keeps the normal ownership checks.
+
 The D-Bus policy allows standard introspection and only the manager and request
 methods listed above. `Apply` still has its own Polkit check before packages can
 be changed.

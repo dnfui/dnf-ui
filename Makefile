@@ -42,7 +42,7 @@ else
   MESON_DEBUG_TRACE = false
 endif
 
-ifneq ($(filter test $(TEST_BIN_NAME) memcheck memcheck-smoke memcheck-tests memory-check,$(MAKECMDGOALS)),)
+ifneq ($(filter test $(TEST_BIN_NAME) $(TRANSACTION_SERVICE_TEST_BIN_NAME) $(TRANSACTION_SERVICE_SMOKE_CLIENT_BIN_NAME) servicetest servicecanceltest serviceapplytest servicesystemtest servicesystemapplytest servicesystemdisconnecttest memcheck memcheck-smoke memcheck-tests memory-check,$(MAKECMDGOALS)),)
   MESON_BUILD_TESTS = true
 else
   MESON_BUILD_TESTS = false
@@ -62,7 +62,9 @@ MESON_SETUP_ARGS = \
 
 APP_BUILD_PATH = $(CURDIR)/$(MESON_BUILD_DIR)/src/$(APP_BIN_NAME)
 SERVICE_BUILD_PATH = $(CURDIR)/$(MESON_BUILD_DIR)/src/service/$(TRANSACTION_SERVICE_BIN_NAME)
+SERVICE_TEST_BUILD_PATH = $(CURDIR)/$(MESON_BUILD_DIR)/src/service/$(TRANSACTION_SERVICE_TEST_BIN_NAME)
 TEST_BUILD_PATH = $(CURDIR)/$(MESON_BUILD_DIR)/test/$(TEST_BIN_NAME)
+SERVICE_SMOKE_CLIENT_BUILD_PATH = $(CURDIR)/$(MESON_BUILD_DIR)/test/$(TRANSACTION_SERVICE_SMOKE_CLIENT_BIN_NAME)
 
 # Service-only native install:
 # - Transaction service binary
@@ -126,6 +128,8 @@ help:
 	@printf '%-36s %s\n' 'meson-setup' 'Configure or reconfigure the active Meson build directory.'
 	@printf '%-36s %s\n' 'dnfui' 'Build the desktop app binary.'
 	@printf '%-36s %s\n' 'dnfui-service' 'Build the transaction service binary.'
+	@printf '%-36s %s\n' 'dnfui-service-tests' 'Build the test-only transaction service binary.'
+	@printf '%-36s %s\n' 'dnfui-service-smoke-client' 'Build the native system bus smoke-test client.'
 	@printf '%-36s %s\n' 'dnfui-tests' 'Build the test binary.'
 	@printf '%-36s %s\n' 'run' 'Build and run the desktop app locally.'
 	@printf '%-36s %s\n' 'test' 'Build and run the local test suite.'
@@ -214,6 +218,18 @@ dnfui-service: meson-setup
 	$(MESON) compile -C "$(MESON_BUILD_DIR)" dnfui-service
 	ln -sfn "$(SERVICE_BUILD_PATH)" "$(TRANSACTION_SERVICE_BIN_NAME)"
 
+# Build the test-only transaction service binary and update the local symlink:
+.PHONY: dnfui-service-tests
+dnfui-service-tests: meson-setup
+	$(MESON) compile -C "$(MESON_BUILD_DIR)" dnfui-service-tests
+	ln -sfn "$(SERVICE_TEST_BUILD_PATH)" "$(TRANSACTION_SERVICE_TEST_BIN_NAME)"
+
+# Build the native system bus smoke-test client and update the local symlink:
+.PHONY: dnfui-service-smoke-client
+dnfui-service-smoke-client: meson-setup
+	$(MESON) compile -C "$(MESON_BUILD_DIR)" dnfui-service-smoke-client
+	ln -sfn "$(SERVICE_SMOKE_CLIENT_BUILD_PATH)" "$(TRANSACTION_SERVICE_SMOKE_CLIENT_BIN_NAME)"
+
 # Build the backend test binary and update the local symlink:
 .PHONY: dnfui-tests
 dnfui-tests: meson-setup
@@ -227,7 +243,7 @@ run: dnfui
 
 # Run the test suite:
 .PHONY: test
-test: dnfui-tests dnfui-service
+test: dnfui-tests dnfui-service-tests
 	@echo "*** Running test suite ***"
 	@./$(TEST_BIN_NAME)
 
@@ -302,32 +318,32 @@ serviceuninstall:
 
 # Session bus smoke test: preview flow from the locally built service binary
 .PHONY: servicetest
-servicetest: dnfui-service
+servicetest: dnfui-service-tests
 	@./test/functional/test_transaction_service_preview.sh
 
 # Session bus smoke test: cancel flow from the locally built service binary
 .PHONY: servicecanceltest
-servicecanceltest: dnfui-service
+servicecanceltest: dnfui-service-tests
 	@./test/functional/test_transaction_service_cancel.sh
 
 # Session bus smoke test: apply flow from the locally built service binary
 .PHONY: serviceapplytest
-serviceapplytest: dnfui-service
+serviceapplytest: dnfui-service-tests
 	@./test/functional/test_transaction_service_apply.sh
 
 # System bus smoke test against the natively installed service
 .PHONY: servicesystemtest
-servicesystemtest:
+servicesystemtest: dnfui-service-smoke-client
 	@./test/functional/test_transaction_service_system_bus.sh
 
 # System bus smoke test: apply flow against the natively installed service
 .PHONY: servicesystemapplytest
-servicesystemapplytest:
+servicesystemapplytest: dnfui-service-smoke-client
 	@SERVICE_SYSTEM_APPLY=yes ./test/functional/test_transaction_service_system_bus.sh
 
 # System bus smoke test: disconnect flow against the natively installed service
 .PHONY: servicesystemdisconnecttest
-servicesystemdisconnecttest:
+servicesystemdisconnecttest: dnfui-service-smoke-client
 	@SERVICE_SYSTEM_DISCONNECT=yes ./test/functional/test_transaction_service_system_bus.sh
 
 # -----------------------------------------------------------------------------
@@ -463,12 +479,12 @@ memcheck-smoke: dnfui-tests
 
 # Run the automated test binary under Valgrind Memcheck:
 .PHONY: memcheck-tests
-memcheck-tests: dnfui-tests dnfui-service
+memcheck-tests: dnfui-tests dnfui-service-tests
 	@$(MAKE) run-memcheck-tests
 
 # Run the main automated memory checks:
 .PHONY: memory-check
-memory-check: dnfui-tests dnfui-service
+memory-check: dnfui-tests dnfui-service-tests
 	@$(MAKE) run-memcheck-tests
 
 # Internal helper used by the public automated memory check targets:
@@ -505,7 +521,7 @@ indent:
 .PHONY: clean
 clean:
 	$(RM) -r "$(MESON_BUILD_ROOT)"
-	$(RM) "$(APP_BIN_NAME)" "$(TRANSACTION_SERVICE_BIN_NAME)" "$(TEST_BIN_NAME)"
+	$(RM) "$(APP_BIN_NAME)" "$(TRANSACTION_SERVICE_BIN_NAME)" "$(TRANSACTION_SERVICE_TEST_BIN_NAME)" "$(TRANSACTION_SERVICE_SMOKE_CLIENT_BIN_NAME)" "$(TEST_BIN_NAME)"
 
 # Remove everything:
 .PHONY: distclean

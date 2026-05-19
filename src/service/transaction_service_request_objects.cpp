@@ -12,12 +12,17 @@
 // Per transaction object handling
 // -----------------------------------------------------------------------------
 static bool
-request_owner_check_disabled_for_tests()
+disable_auto_release_for_tests_requested()
 {
+#ifdef DNFUI_BUILD_TESTS
   // The Docker system bus smoke tests use one gdbus process per method.
-  // That test mode sets SERVICE_TEST_DISABLE_AUTO_RELEASE.
+  // The test-only service binary allows those scripts to keep one request
+  // reachable after the StartTransaction caller exits.
   const char *disable_auto_release = g_getenv("SERVICE_TEST_DISABLE_AUTO_RELEASE");
   return disable_auto_release && g_strcmp0(disable_auto_release, "1") == 0;
+#else
+  return false;
+#endif
 }
 
 // -----------------------------------------------------------------------------
@@ -38,10 +43,10 @@ request_call_is_from_owner(TransactionSession *session, GDBusMethodInvocation *i
   // that created it. Other clients may know the object path, but they must not
   // be allowed to read, cancel, apply, or release that request.
   //
-  // The session bus path is only used for local service tests. Some system bus
-  // smoke tests also use short lived gdbus calls and opt out with the same test
-  // switch that disables automatic release.
-  if (session->service->bus_type != G_BUS_TYPE_SYSTEM || request_owner_check_disabled_for_tests()) {
+  // The session bus path is only used for local service tests. The test-only
+  // service binary also has one system bus smoke path that opts out so short
+  // lived gdbus calls can inspect the request object after StartTransaction.
+  if (session->service->bus_type != G_BUS_TYPE_SYSTEM || disable_auto_release_for_tests_requested()) {
     return true;
   }
 
@@ -387,9 +392,9 @@ create_transaction_session(TransactionService *service,
 
   // Watch for client disconnects on the system bus.
   // Session bus tests often use a fresh connection per call, so they opt out.
-  // SERVICE_TEST_DISABLE_AUTO_RELEASE also opts out during manual service tests.
-  const char *disable_auto_release = g_getenv("SERVICE_TEST_DISABLE_AUTO_RELEASE");
-  if (service->bus_type == G_BUS_TYPE_SYSTEM && (!disable_auto_release || g_strcmp0(disable_auto_release, "1") != 0)) {
+  // The test-only service binary has one system bus smoke path that also opts
+  // out so the request object survives the first gdbus process exit.
+  if (service->bus_type == G_BUS_TYPE_SYSTEM && !disable_auto_release_for_tests_requested()) {
     session->owner_watch_id = g_bus_watch_name_on_connection(service->connection,
                                                              session->owner_name.c_str(),
                                                              G_BUS_NAME_WATCHER_FLAGS_NONE,

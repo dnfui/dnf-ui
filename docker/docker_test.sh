@@ -42,4 +42,4 @@ color_print "$FMT_GREEN" "*** Running test suite inside container... ***"
   -e DNFUI_MESON_BUILD_ROOT=/tmp/dnfui-build \
   -v "$HOST_DIR:/workspace" \
   "$IMAGE_NAME" \
-  bash -c 'BUILD_DIR="$(./utils/meson_build.sh build-dir)" && ./utils/meson_build.sh service tests && meson test -C "$BUILD_DIR" --print-errorlogs'
+  bash -c 'BUILD_DIR="$(./utils/meson_build.sh build-dir)" && ./utils/meson_build.sh service-tests tests && meson test -C "$BUILD_DIR" --print-errorlogs'

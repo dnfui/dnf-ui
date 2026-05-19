@@ -3,6 +3,23 @@
 catch2_dep = dependency('catch2-with-main')
 gio_dep = dependency('gio-2.0')
 
+dnfui_service_smoke_client = executable(
+  'dnfui-service-smoke-client',
+  files(
+    'transaction_service_system_bus_client.cpp',
+    '../src/i18n.cpp',
+    '../src/transaction_service_client_dbus.cpp',
+    '../src/transaction_service_client.cpp',
+    '../src/transaction_service_client_wait.cpp',
+  ),
+  include_directories: src_inc,
+  dependencies: [
+    libdnf5_dep,
+    gio_dep,
+  ],
+  cpp_args: ['-DDNFUI_BUILD_TESTS=1'],
+)
+
 dnfui_tests = executable(
   'dnfui-tests',
   files(
@@ -45,7 +62,7 @@ dnfui_tests = executable(
   ],
   cpp_args: [
     '-DDNFUI_BUILD_TESTS=1',
-    '-DDNFUI_TEST_SERVICE_BIN="@0@"'.format(dnfui_service.full_path()),
+    '-DDNFUI_TEST_SERVICE_BIN="@0@"'.format(dnfui_service_tests.full_path()),
   ],
 )
 

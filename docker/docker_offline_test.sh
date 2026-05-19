@@ -50,7 +50,7 @@ color_print "$FMT_GREEN" "*** Priming DNF cache online inside container... ***"
   -v "$HOST_DIR:/workspace" \
   -v "$CACHE_VOLUME_NAME:/var/cache/libdnf5" \
   "$IMAGE_NAME" \
-  bash -lc 'dnf5 makecache >/dev/null && dnf5 repoquery "$DNFUI_TEST_OFFLINE_REPO_SPEC" >/dev/null && ./utils/meson_build.sh service tests'
+  bash -lc 'dnf5 makecache >/dev/null && dnf5 repoquery "$DNFUI_TEST_OFFLINE_REPO_SPEC" >/dev/null && ./utils/meson_build.sh service-tests tests'
 
 color_print "$FMT_GREEN" "*** Running offline container tests with networking disabled... ***"
 color_print "$FMT_GREEN" "*** Cached repo package spec: $OFFLINE_REPO_SPEC ***"
@@ -67,4 +67,4 @@ color_print "$FMT_GREEN" "*** Cached repo package spec: $OFFLINE_REPO_SPEC ***"
   -v "$HOST_DIR:/workspace" \
   -v "$CACHE_VOLUME_NAME:/var/cache/libdnf5" \
   "$IMAGE_NAME" \
-  bash -lc 'BUILD_DIR="$(./utils/meson_build.sh build-dir)" && ./utils/meson_build.sh service tests && "$BUILD_DIR/test/dnfui-tests" "[offline]"'
+  bash -lc 'BUILD_DIR="$(./utils/meson_build.sh build-dir)" && ./utils/meson_build.sh service-tests tests && "$BUILD_DIR/test/dnfui-tests" "[offline]"'
