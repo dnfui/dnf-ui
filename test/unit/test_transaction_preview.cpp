@@ -9,6 +9,8 @@
 #include "dnf_backend/dnf_backend.hpp"
 #include "test_utils.hpp"
 
+#include <libdnf5/base/transaction_package.hpp>
+
 #include <algorithm>
 #include <string>
 #include <vector>
@@ -216,6 +218,82 @@ TEST_CASE("Transaction preview comparison rejects changed disk space")
   resolved_preview.disk_space_delta = 8192;
 
   REQUIRE_FALSE(dnf_backend_testonly_transaction_previews_match(approved_preview, resolved_preview));
+}
+
+// -----------------------------------------------------------------------------
+// Verify that preview building rejects transaction actions it cannot represent.
+// -----------------------------------------------------------------------------
+TEST_CASE("Transaction preview rejects unsupported transaction actions")
+{
+  TransactionPreview preview;
+  std::string error;
+
+  bool ok = dnf_backend_testonly_build_preview_from_actions(
+      { static_cast<int>(libdnf5::base::TransactionPackage::Action::REASON_CHANGE) }, preview, error);
+
+  REQUIRE_FALSE(ok);
+  REQUIRE(error == "Unsupported transaction action in preview: Reason change.");
+  REQUIRE(preview.empty());
+  REQUIRE(preview.disk_space_delta == 0);
+}
+
+// -----------------------------------------------------------------------------
+// Verify that the public preview entry point does not leak a partial preview
+// result when preview building fails after normal resolved items.
+// -----------------------------------------------------------------------------
+TEST_CASE("Transaction preview failure clears public preview output")
+{
+  reset_backend_globals();
+
+  auto installed_rows = dnf_backend_get_installed_package_rows_interruptible(nullptr);
+  REQUIRE_FALSE(installed_rows.empty());
+  const PackageRow &installed_row = installed_rows.front();
+
+  ScopedEnvVar inject_preview_action("DNFUI_TEST_INJECT_UNSUPPORTED_PREVIEW_ACTION", "1");
+
+  TransactionPreview preview;
+  preview.install = { "stale-package-1-1.x86_64" };
+  preview.disk_space_delta = 1234;
+  std::string error;
+  std::vector<std::string> progress_lines;
+
+  bool ok =
+      dnf_backend_preview_transaction({}, {}, { installed_row.nevra }, preview, error, [&](const std::string &line) {
+        progress_lines.push_back(line);
+      });
+
+  REQUIRE_FALSE(ok);
+  REQUIRE(error == "Unsupported transaction action in preview: Reason change.");
+  REQUIRE(progress_contains(progress_lines, "Unsupported transaction action in preview: Reason change."));
+  REQUIRE(preview.empty());
+  REQUIRE(preview.disk_space_delta == 0);
+}
+
+// -----------------------------------------------------------------------------
+// Verify that the preview-builder test hook leaves the caller output unchanged
+// when a failure happens after supported actions.
+// -----------------------------------------------------------------------------
+TEST_CASE("Transaction preview builder failure leaves output unchanged")
+{
+  TransactionPreview preview;
+  preview.install = { "stale-package-1-1.x86_64" };
+  preview.disk_space_delta = 1234;
+  std::string error;
+
+  bool ok = dnf_backend_testonly_build_preview_from_actions(
+      { static_cast<int>(libdnf5::base::TransactionPackage::Action::INSTALL),
+        static_cast<int>(libdnf5::base::TransactionPackage::Action::REASON_CHANGE) },
+      preview,
+      error);
+
+  REQUIRE_FALSE(ok);
+  REQUIRE(error == "Unsupported transaction action in preview: Reason change.");
+  REQUIRE(preview.install == std::vector<std::string> { "stale-package-1-1.x86_64" });
+  REQUIRE(preview.upgrade.empty());
+  REQUIRE(preview.downgrade.empty());
+  REQUIRE(preview.reinstall.empty());
+  REQUIRE(preview.remove.empty());
+  REQUIRE(preview.disk_space_delta == 1234);
 }
 
 // -----------------------------------------------------------------------------

@@ -38,12 +38,32 @@ test_skip_upgrade_all_goal_job_requested()
   const char *skip_upgrade_job = std::getenv("DNFUI_TEST_SKIP_UPGRADE_ALL_GOAL_JOB");
   return skip_upgrade_job && std::string(skip_upgrade_job) == "1";
 }
+
+// -----------------------------------------------------------------------------
+// Test-only hook that injects one unsupported preview action after normal
+// transaction items so preview failure can be exercised through the public API.
+// -----------------------------------------------------------------------------
+static bool
+test_preview_injection_requested()
+{
+  const char *inject_preview_action = std::getenv("DNFUI_TEST_INJECT_UNSUPPORTED_PREVIEW_ACTION");
+  return inject_preview_action && std::string(inject_preview_action) == "1";
+}
 #else
 // -----------------------------------------------------------------------------
 // Do not change upgrade-all goal construction in production builds.
 // -----------------------------------------------------------------------------
 static bool
 test_skip_upgrade_all_goal_job_requested()
+{
+  return false;
+}
+
+// -----------------------------------------------------------------------------
+// Do not inject preview actions in production builds.
+// -----------------------------------------------------------------------------
+static bool
+test_preview_injection_requested()
 {
   return false;
 }
@@ -162,41 +182,92 @@ resolve_transaction_plan(libdnf5::Base &base,
 
 // -----------------------------------------------------------------------------
 // Add one resolved transaction item to the confirmation preview model.
+// Reject unknown actions so the preview cannot silently omit part of the
+// resolved transaction.
 // -----------------------------------------------------------------------------
-static void
-append_preview_item(TransactionPreview &preview, const libdnf5::base::TransactionPackage &item)
+static bool
+append_preview_action(TransactionPreview &preview,
+                      libdnf5::base::TransactionPackage::Action action,
+                      const std::string &label,
+                      long long install_size,
+                      std::string &error_out)
 {
   using Action = libdnf5::base::TransactionPackage::Action;
 
-  const std::string label = tx::transaction_package_label(item);
-  const long long install_size = static_cast<long long>(item.get_package().get_install_size());
-
-  switch (item.get_action()) {
+  switch (action) {
   case Action::INSTALL:
     preview.install.push_back(label);
     preview.disk_space_delta += install_size;
-    break;
+    return true;
   case Action::UPGRADE:
     preview.upgrade.push_back(label);
     preview.disk_space_delta += install_size;
-    break;
+    return true;
   case Action::DOWNGRADE:
     preview.downgrade.push_back(label);
     preview.disk_space_delta += install_size;
-    break;
+    return true;
   case Action::REINSTALL:
     preview.reinstall.push_back(label);
-    break;
+    return true;
   case Action::REMOVE:
     preview.remove.push_back(label);
     preview.disk_space_delta -= install_size;
-    break;
+    return true;
   case Action::REPLACED:
     preview.disk_space_delta -= install_size;
-    break;
+    return true;
   default:
-    break;
+    error_out = "Unsupported transaction action in preview: " + tx::transaction_action_label(action) + ".";
+    return false;
   }
+}
+
+// -----------------------------------------------------------------------------
+// Add one resolved transaction item to the confirmation preview model.
+// -----------------------------------------------------------------------------
+static bool
+append_preview_item(TransactionPreview &preview, const libdnf5::base::TransactionPackage &item, std::string &error_out)
+{
+  return append_preview_action(preview,
+                               item.get_action(),
+                               tx::transaction_package_label(item),
+                               static_cast<long long>(item.get_package().get_install_size()),
+                               error_out);
+}
+
+// -----------------------------------------------------------------------------
+// Build the confirmation preview model from one resolved transaction.
+// Publish the result only after every action has been represented so callers
+// never observe a partial preview on failure.
+// -----------------------------------------------------------------------------
+static bool
+build_transaction_preview(const libdnf5::base::Transaction &transaction,
+                          TransactionPreview &preview,
+                          std::string &error_out,
+                          const TransactionProgressCallback &progress_cb)
+{
+  TransactionPreview built_preview;
+
+  for (const auto &item : transaction.get_transaction_packages()) {
+    if (!append_preview_item(built_preview, item, error_out)) {
+      tx::emit_progress_line(progress_cb, error_out);
+      return false;
+    }
+  }
+
+  if (test_preview_injection_requested() &&
+      !append_preview_action(built_preview,
+                             libdnf5::base::TransactionPackage::Action::REASON_CHANGE,
+                             "test-injected-preview-action",
+                             0,
+                             error_out)) {
+    tx::emit_progress_line(progress_cb, error_out);
+    return false;
+  }
+
+  preview = std::move(built_preview);
+  return true;
 }
 
 // -----------------------------------------------------------------------------
@@ -226,6 +297,30 @@ bool
 dnf_backend_testonly_transaction_previews_match(const TransactionPreview &left, const TransactionPreview &right)
 {
   return transaction_previews_match(left, right);
+}
+
+// -----------------------------------------------------------------------------
+// Test-only hook for preview-builder regression tests.
+// -----------------------------------------------------------------------------
+bool
+dnf_backend_testonly_build_preview_from_actions(const std::vector<int> &action_codes,
+                                                TransactionPreview &preview,
+                                                std::string &error_out)
+{
+  TransactionPreview built_preview;
+
+  for (size_t i = 0; i < action_codes.size(); ++i) {
+    if (!append_preview_action(built_preview,
+                               static_cast<libdnf5::base::TransactionPackage::Action>(action_codes[i]),
+                               "test-item-" + std::to_string(i + 1),
+                               4096,
+                               error_out)) {
+      return false;
+    }
+  }
+
+  preview = std::move(built_preview);
+  return true;
 }
 #endif
 
@@ -262,8 +357,9 @@ dnf_backend_preview_transaction(const std::vector<std::string> &install_nevras,
       return false;
     }
 
-    for (const auto &item : transaction->get_transaction_packages()) {
-      append_preview_item(preview, item);
+    if (!build_transaction_preview(*transaction, preview, error_out, progress_cb)) {
+      DNFUI_TRACE("Transaction preview resolve produced unsupported action: %s", error_out.c_str());
+      return false;
     }
 
     DNFUI_TRACE("Transaction preview done items=%zu", transaction->get_transaction_packages_count());
@@ -312,8 +408,9 @@ dnf_backend_apply_transaction(const std::vector<std::string> &install_nevras,
     // If the package state changed before Apply, stop before downloads or RPM transaction work starts.
     if (approved_preview) {
       TransactionPreview resolved_preview;
-      for (const auto &item : transaction->get_transaction_packages()) {
-        append_preview_item(resolved_preview, item);
+      if (!build_transaction_preview(*transaction, resolved_preview, error_out, progress_cb)) {
+        DNFUI_TRACE("Transaction apply rejected because preview build failed: %s", error_out.c_str());
+        return false;
       }
 
       if (!transaction_previews_match(*approved_preview, resolved_preview)) {

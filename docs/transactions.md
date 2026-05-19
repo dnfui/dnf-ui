@@ -180,6 +180,10 @@ The preview result is stored on the request object. The GUI reads structured
 preview arrays with `GetPreview` and human-readable summary text through the
 final state details.
 
+Preview must fail if the resolved transaction contains an action that the
+preview model cannot represent. The backend does not return a partial preview
+for that case.
+
 The service also limits active request objects and concurrently running preview
 workers so one client cannot create an unbounded amount of backend work.
 
@@ -198,6 +202,10 @@ signal. Final state is emitted through `Finished`.
 Before applying, the service refreshes package state again. The backend then
 resolves the transaction and compares it with the preview the user approved. If
 the result changed, apply is refused and the user must review a new preview.
+
+Apply uses the same preview builder as the initial preview step. If the
+resolved transaction now contains an action the preview model cannot represent,
+apply is refused before package work starts.
 
 The apply progress stream comes from two libdnf5 callback paths:
 

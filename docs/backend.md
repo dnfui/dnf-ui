@@ -157,6 +157,10 @@ It resolves a preview before apply, then applies the transaction if the service
 authorizes it. Download progress is reported through a callback so the service
 can forward progress lines to the GUI.
 
+The preview builder fails closed when libdnf resolves an action that the
+preview model cannot represent. That keeps the GUI review step from showing a
+partial transaction summary.
+
 Upgrade-all requests use libdnf5's all-installed-packages upgrade job instead of
 expanding the request into many package specs in the GUI.
 

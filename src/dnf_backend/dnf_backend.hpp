@@ -132,6 +132,9 @@ enum class PackageInstallState {
 };
 
 // Resolved transaction preview used by the confirmation dialog before apply.
+// The model must fully describe every resolved transaction action. Callers must
+// never receive a partial preview when the backend cannot represent the whole
+// resolved transaction.
 struct TransactionPreview {
   std::vector<std::string> install;
   std::vector<std::string> upgrade;
@@ -280,6 +283,7 @@ std::string dnf_backend_get_package_deps(const std::string &pkg_nevra);
 std::string dnf_backend_get_package_changelog(const std::string &pkg_nevra);
 // -----------------------------------------------------------------------------
 // Resolve the pending transaction and summarize the final package changes for UI review.
+// On failure, preview is reset to an empty preview and no partial result is returned.
 // -----------------------------------------------------------------------------
 bool dnf_backend_preview_transaction(const std::vector<std::string> &install_nevras,
                                      const std::vector<std::string> &remove_nevras,
@@ -323,6 +327,12 @@ bool dnf_backend_testonly_annotation_fallback_leaves_rows_unknown(std::vector<Pa
 // Compare transaction previews using the same check the backend runs before apply.
 // -----------------------------------------------------------------------------
 bool dnf_backend_testonly_transaction_previews_match(const TransactionPreview &left, const TransactionPreview &right);
+// -----------------------------------------------------------------------------
+// Feed a sequence of transaction actions through the preview builder for tests.
+// -----------------------------------------------------------------------------
+bool dnf_backend_testonly_build_preview_from_actions(const std::vector<int> &action_codes,
+                                                     TransactionPreview &preview,
+                                                     std::string &error_out);
 #endif
 
 // -----------------------------------------------------------------------------

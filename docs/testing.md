@@ -49,7 +49,7 @@ These tests protect:
 - config file parsing and fallback behavior
 - installed snapshot behavior
 - package action row selection for install, upgrade, remove, and reinstall
-- transaction preview behavior
+- transaction preview behavior, including fail-closed preview building
 - transaction request validation
 - transaction service D-Bus request parsing
 - transaction service request validation
