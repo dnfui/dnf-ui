@@ -15,10 +15,15 @@ namespace {
 constexpr size_t kMaxSearchCacheEntries = 3;
 
 // Cache one visible result set per search term and search option combination.
-// Entries are tied to the BaseManager generation that produced them so a Base
-// rebuild cannot serve outdated package metadata back into the UI.
+// Entries are tied to the BaseManager generation, the shared Base lifetime
+// marker, and the cache epoch that produced them. Generation tracks backend
+// rebuilds. The Base epoch tracks when the shared cached Base was replaced or
+// dropped. The cache epoch tracks UI actions that intentionally invalidate
+// cached search rows even when the Base generation does not change yet.
 struct CachedSearchResults {
   uint64_t generation;
+  uint64_t base_epoch;
+  uint64_t cache_epoch;
   uint64_t last_used;
   std::vector<PackageRow> packages;
 };
@@ -26,6 +31,7 @@ struct CachedSearchResults {
 static std::map<std::string, CachedSearchResults> g_search_cache;
 static std::mutex g_cache_mutex; // Protects g_search_cache
 static uint64_t g_cache_use_counter = 0;
+static uint64_t g_cache_epoch = 0;
 
 // -----------------------------------------------------------------------------
 // Drop the oldest cached search rows when the cache reaches its entry limit.
@@ -62,7 +68,9 @@ package_query_cache_key_for(const std::string &term)
 
 // -----------------------------------------------------------------------------
 // Clear cached search results.
-// Used by the Clear Cache button, repository refresh, and transaction refresh.
+// Used by the Clear Cache button, repository refresh, transaction refresh, and
+// installed-state refresh. Advancing the cache epoch also prevents older
+// searches from storing rows back into a cache state the UI already invalidated.
 // -----------------------------------------------------------------------------
 void
 package_query_cache_clear()
@@ -70,15 +78,31 @@ package_query_cache_clear()
   std::lock_guard<std::mutex> lock(g_cache_mutex);
   g_search_cache.clear();
   g_cache_use_counter = 0;
+  g_cache_epoch++;
+}
+
+// -----------------------------------------------------------------------------
+// Return the current cache epoch.
+// -----------------------------------------------------------------------------
+uint64_t
+package_query_cache_current_epoch()
+{
+  std::lock_guard<std::mutex> lock(g_cache_mutex);
+  return g_cache_epoch;
 }
 
 // -----------------------------------------------------------------------------
 // Look up cached rows before starting a new backend query.
-// Reuse only results produced from the current Base generation so refreshes
-// and transaction rebuilds cannot surface outdated package metadata.
+// Reuse only results produced from the current Base generation, Base epoch, and
+// cache epoch so Base drops, refreshes, transactions, and explicit cache
+// invalidation cannot surface outdated package metadata.
 // -----------------------------------------------------------------------------
 bool
-package_query_cache_lookup(const std::string &key, uint64_t generation, std::vector<PackageRow> &out_packages)
+package_query_cache_lookup(const std::string &key,
+                           uint64_t generation,
+                           uint64_t base_epoch,
+                           uint64_t cache_epoch,
+                           std::vector<PackageRow> &out_packages)
 {
   std::lock_guard<std::mutex> lock(g_cache_mutex);
   auto it = g_search_cache.find(key);
@@ -86,7 +110,8 @@ package_query_cache_lookup(const std::string &key, uint64_t generation, std::vec
     return false;
   }
 
-  if (it->second.generation != generation) {
+  if (it->second.generation != generation || it->second.base_epoch != base_epoch ||
+      it->second.cache_epoch != cache_epoch) {
     g_search_cache.erase(it);
     return false;
   }
@@ -98,14 +123,22 @@ package_query_cache_lookup(const std::string &key, uint64_t generation, std::vec
 
 // -----------------------------------------------------------------------------
 // Save rows so the same search can be shown faster next time.
-// Search results are only reusable while the backend Base generation stays
-// the same, otherwise repo state may have changed underneath the cache.
+// Search results are reusable only while the backend Base generation, the
+// shared Base lifetime marker, and the cache epoch stay the same.
 // -----------------------------------------------------------------------------
 void
-package_query_cache_store(const std::string &key, uint64_t generation, const std::vector<PackageRow> &packages)
+package_query_cache_store(const std::string &key,
+                          uint64_t generation,
+                          uint64_t base_epoch,
+                          uint64_t cache_epoch,
+                          const std::vector<PackageRow> &packages)
 {
   std::lock_guard<std::mutex> lock(g_cache_mutex);
-  g_search_cache[key] = CachedSearchResults { generation, ++g_cache_use_counter, packages };
+  if (cache_epoch != g_cache_epoch) {
+    return;
+  }
+
+  g_search_cache[key] = CachedSearchResults { generation, base_epoch, cache_epoch, ++g_cache_use_counter, packages };
   package_query_cache_prune_locked();
 }
 

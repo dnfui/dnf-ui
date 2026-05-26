@@ -57,6 +57,21 @@ TEST_CASE("BaseManager cache drop keeps generation stable")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that dropping cached backend memory changes the Base lifetime marker.
+// -----------------------------------------------------------------------------
+TEST_CASE("BaseManager cache drop advances Base epoch")
+{
+  auto &mgr = BaseManager::instance();
+
+  REQUIRE_NOTHROW(mgr.acquire_read());
+  const auto before = mgr.current_base_epoch();
+
+  mgr.drop_cached_base();
+
+  REQUIRE(mgr.current_base_epoch() > before);
+}
+
+// -----------------------------------------------------------------------------
 // Verify that startup still exposes installed packages when repo loading fails.
 // -----------------------------------------------------------------------------
 TEST_CASE("BaseManager falls back to installed-package-only initialization when repo-backed startup fails")

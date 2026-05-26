@@ -117,6 +117,15 @@ class BaseManager {
   }
 
   // -----------------------------------------------------------------------------
+  // Return the current cached Base lifetime marker.
+  // This changes whenever the shared cached Base is replaced, created, or dropped.
+  // -----------------------------------------------------------------------------
+  uint64_t current_base_epoch() const
+  {
+    return base_epoch.load(std::memory_order_relaxed);
+  }
+
+  // -----------------------------------------------------------------------------
   // Return the repo state of the cached Base.
   // -----------------------------------------------------------------------------
   BaseRepoState current_repo_state() const;
@@ -176,6 +185,7 @@ class BaseManager {
   BaseRepoState repo_state = BaseRepoState::LIVE_METADATA;
 
   std::atomic<uint64_t> generation { 0 };
+  std::atomic<uint64_t> base_epoch { 0 };
 
   // Serializes Base queries, rebuilds, transactions, and Base destruction.
   mutable std::shared_mutex base_mutex;

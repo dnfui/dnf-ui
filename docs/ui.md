@@ -78,8 +78,11 @@ Long-running package queries run on worker threads through `GTask`. Completion
 callbacks run on the GTK thread before they update widgets.
 
 Search results are cached in [src/ui/package_query_cache.cpp](../src/ui/package_query_cache.cpp).
-The cache is tied to the current backend Base generation, so a repository
-refresh or transaction rebuild cannot reuse outdated package rows.
+The cache is tied to the current backend Base generation, the shared Base
+lifetime marker, and a cache epoch owned by the query cache layer. Repository
+refreshes, transaction follow-up refreshes, and installed-state refreshes clear
+cached search rows and advance that epoch, so older search workers cannot
+repopulate the cache with rows the UI has already invalidated.
 
 ### Package info controller
 

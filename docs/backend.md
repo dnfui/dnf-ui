@@ -41,8 +41,18 @@ That creates a short-lived Base for the local rpm database and does not replace
 the shared cached Base used by later package queries.
 
 The Base has a generation counter. When the Base is rebuilt, the generation is
-incremented. UI tasks and search caches use that value to reject outdated
-results.
+incremented. UI tasks use that value to reject outdated results after refreshes
+and transactions.
+
+The shared cached Base also has a lifetime marker. That marker changes whenever
+the shared Base is created, replaced, or dropped. The package search cache uses
+it so cached rows from one shared Base lifetime are never reused after that Base
+was discarded and recreated under the same generation.
+
+The package search cache also keeps its own cache epoch. That epoch advances
+when the UI explicitly clears cached search rows, even if the backend Base
+generation has not changed yet. This keeps older search workers from storing
+old rows back into a cache state the UI already invalidated.
 
 ## Query flow
 

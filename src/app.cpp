@@ -10,6 +10,7 @@
 #include "debug_trace.hpp"
 #include "dnf_backend/dnf_backend.hpp"
 #include "i18n.hpp"
+#include "ui/package_query_controller.hpp"
 #include "ui/main_window.hpp"
 #include "ui/ui_helpers.hpp"
 #include "ui/widgets.hpp"
@@ -120,8 +121,11 @@ start_installed_refresh_task(void)
     return;
   }
 
+  // A successful installed-state refresh can observe package changes that do
+  // not rebuild the shared Base. Drop cached search rows now so older workers
+  // cannot store results back into a cache state we are refreshing.
+  package_query_clear_search_cache();
   DNFUI_TRACE("Installed package refresh task start");
-
   GTask *task = g_task_new(nullptr, nullptr, on_installed_refresh_task_finished, nullptr);
   g_task_run_in_thread(task, on_installed_refresh_task);
   g_object_unref(task);
@@ -157,6 +161,9 @@ on_installed_refresh_task_finished(GObject *, GAsyncResult *result, gpointer)
   if (error) {
     DNFUI_TRACE("Installed package refresh task failed: %s", error->message);
   } else {
+    // A search may have started while the installed-state refresh was running.
+    // Drop those cached rows now that the installed snapshot is up to date.
+    package_query_clear_search_cache();
     DNFUI_TRACE("Installed package refresh task done");
   }
 

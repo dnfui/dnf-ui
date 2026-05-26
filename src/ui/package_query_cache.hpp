@@ -22,13 +22,27 @@ std::string package_query_cache_key_for(const std::string &term);
 // -----------------------------------------------------------------------------
 void package_query_cache_clear();
 // -----------------------------------------------------------------------------
-// Look up cached package rows for one key and generation.
+// Return the current search-cache invalidation epoch.
+// The epoch advances when UI actions explicitly invalidate cached search rows
+// without requiring a backend Base rebuild.
 // -----------------------------------------------------------------------------
-bool package_query_cache_lookup(const std::string &key, uint64_t generation, std::vector<PackageRow> &out_packages);
+uint64_t package_query_cache_current_epoch();
 // -----------------------------------------------------------------------------
-// Store package rows for one key and generation.
+// Look up cached package rows for one key, generation, Base epoch, and cache epoch.
 // -----------------------------------------------------------------------------
-void package_query_cache_store(const std::string &key, uint64_t generation, const std::vector<PackageRow> &packages);
+bool package_query_cache_lookup(const std::string &key,
+                                uint64_t generation,
+                                uint64_t base_epoch,
+                                uint64_t cache_epoch,
+                                std::vector<PackageRow> &out_packages);
+// -----------------------------------------------------------------------------
+// Store package rows for one key, generation, Base epoch, and cache epoch.
+// -----------------------------------------------------------------------------
+void package_query_cache_store(const std::string &key,
+                               uint64_t generation,
+                               uint64_t base_epoch,
+                               uint64_t cache_epoch,
+                               const std::vector<PackageRow> &packages);
 
 // -----------------------------------------------------------------------------
 // EOF
