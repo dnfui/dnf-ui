@@ -1,5 +1,5 @@
 Name:           dnf-ui
-Version:        0.1.5
+Version:        0.1.6
 Release:        1%{?dist}
 Summary:        GTK frontend for DNF5 with a privileged transaction service
 
@@ -75,6 +75,13 @@ appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/com.fedora.dnfui
 %{_unitdir}/dnfui-service.service
 
 %changelog
+* Wed May 27 2026 ErikMN <erik@example.invalid> - 0.1.6-1
+- Make transaction preview fail closed for unsupported resolved actions
+- Split test-only transaction service hooks out of the installed service
+- Authorize system-bus preview requests before privileged preview work starts
+- Fix search cache reuse after the shared backend Base is dropped and recreated
+- Improve transaction service test coverage and supporting documentation
+
 * Fri May 15 2026 ErikMN <erik@example.invalid> - 0.1.5-1
 - Polish the package list, history panel, details tabs, and status markers
 - Keep long transaction messages from widening the progress window
