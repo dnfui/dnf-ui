@@ -47,4 +47,4 @@ color_print "$FMT_GREEN" "*** Package spec: cowsay ***"
   -e SERVICE_SYSTEM_BUS_ALLOW_APPLY=yes \
   -v "$HOST_DIR:/workspace" \
   "$IMAGE_NAME" \
-  bash -c 'BUILD_DIR="$(./utils/meson_build.sh build-dir)" && ./utils/meson_build.sh service-tests && SERVICE_TEST_DISABLE_AUTO_RELEASE=1 SERVICE_BIN="$BUILD_DIR/src/service/dnfui-service-tests" bash /workspace/docker/docker_service_system_bus_inner.sh'
+  bash -c 'BUILD_DIR="$(./utils/meson_build.sh build-dir)" && ./utils/meson_build.sh service-tests && SERVICE_TEST_DISABLE_AUTO_RELEASE=1 SERVICE_TEST_DISABLE_PREVIEW_AUTHORIZATION=1 SERVICE_BIN="$BUILD_DIR/src/service/dnfui-service-tests" bash /workspace/docker/docker_service_system_bus_inner.sh'

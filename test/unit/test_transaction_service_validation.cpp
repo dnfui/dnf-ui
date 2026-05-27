@@ -42,6 +42,32 @@ TEST_CASE("Transaction service validation accepts install-only requests")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that preview authorization stays open on the session bus.
+// -----------------------------------------------------------------------------
+TEST_CASE("Transaction service preview authorization skips session bus")
+{
+  TransactionService service;
+  service.bus_type = G_BUS_TYPE_SESSION;
+  std::string error = "stale";
+
+  REQUIRE(authorize_preview_start(&service, ":1.23", error));
+  REQUIRE(error.empty());
+}
+
+// -----------------------------------------------------------------------------
+// Verify that preview authorization requires a caller identity on the system bus.
+// -----------------------------------------------------------------------------
+TEST_CASE("Transaction service preview authorization requires caller identity")
+{
+  TransactionService service;
+  service.bus_type = G_BUS_TYPE_SYSTEM;
+  std::string error;
+
+  REQUIRE_FALSE(authorize_preview_start(&service, "", error));
+  REQUIRE(error == "Could not determine the caller identity.");
+}
+
+// -----------------------------------------------------------------------------
 // Verify that remove and reinstall validation refreshes installed package state.
 // -----------------------------------------------------------------------------
 TEST_CASE("Transaction service validation refreshes installed state for remove and reinstall")

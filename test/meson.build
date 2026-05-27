@@ -40,6 +40,7 @@ dnfui_tests = executable(
   ) + backend_sources + files(
     '../src/i18n.cpp',
     '../src/config.cpp',
+    '../src/service/transaction_service_preview_authorization.cpp',
     '../src/service/transaction_service_preview_formatter.cpp',
     '../src/service/transaction_service_request_parser.cpp',
     '../src/service/transaction_service_validation.cpp',
@@ -58,6 +59,7 @@ dnfui_tests = executable(
     libdnf5_dep,
     gio_dep,
     gtk4_dep,
+    polkit_dep,
     catch2_dep,
   ],
   cpp_args: [

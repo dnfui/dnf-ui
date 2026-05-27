@@ -6,6 +6,16 @@
   <vendor>Fedora Project</vendor>
   <vendor_url>https://fedoraproject.org/</vendor_url>
 
+  <action id="com.fedora.dnfui.preview-transactions">
+    <description>Prepare package transaction previews with DNF UI</description>
+    <message>Authorization is required to prepare package transactions.</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>yes</allow_active>
+    </defaults>
+  </action>
+
   <action id="com.fedora.dnfui.apply-transactions">
     <description>Apply package transactions with DNF UI</description>
     <message>Authentication is required to apply package transactions.</message>

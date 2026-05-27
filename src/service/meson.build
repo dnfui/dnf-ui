@@ -2,6 +2,7 @@ service_sources = files(
   '../i18n.cpp',
   'transaction_service.cpp',
   'transaction_service_authorization.cpp',
+  'transaction_service_preview_authorization.cpp',
   'transaction_service_format.cpp',
   'transaction_service_introspection.cpp',
   'transaction_service_limits.cpp',

@@ -73,12 +73,14 @@ When the user clicks Apply:
 1. The pending controller validates the pending actions.
 2. The controller builds a `TransactionRequest`.
 3. The GUI client calls `StartTransaction` on the service.
-4. The service creates a request object and starts preview work.
-5. The GUI waits for the preview result.
-6. The GUI shows a summary dialog.
-7. If the user confirms, the GUI calls `Apply` on the request object.
-8. The service authorizes and runs the transaction.
-9. The GUI refreshes package state and releases the request object.
+4. On the system bus, the service first checks that the caller is the active
+   local desktop user.
+5. The service creates a request object and starts preview work.
+6. The GUI waits for the preview result.
+7. The GUI shows a summary dialog.
+8. If the user confirms, the GUI calls `Apply` on the request object.
+9. The service authorizes and runs the transaction.
+10. The GUI refreshes package state and releases the request object.
 
 When the user clicks Upgrade All, the GUI skips the pending action list and asks
 the service to start an upgrade-all request directly. If the resolved preview is
@@ -90,8 +92,9 @@ flowchart TD
     Mark[Marked actions] --> Request[TransactionRequest]
     UpgradeAll[Upgrade All] --> StartAll[StartUpgradeAllTransaction]
     Request --> Start[StartTransaction]
-    Start --> Preview[Preview worker]
-    StartAll --> Preview
+    Start --> PreviewAuth[Preview authorization]
+    StartAll --> PreviewAuth
+    PreviewAuth --> Preview[Preview worker]
     Preview --> Dialog[Summary dialog]
     Preview --> NoChanges[No changes available]
     Dialog --> Apply[Apply method]
@@ -139,8 +142,10 @@ relax request lifetime rules for short-lived `gdbus` calls. The installed
 service build keeps the normal ownership checks.
 
 The D-Bus policy allows standard introspection and only the manager and request
-methods listed above. `Apply` still has its own Polkit check before packages can
-be changed.
+methods listed above. On the system bus, `StartTransaction` and
+`StartUpgradeAllTransaction` still go through a Polkit-backed active-user check
+before a request object is created. `Apply` has its own separate Polkit check
+before packages can be changed.
 
 ## Request lifecycle
 
@@ -170,6 +175,11 @@ returns an error instead of waiting forever.
 ## Preview
 
 Preview starts when the service creates a request object.
+
+On the session bus, preview starts immediately so local development and Docker
+tests keep the same flow they used before. On the system bus, the service first
+checks that the caller is an active local desktop user. If that check fails, no
+request object is created and no backend preview work starts.
 
 Before the service creates a request object, it validates the shared request
 shape, rejects oversized requests, and rejects remove or reinstall requests for

@@ -57,6 +57,15 @@ on_manager_method_call(GDBusConnection *,
     return;
   }
 
+  // On the system bus, allow only the active local desktop user to start
+  // preview work. Deny the request before creating a request object or doing
+  // backend transaction resolution.
+  if (!authorize_preview_start(service, owner_name.c_str(), error_out)) {
+    g_dbus_method_invocation_return_error(
+        invocation, G_DBUS_ERROR, G_DBUS_ERROR_ACCESS_DENIED, "%s", error_out.c_str());
+    return;
+  }
+
   if (service_request_limit_reached(service, owner_name, error_out)) {
     g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR, G_DBUS_ERROR_FAILED, "%s", error_out.c_str());
     return;

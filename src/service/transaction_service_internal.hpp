@@ -24,6 +24,7 @@ constexpr const char *kServiceName = kTransactionServiceName;
 constexpr const char *kManagerObjectPath = kTransactionServiceManagerPath;
 constexpr const char *kManagerInterface = kTransactionServiceManagerInterface;
 constexpr const char *kTransactionInterface = kTransactionServiceRequestInterface;
+constexpr const char *kPreviewActionId = "com.fedora.dnfui.preview-transactions";
 constexpr const char *kApplyActionId = "com.fedora.dnfui.apply-transactions";
 constexpr size_t kMaxLiveTransactionSessions = 32;
 constexpr size_t kMaxLiveTransactionSessionsPerClient = 8;
@@ -130,6 +131,7 @@ void set_transaction_running(TransactionSession *session, TransactionStage stage
 // -----------------------------------------------------------------------------
 // Transaction authorization
 // -----------------------------------------------------------------------------
+bool authorize_preview_start(TransactionService *service, const char *sender, std::string &error_out);
 bool
 start_authorize_apply_request(TransactionSession *session, GDBusMethodInvocation *invocation, std::string &error_out);
 void complete_apply_request(TransactionSession *session, GDBusMethodInvocation *invocation);

@@ -1,6 +1,6 @@
 // -----------------------------------------------------------------------------
 // transaction_service_authorization.cpp
-// Handles authorization for Apply calls.
+// Handles authorization for apply calls.
 // Session bus runs without Polkit for local tests. System bus asks Polkit before
 // starting package changes.
 // -----------------------------------------------------------------------------

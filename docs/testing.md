@@ -95,6 +95,11 @@ shell tests can inspect the request object after the start call exits and keep
 request ownership checks compatible with that test shape. The installed service
 binary is built without that test-only escape hatch.
 
+Those Docker system bus tests also run without an active desktop session, so
+the test-only service binary can be started with
+`SERVICE_TEST_DISABLE_PREVIEW_AUTHORIZATION=1`. That switch is test-only and is
+not present in the installed service binary.
+
 ## Common commands
 
 Run the native test suite:
