@@ -19,7 +19,7 @@ struct PackageActionRows {
   bool install_is_upgrade = false;
   bool has_install_row = false;
   bool has_installed_row = false;
-  // NOTE: Fast UI check only. The reinstall click handler still asks the backend.
+  // Fast UI check only. This does not prove that reinstall is available from repositories.
   bool can_try_reinstall = false;
   PackageRow install_row;
   PackageRow installed_row;

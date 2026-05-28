@@ -2,8 +2,8 @@
 // src/ui/pending_transaction_state.hpp
 // Pending transaction state model
 //
-// Keeps the marked package action list and pending transaction widget pointers
-// separate from the top-level widget state bag.
+// Keeps marked package actions and pending transaction widgets separate from
+// the top-level widget state.
 // -----------------------------------------------------------------------------
 #pragma once
 

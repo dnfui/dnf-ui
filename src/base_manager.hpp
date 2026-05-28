@@ -117,7 +117,7 @@ class BaseManager {
   }
 
   // -----------------------------------------------------------------------------
-  // Return the current cached Base lifetime marker.
+  // Return the current cached Base id.
   // This changes whenever the shared cached Base is replaced, created, or dropped.
   // -----------------------------------------------------------------------------
   uint64_t current_base_epoch() const

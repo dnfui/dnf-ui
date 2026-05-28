@@ -86,20 +86,20 @@ The main window is built once and the controller files own behavior.
 
 - [src/ui/main_window.cpp](../src/ui/main_window.cpp) builds the window, creates shared widget state, and connects signals.
 - [src/ui/widgets.hpp](../src/ui/widgets.hpp) groups the widget pointers and shared UI state.
-- [src/ui/widgets.cpp](../src/ui/widgets.cpp) owns repository refresh callbacks and task helpers shared by controllers.
-- [src/ui/main_menu.cpp](../src/ui/main_menu.cpp) owns top menu actions.
-- [src/ui/package_query_controller.cpp](../src/ui/package_query_controller.cpp) owns the public search, list, history, clear, and reload callbacks.
-- [src/ui/package_query_controls.cpp](../src/ui/package_query_controls.cpp) owns active package-query request state, Stop button handling, cancellation, and refresh completion.
-- [src/ui/package_query_tasks.cpp](../src/ui/package_query_tasks.cpp) owns package-query worker tasks and completion handlers.
-- [src/ui/package_info_controller.cpp](../src/ui/package_info_controller.cpp) owns selection handling and details loading.
-- [src/ui/package_table_view.cpp](../src/ui/package_table_view.cpp) owns package table assembly.
+- [src/ui/widgets.cpp](../src/ui/widgets.cpp) handles repository refresh callbacks and task helpers shared by controllers.
+- [src/ui/main_menu.cpp](../src/ui/main_menu.cpp) handles top menu actions.
+- [src/ui/package_query_controller.cpp](../src/ui/package_query_controller.cpp) handles the public search, list, history, clear, and reload callbacks.
+- [src/ui/package_query_controls.cpp](../src/ui/package_query_controls.cpp) handles active package-query request state, Stop button handling, cancellation, and refresh completion.
+- [src/ui/package_query_tasks.cpp](../src/ui/package_query_tasks.cpp) contains package-query worker tasks and completion handlers.
+- [src/ui/package_info_controller.cpp](../src/ui/package_info_controller.cpp) handles selection and details loading.
+- [src/ui/package_table_view.cpp](../src/ui/package_table_view.cpp) builds the package table.
 - [src/ui/package_table_model.cpp](../src/ui/package_table_model.cpp) stores package rows in GTK objects.
-- [src/ui/package_table_sort.cpp](../src/ui/package_table_sort.cpp) owns package table sorting.
-- [src/ui/pending_transaction_controller.cpp](../src/ui/pending_transaction_controller.cpp) owns package action buttons.
-- [src/ui/pending_transaction_view.cpp](../src/ui/pending_transaction_view.cpp) owns the Pending Actions tab.
-- [src/ui/pending_transaction_apply.cpp](../src/ui/pending_transaction_apply.cpp) owns preview, apply, and post-apply refresh.
-- [src/ui/transaction_review_dialog.cpp](../src/ui/transaction_review_dialog.cpp) owns the review and error dialogs.
-- [src/ui/transaction_progress.cpp](../src/ui/transaction_progress.cpp) owns the live progress window.
+- [src/ui/package_table_sort.cpp](../src/ui/package_table_sort.cpp) contains package table sorting rules.
+- [src/ui/pending_transaction_controller.cpp](../src/ui/pending_transaction_controller.cpp) handles package action buttons.
+- [src/ui/pending_transaction_view.cpp](../src/ui/pending_transaction_view.cpp) builds the Pending Actions tab.
+- [src/ui/pending_transaction_apply.cpp](../src/ui/pending_transaction_apply.cpp) handles preview, apply, and post-apply refresh.
+- [src/ui/transaction_review_dialog.cpp](../src/ui/transaction_review_dialog.cpp) builds the review and error dialogs.
+- [src/ui/transaction_progress.cpp](../src/ui/transaction_progress.cpp) manages the live progress window.
 
 The UI controller pattern follows this shape:
 
@@ -123,10 +123,10 @@ It exposes small value types such as `PackageRow`, `PackageInstallState`, and
 
 The backend implementation is split by responsibility:
 
-- [src/base_manager.cpp](../src/base_manager.cpp) owns the shared libdnf5 `Base`.
+- [src/base_manager.cpp](../src/base_manager.cpp) manages the shared libdnf5 `Base`.
 - [src/dnf_backend/dnf_query.cpp](../src/dnf_backend/dnf_query.cpp) builds package rows for search, browse, and installed-list views.
 - [src/dnf_backend/dnf_details.cpp](../src/dnf_backend/dnf_details.cpp) formats package details, files, dependencies, and changelog text.
-- [src/dnf_backend/dnf_state.cpp](../src/dnf_backend/dnf_state.cpp) owns installed-package snapshot state and package status classification.
+- [src/dnf_backend/dnf_state.cpp](../src/dnf_backend/dnf_state.cpp) keeps installed-package snapshot state and package status classification.
 - [src/dnf_backend/dnf_transaction.cpp](../src/dnf_backend/dnf_transaction.cpp) resolves previews and applies transactions.
 - [src/dnf_backend/dnf_transaction_callbacks.cpp](../src/dnf_backend/dnf_transaction_callbacks.cpp) adapts libdnf download and rpm callbacks into progress lines.
 - [src/dnf_backend/dnf_transaction_format.cpp](../src/dnf_backend/dnf_transaction_format.cpp) keeps shared transaction text formatting out of the resolver.

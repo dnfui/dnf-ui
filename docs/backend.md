@@ -23,7 +23,7 @@ Controller code should use this public API instead of calling libdnf5 directly.
 
 ## BaseManager
 
-[src/base_manager.cpp](../src/base_manager.cpp) owns the shared libdnf5 `Base`.
+[src/base_manager.cpp](../src/base_manager.cpp) manages the shared libdnf5 `Base`.
 
 The Base can be in one of three repository states:
 
@@ -44,10 +44,10 @@ The Base has a generation counter. When the Base is rebuilt, the generation is
 incremented. UI tasks use that value to reject outdated results after refreshes
 and transactions.
 
-The shared cached Base also has a lifetime marker. That marker changes whenever
-the shared Base is created, replaced, or dropped. The package search cache uses
-it so cached rows from one shared Base lifetime are never reused after that Base
-was discarded and recreated under the same generation.
+The shared cached Base also has an id that changes whenever the shared Base is
+created, replaced, or dropped. The package search cache uses it so rows from one
+cached Base are not reused after that Base was discarded and recreated under the
+same generation.
 
 The package search cache also keeps its own cache epoch. That epoch advances
 when the UI explicitly clears cached search rows, even if the backend Base
@@ -74,7 +74,7 @@ architecture pair.
 
 ## Installed snapshot
 
-[src/dnf_backend/dnf_state.cpp](../src/dnf_backend/dnf_state.cpp) owns cached
+[src/dnf_backend/dnf_state.cpp](../src/dnf_backend/dnf_state.cpp) keeps cached
 state about installed packages.
 
 It stores:

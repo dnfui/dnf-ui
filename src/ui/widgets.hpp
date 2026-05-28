@@ -66,7 +66,7 @@ struct MainWindowState {
 };
 
 // -----------------------------------------------------------------------------
-// Shared widget state bag passed between the split controller modules
+// Shared widget state passed between controller modules
 // -----------------------------------------------------------------------------
 struct SearchWidgets : std::enable_shared_from_this<SearchWidgets> {
   PackageQueryWidgets query;

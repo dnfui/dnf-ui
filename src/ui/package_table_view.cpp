@@ -68,7 +68,7 @@ refresh_visible_status_labels(GtkWidget *widget, SearchWidgets *widgets)
 }
 
 // -----------------------------------------------------------------------------
-// Select the package row that owns the context menu action.
+// Select the package row used by the context menu action.
 // -----------------------------------------------------------------------------
 static bool
 select_package_table_row(GtkColumnView *view, const std::string &nevra)

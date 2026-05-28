@@ -124,7 +124,7 @@ package_query_cache_lookup(const std::string &key,
 // -----------------------------------------------------------------------------
 // Save rows so the same search can be shown faster next time.
 // Search results are reusable only while the backend Base generation, the
-// shared Base lifetime marker, and the cache epoch stay the same.
+// shared Base id, and the cache epoch stay the same.
 // -----------------------------------------------------------------------------
 void
 package_query_cache_store(const std::string &key,

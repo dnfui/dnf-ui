@@ -2,7 +2,7 @@
 // src/ui/main_window.cpp
 // Main application window
 // Builds the primary GTK window, creates shared widget state, wires callbacks,
-// and owns window-level UI lifecycle behavior.
+// and handles window-level UI lifecycle behavior.
 // -----------------------------------------------------------------------------
 #include "main_window.hpp"
 

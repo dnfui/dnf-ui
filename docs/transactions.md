@@ -34,7 +34,7 @@ Important files:
 
 The transaction service implementation is split by responsibility:
 
-- `transaction_service.cpp` owns the service process runtime and shutdown.
+- `transaction_service.cpp` runs the service process and shutdown path.
 - `transaction_service_manager.cpp` handles the manager object and creates request objects.
 - `transaction_service_request_objects.cpp` handles methods on one request object.
 - `transaction_service_authorization.cpp` handles Apply authorization.
@@ -137,9 +137,9 @@ The native installed-service smoke tests keep those ownership checks enabled by
 using a dedicated helper client that holds one system bus connection across the
 whole request lifecycle.
 
-The Docker smoke tests use a separate test-only service build when they need to
-relax request lifetime rules for short-lived `gdbus` calls. The installed
-service build keeps the normal ownership checks.
+The Docker smoke tests use a separate test-only service build for short-lived
+`gdbus` calls. The installed service build keeps the normal request ownership
+checks.
 
 The D-Bus policy allows standard introspection and only the manager and request
 methods listed above. On the system bus, `StartTransaction` and

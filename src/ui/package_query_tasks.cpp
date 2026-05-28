@@ -29,7 +29,7 @@ struct SearchTaskData {
   // BaseManager generation recorded when the task starts.
   // Used to drop outdated results if the backend Base is rebuilt before the task ends.
   uint64_t generation;
-  // Shared Base lifetime marker recorded when the task starts.
+  // Shared Base id recorded when the task starts.
   // Used to stop cache reuse after the shared Base was dropped or replaced.
   uint64_t base_epoch;
   // Search-cache epoch recorded when the task starts.
@@ -372,7 +372,7 @@ on_search_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
   if (packages) {
     // Save rows so the same search can be shown faster next time.
     // Search results are reusable only while the backend Base generation, the
-    // shared Base lifetime marker, and the cache epoch still match the state
+    // shared Base id, and the cache epoch still match the state
     // recorded when the task began.
     if (td && td->cache_key && td->base_epoch == BaseManager::instance().current_base_epoch()) {
       package_query_cache_store(td->cache_key, td->generation, td->base_epoch, td->cache_epoch, *packages);

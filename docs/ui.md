@@ -53,7 +53,7 @@ GTK pointers that several controllers need.
 ### Package query controller
 
 [src/ui/package_query_controller.cpp](../src/ui/package_query_controller.cpp)
-owns the public GTK callbacks for package list workflows:
+handles the public GTK callbacks for package list workflows:
 
 - list installed packages
 - browse available and installed packages together
@@ -67,27 +67,27 @@ The supporting package query files keep the slower and more stateful parts out
 of the public callback file:
 
 - [src/ui/package_query_controls.cpp](../src/ui/package_query_controls.cpp)
-  owns active request state, Stop button handling, cancellation, and refresh
+  handles active request state, Stop button handling, cancellation, and refresh
   completion.
 - [src/ui/package_query_tasks.cpp](../src/ui/package_query_tasks.cpp)
-  owns the `GTask` workers and completion handlers for package queries.
+  contains the `GTask` workers and completion handlers for package queries.
 - [src/ui/package_query_controller_internal.hpp](../src/ui/package_query_controller_internal.hpp)
-  declares the small shared helpers used by those files.
+  declares the shared functions used by those files.
 
 Long-running package queries run on worker threads through `GTask`. Completion
 callbacks run on the GTK thread before they update widgets.
 
 Search results are cached in [src/ui/package_query_cache.cpp](../src/ui/package_query_cache.cpp).
-The cache is tied to the current backend Base generation, the shared Base
-lifetime marker, and a cache epoch owned by the query cache layer. Repository
-refreshes, transaction follow-up refreshes, and installed-state refreshes clear
-cached search rows and advance that epoch, so older search workers cannot
-repopulate the cache with rows the UI has already invalidated.
+The cache is tied to the current backend Base generation, the shared Base id,
+and a cache epoch kept by the query cache layer. Repository refreshes,
+transaction follow-up refreshes, and installed-state refreshes clear cached
+search rows and advance that epoch, so older search workers cannot repopulate
+the cache with rows the UI has already invalidated.
 
 ### Package info controller
 
 [src/ui/package_info_controller.cpp](../src/ui/package_info_controller.cpp)
-owns the details pane for the selected package.
+updates the details pane for the selected package.
 
 It updates:
 
@@ -103,25 +103,25 @@ the backend generation changes, the old result is ignored.
 
 ### Package table view
 
-[src/ui/package_table_view.cpp](../src/ui/package_table_view.cpp) owns package
-table assembly, column setup, selection, and status refresh.
+[src/ui/package_table_view.cpp](../src/ui/package_table_view.cpp) builds the
+package table, including column setup, selection, and status refresh.
 
-[src/ui/package_table_model.cpp](../src/ui/package_table_model.cpp) owns the
+[src/ui/package_table_model.cpp](../src/ui/package_table_model.cpp) contains the
 GTK object wrapper used to store package rows in the table model.
 
-[src/ui/package_table_sort.cpp](../src/ui/package_table_sort.cpp) owns package
+[src/ui/package_table_sort.cpp](../src/ui/package_table_sort.cpp) contains package
 table cell text and sorting rules.
 
 [src/ui/package_table_status.cpp](../src/ui/package_table_status.cpp) keeps the
 status text, tooltip text, and CSS classes separate from table construction.
 
 [src/ui/package_table_context_menu.cpp](../src/ui/package_table_context_menu.cpp)
-owns right-click actions for package rows.
+builds right-click actions for package rows.
 
 ### Pending transaction controller
 
 [src/ui/pending_transaction_controller.cpp](../src/ui/pending_transaction_controller.cpp)
-owns the package action buttons.
+handles the package action buttons.
 
 It is responsible for:
 
@@ -130,7 +130,7 @@ It is responsible for:
 - clearing pending actions
 
 [src/ui/pending_transaction_view.cpp](../src/ui/pending_transaction_view.cpp)
-owns the Pending Actions tab.
+builds the Pending Actions tab.
 
 It is responsible for:
 
@@ -139,7 +139,7 @@ It is responsible for:
 - enabling the Apply button only when actions are pending
 
 [src/ui/pending_transaction_apply.cpp](../src/ui/pending_transaction_apply.cpp)
-owns preview and apply work.
+handles preview and apply work.
 
 It is responsible for:
 
@@ -165,11 +165,11 @@ must not run libdnf queries because it is called while updating GTK controls.
 
 ### Transaction progress
 
-[src/ui/transaction_progress.cpp](../src/ui/transaction_progress.cpp) owns the
+[src/ui/transaction_progress.cpp](../src/ui/transaction_progress.cpp) manages the
 live progress window shown while apply is running.
 
 [src/ui/transaction_review_dialog.cpp](../src/ui/transaction_review_dialog.cpp)
-owns the confirmation dialog shown before apply and the error dialog shown when
+builds the confirmation dialog shown before apply and the error dialog shown when
 preview or apply fails.
 
 The progress window can receive progress messages after the apply request has
