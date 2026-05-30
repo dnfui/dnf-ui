@@ -2,8 +2,7 @@
 // transaction_service_validation.cpp
 // Service-side checks for transaction requests
 //
-// Keeps request checks that need current installed-package state out of the
-// worker thread implementation.
+// Keeps request checks that need current installed-package state out of the worker thread implementation.
 // -----------------------------------------------------------------------------
 #include "transaction_service_internal.hpp"
 

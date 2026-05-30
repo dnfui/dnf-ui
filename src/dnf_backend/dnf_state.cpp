@@ -83,8 +83,8 @@ collect_self_protected_package_names(libdnf5::Base &base)
   }
 
 #ifdef DNFUI_BUILD_TESTS
-  // Let tests exercise self-protection with an installed package chosen by the
-  // test case. Production builds only use the running executable owner above.
+  // Let tests exercise self-protection with an installed package chosen by the test case.
+  // Production builds only use the running executable owner above.
   const char *test_name = g_getenv("DNFUI_TEST_SELF_PROTECTED_PACKAGE_NAME");
   if (test_name && *test_name) {
     protected_names.insert(test_name);
@@ -161,10 +161,9 @@ dnf_backend_installed_snapshot_size()
 }
 
 // -----------------------------------------------------------------------------
-// Refresh the exact-installed and self-protection snapshots used by UI state
-// classification. This path is intentionally local-first: it does not require
-// repository metadata and should keep working from the rpmdb alone. It uses a
-// short-lived system-only Base so future queries do not inherit that mode.
+// Refresh the exact-installed and self-protection snapshots used by UI state classification.
+// This path uses only the local rpmdb.
+// The short-lived system-only Base prevents future queries from inheriting that mode.
 //
 // Thread-safety:
 //   The Base read lock and g_installed_mutex must never be held simultaneously.
@@ -217,9 +216,9 @@ dnf_backend_get_installed_package_row_by_name_arch(const PackageRow &row, Packag
 
 // -----------------------------------------------------------------------------
 // Classify a package row as available, upgradeable, exact-installed,
-// local-only, or installed-newer-than-repo. Exact-installed rows prefer the row
-// provenance annotation; available rows fall back to the installed name and architecture
-// cache so upgrade-state badges can be shown without duplicate visible rows.
+// local-only, or installed-newer-than-repo. Exact-installed rows prefer the row repo relation.
+// Available rows fall back to the installed name and architecture cache so upgrade-state badges
+// can be shown without duplicate visible rows.
 // -----------------------------------------------------------------------------
 PackageInstallState
 dnf_backend_get_package_install_state(const PackageRow &row)
@@ -280,8 +279,7 @@ dnf_backend_get_install_state_sort_rank(PackageInstallState state)
 }
 
 // -----------------------------------------------------------------------------
-// Check the cached self-protection snapshot collected from the owner of the
-// running GUI executable during the latest installed-package refresh.
+// Check the cached self-protection snapshot collected from the owner of the running GUI executable.
 // -----------------------------------------------------------------------------
 bool
 dnf_backend_is_package_self_protected(const PackageRow &row)
@@ -360,8 +358,7 @@ dnf_backend_testonly_replace_installed_snapshot(const std::set<std::string> &nev
 }
 
 // -----------------------------------------------------------------------------
-// Replace the installed-package snapshot with full rows for name and
-// architecture lookup tests.
+// Replace the installed-package snapshot with full rows for name and architecture lookup tests.
 // -----------------------------------------------------------------------------
 void
 dnf_backend_testonly_replace_installed_snapshot_rows(const std::vector<PackageRow> &rows)

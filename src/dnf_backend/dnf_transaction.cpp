@@ -2,9 +2,9 @@
 // dnf_transaction.cpp
 // Transaction preview and apply
 //
-// Owns libdnf5 Goal resolution, transaction preview model generation, and
-// transaction execution. Progress callback adapters live in their own file so
-// this file can stay focused on what is resolved and when it is applied.
+// Owns libdnf5 Goal resolution, transaction preview model generation, and transaction execution.
+// Progress callback adapters live in their own file so this file can stay focused
+// on what is resolved and when it is applied.
 // -----------------------------------------------------------------------------
 #include "dnf_backend/dnf_backend.hpp"
 
@@ -119,8 +119,8 @@ resolve_transaction_plan(libdnf5::Base &base,
 
   tx::emit_progress_line(progress_cb, "Resolving dependency changes...");
 
-  // Let package removal also remove installed packages that depend on the
-  // selected package, matching DNF's normal transaction behavior.
+  // Let package removal also remove installed packages that depend on the selected package.
+  // This matches DNF's normal transaction behavior.
   if (!remove_nevras.empty()) {
     goal.set_allow_erasing(true);
   }
@@ -182,8 +182,7 @@ resolve_transaction_plan(libdnf5::Base &base,
 
 // -----------------------------------------------------------------------------
 // Add one resolved transaction item to the confirmation preview model.
-// Reject unknown actions so the preview cannot silently omit part of the
-// resolved transaction.
+// Reject unknown actions so the preview cannot silently omit part of the resolved transaction.
 // -----------------------------------------------------------------------------
 static bool
 append_preview_action(TransactionPreview &preview,
@@ -325,10 +324,8 @@ dnf_backend_testonly_build_preview_from_actions(const std::vector<int> &action_c
 #endif
 
 // -----------------------------------------------------------------------------
-// Resolve the final transaction and group the resulting package actions for
-// the confirmation dialog. This deliberately shares resolve_transaction_plan
-// with apply so the preview and actual transaction use identical dependency
-// resolution logic.
+// Resolve the final transaction and group the resulting package actions for the confirmation dialog.
+// This deliberately shares resolve_transaction_plan with apply so preview and apply use the same dependency logic.
 // -----------------------------------------------------------------------------
 bool
 dnf_backend_preview_transaction(const std::vector<std::string> &install_nevras,
@@ -372,10 +369,9 @@ dnf_backend_preview_transaction(const std::vector<std::string> &install_nevras,
 }
 
 // -----------------------------------------------------------------------------
-// Apply a resolved package transaction after the caller has completed any
-// required authorization. The transaction service enforces Polkit before
-// invoking this function; direct backend callers are expected to run in tests or
-// another already-authorized context.
+// Apply a resolved package transaction after the caller has completed authorization.
+// The transaction service enforces Polkit before invoking this function.
+// Direct backend callers are expected to run in tests or another already-authorized context.
 // -----------------------------------------------------------------------------
 bool
 dnf_backend_apply_transaction(const std::vector<std::string> &install_nevras,

@@ -68,9 +68,8 @@ show_pending_action_package(SearchWidgets *widgets, const PendingAction &action)
     return;
   }
 
-  // Selecting a pending action shows only that package in the table. After a
-  // transaction, refresh it from the selected NEVRA instead of replaying an old
-  // search or list view.
+  // Selecting a pending action shows only that package in the table.
+  // After a transaction, refresh it from the selected NEVRA instead of replaying an old search or list view.
   widgets->query_state.displayed_query = DisplayedPackageQueryState();
   widgets->results.selected_nevra = action.nevra;
   package_table_fill_package_view(widgets, rows);

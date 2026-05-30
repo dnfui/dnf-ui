@@ -17,8 +17,8 @@
 #include <cstring>
 
 // Task data for package-info operation.
-// Snapshot generation at dispatch time so outdated results can be dropped after
-// a Base rebuild.
+// Snapshot generation at dispatch time.
+// Outdated results can be dropped after a Base rebuild.
 struct InfoTaskData {
   char *nevra;
   uint64_t generation;

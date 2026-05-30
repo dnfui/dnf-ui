@@ -143,7 +143,7 @@ widgets_on_rebuild_task(GTask *task, gpointer, gpointer, GCancellable *)
 {
   try {
     BaseRepoState refresh_state = BaseManager::instance().rebuild();
-    // GTask completion transfers this heap value back to the GTK thread where
+    // GTask completion transfers this heap value back to the GTK thread.
     // widgets_on_rebuild_task_finished() deletes it after reading the result.
     g_task_return_pointer(
         task, new BaseRepoState(refresh_state), [](gpointer p) { delete static_cast<BaseRepoState *>(p); });

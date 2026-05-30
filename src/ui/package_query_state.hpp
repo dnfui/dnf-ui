@@ -2,8 +2,8 @@
 // src/ui/package_query_state.hpp
 // Package query state model
 //
-// Keeps the non-widget state for search, package listing, cancellation, and
-// reload handling separate from the top-level widget pointer bag.
+// Keeps the non-widget state for search, package listing, cancellation, and reload handling.
+// Widget pointers stay in the top-level widget state.
 // -----------------------------------------------------------------------------
 #pragma once
 
@@ -46,8 +46,8 @@ struct PackageQueryState {
   uint64_t current_package_list_request_id = 0;
   // Identifies which query button owns the active Stop state.
   PackageListRequestKind current_package_list_request_kind = PackageListRequestKind::NONE;
-  // Remembers the last query-backed result view so rebuilds can repopulate the
-  // visible table instead of leaving outdated rows on screen after a transaction.
+  // Remembers the last query-backed result view.
+  // Rebuilds can repopulate the visible table instead of leaving outdated rows on screen after a transaction.
   DisplayedPackageQueryState displayed_query;
   // Temporary selection snapshot used only while a rebuild-triggered query is
   // reloading. This lets the refreshed view keep the previously selected row

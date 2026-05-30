@@ -57,7 +57,7 @@ TEST_CASE("BaseManager cache drop keeps generation stable")
 }
 
 // -----------------------------------------------------------------------------
-// Verify that dropping cached backend memory changes the Base lifetime marker.
+// Verify that dropping cached backend memory advances the Base epoch.
 // -----------------------------------------------------------------------------
 TEST_CASE("BaseManager cache drop advances Base epoch")
 {

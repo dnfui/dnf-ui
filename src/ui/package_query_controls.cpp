@@ -2,8 +2,7 @@
 // package_query_controls.cpp
 // Package query request state and shared UI completion helpers
 //
-// Owns the small pieces of package query state that are shared by search, list,
-// cancellation, and reload flows.
+// Owns the small pieces of package query state shared by search, list, cancellation, and reload flows.
 // -----------------------------------------------------------------------------
 #include "package_query_controller_internal.hpp"
 
@@ -16,8 +15,7 @@
 
 // -----------------------------------------------------------------------------
 // Remember which main query flow produced the currently displayed table.
-// Transaction and repository rebuilds use this to rerun the same query and
-// replace outdated rows with fresh backend data.
+// Transaction and repository rebuilds use this to rerun the same query with fresh backend data.
 // -----------------------------------------------------------------------------
 void
 package_query_set_displayed_query_kind(SearchWidgets *widgets, DisplayedPackageQueryKind kind)
@@ -53,9 +51,9 @@ package_query_set_displayed_search_query(SearchWidgets *widgets,
 }
 
 // -----------------------------------------------------------------------------
-// Complete one rebuild-triggered refresh. When the old selection survived the
-// refreshed query result, leave the details pane intact; otherwise clear it so
-// outdated package info is not shown for rows that disappeared.
+// Complete one rebuild-triggered refresh.
+// When the old selection survived the refreshed query result, leave the details pane intact.
+// Otherwise clear it so outdated package info is not shown for rows that disappeared.
 // -----------------------------------------------------------------------------
 void
 package_query_finish_results_refresh(SearchWidgets *widgets)

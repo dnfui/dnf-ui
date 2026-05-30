@@ -1,8 +1,7 @@
 // -----------------------------------------------------------------------------
 // src/ui/package_query_cache.cpp
 // Package query result cache
-// Keeps cached search result storage and invalidation rules separate from the
-// package query controller.
+// Keeps cached search result storage and invalidation rules separate from the package query controller.
 // -----------------------------------------------------------------------------
 #include "package_query_cache.hpp"
 
@@ -15,11 +14,10 @@ namespace {
 constexpr size_t kMaxSearchCacheEntries = 3;
 
 // Cache one visible result set per search term and search option combination.
-// Entries are tied to the BaseManager generation, the shared Base lifetime
-// marker, and the cache epoch that produced them. Generation tracks backend
-// rebuilds. The Base epoch tracks when the shared cached Base was replaced or
-// dropped. The cache epoch tracks UI actions that intentionally invalidate
-// cached search rows even when the Base generation does not change yet.
+// Entries are tied to the BaseManager generation, the shared Base epoch, and the cache epoch.
+// Generation tracks backend rebuilds.
+// The Base epoch tracks when the shared cached Base was replaced or dropped.
+// The cache epoch tracks UI actions that intentionally invalidate cached search rows.
 struct CachedSearchResults {
   uint64_t generation;
   uint64_t base_epoch;
@@ -68,9 +66,9 @@ package_query_cache_key_for(const std::string &term)
 
 // -----------------------------------------------------------------------------
 // Clear cached search results.
-// Used by the Clear Cache button, repository refresh, transaction refresh, and
-// installed-state refresh. Advancing the cache epoch also prevents older
-// searches from storing rows back into a cache state the UI already invalidated.
+// Used by the Clear Cache button, repository refresh, transaction refresh, and installed-state refresh.
+// Advancing the cache epoch also prevents older searches from storing rows back into a cache state the UI already
+// invalidated.
 // -----------------------------------------------------------------------------
 void
 package_query_cache_clear()
@@ -93,9 +91,8 @@ package_query_cache_current_epoch()
 
 // -----------------------------------------------------------------------------
 // Look up cached rows before starting a new backend query.
-// Reuse only results produced from the current Base generation, Base epoch, and
-// cache epoch so Base drops, refreshes, transactions, and explicit cache
-// invalidation cannot surface outdated package metadata.
+// Reuse only results produced from the current Base generation, Base epoch, and cache epoch.
+// This prevents Base drops, refreshes, transactions, and explicit cache invalidation from showing outdated metadata.
 // -----------------------------------------------------------------------------
 bool
 package_query_cache_lookup(const std::string &key,
@@ -123,8 +120,7 @@ package_query_cache_lookup(const std::string &key,
 
 // -----------------------------------------------------------------------------
 // Save rows so the same search can be shown faster next time.
-// Search results are reusable only while the backend Base generation, the
-// shared Base id, and the cache epoch stay the same.
+// Search results are reusable only while the backend Base generation, shared Base id, and cache epoch stay the same.
 // -----------------------------------------------------------------------------
 void
 package_query_cache_store(const std::string &key,

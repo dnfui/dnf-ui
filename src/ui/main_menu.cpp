@@ -1,8 +1,7 @@
 // -----------------------------------------------------------------------------
 // src/ui/main_menu.cpp
 // Main window menu bar
-// Keeps secondary application actions in the top menu instead of crowding the
-// main package workflow toolbar.
+// Keeps secondary application actions in the top menu instead of crowding the main package workflow toolbar.
 // -----------------------------------------------------------------------------
 #include "main_menu.hpp"
 

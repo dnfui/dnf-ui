@@ -1,8 +1,7 @@
 // -----------------------------------------------------------------------------
 // transaction_service_workers.cpp
 // Runs preview and apply work outside the service main loop.
-// Talks to the backend, refreshes package state, and reports progress back to
-// request objects.
+// Talks to the backend, refreshes package state, and reports progress back to request objects.
 // -----------------------------------------------------------------------------
 #include "transaction_service_internal.hpp"
 
@@ -31,9 +30,8 @@ throw_if_test_preview_exception_requested()
 }
 
 // -----------------------------------------------------------------------------
-// In test builds, allow one preview worker to announce that it has started and
-// then wait for a short time. This lets one integration test stop the service
-// while the client is blocked waiting for the preview result.
+// In test builds, allow one preview worker to announce that it has started and then wait for a short time.
+// This lets one integration test stop the service while the client is blocked waiting for the preview result.
 // -----------------------------------------------------------------------------
 static void
 run_test_preview_wait_hook_if_requested()
@@ -148,8 +146,7 @@ struct BackendBaseDropGuard {
 static bool transaction_apply_should_stop_before_work(TransactionSession *session, std::string &details_out);
 
 // -----------------------------------------------------------------------------
-// Return true when the transaction may need available-repo metadata instead of
-// the local rpmdb alone.
+// Return true when the transaction may need available-repo metadata instead of the local rpmdb alone.
 // -----------------------------------------------------------------------------
 static bool
 transaction_request_needs_available_repos(const TransactionRequest &request)
@@ -195,10 +192,9 @@ run_transaction_preview(TransactionSession *session)
 
     try {
       if (transaction_request_needs_available_repos(session->request)) {
-        // The transaction service is a long-lived process, so packages installed or
-        // removed outside the GUI can leave its cached Base out of date. Rebuild it
-        // before each preview so resolve and apply requests always use the current
-        // rpmdb and repository metadata snapshot.
+        // The transaction service is a long-lived process.
+        // Packages installed or removed outside the GUI can leave its cached Base out of date.
+        // Rebuild it before each preview so resolve and apply requests use the current rpmdb and repository metadata.
         queue_transaction_progress(session, _("Refreshing backend state..."));
         BaseManager::instance().rebuild();
       } else {
@@ -313,8 +309,7 @@ run_transaction_apply(TransactionSession *session)
   ApplyGuard apply_guard { session->service->apply_running };
   BackendBaseDropGuard base_drop_guard;
 
-  // Stop if the request was released after the worker started but before
-  // backend package work begins.
+  // Stop if the request was released after the worker started but before backend package work begins.
   std::string stop_details;
   if (transaction_apply_should_stop_before_work(session, stop_details)) {
     queue_transaction_finished(session, TransactionStage::CANCELLED, false, stop_details);
@@ -327,8 +322,8 @@ run_transaction_apply(TransactionSession *session)
     queue_transaction_progress(session, _("Loading package base..."));
     auto progress_cb = [session](const std::string &line) { queue_transaction_progress(session, line); };
 
-    // Keep a copy of the approved preview so the backend can refuse apply if a
-    // later resolve produces different package actions.
+    // Keep a copy of the approved preview so the backend can refuse apply if
+    // a later resolve produces different package actions.
     {
       std::lock_guard<std::mutex> lock(session->state_mutex);
       approved_preview = session->preview;

@@ -2,8 +2,7 @@
 // pending_transaction_apply.cpp
 // Pending transaction preview and apply helpers
 //
-// Keeps the service preview, service apply, and post-transaction refresh code
-// separate from the package action button handlers.
+// Keeps service preview, service apply, and post-transaction refresh code separate from package action button handlers.
 // -----------------------------------------------------------------------------
 #include "pending_transaction_apply.hpp"
 
@@ -20,8 +19,9 @@
 #include "widgets.hpp"
 #include "widgets_internal.hpp"
 
-// Data owned by the apply task. The worker uses transaction_path to call the
-// service, and progress_window receives text lines while the service applies.
+// Data owned by the apply task.
+// The worker uses transaction_path to call the service, and progress_window receives text lines while the service
+// applies.
 struct ApplyTaskData {
   std::string transaction_path;
   TransactionProgressWindow *progress_window;
@@ -155,12 +155,11 @@ rebuild_after_tx_finished(GObject *, GAsyncResult *res, gpointer user_data)
     return;
   }
 
-  // Transaction follow-up rebuilds produce a new Base generation, so any
-  // cached search result rows must be discarded before the next search.
+  // Transaction follow-up rebuilds produce a new Base generation.
+  // Cached search result rows must be discarded before the next search.
   package_query_clear_search_cache();
 
-  // Repopulate the currently visible package view so rows removed by the
-  // transaction disappear without a manual reload.
+  // Repopulate the currently visible package view so rows removed by the transaction disappear without a manual reload.
   package_query_reload_current_view(widgets);
 }
 
@@ -170,8 +169,8 @@ rebuild_after_tx_finished(GObject *, GAsyncResult *res, gpointer user_data)
 static void
 rebuild_after_tx_async(SearchWidgets *widgets)
 {
-  // Once the post-transaction rebuild begins, stop serving cached search
-  // results from the pre-transaction Base generation.
+  // Once the post-transaction rebuild begins, stop serving cached search results from the pre-transaction Base
+  // generation.
   package_query_clear_search_cache();
 
   GCancellable *c = widgets_make_task_cancellable_for(GTK_WIDGET(widgets->query.entry));
@@ -182,8 +181,8 @@ rebuild_after_tx_async(SearchWidgets *widgets)
 }
 
 // -----------------------------------------------------------------------------
-// Start applying the transaction after the user confirms the summary. The
-// service streams progress back through the callback passed to the client.
+// Start applying the transaction after the user confirms the summary.
+// The service streams progress back through the callback passed to the client.
 // -----------------------------------------------------------------------------
 static void
 start_apply_transaction(SearchWidgets *widgets)
@@ -201,8 +200,8 @@ start_apply_transaction(SearchWidgets *widgets)
   td->transaction_path = widgets->transaction.preview_transaction_path;
   size_t pending_count = widgets->transaction.preview_upgrade_all ? 0 : widgets->transaction.actions.size();
   td->progress_window = transaction_progress_create_window(widgets, pending_count);
-  // Keep the progress state alive while the apply worker may still receive
-  // service progress. Closing the window only removes the GTK widgets.
+  // Keep the progress state alive while the apply worker may still receive service progress.
+  // Closing the window only removes the GTK widgets.
   transaction_progress_retain(td->progress_window);
 
   transaction_progress_append(td->progress_window, _("Queued transaction request."));
@@ -267,9 +266,8 @@ start_apply_transaction(SearchWidgets *widgets)
       task, +[](GTask *t, gpointer, gpointer task_data, GCancellable *) {
         ApplyTaskData *td = static_cast<ApplyTaskData *>(task_data);
         std::string err;
-        // This callback runs on the apply worker thread when the client
-        // receives a service Progress signal. transaction_progress_append
-        // queues the actual GTK update onto the main thread.
+        // This callback runs on the apply worker thread when the client receives a service Progress signal.
+        // transaction_progress_append queues the actual GTK update onto the main thread.
         bool ok = transaction_service_client_apply_started_request(
             td->transaction_path,
             [td](const std::string &message) { transaction_progress_append(td->progress_window, message); },

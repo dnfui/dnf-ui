@@ -23,8 +23,7 @@ authorize the privileged step.
 ## Key terms
 
 - GTK is the user interface toolkit used to build the window.
-- libdnf5 is the Fedora package management library used for package queries and
-  transactions.
+- libdnf5 is the Fedora package management library used for package queries and transactions.
 - Base is the libdnf5 object that holds loaded repository and installed package
   state.
 - rpmdb is the local database of packages installed on the system.
@@ -32,11 +31,9 @@ authorize the privileged step.
   exact package build.
 - EVR means epoch, version, and release. The backend uses it when comparing
   package versions.
-- D-Bus is the local message bus used by the GUI and transaction service to
-  call each other.
+- D-Bus is the local message bus used by the GUI and transaction service to call each other.
 - Polkit is the authorization service used before privileged package apply work.
-- GTask is the GLib helper used to run slow work away from the GTK thread and
-  return results safely.
+- GTask is the GLib helper used to run slow work away from the GTK thread and return results safely.
 
 ## Main parts
 

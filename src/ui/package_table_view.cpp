@@ -358,8 +358,8 @@ package_table_refresh_statuses(SearchWidgets *widgets)
 
 // -----------------------------------------------------------------------------
 // Package table population
-// Builds a virtualized GTK4 ColumnView with structured package metadata while
-// preserving the selected NEVRA across list refreshes when possible.
+// Builds a virtualized GTK4 ColumnView with structured package metadata.
+// Preserves the selected NEVRA across list refreshes when possible.
 // -----------------------------------------------------------------------------
 void
 package_table_fill_package_view(SearchWidgets *widgets, const std::vector<PackageRow> &items)

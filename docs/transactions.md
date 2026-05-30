@@ -134,8 +134,8 @@ created the request. This keeps another local process from reading, cancelling,
 applying, or releasing someone else's transaction request.
 
 The native installed-service smoke tests keep those ownership checks enabled by
-using a dedicated helper client that holds one system bus connection across the
-whole request lifecycle.
+using a dedicated helper client that holds one system bus connection until the
+whole request is done.
 
 The Docker smoke tests use a separate test-only service build for short-lived
 `gdbus` calls. The installed service build keeps the normal request ownership
@@ -147,7 +147,7 @@ methods listed above. On the system bus, `StartTransaction` and
 before a request object is created. `Apply` has its own separate Polkit check
 before packages can be changed.
 
-## Request lifecycle
+## Request states
 
 One transaction request normally moves through these states:
 
@@ -203,7 +203,7 @@ preview model cannot represent. The backend does not return a partial preview
 for that case.
 
 The service also limits active request objects and concurrently running preview
-workers so one client cannot create an unbounded amount of backend work.
+workers so one client cannot create too much backend work.
 
 ## Apply
 
@@ -227,8 +227,7 @@ apply is refused before package work starts.
 
 The apply progress stream comes from two libdnf5 callback paths:
 
-- `libdnf5::repo::DownloadCallbacks` reports package download progress and
-  mirror failures.
+- `libdnf5::repo::DownloadCallbacks` reports package download progress and mirror failures.
 - `libdnf5::rpm::TransactionCallbacks` reports rpm verification, transaction
   preparation, one line per package action, script errors, and unpack errors.
 

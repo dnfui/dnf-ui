@@ -14,8 +14,8 @@
 // -----------------------------------------------------------------------------
 // Transaction progress popup state
 // -----------------------------------------------------------------------------
-// The GTK widgets inside this state still belong to the main thread, but the
-// state object itself can outlive the window for a short time.
+// The GTK widgets inside this state still belong to the main thread.
+// The state object itself can outlive the window for a short time.
 //
 // Ownership rules:
 //   - The newly created progress window starts with one reference for the live window.
@@ -74,8 +74,7 @@ transaction_progress_retain(TransactionProgressWindow *progress)
 }
 
 // -----------------------------------------------------------------------------
-// Release one reference to the progress window state and delete it after the
-// last owner is done with it.
+// Release one reference to the progress window state and delete it after the last owner is done with it.
 // -----------------------------------------------------------------------------
 void
 transaction_progress_release(TransactionProgressWindow *progress)

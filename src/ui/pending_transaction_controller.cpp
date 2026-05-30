@@ -105,8 +105,8 @@ pending_transaction_on_remove_button_clicked(GtkButton *, gpointer user_data)
 
   PackageActionRows action_rows = package_action_rows_for_selection(pkg);
 
-  // Only block self-removal for the installed row. Upgrade candidates use the
-  // currently installed NEVRA for removal.
+  // Only block self-removal for the installed row.
+  // Upgrade candidates use the currently installed NEVRA for removal.
   if (!action_rows.has_installed_row) {
     ui_helpers_set_status(widgets->query.status_label, _("Package is not installed."), "gray");
     return;

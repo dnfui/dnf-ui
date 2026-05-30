@@ -1,8 +1,8 @@
 // -----------------------------------------------------------------------------
 // transaction_service_client_internal.hpp
 // Private helpers for the GUI-side transaction service client.
-// This is not a public API. It keeps raw D-Bus calls and wait handling out of
-// the high-level preview and apply flow.
+// This is not a public API.
+// It keeps raw D-Bus calls and wait handling out of the high-level preview and apply flow.
 // -----------------------------------------------------------------------------
 #pragma once
 

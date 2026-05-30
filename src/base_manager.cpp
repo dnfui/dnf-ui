@@ -1,8 +1,7 @@
 // -----------------------------------------------------------------------------
 // src/base_manager.cpp
 // Shared libdnf5 Base manager
-// Creates, reuses, and rebuilds Base objects while protecting access from
-// worker threads.
+// Creates, reuses, and rebuilds Base objects while protecting access from worker threads.
 // -----------------------------------------------------------------------------
 #include "base_manager.hpp"
 #include "debug_trace.hpp"
@@ -298,9 +297,8 @@ BaseManager::rebuild()
 }
 
 // -----------------------------------------------------------------------------
-// Force a local-only rebuild that loads only the installed-package view from
-// the rpmdb. This keeps remove-only transaction flows independent of remote
-// repository availability.
+// Force a local-only rebuild that loads only the installed-package view from the rpmdb.
+// This keeps remove-only transaction flows independent of remote repository availability.
 // -----------------------------------------------------------------------------
 void
 BaseManager::rebuild_system_only()
@@ -319,8 +317,7 @@ BaseManager::rebuild_system_only()
 }
 
 // -----------------------------------------------------------------------------
-// Drop the cached Base so memory-heavy metadata does not stay resident after
-// short-lived backend work.
+// Drop the cached Base so memory-heavy metadata does not stay resident after short-lived backend work.
 // -----------------------------------------------------------------------------
 void
 BaseManager::drop_cached_base()

@@ -13,8 +13,7 @@ This file states the rules that should stay true as DNF UI changes.
 - Comments should explain intent, boundaries, or non-obvious behavior.
 - Tests should describe important user-visible rules, not private implementation
   details.
-- If code cannot be explained, it should be reviewed, documented, simplified, or
-  removed.
+- If code cannot be explained, it should be reviewed, documented, simplified, or removed.
 
 ## Privilege boundary
 

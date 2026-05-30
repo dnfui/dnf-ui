@@ -2,8 +2,8 @@
 // package_query_controller.cpp
 // Public package query controller callbacks
 //
-// Handles the GTK entry points for search, package lists, clear, history, and
-// view reload. Worker task details live in package_query_tasks.cpp.
+// Handles the GTK entry points for search, package lists, clear, history, and view reload.
+// Worker task details live in package_query_tasks.cpp.
 // -----------------------------------------------------------------------------
 #include "package_query_controller.hpp"
 
@@ -284,10 +284,9 @@ package_query_reload_current_view(SearchWidgets *widgets)
     break;
   }
 
-  // Exact one-package views are not part of the main query state. When the
-  // user is reviewing one package from the pending-actions sidebar, refresh the
-  // selected NEVRA directly so removed rows disappear without carrying extra
-  // global view bookkeeping.
+  // Exact one-package views are not part of the main query state.
+  // When the user is reviewing one package from the pending-actions sidebar,
+  // refresh the selected NEVRA directly so removed rows disappear without extra global view state.
   if (widgets->results.selected_nevra.empty()) {
     widgets->query_state.preserve_selection_on_reload = false;
     widgets->query_state.reload_selected_nevra.clear();

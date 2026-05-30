@@ -71,8 +71,8 @@ dispatch_transaction_release(gpointer user_data)
     }
   }
 
-  // Keep the session alive until running preview or apply work has reached a
-  // finished state. Worker threads still hold a raw session pointer.
+  // Keep the session alive until running preview or apply work has reached a finished state.
+  // Worker threads still hold a raw session pointer.
   if (!session->finished.load()) {
     session->cancelled = true;
     return G_SOURCE_REMOVE;
@@ -87,8 +87,8 @@ dispatch_transaction_release(gpointer user_data)
 }
 
 // -----------------------------------------------------------------------------
-// Send one progress line to the GUI. The GUI subscribed to Progress on this
-// request object before it called Apply.
+// Send one progress line to the GUI.
+// The GUI subscribed to Progress on this request object before it called Apply.
 // -----------------------------------------------------------------------------
 void
 emit_transaction_progress(TransactionSession *session, const std::string &line)
@@ -135,16 +135,16 @@ emit_transaction_finished(TransactionSession *session, TransactionStage stage, b
                                 g_variant_new("(sbs)", transaction_stage_name(stage), success, details.c_str()),
                                 nullptr);
 
-  // A disconnected client cannot call Release after the running work ends, so
-  // finish processing is responsible for completing the deferred cleanup.
+  // A disconnected client cannot call Release after the running work ends.
+  // Finish processing is responsible for completing the deferred cleanup.
   if (session->release_requested.load()) {
     queue_transaction_release(session);
   }
 }
 
 // -----------------------------------------------------------------------------
-// Backend work runs on a worker thread. D-Bus signals are emitted from the
-// service main loop, so progress lines are queued here first.
+// Backend work runs on a worker thread.
+// D-Bus signals are emitted from the service main loop, so progress lines are queued here first.
 // -----------------------------------------------------------------------------
 void
 queue_transaction_progress(TransactionSession *session, const std::string &line)

@@ -2,9 +2,8 @@
 // dnf_transaction_callbacks.cpp
 // libdnf callback adapters used while applying a transaction.
 //
-// libdnf reports download and rpm progress through callback objects. This file
-// turns the useful callback events into the short text lines shown by the
-// transaction progress window.
+// libdnf reports download and rpm progress through callback objects.
+// This file turns the useful callback events into the short text lines shown by the transaction progress window.
 // -----------------------------------------------------------------------------
 #include "dnf_backend/dnf_transaction_internal.hpp"
 
@@ -47,8 +46,8 @@ namespace {
   }
 
   // -----------------------------------------------------------------------------
-  // Format an rpm callback NEVRA. Script callbacks may refer to packages that are
-  // not direct transaction items.
+  // Format an rpm callback NEVRA.
+  // Script callbacks may refer to packages that are not direct transaction items.
   // -----------------------------------------------------------------------------
   static std::string rpm_nevra_label(const libdnf5::rpm::Nevra &nevra)
   {
@@ -90,8 +89,8 @@ public:
       return state;
     }
 
-    // libdnf may call this often. Report only ten percent steps so the progress
-    // window gets useful updates without being flooded.
+    // libdnf may call this often.
+    // Report only ten percent steps so the progress window gets useful updates without being flooded.
     int progress(void *user_cb_data, double total_to_download, double downloaded) override
     {
       auto *state = static_cast<DownloadState *>(user_cb_data);

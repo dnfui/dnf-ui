@@ -60,12 +60,10 @@ Why this matters:
 - `dnf_backend_get_upgradeable_package_rows_interruptible` depends on
   `filter_upgrades()` so the app follows libdnf5's upgrade-candidate semantics
   instead of maintaining its own version comparison rules.
-- The upgradable package list is a read-only candidate view. The transaction
-  preview remains the source of truth for what would actually be installed,
-  upgraded, downgraded, reinstalled, or removed.
-- Upgradable rows are available package candidates. UI actions that remove or
-  reinstall such a row must resolve the matching installed row by package name
-  and architecture before building the pending action.
+- The upgradable package list is a read-only candidate view. The transaction preview is the final check
+  for what would actually be installed, upgraded, downgraded, reinstalled, or removed.
+- Upgradable rows are available package candidates. UI actions that remove or reinstall such a row
+  must resolve the matching installed row by package name and architecture before building the pending action.
 - Installed rows can also be classified as upgradable after repo annotation.
   Those rows carry the matching available upgrade NEVRA so UI action handling
   does not need a fresh libdnf query on the GTK thread.
@@ -115,8 +113,7 @@ Tests:
 
 Maintenance check:
 
-- If upgrade-all behavior changes, verify `goal.hpp`, then test preview and
-  apply in Docker before any native system test.
+- If upgrade-all behavior changes, verify `goal.hpp`, then test preview and apply in Docker before any native system test.
 
 ## Shared libdnf5 Base access
 
@@ -132,15 +129,14 @@ Assumptions:
 - `BaseManager::acquire_read()` is serialized with an exclusive guard. Do not
   change it back to shared locking unless libdnf5 `Base` and `PackageQuery`
   concurrent access has been verified against the local libdnf5 version.
-- Transaction preview and apply take `BaseManager::acquire_write()` because
-  transaction resolution and apply operate on shared libdnf5 state.
-- Changelog lookups read installed packages from the shared Base first because
-  rpmdb changelog metadata does not need repo `other` metadata.
+- Transaction preview and apply take `BaseManager::acquire_write()` because transaction resolution and apply
+  operate on shared libdnf5 state.
+- Changelog lookups read installed packages from the shared Base first because rpmdb changelog metadata
+  does not need repo `other` metadata.
 - Changelog lookups use `BaseManager::acquire_changelog_read()` only when no
   installed package matches, so repo `other` metadata is loaded only for the
   short-lived available-package changelog query.
-- The backend installed snapshot mutex must not be held at the same time as a
-  `BaseManager` read or write guard.
+- The backend installed snapshot mutex must not be held at the same time as a `BaseManager` read or write guard.
 
 Current local source:
 
@@ -150,8 +146,7 @@ Why this matters:
 
 - The app avoids relying on undocumented cross-thread behavior of one shared
   libdnf5 `Base`.
-- The explicit lock ordering prevents deadlocks between package query code and
-  installed-state cache code.
+- The explicit lock ordering prevents deadlocks between package query code and installed-state cache code.
 
 Tests:
 
@@ -175,8 +170,7 @@ Code:
 
 Assumptions:
 
-- `GTask` completion callbacks run in the thread-default main context where the
-  task was created.
+- `GTask` completion callbacks run in the thread-default main context where the task was created.
 - DNF UI creates UI tasks from the GTK thread, so finish callbacks may update GTK
   widgets after they validate that the result still applies.
 - `g_task_run_in_thread()` runs synchronous backend work on a worker thread.
@@ -185,8 +179,7 @@ Assumptions:
 Why this matters:
 
 - UI code must not update GTK widgets directly from worker threads.
-- Stop buttons cancel task state, but long libdnf5 calls may only stop after the
-  next cancellable check.
+- Stop buttons cancel task state, but long libdnf5 calls may only stop after the next cancellable check.
 - DNF UI must not assume cancellation kills a worker thread. Cancelled workers
   can still finish later, so completion callbacks must be safe to ignore.
 - Completion callbacks must check destroyed widgets, selected NEVRA, backend
@@ -219,8 +212,8 @@ Code:
 
 Assumptions:
 
-- `g_dbus_connection_register_object()` dispatches vtable callbacks in the
-  thread-default main context used when the object was registered.
+- `g_dbus_connection_register_object()` dispatches vtable callbacks in the thread-default main context
+  used when the object was registered.
 - `GDBusMethodInvocation` is the object used to return a method result or error.
 - `g_dbus_method_invocation_return_value()` finishes a method call and takes
   ownership of the invocation.
@@ -228,8 +221,8 @@ Assumptions:
   thread-default main context.
 - On the system bus, a transaction request object belongs to the unique bus name
   that created it.
-- The installed D-Bus policy allows standard introspection and only the
-  transaction manager and request methods the service exposes.
+- The installed D-Bus policy allows standard introspection and only the transaction manager and request methods
+  the service exposes.
 
 Why this matters:
 
@@ -237,8 +230,7 @@ Why this matters:
   but each D-Bus method call must still receive exactly one final reply.
 - The GUI client can wait for `Finished` signals while also handling service
   disappearance as a normal error path.
-- Another local process should not be able to read, cancel, apply, or release a
-  request object it did not create.
+- Another local process should not be able to read, cancel, apply, or release a request object it did not create.
 
 Tests:
 
@@ -284,8 +276,8 @@ Tests:
 
 Maintenance check:
 
-- Any new privileged operation needs a policy decision before implementation. It
-  should not be added only because the session-bus development path works.
+- Any new privileged operation needs a policy decision before implementation.
+  It should not be added only because the session-bus development path works.
 - Session-bus tests do not prove Polkit behavior. Policy or authorization
   changes need the matching system-bus tests and a native prompt check when
   possible.

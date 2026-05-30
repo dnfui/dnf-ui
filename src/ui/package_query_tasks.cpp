@@ -371,9 +371,8 @@ on_search_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
 
   if (packages) {
     // Save rows so the same search can be shown faster next time.
-    // Search results are reusable only while the backend Base generation, the
-    // shared Base id, and the cache epoch still match the state
-    // recorded when the task began.
+    // Search results are reusable only while the backend Base generation, shared Base id,
+    // and cache epoch still match the state recorded when the task began.
     if (td && td->cache_key && td->base_epoch == BaseManager::instance().current_base_epoch()) {
       package_query_cache_store(td->cache_key, td->generation, td->base_epoch, td->cache_epoch, *packages);
     }

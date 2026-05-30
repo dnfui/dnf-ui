@@ -1,8 +1,7 @@
 // -----------------------------------------------------------------------------
 // test/unit/test_transaction_preview.cpp
 // Backend transaction preview tests
-// Covers the public preview API that prepares transaction summaries before the
-// service or GUI proceeds to the apply step.
+// Covers the public preview API that prepares transaction summaries before the service or GUI proceeds to apply.
 // -----------------------------------------------------------------------------
 #include <catch2/catch_test_macros.hpp>
 

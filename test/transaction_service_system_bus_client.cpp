@@ -1,8 +1,8 @@
 // -----------------------------------------------------------------------------
 // transaction_service_system_bus_client.cpp
 // Native system bus smoke-test client for the installed transaction service.
-// Keeps one client connection alive across preview, apply, and release so the
-// installed service ownership checks stay enabled during native smoke tests.
+// Keeps one client connection alive across preview, apply, and release.
+// This keeps installed service ownership checks enabled during native smoke tests.
 // -----------------------------------------------------------------------------
 #include "dnf_backend/dnf_backend.hpp"
 #include "i18n.hpp"

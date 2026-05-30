@@ -107,9 +107,8 @@ collect_available_rows_by_name_arch(libdnf5::Base &base,
   query.filter_available();
   query.filter_latest_evr();
 
-  // If description search is disabled, let libdnf narrow the package set by
-  // name before we iterate it. Description search is handled below because it
-  // needs both package names and descriptions.
+  // If description search is disabled, let libdnf narrow the package set by name before we iterate it.
+  // Description search is handled below because it needs both package names and descriptions.
   if (pattern && !search_options.search_in_description) {
     if (search_options.exact_match) {
       query.filter_name(*pattern, libdnf5::sack::QueryCmp::EQ);
@@ -133,10 +132,9 @@ collect_available_rows_by_name_arch(libdnf5::Base &base,
     }
 
     // The visible table shows one row per package name and architecture.
-    // Repositories can contain more than one EVR, so keep only the newest row
-    // before installed rows are merged in.
-    // Provenance is UNKNOWN until compared against the installed set. The
-    // merge or annotation helpers resolve it when installed rows are available.
+    // Repositories can contain more than one EVR, so keep only the newest row before installed rows are merged in.
+    // The repo relation is UNKNOWN until compared against the installed set.
+    // The merge or annotation helpers resolve it when installed rows are available.
     PackageRow row = make_package_row(pkg, PackageRepoCandidateRelation::UNKNOWN);
     remember_newest_row(rows_by_name_arch, row);
   }
@@ -178,9 +176,8 @@ collect_available_rows_for_installed_names(libdnf5::Base &base,
 }
 
 // -----------------------------------------------------------------------------
-// Collect installed package rows and the corresponding exact NEVRA and name and architecture
-// caches in one pass. When a search term is provided, filter the installed list
-// with the same search semantics used for repo-backed rows.
+// Collect installed package rows and the corresponding exact NEVRA and name and architecture caches in one pass.
+// When a search term is provided, filter the installed list with the same search semantics used for repo-backed rows.
 // -----------------------------------------------------------------------------
 InstalledQueryResult
 collect_installed_rows(libdnf5::Base &base,
@@ -220,8 +217,7 @@ collect_installed_rows(libdnf5::Base &base,
 
 // -----------------------------------------------------------------------------
 // Rebuild the installed name and architecture lookup from the current row data.
-// Call this after changing installed rows so the published lookup matches the
-// rows returned to the UI.
+// Call this after changing installed rows so the published lookup matches the rows returned to the UI.
 // -----------------------------------------------------------------------------
 static void
 refresh_installed_row_lookup(InstalledQueryResult &installed)
@@ -233,8 +229,8 @@ refresh_installed_row_lookup(InstalledQueryResult &installed)
 }
 
 // -----------------------------------------------------------------------------
-// Compare one installed row against the newest visible repo candidate for the
-// same name and architecture tuple and annotate the row with the resolved relationship.
+// Compare one installed row against the newest visible repo candidate for the same name and architecture tuple.
+// Store the resolved relation on the installed row.
 // -----------------------------------------------------------------------------
 void
 annotate_installed_row_with_repo_candidate(PackageRow &installed_row,
@@ -260,8 +256,7 @@ annotate_installed_row_with_repo_candidate(PackageRow &installed_row,
 
 // -----------------------------------------------------------------------------
 // Add repo-candidate state to installed rows when repo metadata is available.
-// Installed queries must keep working from the local rpmdb, so failures here
-// leave repo provenance as UNKNOWN instead of failing the installed list.
+// Installed queries must keep working from the local rpmdb, so failures here leave the repo relation as UNKNOWN.
 // -----------------------------------------------------------------------------
 void
 annotate_installed_rows_with_repo_candidates_best_effort(std::vector<PackageRow> &installed_rows,
@@ -287,24 +282,22 @@ annotate_installed_rows_with_repo_candidates_best_effort(std::vector<PackageRow>
 }
 
 // -----------------------------------------------------------------------------
-// Build the merged package view used by search and browse: start with the
-// visible repo-backed candidates, then add installed-only rows for name and architecture tuples
-// that are missing from enabled repositories. If an installed package is
-// newer than the repo candidate, keep the installed row so the UI can surface
-// that state directly.
+// Build the merged package view used by search and browse.
+// Start with the visible repo-backed candidates, then add installed-only rows for name and architecture tuples
+// that are missing from enabled repositories. If an installed package is newer than the repo candidate,
+// keep the installed row so the UI can show that state directly.
 //
 // Note on repo_candidate_relation in the returned rows:
-//   - Installed rows that are promoted into the map (LOCAL_ONLY, OLDER, or the
-//     installed-newer-than-repo case) carry a fully resolved relation.
+//   - Installed rows promoted into the map carry a fully resolved relation.
+//     This covers LOCAL_ONLY, OLDER, and installed-newer-than-repo rows.
 //   - Available rows that stay in the map without a matching installed entry
 //     keep repo_candidate_relation = UNKNOWN because no installed counterpart
 //     was found during this pass.
 //   - dnf_backend_get_package_install_state handles UNKNOWN on available rows
 //     through its installed-cache EVR comparison fallback.
 //
-// Code that reads repo_candidate_relation directly should treat UNKNOWN on a
-// non-installed row as "no installed counterpart known", not as a failed repo
-// lookup.
+// Code that reads repo_candidate_relation directly should treat UNKNOWN on a non-installed row
+// as "no installed counterpart known", not as a failed repo lookup.
 // -----------------------------------------------------------------------------
 std::vector<PackageRow>
 visible_rows_from_maps(std::map<std::string, PackageRow> available_rows,
@@ -338,8 +331,7 @@ visible_rows_from_maps(std::map<std::string, PackageRow> available_rows,
 using namespace dnf_backend_internal;
 
 // -----------------------------------------------------------------------------
-// Search merged repo and installed-only package rows and stop early when the
-// task cancellable is set.
+// Search merged repo and installed-only package rows and stop early when the task cancellable is set.
 // -----------------------------------------------------------------------------
 std::vector<PackageRow>
 dnf_backend_search_package_rows_interruptible(const std::string &pattern, GCancellable *cancellable)
@@ -383,8 +375,8 @@ dnf_backend_search_package_rows_interruptible(const std::string &pattern, GCance
 
 // -----------------------------------------------------------------------------
 // Query installed packages via libdnf5 and return structured rows in one pass.
-// The exact-NEVRA cache is updated only after a complete uncancelled scan, so a
-// cancelled worker cannot publish a partial installed snapshot.
+// The exact-NEVRA cache is updated only after a complete uncancelled scan.
+// A cancelled worker cannot publish a partial installed snapshot.
 //
 // Thread-safety:
 //   The Base read lock and g_installed_mutex must never be held at the same
@@ -425,9 +417,8 @@ dnf_backend_get_installed_package_rows_interruptible(GCancellable *cancellable)
 }
 
 // -----------------------------------------------------------------------------
-// Query the combined browse view via libdnf5. The returned rows include the
-// newest available candidate for each package stream plus installed-only local
-// RPMs that are missing from enabled repositories.
+// Query the combined browse view via libdnf5.
+// The returned rows include the newest available candidate for each package stream plus installed-only local RPMs.
 // -----------------------------------------------------------------------------
 std::vector<PackageRow>
 dnf_backend_get_browse_package_rows_interruptible(GCancellable *cancellable)
@@ -512,9 +503,9 @@ dnf_backend_get_upgradeable_package_rows_interruptible(GCancellable *cancellable
 }
 
 // -----------------------------------------------------------------------------
-// Return installed package rows that exactly match one NEVRA. Repo provenance is
-// annotated when repository data is available, so pending-action navigation can
-// still show local-only or newer-than-repo status when possible.
+// Return installed package rows that exactly match one NEVRA.
+// Repo relation is added when repository data is available, so pending-action navigation
+// can still show local-only or newer-than-repo status when possible.
 // -----------------------------------------------------------------------------
 std::vector<PackageRow>
 dnf_backend_get_installed_package_rows_by_nevra(const std::string &pkg_nevra)

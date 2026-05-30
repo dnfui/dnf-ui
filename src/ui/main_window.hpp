@@ -1,8 +1,8 @@
 // src/ui/main_window.hpp
 // Main application window
 //
-// Owns construction and wiring of the primary GTK window while keeping
-// application lifecycle setup in the application module.
+// Owns construction and wiring of the primary GTK window.
+// Application startup stays in the application module.
 #pragma once
 
 #include <gtk/gtk.h>

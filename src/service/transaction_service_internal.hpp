@@ -1,8 +1,8 @@
 // -----------------------------------------------------------------------------
 // transaction_service_internal.hpp
 // Private transaction service declarations shared by the service implementation.
-// This is not a public API. It keeps the split service source files using the
-// same request and runtime state.
+// This is not a public API.
+// It gives the split service source files the same request and runtime state.
 // -----------------------------------------------------------------------------
 #pragma once
 

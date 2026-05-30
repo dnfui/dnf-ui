@@ -1,8 +1,8 @@
 // -----------------------------------------------------------------------------
 // test/unit/test_transaction_service_client.cpp
 // Transaction service client integration tests
-// Covers the GUI-side D-Bus client behavior around request lifecycle failures
-// that need a live service process and a private session bus.
+// Covers GUI-side D-Bus client behavior around request failures that need a
+// live service process and private session bus.
 // -----------------------------------------------------------------------------
 #include <catch2/catch_test_macros.hpp>
 
@@ -233,8 +233,8 @@ TEST_CASE("Transaction service client reports an error when the service disappea
   INFO(error_text);
   REQUIRE(temp_dir != nullptr);
 
-  // Start the service with a test-only preview delay so the client has time to
-  // enter its wait path before the service is stopped.
+  // Start the service with a test-only preview delay.
+  // This gives the client time to enter its wait path before the service is stopped.
   std::string started_file = std::string(temp_dir) + "/preview-started";
 
   GSubprocessLauncher *launcher = g_subprocess_launcher_new(

@@ -2,9 +2,8 @@
 // src/dnf_backend/dnf_common.cpp
 // Shared libdnf5 backend model conversion helpers
 //
-// This file contains small conversions that are used across the backend
-// implementation. Keeping them separate avoids making query, details, and
-// transaction files depend on each other's private helpers.
+// This file contains small conversions that are used across the backend implementation.
+// Keeping them separate avoids making query, details, and transaction files depend on each other's private helpers.
 // -----------------------------------------------------------------------------
 #include "dnf_backend/dnf_internal.hpp"
 

@@ -137,8 +137,8 @@ on_transaction_method_call(GDBusConnection *,
 
     session->cancelled = true;
 
-    // If the preview worker already finished (PREVIEW_READY), clear the flag so
-    // emit_transaction_progress can send the cancellation line before the Finished signal.
+    // If the preview worker already finished (PREVIEW_READY), clear the flag.
+    // That lets emit_transaction_progress send the cancellation line before the Finished signal.
     // The reset is safe here: PREVIEW_READY is only reached after the worker exits,
     // so no thread is concurrently modifying session->finished.
     if (finished) {
@@ -350,8 +350,7 @@ get_invocation_sender(GDBusMethodInvocation *invocation, std::string &sender_out
 
 // -----------------------------------------------------------------------------
 // Create and register one new transaction request object on the bus.
-// Watches the client's unique bus name to auto-release the session if the
-// client disconnects without calling Release.
+// Watches the client's unique bus name to auto-release the session if the client disconnects without calling Release.
 // -----------------------------------------------------------------------------
 TransactionSession *
 create_transaction_session(TransactionService *service,

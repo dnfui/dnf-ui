@@ -140,8 +140,7 @@ package_table_update_status_label(GtkWidget *label, SearchWidgets *widgets, cons
   package_table_clear_status_css(label);
   std::string alternate_nevra;
 
-  // Upgradable rows can show one package ID while the pending action uses the
-  // matching installed or available package ID.
+  // Upgradable rows can show one package ID while the pending action uses a matching installed or available package ID.
   if (action_rows.has_install_row && action_rows.install_row.nevra != row.nevra) {
     alternate_nevra = action_rows.install_row.nevra;
   } else if (action_rows.has_installed_row && action_rows.installed_row.nevra != row.nevra) {

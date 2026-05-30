@@ -37,9 +37,8 @@ format_package_size(unsigned long long size_bytes)
 }
 
 // -----------------------------------------------------------------------------
-// Collect installed packages whose requires match capabilities provided by the
-// selected installed package. This keeps reverse dependency reporting narrow
-// and focused on the current system state.
+// Collect installed packages whose requires match capabilities provided by the selected installed package.
+// This keeps reverse dependency reporting narrow and focused on the current system state.
 // -----------------------------------------------------------------------------
 static std::set<std::string>
 collect_installed_reverse_dependency_nevras(libdnf5::Base &base, const libdnf5::rpm::Package &pkg)
@@ -67,9 +66,8 @@ collect_installed_reverse_dependency_nevras(libdnf5::Base &base, const libdnf5::
 // -----------------------------------------------------------------------------
 // Fetch and format details for one exact NEVRA.
 //
-// Upgradable packages can be opened from either the installed package row or
-// the available update row. The details pane should describe the installed
-// package first, then add the available update version when one exists.
+// Upgradable packages can be opened from either the installed package row or the available update row.
+// The details pane should describe the installed package first, then add the available update version when one exists.
 // -----------------------------------------------------------------------------
 std::string
 dnf_backend_get_package_info(const std::string &pkg_nevra)
@@ -190,13 +188,12 @@ dnf_backend_get_package_info(const std::string &pkg_nevra)
 }
 
 // -----------------------------------------------------------------------------
-// Return newline-separated file paths for the installed package behind one
-// selected NEVRA. If the selected NEVRA is an available update, use the
-// currently installed package with the same name and architecture.
+// Return newline-separated file paths for the installed package behind one selected NEVRA.
+// Available update rows use the currently installed package with the same name and architecture.
 //
-// Large file lists can overwhelm GTK clipboard transfer, so callers can pass a
-// positive max_files_for_display to append a truncation notice after that many
-// visible entries. Passing 0 returns the full list.
+// Large file lists can overwhelm GTK clipboard transfer.
+// Callers can pass a positive max_files_for_display to append a truncation notice after that many visible entries.
+// Passing 0 returns the full list.
 // -----------------------------------------------------------------------------
 std::string
 dnf_backend_get_installed_package_files(const std::string &pkg_nevra, size_t max_files_for_display)
@@ -226,14 +223,14 @@ dnf_backend_get_installed_package_files(const std::string &pkg_nevra, size_t max
     selected_query.filter_latest_evr();
     auto selected_pkg = *selected_query.begin();
 
-    // Available update packages do not own the installed file list. Look up the
-    // installed package with the same name and architecture instead.
+    // Available update packages do not own the installed file list.
+    // Look up the installed package with the same name and architecture instead.
     libdnf5::rpm::PackageQuery installed_by_name(base);
     installed_by_name.filter_name(selected_pkg.get_name(), libdnf5::sack::QueryCmp::EQ);
     installed_by_name.filter_installed();
 
-    // Match the selected package architecture and keep the newest installed
-    // package if more than one installed row exists.
+    // Match the selected package architecture and keep the newest installed package if more than one installed row
+    // exists.
     PackageRow installed_row;
     bool have_installed_row = false;
 
@@ -261,8 +258,7 @@ dnf_backend_get_installed_package_files(const std::string &pkg_nevra, size_t max
   installed_files_query.filter_nevra(installed_nevra);
   installed_files_query.filter_installed();
 
-  // If the installed package cannot be found here, use the same message as for
-  // packages without an installed file list.
+  // If the installed package cannot be found here, use the same message as for packages without an installed file list.
   if (installed_files_query.empty()) {
     DNFUI_TRACE("Backend file list installed package not found nevra=%s installed_nevra=%s",
                 pkg_nevra.c_str(),
@@ -440,11 +436,10 @@ format_changelog_entries(libdnf5::rpm::Package pkg)
 }
 
 // -----------------------------------------------------------------------------
-// Retrieve and format changelog entries for one exact NEVRA. Installed package
-// metadata is preferred because rpmdb entries often contain a fuller local
-// history than repository metadata. If the package is not installed, fall back
-// to a temporary Base with repo "other" metadata so normal queries do not keep
-// changelog metadata resident.
+// Retrieve and format changelog entries for one exact NEVRA.
+// Installed package metadata is preferred because rpmdb entries often contain a fuller local history than repository
+// metadata. If the package is not installed, fall back to a temporary Base with repo "other" metadata. This keeps
+// changelog metadata out of normal queries.
 // -----------------------------------------------------------------------------
 std::string
 dnf_backend_get_package_changelog(const std::string &pkg_nevra)

@@ -1,15 +1,12 @@
 // src/dnf_backend/dnf_backend.hpp
 // Public libdnf5 backend facade
 //
-// This header is the app-facing contract for the libdnf5 integration. It keeps
-// libdnf5 types out of the GTK controller layer by exposing small value models
-// and string-based transaction specs, while the implementation owns Base access,
-// rpmdb and repository queries, EVR comparison, cache publication, and transaction resolution.
+// This header is the app-facing contract for the libdnf5 integration.
+// It keeps libdnf5 types out of the GTK controller layer.
+// The implementation owns package queries, cache publication, and transaction resolution.
 //
-// Callers should depend only on the types and functions declared here. Helpers
-// under the internal backend header are private implementation details for
-// the backend translation units and may change whenever the backend internals
-// are reorganized.
+// Callers should depend only on the types and functions declared here.
+// Helpers under the internal backend header are private implementation details for backend files.
 #pragma once
 
 #include <cstddef>
@@ -28,7 +25,7 @@
 // friendlier fields for list and column-based views. The repo candidate relation
 // describes how the installed row compares to the newest visible repo-backed
 // candidate for the same name and architecture tuple:
-//   UNKNOWN: repo provenance was not checked or could not be resolved
+//   UNKNOWN: repo relation was not checked or could not be resolved
 //   NONE: no visible repo candidate exists for that name and architecture tuple
 //   SAME: installed and visible repo candidate resolve to the same EVR
 //   NEWER: the visible repo candidate is newer than the installed row
@@ -44,7 +41,7 @@ enum class PackageRepoCandidateRelation {
 
 // -----------------------------------------------------------------------------
 // Backend-owned install reason for installed packages.
-// This keeps package provenance visible to the UI without exposing libdnf5
+// This keeps package origin visible to the UI without exposing libdnf5
 // enums directly through the presentation model. Available-only rows keep
 // UNKNOWN because the install reason is meaningful only for installed packages.
 // -----------------------------------------------------------------------------
@@ -119,7 +116,7 @@ struct PackageRow {
 // -----------------------------------------------------------------------------
 // Backend-owned install state so the UI can reason about package actions
 // without depending on libdnf5 headers or EVR comparison details.
-// These values are presentation-oriented and may depend on repo provenance
+// These values are presentation-oriented and may depend on repo relation
 // being known for the visible row.
 // -----------------------------------------------------------------------------
 enum class PackageInstallState {
@@ -154,9 +151,9 @@ struct TransactionPreview {
 using TransactionProgressCallback = std::function<void(const std::string &)>;
 
 // -----------------------------------------------------------------------------
-// Search flags used by backend search queries. The UI can update them from the
-// search controls, and each backend worker copies a snapshot before scanning so
-// one query remains internally consistent.
+// Search flags used by backend search queries.
+// The UI can update them from the search controls.
+// Each backend worker copies a snapshot before scanning so one query remains internally consistent.
 // -----------------------------------------------------------------------------
 struct DnfBackendSearchOptions {
   bool search_in_description = false;
@@ -216,8 +213,8 @@ bool dnf_backend_is_package_installed_exact(const PackageRow &row);
 bool dnf_backend_get_installed_package_row_by_name_arch(const PackageRow &row, PackageRow &installed_out);
 
 // -----------------------------------------------------------------------------
-// Return true when this installed package owns the running GUI executable and
-// therefore must not be removed or reinstalled from within the app itself.
+// Return true when this installed package owns the running GUI executable.
+// That package must not be removed or reinstalled from within the app itself.
 // -----------------------------------------------------------------------------
 bool dnf_backend_is_package_self_protected(const PackageRow &row);
 
@@ -228,9 +225,8 @@ bool dnf_backend_is_package_self_protected(const PackageRow &row);
 bool dnf_backend_is_self_protected_transaction_spec(const std::string &spec);
 
 // -----------------------------------------------------------------------------
-// Query all installed packages. This path remains local-first and should still
-// work when repository metadata is unavailable; repo provenance is annotated
-// only as an optional extra when possible.
+// Query all installed packages. This path remains local-first and should still work when repository metadata is
+// unavailable. Repo relation is added only as an optional extra when possible.
 // -----------------------------------------------------------------------------
 std::vector<PackageRow> dnf_backend_get_installed_package_rows_interruptible(GCancellable *cancellable);
 
@@ -298,8 +294,8 @@ bool dnf_backend_apply_transaction(const std::vector<std::string> &install_nevra
 
 #ifdef DNFUI_BUILD_TESTS
 // -----------------------------------------------------------------------------
-// Test-only hooks for cache-state setup. Production callers should refresh the
-// installed snapshot from libdnf instead of mutating it directly.
+// Test-only hooks for cache-state setup.
+// Production callers should refresh the installed snapshot from libdnf instead of mutating it directly.
 // -----------------------------------------------------------------------------
 void dnf_backend_testonly_clear_installed_snapshot();
 // -----------------------------------------------------------------------------

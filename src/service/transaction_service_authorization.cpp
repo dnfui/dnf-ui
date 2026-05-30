@@ -1,8 +1,8 @@
 // -----------------------------------------------------------------------------
 // transaction_service_authorization.cpp
 // Handles authorization for apply calls.
-// Session bus runs without Polkit for local tests. System bus asks Polkit before
-// starting package changes.
+// Session bus runs without Polkit for local tests.
+// System bus asks Polkit before starting package changes.
 // -----------------------------------------------------------------------------
 #include "transaction_service_internal.hpp"
 
@@ -39,8 +39,8 @@ complete_apply_request(TransactionSession *session, GDBusMethodInvocation *invoc
 
 // -----------------------------------------------------------------------------
 // Context passed to the polkit authorization callback.
-// Stores the object path and service pointer so the callback can look up the
-// session after authorization finishes or ignore the result during shutdown.
+// Stores the object path and service pointer for the authorization callback.
+// The callback uses them to find the session after authorization finishes.
 // -----------------------------------------------------------------------------
 struct AuthorizationCallbackContext {
   TransactionService *service = nullptr;
@@ -49,9 +49,8 @@ struct AuthorizationCallbackContext {
 
 // -----------------------------------------------------------------------------
 // Finish the polkit authorization check for Apply.
-// The service and session are looked up again because the client may have
-// released the request or the service may have started shutdown while
-// authorization was still running.
+// The service and session are looked up again because the client may have released the request.
+// The service may also have started shutdown while authorization was still running.
 // -----------------------------------------------------------------------------
 static void
 on_apply_authorization_result(GObject *source_object, GAsyncResult *res, gpointer user_data)
@@ -175,8 +174,7 @@ start_authorize_apply_request(TransactionSession *session, GDBusMethodInvocation
   PolkitSubject *subject = polkit_system_bus_name_new(sender);
 
   // Reserve the pending authorization slot before starting the async request.
-  // This keeps concurrent Apply calls from starting two authorization checks for
-  // the same transaction request object.
+  // This keeps concurrent Apply calls from starting two authorization checks for the same transaction request object.
   {
     std::lock_guard<std::mutex> lock(session->state_mutex);
     if (session->pending_apply_invocation) {

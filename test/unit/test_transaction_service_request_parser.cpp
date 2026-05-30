@@ -1,8 +1,7 @@
 // -----------------------------------------------------------------------------
 // test/unit/test_transaction_service_request_parser.cpp
 // Transaction service request parser tests
-// Verifies the small D-Bus tuple parser used by StartTransaction before the
-// service validates or resolves the request.
+// Verifies the small D-Bus tuple parser used by StartTransaction before the service validates or resolves the request.
 // -----------------------------------------------------------------------------
 #include <catch2/catch_test_macros.hpp>
 

@@ -2,9 +2,9 @@
 // dnf_transaction_internal.hpp
 // Internal helpers shared by the transaction backend files.
 //
-// These declarations are not part of the UI contract. They keep transaction
-// resolving, progress text, and libdnf callback handling in separate files while
-// still using one backend implementation.
+// These declarations are not part of the UI contract.
+// They keep transaction resolving, progress text, and libdnf callback handling
+// in separate files while still using one backend implementation.
 // -----------------------------------------------------------------------------
 #pragma once
 

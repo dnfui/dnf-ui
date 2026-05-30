@@ -23,9 +23,8 @@
 
 namespace dnf_backend_internal {
 
-// Installed package scan result published into the shared UI cache only after a
-// full uncancelled scan. Keeping rows, exact NEVRAs, and name and architecture lookup
-// together avoids partial cache updates.
+// Installed package scan result published into the shared UI cache only after a full uncancelled scan.
+// Keeping rows, exact NEVRAs, and name and architecture lookup together avoids partial cache updates.
 struct InstalledQueryResult {
   std::vector<PackageRow> rows;
   std::set<std::string> nevras;
