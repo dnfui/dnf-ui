@@ -75,7 +75,6 @@ struct MainWindowCleanupData {
 // Function forward declarations
 // -----------------------------------------------------------------------------
 static GtkWidget *create_window(GtkApplication *app);
-static GtkWidget *create_thin_separator(void);
 static GtkWidget *create_scrolled_text_view(const char *text, GtkWrapMode wrap_mode, GtkTextBuffer **out_buffer);
 static void setup_shortcuts(GtkWidget *window, GtkWidget *entry);
 static void build_main_ui(AppWidgets *ui);
@@ -99,19 +98,6 @@ create_window(GtkApplication *app)
   config_load_window_geometry(GTK_WINDOW(window));
 
   return window;
-}
-
-// -----------------------------------------------------------------------------
-// Create a reusable flat line separator
-// -----------------------------------------------------------------------------
-static GtkWidget *
-create_thin_separator(void)
-{
-  GtkWidget *line = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-  gtk_widget_set_size_request(line, -1, 1);
-  gtk_widget_add_css_class(line, "thin-line");
-
-  return line;
 }
 
 // -----------------------------------------------------------------------------
@@ -318,8 +304,6 @@ build_main_ui(AppWidgets *ui)
   gtk_label_set_wrap(GTK_LABEL(status_label), TRUE);
   gtk_box_append(GTK_BOX(controls_box), status_label);
   ui->status_label = status_label;
-
-  gtk_box_append(GTK_BOX(vbox_root), create_thin_separator());
 
   // History panel and package list fill the remaining space below the toolbar
   gtk_widget_set_vexpand(outer_paned, TRUE);
@@ -560,12 +544,6 @@ setup_css(SearchWidgets *widgets)
                                     "} "
                                     ".package-summary { "
                                     "  opacity: 0.92; "
-                                    "} "
-                                    ".thin-line { "
-                                    "  background-color: @borders; "
-                                    "  margin: 0; "
-                                    "  padding: 0; "
-                                    "  min-height: 1px; "
                                     "} "
                                     ".details-switcher { "
                                     "  margin: 6px; "
