@@ -217,12 +217,6 @@ bool dnf_backend_is_package_installed_exact(const PackageRow &row);
 bool dnf_backend_get_installed_package_row_by_name_arch(const PackageRow &row, PackageRow &installed_out);
 
 // -----------------------------------------------------------------------------
-// Return true when the exact installed NEVRA can be reinstalled from currently
-// available package sources. Local-only packages therefore return false.
-// -----------------------------------------------------------------------------
-bool dnf_backend_can_reinstall_package(const PackageRow &row);
-
-// -----------------------------------------------------------------------------
 // Return true when this installed package owns the running GUI executable and
 // therefore must not be removed or reinstalled from within the app itself.
 // -----------------------------------------------------------------------------

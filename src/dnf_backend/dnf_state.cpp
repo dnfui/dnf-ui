@@ -280,31 +280,6 @@ dnf_backend_get_install_state_sort_rank(PackageInstallState state)
 }
 
 // -----------------------------------------------------------------------------
-// Return true only when the exact installed NEVRA is also available from the
-// current package sources and can therefore be reinstalled through libdnf5.
-// -----------------------------------------------------------------------------
-bool
-dnf_backend_can_reinstall_package(const PackageRow &row)
-{
-  // Reinstall is valid only for the exact installed NEVRA that the user is
-  // looking at, not for an older or newer visible candidate with the same name.
-  if (!dnf_backend_is_package_installed_exact(row)) {
-    return false;
-  }
-
-  bool can_reinstall = false;
-  {
-    auto [base, guard, generation] = BaseManager::instance().acquire_read();
-    libdnf5::rpm::PackageQuery query(base);
-    query.filter_nevra(row.nevra);
-    query.filter_available();
-    can_reinstall = !query.empty();
-  }
-
-  return can_reinstall;
-}
-
-// -----------------------------------------------------------------------------
 // Check the cached self-protection snapshot collected from the owner of the
 // running GUI executable during the latest installed-package refresh.
 // -----------------------------------------------------------------------------

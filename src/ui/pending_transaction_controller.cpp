@@ -183,7 +183,7 @@ pending_transaction_on_reinstall_button_clicked(GtkButton *, gpointer user_data)
     return;
   }
 
-  if (!dnf_backend_can_reinstall_package(action_rows.installed_row)) {
+  if (!action_rows.can_try_reinstall) {
     ui_helpers_set_status(
         widgets->query.status_label, _("Package cannot be reinstalled from current repositories."), "gray");
     return;
