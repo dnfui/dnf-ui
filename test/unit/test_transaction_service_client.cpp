@@ -1,8 +1,7 @@
 // -----------------------------------------------------------------------------
 // test/unit/test_transaction_service_client.cpp
 // Transaction service client integration tests
-// Covers GUI-side D-Bus client behavior around request failures that need a
-// live service process and private session bus.
+// Covers GUI-side D-Bus client behavior that needs a live service process and private session bus.
 // -----------------------------------------------------------------------------
 #include <catch2/catch_test_macros.hpp>
 

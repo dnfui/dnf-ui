@@ -284,8 +284,7 @@ TEST_CASE("Package info formatting contains expected fields")
 }
 
 // -----------------------------------------------------------------------------
-// Verify that package details show the same upgrade information from either the
-// installed row or the available update row.
+// Verify that installed and available update rows show the same upgrade details.
 // -----------------------------------------------------------------------------
 TEST_CASE("Package info formatting shows upgrade details consistently")
 {

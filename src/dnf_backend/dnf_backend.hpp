@@ -2,8 +2,9 @@
 // Public libdnf5 backend facade
 //
 // This header is the app-facing contract for the libdnf5 integration.
-// It keeps libdnf5 types out of the GTK controller layer.
-// The implementation owns package queries, cache publication, and transaction resolution.
+// It keeps libdnf5 types out of the GTK controller layer by exposing value models and string transaction specs.
+// The implementation owns Base access, rpmdb and repo queries, EVR comparison, cache updates,
+// and transaction resolution.
 //
 // Callers should depend only on the types and functions declared here.
 // Helpers under the internal backend header are private implementation details for backend files.

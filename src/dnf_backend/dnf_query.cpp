@@ -418,7 +418,8 @@ dnf_backend_get_installed_package_rows_interruptible(GCancellable *cancellable)
 
 // -----------------------------------------------------------------------------
 // Query the combined browse view via libdnf5.
-// The returned rows include the newest available candidate for each package stream plus installed-only local RPMs.
+// The returned rows include the newest available candidate for each package stream.
+// Installed RPMs missing from enabled repositories are included as local-only rows.
 // -----------------------------------------------------------------------------
 std::vector<PackageRow>
 dnf_backend_get_browse_package_rows_interruptible(GCancellable *cancellable)
