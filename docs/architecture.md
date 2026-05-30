@@ -9,6 +9,7 @@ Use it as the first map when reading the code. The deeper documents are:
 - [Transaction service internals](transactions.md)
 - [Testing](testing.md)
 - [External API assumptions](api-assumptions.md)
+- [Project rules](project-rules.md)
 
 ## Purpose
 
