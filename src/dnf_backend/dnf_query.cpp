@@ -93,9 +93,9 @@ package_matches_search(const libdnf5::rpm::Package &pkg,
 }
 
 // -----------------------------------------------------------------------------
-// Collect the newest visible repo candidate for each name and architecture tuple. When a
-// search term is provided, apply the same name and description filtering as the
-// main search flow before deduplicating the results.
+// Collect the newest visible repo candidate for each name and architecture tuple.
+// When a search term is provided, apply the same name and description filtering
+// as the main search flow before deduplicating the results.
 // -----------------------------------------------------------------------------
 std::map<std::string, PackageRow>
 collect_available_rows_by_name_arch(libdnf5::Base &base,
@@ -288,8 +288,8 @@ annotate_installed_rows_with_repo_candidates_best_effort(std::vector<PackageRow>
 
 // -----------------------------------------------------------------------------
 // Build the merged package view used by search and browse: start with the
-// visible repo-backed candidates, then add installed-only rows for name and architecture
-// tuples that are missing from enabled repositories. If an installed package is
+// visible repo-backed candidates, then add installed-only rows for name and architecture tuples
+// that are missing from enabled repositories. If an installed package is
 // newer than the repo candidate, keep the installed row so the UI can surface
 // that state directly.
 //
@@ -513,8 +513,8 @@ dnf_backend_get_upgradeable_package_rows_interruptible(GCancellable *cancellable
 
 // -----------------------------------------------------------------------------
 // Return installed package rows that exactly match one NEVRA. Repo provenance is
-// annotated when repository data is available so pending-action navigation can still show
-// local-only or newer-than-repo status when possible.
+// annotated when repository data is available, so pending-action navigation can
+// still show local-only or newer-than-repo status when possible.
 // -----------------------------------------------------------------------------
 std::vector<PackageRow>
 dnf_backend_get_installed_package_rows_by_nevra(const std::string &pkg_nevra)

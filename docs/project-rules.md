@@ -56,8 +56,8 @@ This file states the rules that should stay true as DNF UI changes.
   changed.
 - The preview comparison should compare the same package action set, not resolver
   iteration order.
-- Transaction progress should show **useful** user-facing stages without becoming a
-  debug log.
+- Transaction progress should show **useful** user-facing stages without becoming
+  a debug log.
 - The UI **must** refresh package state after a successful apply.
 - Failed or cancelled transactions **must** leave the UI in a state where the user
   can try again.

@@ -4,8 +4,7 @@
 // This header is the app-facing contract for the libdnf5 integration. It keeps
 // libdnf5 types out of the GTK controller layer by exposing small value models
 // and string-based transaction specs, while the implementation owns Base access,
-// rpmdb and repository queries, EVR comparison, cache publication, and transaction
-// resolution.
+// rpmdb and repository queries, EVR comparison, cache publication, and transaction resolution.
 //
 // Callers should depend only on the types and functions declared here. Helpers
 // under the internal backend header are private implementation details for

@@ -60,8 +60,8 @@ on_transaction_progress_signal(GDBusConnection *,
 // Wait until the service transaction request leaves the given running stage.
 // Subscribes to the Finished D-Bus signal so the wait wakes up immediately
 // when the service reports a final state.
-// The context must already be the thread-default context of the calling thread so
-// that signal callbacks are dispatched on the same context that is iterated.
+// The context must already be the thread-default context of the calling thread.
+// That lets signal callbacks run on the same context that is being iterated.
 // -----------------------------------------------------------------------------
 bool
 transaction_service_client_wait_for_transaction_stage(GDBusConnection *connection,
