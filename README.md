@@ -19,6 +19,22 @@ The project is **usable for testing** and is becoming more mature with each rele
 Some interfaces, behavior, and features may still change while the application
 continues to evolve.
 
+## Install from COPR
+
+DNF UI is available from COPR:
+
+```text
+https://copr.fedorainfracloud.org/coprs/erikmn/dnf-ui/
+```
+
+Enable the repository and install the app:
+
+```sh
+sudo dnf install dnf5-plugins
+sudo dnf copr enable erikmn/dnf-ui
+sudo dnf install dnf-ui
+```
+
 ## Goals and principles
 
 - User experience first!
