@@ -1,0 +1,92 @@
+name: Publish COPR
+
+on:
+  push:
+    tags:
+      - "*.*.*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  copr:
+    name: COPR build
+    runs-on: ubuntu-latest
+    env:
+      COPR_PROJECT: erikmn/dnf-ui
+      COPR_URL: https://copr.fedorainfracloud.org
+
+    steps:
+      - name: Validate release tag
+        shell: bash
+        run: |
+          if [[ ! "${GITHUB_REF_NAME}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid release tag: ${GITHUB_REF_NAME}"
+            echo "Expected tag format: 0.1.0"
+            exit 1
+          fi
+
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build SRPM and publish to COPR
+        shell: bash
+        env:
+          COPR_LOGIN: ${{ secrets.COPR_LOGIN }}
+          COPR_USERNAME: ${{ secrets.COPR_USERNAME }}
+          COPR_TOKEN: ${{ secrets.COPR_TOKEN }}
+        run: |
+          docker run --rm \
+            -e HOST_UID="$(id -u)" \
+            -e HOST_GID="$(id -g)" \
+            -e GITHUB_REF_NAME="${GITHUB_REF_NAME}" \
+            -e COPR_LOGIN \
+            -e COPR_USERNAME \
+            -e COPR_TOKEN \
+            -e COPR_PROJECT \
+            -e COPR_URL \
+            -v "$PWD:/workspace" \
+            -w /workspace \
+            fedora:latest \
+            bash -lc '
+              set -euo pipefail
+              trap '\''chown -R "${HOST_UID}:${HOST_GID}" rpmbuild dnf-ui-latest.src.rpm 2>/dev/null || true'\'' EXIT
+
+              : "${COPR_LOGIN:?Missing COPR_LOGIN secret}"
+              : "${COPR_USERNAME:?Missing COPR_USERNAME secret}"
+              : "${COPR_TOKEN:?Missing COPR_TOKEN secret}"
+
+              dnf -y install \
+                copr-cli \
+                git \
+                make \
+                rpm-build
+
+              spec_version="$(rpmspec -q --qf "%{VERSION}\n" dnf-ui.spec | head -n1)"
+              if [ "${spec_version}" != "${GITHUB_REF_NAME}" ]; then
+                echo "Spec version does not match release tag"
+                echo "Spec version: ${spec_version}"
+                echo "Release tag: ${GITHUB_REF_NAME}"
+                exit 1
+              fi
+
+              git config --global --add safe.directory /workspace
+              make srpm
+
+              mkdir -p ~/.config
+              chmod 700 ~/.config
+              cat > ~/.config/copr <<EOF
+[copr-cli]
+login = ${COPR_LOGIN}
+username = ${COPR_USERNAME}
+token = ${COPR_TOKEN}
+copr_url = ${COPR_URL}
+EOF
+              chmod 600 ~/.config/copr
+
+              copr-cli build "${COPR_PROJECT}" dnf-ui-latest.src.rpm
+            '

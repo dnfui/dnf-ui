@@ -159,6 +159,28 @@ erikmn
 
 The COPR API token expires after 180 days. If COPR CLI authentication starts failing later, renew the token from the same API page.
 
+### GitHub Actions COPR publishing
+
+The repository has a GitHub Actions workflow that publishes tagged releases to COPR:
+
+```text
+.github/workflows/publish-copr.yml
+```
+
+It runs when a tag like `0.1.0` is pushed. The workflow validates the tag,
+checks that `dnf-ui.spec` has the same version, builds the SRPM, and submits it to COPR.
+
+Set these GitHub repository secrets before using it:
+
+```text
+COPR_LOGIN
+COPR_USERNAME
+COPR_TOKEN
+```
+
+Do not commit the generated COPR config file or token.
+The workflow writes the temporary COPR config inside the CI container from GitHub Secrets.
+
 ## 6. Create the COPR project
 
 This was already done for `dnf-ui`, but these are the commands used:
