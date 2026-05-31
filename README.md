@@ -89,87 +89,17 @@ If you are looking for other graphical package managers with a longer track-reco
 
 See [docs/contributing.md](docs/contributing.md).
 
-## Build
-
-### Native build
+## Development
 
 Fedora build dependencies are listed in
 [docs/fedora-native-dependencies.txt](docs/fedora-native-dependencies.txt).
 
-Install them with:
+Install them, then build and run:
 
 ```sh
 ./utils/install_fedora_dependencies.sh
-```
-
-Meson handles the real build and install logic.
-The `Makefile` is a thin task runner for the common developer commands.
-
-Build and run:
-
-```sh
 make && ./dnfui
 ```
-
-Build final and run:
-
-```sh
-FINAL=y make && ./dnfui
-```
-
-Run the Meson setup directly:
-
-```sh
-meson setup build/debug --prefix /usr --libexecdir libexec
-meson compile -C build/debug
-./build/debug/src/dnfui
-```
-
-## Polkit integration
-
-DNF UI uses a small privileged transaction service called `dnfui-service` for package apply operations.
-
-`dnfui` runs as the regular desktop user, while the service runs on D-Bus and is
-responsible for the privileged transaction step.
-
-[Polkit](https://github.com/polkit-org/polkit) is used only for the apply step:
-
-- Transaction preview is prepared through the service
-- The GUI shows the summary dialog
-- Apply is authorized by Polkit on the native system bus
-
-This keeps the main application **unprivileged** while still allowing normal desktop
-authentication when a transaction is applied.
-
-### Native service install for development
-
-For native Polkit testing from the source tree, install the service files with:
-
-```sh
-make
-sudo make serviceinstall
-```
-
-Then run the app as a regular desktop user:
-
-```sh
-./dnfui
-```
-
-When you apply a transaction, the desktop Polkit prompt should appear.
-
-Remove the development service install with:
-
-```sh
-sudo make serviceuninstall
-```
-
-**NOTE:**
-
-- Choose a non critical installed package for native apply tests
-- `serviceinstall` is just a development helper for installing the app without RPM packaging
-
-### Tests
 
 Run the native test suite:
 
@@ -177,102 +107,26 @@ Run the native test suite:
 make test
 ```
 
-For the full test matrix, Docker test commands, and memory checks, see
-[docs/testing.md](docs/testing.md).
+For native service testing, Docker commands, and local RPM packaging, see
+[docs/development.md](docs/development.md).
+
+For the full test matrix, see [docs/testing.md](docs/testing.md).
 
 For architecture notes and source-backed external API assumptions, start with
 [docs/architecture.md](docs/architecture.md).
 
-### Docker
+## Transaction service
 
-[Docker](https://www.docker.com/) is the default container runtime. The container targets also support
-[Podman](https://podman.io/) by setting `CONTAINER_RUNTIME=podman`. The target names still says Docker though.
+DNF UI uses a small privileged transaction service called `dnfui-service`.
 
-Running the application in a container is useful for testing and developing without affecting the
-host system.
+`dnfui` runs as the regular desktop user. Transaction preview and apply go
+through the D-Bus service. On the native system bus, preview start is limited to
+the active local user and apply has separate Polkit authorization.
 
-Build the development image:
+This keeps the main application **unprivileged** while still allowing normal desktop
+authentication when a transaction is applied.
 
-```sh
-make dockersetup
-```
-
-Build the development image with Podman:
-
-```sh
-CONTAINER_RUNTIME=podman make dockersetup
-```
-
-Run the application in a container:
-
-```sh
-make dockerrun
-```
-
-Run the application in Docker with networking disabled:
-
-```sh
-make dockerrunoffline
-```
-
-Run the application in Docker with networking disabled and an empty repo cache:
-
-```sh
-make dockerruncoldoffline
-```
-
-## RPM packaging
-
-Fedora RPM packaging is included for this application.
-
-Build a source RPM from the current tracked working tree:
-
-```sh
-make srpm
-```
-
-Build binary and source RPMs locally:
-
-```sh
-make rpm
-```
-
-Build a source RPM in Docker:
-
-```sh
-make dockersrpm
-```
-
-Build binary and source RPMs in Docker:
-
-```sh
-make dockerrpm
-```
-
-Artifacts are written under `./rpmbuild/`.
-
-Notes:
-
-- The RPM package is built from `dnf-ui.spec`
-- `make srpm` includes files tracked by Git in the generated source tarball
-- The Docker RPM targets use the existing Fedora development image and write artifacts into the same `./rpmbuild/` tree
-
-Run `rpmlint` on the source RPM and binary RPMs:
-
-```sh
-rpmlint dnf-ui-latest.src.rpm rpmbuild/RPMS/*/*.rpm
-```
-
-To check that the package builds without depending on files or packages from your
-own system, rebuild the generated source RPM in an isolated Fedora build
-environment with `mock`:
-
-```sh
-mock -r fedora-rawhide-x86_64 --rebuild dnf-ui-latest.src.rpm
-```
-
-Use a different `-r` value if you want to build for another Fedora release or
-architecture.
+For the full transaction flow, see [docs/transactions.md](docs/transactions.md).
 
 ## Screenshots
 
