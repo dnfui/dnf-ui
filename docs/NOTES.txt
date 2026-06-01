@@ -128,4 +128,7 @@ https://polkit.pages.freedesktop.org/polkit/pkexec.1.html
 Fedora packaging guidelines:
 https://docs.fedoraproject.org/en-US/packaging-guidelines/
 
+GitHub CLI Extension for nektos/act which allows you to run your GitHub Actions locally!
+https://github.com/nektos/gh-act
+
 --------------------------------------------------------------------------------
