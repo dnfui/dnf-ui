@@ -4,10 +4,10 @@
   <img src="img/logo.png" width="220" alt="DNF UI logo"/>
 </p>
 
-[![CI](https://github.com/ErikMN/dnf_ui/actions/workflows/ci.yml/badge.svg)](https://github.com/ErikMN/dnf_ui/actions/workflows/ci.yml)
-[![Release RPM](https://github.com/ErikMN/dnf_ui/actions/workflows/release-rpm.yml/badge.svg)](https://github.com/ErikMN/dnf_ui/actions/workflows/release-rpm.yml)
-[![Publish COPR](https://github.com/ErikMN/dnf_ui/actions/workflows/publish-copr.yml/badge.svg)](https://github.com/ErikMN/dnf_ui/actions/workflows/publish-copr.yml)
-[![ShellCheck](https://github.com/ErikMN/dnf_ui/actions/workflows/shellcheck.yml/badge.svg)](https://github.com/ErikMN/dnf_ui/actions/workflows/shellcheck.yml)
+[![CI](https://github.com/ErikMN/dnf-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/ErikMN/dnf-ui/actions/workflows/ci.yml)
+[![ShellCheck](https://github.com/ErikMN/dnf-ui/actions/workflows/shellcheck.yml/badge.svg)](https://github.com/ErikMN/dnf-ui/actions/workflows/shellcheck.yml)
+[![Release RPM](https://github.com/ErikMN/dnf-ui/actions/workflows/release-rpm.yml/badge.svg)](https://github.com/ErikMN/dnf-ui/actions/workflows/release-rpm.yml)
+[![Publish COPR](https://github.com/ErikMN/dnf-ui/actions/workflows/publish-copr.yml/badge.svg)](https://github.com/ErikMN/dnf-ui/actions/workflows/publish-copr.yml)
 
 DNF UI is a graphical frontend for Fedora's DNF5 (Dandified YUM) package manager, inspired by [Synaptic](https://github.com/mvo5/synaptic).
 It is built with GTK 4 and [libdnf5](https://github.com/rpm-software-management/dnf5) and aims to provide a **fast** and
