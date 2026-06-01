@@ -79,13 +79,13 @@ jobs:
 
               mkdir -p ~/.config
               chmod 700 ~/.config
-              cat > ~/.config/copr <<EOF
-[copr-cli]
-login = ${COPR_LOGIN}
-username = ${COPR_USERNAME}
-token = ${COPR_TOKEN}
-copr_url = ${COPR_URL}
-EOF
+              {
+                printf "[copr-cli]\n"
+                printf "login = %s\n" "${COPR_LOGIN}"
+                printf "username = %s\n" "${COPR_USERNAME}"
+                printf "token = %s\n" "${COPR_TOKEN}"
+                printf "copr_url = %s\n" "${COPR_URL}"
+              } > ~/.config/copr
               chmod 600 ~/.config/copr
 
               copr-cli build "${COPR_PROJECT}" dnf-ui-latest.src.rpm
