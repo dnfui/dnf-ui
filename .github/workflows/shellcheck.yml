@@ -1,0 +1,36 @@
+name: ShellCheck
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  shellcheck:
+    name: Shell scripts
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Run ShellCheck in Fedora
+        run: |
+          docker run --rm \
+            -v "$PWD:/workspace" \
+            -w /workspace \
+            fedora:latest \
+            bash -lc '
+              set -euo pipefail
+
+              dnf -y install ShellCheck
+
+              find docker packaging test utils -name "*.sh" -print0 |
+                xargs -0 shellcheck --severity=warning
+            '
