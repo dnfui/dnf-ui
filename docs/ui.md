@@ -77,6 +77,9 @@ of the public callback file:
 Long-running package queries run on worker threads through `GTask`. Completion
 callbacks run on the GTK thread before they update widgets.
 
+The bottom bar shows the visible row count on the left and the last completed
+package query time on the right.
+
 Search results are cached in [src/ui/package_query_cache.cpp](../src/ui/package_query_cache.cpp).
 The cache is tied to the current backend Base generation, the shared Base id,
 and a cache epoch kept by the query cache layer. Repository refreshes,

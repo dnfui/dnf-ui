@@ -59,6 +59,8 @@ struct MainWindowState {
   bool pending_quit_dialog_open = false;
   // Passive bottom-bar label used for quiet startup backend status.
   GtkLabel *backend_warmup_label = nullptr;
+  // Passive bottom-bar label showing how long the last package query took.
+  GtkLabel *query_duration_label = nullptr;
   // Cancellable owned by the startup backend warm up task.
   GCancellable *backend_warmup_cancellable = nullptr;
   // Set when the main window is being destroyed.

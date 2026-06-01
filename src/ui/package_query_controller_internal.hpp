@@ -34,6 +34,14 @@ void package_query_set_displayed_search_query(SearchWidgets *widgets,
 // -----------------------------------------------------------------------------
 void package_query_finish_results_refresh(SearchWidgets *widgets);
 // -----------------------------------------------------------------------------
+// Hide the package query timing label while new work is running.
+// -----------------------------------------------------------------------------
+void package_query_clear_duration_label(SearchWidgets *widgets);
+// -----------------------------------------------------------------------------
+// Show how long a package query took in the bottom bar.
+// -----------------------------------------------------------------------------
+void package_query_show_duration_label(SearchWidgets *widgets, const char *title, gint64 started_at_us);
+// -----------------------------------------------------------------------------
 // Return true when a package query worker is active.
 // -----------------------------------------------------------------------------
 bool package_query_has_active_package_list_request(const SearchWidgets *widgets);

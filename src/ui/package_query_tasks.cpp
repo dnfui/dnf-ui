@@ -26,6 +26,7 @@ struct SearchTaskData {
   char *term;
   char *cache_key;
   uint64_t request_id;
+  gint64 started_at_us;
   // BaseManager generation recorded when the task starts.
   // Used to drop outdated results if the backend Base is rebuilt before the task ends.
   uint64_t generation;
@@ -61,6 +62,7 @@ search_task_data_free(gpointer p)
 struct PackageListTaskData {
   uint64_t request_id;
   uint64_t generation;
+  gint64 started_at_us;
 };
 
 struct QueryBackendBaseDropGuard {
@@ -140,12 +142,14 @@ on_list_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
     std::string msg =
         dnfui_i18n_format_count(packages->size(), "Found %zu installed package.", "Found %zu installed packages.");
     ui_helpers_set_status(widgets->query.status_label, msg, "green");
+    package_query_show_duration_label(widgets, _("List Installed"), td ? td->started_at_us : 0);
     package_query_finish_results_refresh(widgets);
     delete packages;
   } else {
     widgets->query_state.preserve_selection_on_reload = false;
     widgets->query_state.reload_selected_nevra.clear();
     ui_helpers_set_status(widgets->query.status_label, error ? error->message : _("Error listing packages."), "red");
+    package_query_show_duration_label(widgets, _("List Installed"), td ? td->started_at_us : 0);
     if (error) {
       g_error_free(error);
     }
@@ -218,12 +222,14 @@ on_list_available_task_finished(GObject *, GAsyncResult *res, gpointer user_data
     package_table_fill_package_view(widgets, *packages);
     std::string msg = dnfui_i18n_format_count(packages->size(), "Found %zu package.", "Found %zu packages.");
     ui_helpers_set_status(widgets->query.status_label, msg, "green");
+    package_query_show_duration_label(widgets, _("List Packages"), td ? td->started_at_us : 0);
     package_query_finish_results_refresh(widgets);
     delete packages;
   } else {
     widgets->query_state.preserve_selection_on_reload = false;
     widgets->query_state.reload_selected_nevra.clear();
     ui_helpers_set_status(widgets->query.status_label, error ? error->message : _("Error listing packages."), "red");
+    package_query_show_duration_label(widgets, _("List Packages"), td ? td->started_at_us : 0);
     if (error) {
       g_error_free(error);
     }
@@ -296,6 +302,7 @@ on_list_upgradeable_task_finished(GObject *, GAsyncResult *res, gpointer user_da
     std::string msg =
         dnfui_i18n_format_count(packages->size(), "Found %zu upgradable package.", "Found %zu upgradable packages.");
     ui_helpers_set_status(widgets->query.status_label, msg, packages->empty() ? "gray" : "green");
+    package_query_show_duration_label(widgets, _("List Upgradable"), td ? td->started_at_us : 0);
     package_query_finish_results_refresh(widgets);
     delete packages;
   } else {
@@ -303,6 +310,7 @@ on_list_upgradeable_task_finished(GObject *, GAsyncResult *res, gpointer user_da
     widgets->query_state.reload_selected_nevra.clear();
     ui_helpers_set_status(
         widgets->query.status_label, error ? error->message : _("Error listing upgradable packages."), "red");
+    package_query_show_duration_label(widgets, _("List Upgradable"), td ? td->started_at_us : 0);
     if (error) {
       g_error_free(error);
     }
@@ -391,12 +399,14 @@ on_search_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
     package_table_fill_package_view(widgets, *packages);
     std::string msg = dnfui_i18n_format_count(packages->size(), "Found %zu package.", "Found %zu packages.");
     ui_helpers_set_status(widgets->query.status_label, msg, "green");
+    package_query_show_duration_label(widgets, _("Search"), td ? td->started_at_us : 0);
     package_query_finish_results_refresh(widgets);
     delete packages;
   } else {
     widgets->query_state.preserve_selection_on_reload = false;
     widgets->query_state.reload_selected_nevra.clear();
     ui_helpers_set_status(widgets->query.status_label, error ? error->message : _("Error or no results."), "red");
+    package_query_show_duration_label(widgets, _("Search"), td ? td->started_at_us : 0);
     if (error) {
       g_error_free(error);
     }
@@ -415,6 +425,7 @@ package_query_start_list_installed_task(SearchWidgets *widgets)
   PackageListTaskData *td = new PackageListTaskData;
   td->request_id = widgets->query_state.next_package_list_request_id++;
   td->generation = BaseManager::instance().current_generation();
+  td->started_at_us = g_get_monotonic_time();
 
   package_query_begin_package_list_request(widgets, c, td->request_id, PackageListRequestKind::LIST_INSTALLED);
   GTask *task = widgets_task_new_for_search_widgets(widgets, c, on_list_task_finished);
@@ -437,6 +448,7 @@ package_query_start_list_available_task(SearchWidgets *widgets)
   PackageListTaskData *td = new PackageListTaskData;
   td->request_id = widgets->query_state.next_package_list_request_id++;
   td->generation = BaseManager::instance().current_generation();
+  td->started_at_us = g_get_monotonic_time();
 
   package_query_begin_package_list_request(widgets, c, td->request_id, PackageListRequestKind::LIST_AVAILABLE);
   GTask *task = widgets_task_new_for_search_widgets(widgets, c, on_list_available_task_finished);
@@ -459,6 +471,7 @@ package_query_start_list_upgradeable_task(SearchWidgets *widgets)
   PackageListTaskData *td = new PackageListTaskData;
   td->request_id = widgets->query_state.next_package_list_request_id++;
   td->generation = BaseManager::instance().current_generation();
+  td->started_at_us = g_get_monotonic_time();
 
   package_query_begin_package_list_request(widgets, c, td->request_id, PackageListRequestKind::LIST_UPGRADEABLE);
   GTask *task = widgets_task_new_for_search_widgets(widgets, c, on_list_upgradeable_task_finished);
@@ -487,6 +500,7 @@ package_query_start_search_task(SearchWidgets *widgets,
   td->term = g_strdup(term.c_str());
   td->cache_key = g_strdup(cache_key.c_str());
   td->request_id = widgets->query_state.next_package_list_request_id++;
+  td->started_at_us = g_get_monotonic_time();
   td->generation = generation;
   td->base_epoch = base_epoch;
   td->cache_epoch = cache_epoch;

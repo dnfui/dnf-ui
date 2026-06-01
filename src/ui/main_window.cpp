@@ -63,6 +63,7 @@ struct AppWidgets {
 
   GtkWidget *count_label = NULL;
   GtkWidget *warmup_label = NULL;
+  GtkWidget *query_duration_label = NULL;
 };
 
 struct MainWindowCleanupData {
@@ -412,6 +413,12 @@ build_main_ui(AppWidgets *ui)
   gtk_widget_set_visible(warmup_label, FALSE);
   gtk_box_append(GTK_BOX(bottom_bar), warmup_label);
   ui->warmup_label = warmup_label;
+
+  GtkWidget *query_duration_label = gtk_label_new("");
+  gtk_label_set_xalign(GTK_LABEL(query_duration_label), 1.0);
+  gtk_widget_set_visible(query_duration_label, FALSE);
+  gtk_box_append(GTK_BOX(bottom_bar), query_duration_label);
+  ui->query_duration_label = query_duration_label;
 }
 
 // -----------------------------------------------------------------------------
@@ -458,6 +465,7 @@ create_search_widgets(const AppWidgets *ui)
   widgets->window_state.allow_close_with_pending = false;
   widgets->window_state.pending_quit_dialog_open = false;
   widgets->window_state.backend_warmup_label = GTK_LABEL(ui->warmup_label);
+  widgets->window_state.query_duration_label = GTK_LABEL(ui->query_duration_label);
   widgets->window_state.backend_warmup_cancellable = nullptr;
 
   return widgets;

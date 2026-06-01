@@ -75,6 +75,7 @@ perform_search(SearchWidgets *widgets, const std::string &term)
   gtk_editable_set_text(GTK_EDITABLE(widgets->query.entry), term.c_str());
   std::string searching_message = dnfui_i18n_format(_("Searching for '%s'..."), term.c_str());
   ui_helpers_set_status(widgets->query.status_label, searching_message, "blue");
+  package_query_clear_duration_label(widgets);
   if (!widgets->query_state.preserve_selection_on_reload) {
     widgets->results.selected_nevra.clear();
   }
@@ -87,6 +88,7 @@ perform_search(SearchWidgets *widgets, const std::string &term)
   const uint64_t generation = BaseManager::instance().current_generation();
   const uint64_t base_epoch = BaseManager::instance().current_base_epoch();
   const uint64_t cache_epoch = package_query_cache_current_epoch();
+  const gint64 started_at_us = g_get_monotonic_time();
   std::vector<PackageRow> cached_packages;
   if (package_query_cache_lookup(key, generation, base_epoch, cache_epoch, cached_packages)) {
     // Show saved rows and skip the worker thread.
@@ -98,6 +100,7 @@ perform_search(SearchWidgets *widgets, const std::string &term)
     std::string msg =
         dnfui_i18n_format_count(cached_packages.size(), "Loaded %zu cached result.", "Loaded %zu cached results.");
     ui_helpers_set_status(widgets->query.status_label, msg, "gray");
+    package_query_show_duration_label(widgets, _("Search"), started_at_us);
     package_query_finish_results_refresh(widgets);
 
     return;
@@ -226,6 +229,7 @@ package_query_on_clear_button_clicked(GtkButton *, gpointer user_data)
   widgets->query_state.reload_selected_nevra.clear();
   widgets->results.selected_nevra.clear();
   package_table_fill_package_view(widgets, {});
+  package_query_clear_duration_label(widgets);
 
   // Reset status labels and package actions.
   ui_helpers_set_status(widgets->query.status_label, _("Ready."), "gray");

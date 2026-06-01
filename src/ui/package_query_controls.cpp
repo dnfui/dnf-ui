@@ -76,6 +76,42 @@ package_query_finish_results_refresh(SearchWidgets *widgets)
 }
 
 // -----------------------------------------------------------------------------
+// Hide the package query timing label while new work is running.
+// -----------------------------------------------------------------------------
+void
+package_query_clear_duration_label(SearchWidgets *widgets)
+{
+  if (!widgets || !widgets->window_state.query_duration_label) {
+    return;
+  }
+
+  gtk_label_set_text(widgets->window_state.query_duration_label, "");
+  gtk_widget_set_visible(GTK_WIDGET(widgets->window_state.query_duration_label), FALSE);
+}
+
+// -----------------------------------------------------------------------------
+// Show how long a package query took in the bottom bar.
+// -----------------------------------------------------------------------------
+void
+package_query_show_duration_label(SearchWidgets *widgets, const char *title, gint64 started_at_us)
+{
+  if (!widgets || !widgets->window_state.query_duration_label || started_at_us <= 0) {
+    return;
+  }
+
+  gint64 elapsed_us = g_get_monotonic_time() - started_at_us;
+  if (elapsed_us < 0) {
+    elapsed_us = 0;
+  }
+
+  const double elapsed_seconds = static_cast<double>(elapsed_us) / 1000000.0;
+  const char *display_title = title ? title : _("Query");
+  std::string text = dnfui_i18n_format(_("%s: %.1f s"), display_title, elapsed_seconds);
+  gtk_label_set_text(widgets->window_state.query_duration_label, text.c_str());
+  gtk_widget_set_visible(GTK_WIDGET(widgets->window_state.query_duration_label), TRUE);
+}
+
+// -----------------------------------------------------------------------------
 // Return true when a package list task is currently running.
 // -----------------------------------------------------------------------------
 bool
@@ -172,6 +208,8 @@ package_query_begin_package_list_request(SearchWidgets *widgets,
   widgets->query_state.current_package_list_request_id = request_id;
   widgets->query_state.current_package_list_request_kind = kind;
   GtkButton *stop_button = package_list_stop_button(widgets, kind);
+
+  package_query_clear_duration_label(widgets);
 
   ui_helpers_set_icon_button(widgets->query.search_button, "system-search-symbolic", _("Search"));
   ui_helpers_set_icon_button(widgets->query.list_button, "view-list-symbolic", _("List Installed"));
