@@ -11,6 +11,7 @@
 #include "widgets.hpp"
 
 #include <string>
+#include <vector>
 
 // -----------------------------------------------------------------------------
 // Convert one backend install state into the Status column text.
@@ -83,44 +84,150 @@ status_cell_icon(GtkWidget *cell)
 }
 
 // -----------------------------------------------------------------------------
-// Return the CSS class for a pending action, if the row is currently marked.
+// Return true when one package ID describes the current row.
 // -----------------------------------------------------------------------------
-static const char *
-pending_css_class(SearchWidgets *widgets, const std::string &nevra, const std::string &alternate_nevra)
+static bool
+package_id_matches_row(const std::string &package_nevra, const std::string &nevra, const std::string &alternate_nevra)
 {
-  for (const auto &a : widgets->transaction.actions) {
-    if (a.nevra == nevra || (!alternate_nevra.empty() && a.nevra == alternate_nevra)) {
-      switch (a.type) {
-      case PendingAction::INSTALL:
-      case PendingAction::UPGRADE:
-        return "package-status-pending-install";
-      case PendingAction::REINSTALL:
-        return "package-status-pending-reinstall";
-      case PendingAction::REMOVE:
-        return "package-status-pending-remove";
-      }
-    }
-  }
-  return nullptr;
+  return package_nevra == nevra || (!alternate_nevra.empty() && package_nevra == alternate_nevra);
 }
 
 // -----------------------------------------------------------------------------
-// Return the icon name for a pending action.
+// Return true when one resolved preview section contains the current row.
 // -----------------------------------------------------------------------------
-static const char *
-pending_icon_name(PendingAction::Type action_type, PackageInstallState install_state)
+static bool
+preview_section_matches_row(const std::vector<std::string> &items,
+                            const std::string &nevra,
+                            const std::string &alternate_nevra)
 {
-  switch (action_type) {
-  case PendingAction::INSTALL:
-  case PendingAction::UPGRADE:
-    return install_state == PackageInstallState::UPGRADEABLE ? "view-refresh-symbolic" : "list-add-symbolic";
-  case PendingAction::REINSTALL:
-    return "view-refresh-symbolic";
-  case PendingAction::REMOVE:
-    return "list-remove-symbolic";
+  for (const auto &item : items) {
+    if (package_id_matches_row(item, nevra, alternate_nevra)) {
+      return true;
+    }
   }
 
-  return nullptr;
+  return false;
+}
+
+// -----------------------------------------------------------------------------
+// Return the text shown for a transaction effect in the Status column.
+// -----------------------------------------------------------------------------
+static const char *
+status_effect_text(PackageTableStatusEffect effect, PackageInstallState install_state)
+{
+  switch (effect) {
+  case PackageTableStatusEffect::PENDING_INSTALL:
+    return install_state == PackageInstallState::UPGRADEABLE ? _("Pending Upgrade") : _("Pending Install");
+  case PackageTableStatusEffect::PENDING_REINSTALL:
+    return _("Pending Reinstall");
+  case PackageTableStatusEffect::PENDING_REMOVE:
+    return _("Pending Removal");
+  case PackageTableStatusEffect::PREVIEW_INSTALL:
+    return _("Required Install");
+  case PackageTableStatusEffect::PREVIEW_UPGRADE:
+    return _("Required Upgrade");
+  case PackageTableStatusEffect::PREVIEW_DOWNGRADE:
+    return _("Required Downgrade");
+  case PackageTableStatusEffect::PREVIEW_REINSTALL:
+    return _("Required Reinstall");
+  case PackageTableStatusEffect::PREVIEW_REMOVE:
+    return _("Required Removal");
+  case PackageTableStatusEffect::NONE:
+  default:
+    return package_table_status_text(install_state);
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Return the CSS class for one Status column transaction effect.
+// -----------------------------------------------------------------------------
+static const char *
+status_effect_css_class(PackageTableStatusEffect effect)
+{
+  switch (effect) {
+  case PackageTableStatusEffect::PENDING_INSTALL:
+    return "package-status-pending-install";
+  case PackageTableStatusEffect::PENDING_REINSTALL:
+    return "package-status-pending-reinstall";
+  case PackageTableStatusEffect::PENDING_REMOVE:
+    return "package-status-pending-remove";
+  case PackageTableStatusEffect::PREVIEW_INSTALL:
+  case PackageTableStatusEffect::PREVIEW_UPGRADE:
+  case PackageTableStatusEffect::PREVIEW_DOWNGRADE:
+  case PackageTableStatusEffect::PREVIEW_REINSTALL:
+  case PackageTableStatusEffect::PREVIEW_REMOVE:
+    return "package-status-required-change";
+  case PackageTableStatusEffect::NONE:
+  default:
+    return nullptr;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Return true when the effect came from a prepared preview rather than a marked action.
+// -----------------------------------------------------------------------------
+static bool
+status_effect_is_preview(PackageTableStatusEffect effect)
+{
+  switch (effect) {
+  case PackageTableStatusEffect::PREVIEW_INSTALL:
+  case PackageTableStatusEffect::PREVIEW_UPGRADE:
+  case PackageTableStatusEffect::PREVIEW_DOWNGRADE:
+  case PackageTableStatusEffect::PREVIEW_REINSTALL:
+  case PackageTableStatusEffect::PREVIEW_REMOVE:
+    return true;
+  case PackageTableStatusEffect::NONE:
+  case PackageTableStatusEffect::PENDING_INSTALL:
+  case PackageTableStatusEffect::PENDING_REINSTALL:
+  case PackageTableStatusEffect::PENDING_REMOVE:
+  default:
+    return false;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Return the current transaction effect for one package row.
+// -----------------------------------------------------------------------------
+PackageTableStatusEffect
+package_table_status_effect_for_row(const PendingTransactionWidgets &transaction,
+                                    const std::string &nevra,
+                                    const std::string &alternate_nevra)
+{
+  for (const auto &a : transaction.actions) {
+    if (package_id_matches_row(a.nevra, nevra, alternate_nevra)) {
+      switch (a.type) {
+      case PendingAction::INSTALL:
+      case PendingAction::UPGRADE:
+        return PackageTableStatusEffect::PENDING_INSTALL;
+      case PendingAction::REINSTALL:
+        return PackageTableStatusEffect::PENDING_REINSTALL;
+      case PendingAction::REMOVE:
+        return PackageTableStatusEffect::PENDING_REMOVE;
+      }
+    }
+  }
+
+  if (!transaction.show_required_package_changes) {
+    return PackageTableStatusEffect::NONE;
+  }
+
+  if (preview_section_matches_row(transaction.prepared_preview.install, nevra, alternate_nevra)) {
+    return PackageTableStatusEffect::PREVIEW_INSTALL;
+  }
+  if (preview_section_matches_row(transaction.prepared_preview.upgrade, nevra, alternate_nevra)) {
+    return PackageTableStatusEffect::PREVIEW_UPGRADE;
+  }
+  if (preview_section_matches_row(transaction.prepared_preview.downgrade, nevra, alternate_nevra)) {
+    return PackageTableStatusEffect::PREVIEW_DOWNGRADE;
+  }
+  if (preview_section_matches_row(transaction.prepared_preview.reinstall, nevra, alternate_nevra)) {
+    return PackageTableStatusEffect::PREVIEW_REINSTALL;
+  }
+  if (preview_section_matches_row(transaction.prepared_preview.remove, nevra, alternate_nevra)) {
+    return PackageTableStatusEffect::PREVIEW_REMOVE;
+  }
+
+  return PackageTableStatusEffect::NONE;
 }
 
 // -----------------------------------------------------------------------------
@@ -143,6 +250,31 @@ status_icon_name(PackageInstallState state)
 }
 
 // -----------------------------------------------------------------------------
+// Return the icon name for one Status column transaction effect.
+// -----------------------------------------------------------------------------
+static const char *
+status_effect_icon_name(PackageTableStatusEffect effect, PackageInstallState install_state)
+{
+  switch (effect) {
+  case PackageTableStatusEffect::PENDING_INSTALL:
+    return install_state == PackageInstallState::UPGRADEABLE ? "view-refresh-symbolic" : "list-add-symbolic";
+  case PackageTableStatusEffect::PREVIEW_INSTALL:
+    return "list-add-symbolic";
+  case PackageTableStatusEffect::PENDING_REINSTALL:
+  case PackageTableStatusEffect::PREVIEW_UPGRADE:
+  case PackageTableStatusEffect::PREVIEW_DOWNGRADE:
+  case PackageTableStatusEffect::PREVIEW_REINSTALL:
+    return "view-refresh-symbolic";
+  case PackageTableStatusEffect::PENDING_REMOVE:
+  case PackageTableStatusEffect::PREVIEW_REMOVE:
+    return "list-remove-symbolic";
+  case PackageTableStatusEffect::NONE:
+  default:
+    return status_icon_name(install_state);
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Remove all Status-column CSS classes before applying the current one.
 // -----------------------------------------------------------------------------
 void
@@ -156,6 +288,7 @@ package_table_clear_status_css(GtkWidget *cell)
   gtk_widget_remove_css_class(cell, "package-status-pending-install");
   gtk_widget_remove_css_class(cell, "package-status-pending-reinstall");
   gtk_widget_remove_css_class(cell, "package-status-pending-remove");
+  gtk_widget_remove_css_class(cell, "package-status-required-change");
 
   if (GtkWidget *icon = status_cell_icon(cell)) {
     gtk_widget_set_visible(icon, FALSE);
@@ -174,40 +307,7 @@ package_table_update_status_label(GtkWidget *cell, SearchWidgets *widgets, const
     action_rows = package_action_rows_for_selection(row);
   }
 
-  const char *text = package_table_status_text(install_state);
-  const char *icon_name = status_icon_name(install_state);
-  for (const auto &a : widgets->transaction.actions) {
-    bool action_matches_visible_row = a.nevra == row.nevra;
-    bool action_matches_install_row = action_rows.has_install_row && a.nevra == action_rows.install_row.nevra;
-    bool action_matches_installed_row = action_rows.has_installed_row && a.nevra == action_rows.installed_row.nevra;
-    if (action_matches_visible_row || action_matches_install_row || action_matches_installed_row) {
-      switch (a.type) {
-      case PendingAction::INSTALL:
-      case PendingAction::UPGRADE:
-        text = install_state == PackageInstallState::UPGRADEABLE ? _("Pending Upgrade") : _("Pending Install");
-        break;
-      case PendingAction::REINSTALL:
-        text = _("Pending Reinstall");
-        break;
-      case PendingAction::REMOVE:
-        text = _("Pending Removal");
-        break;
-      }
-      icon_name = pending_icon_name(a.type, install_state);
-      break;
-    }
-  }
-
-  GtkWidget *label = status_cell_label(cell);
-  gtk_label_set_text(GTK_LABEL(label), text);
-
   package_table_clear_status_css(cell);
-
-  if (GtkWidget *icon = status_cell_icon(cell)) {
-    gtk_image_set_from_icon_name(GTK_IMAGE(icon), icon_name);
-    gtk_widget_set_visible(icon, icon_name != nullptr);
-  }
-
   std::string alternate_nevra;
 
   // Upgradable rows can show one package ID while the pending action uses a matching installed or available package ID.
@@ -217,8 +317,19 @@ package_table_update_status_label(GtkWidget *cell, SearchWidgets *widgets, const
     alternate_nevra = action_rows.installed_row.nevra;
   }
 
-  if (const char *pending_class = pending_css_class(widgets, row.nevra, alternate_nevra)) {
-    gtk_widget_add_css_class(cell, pending_class);
+  PackageTableStatusEffect effect =
+      package_table_status_effect_for_row(widgets->transaction, row.nevra, alternate_nevra);
+  GtkWidget *label = status_cell_label(cell);
+  gtk_label_set_text(GTK_LABEL(label), status_effect_text(effect, install_state));
+
+  if (GtkWidget *icon = status_cell_icon(cell)) {
+    const char *icon_name = status_effect_icon_name(effect, install_state);
+    gtk_image_set_from_icon_name(GTK_IMAGE(icon), icon_name);
+    gtk_widget_set_visible(icon, icon_name != nullptr);
+  }
+
+  if (const char *effect_class = status_effect_css_class(effect)) {
+    gtk_widget_add_css_class(cell, effect_class);
   } else {
     if (install_state == PackageInstallState::LOCAL_ONLY) {
       gtk_widget_add_css_class(cell, "package-status-local-only");
@@ -234,6 +345,12 @@ package_table_update_status_label(GtkWidget *cell, SearchWidgets *widgets, const
   }
 
   std::string tooltip = package_table_status_tooltip_text(row);
+  if (status_effect_is_preview(effect)) {
+    if (!tooltip.empty()) {
+      tooltip += "\n";
+    }
+    tooltip += _("This package is required by the current pending changes.");
+  }
   gtk_widget_set_tooltip_text(cell, tooltip.empty() ? nullptr : tooltip.c_str());
 }
 

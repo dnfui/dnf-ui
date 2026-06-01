@@ -78,10 +78,7 @@ pending_transaction_on_install_button_clicked(GtkButton *, gpointer user_data)
   const std::string installed_nevra = action_rows.has_installed_row ? action_rows.installed_row.nevra : pkg.nevra;
   ui_helpers_update_action_button_labels_for_selection(
       widgets, action_rows.install_row.nevra, installed_nevra, installed_nevra, action_rows.install_is_upgrade);
-  pending_transaction_invalidate_service_preview(widgets);
-
-  // Refresh status badges without rebuilding the package table.
-  package_table_refresh_statuses(widgets);
+  pending_transaction_refresh_affected_packages(widgets);
 }
 
 // -----------------------------------------------------------------------------
@@ -145,10 +142,7 @@ pending_transaction_on_remove_button_clicked(GtkButton *, gpointer user_data)
                                                        action_rows.installed_row.nevra,
                                                        action_rows.installed_row.nevra,
                                                        action_rows.install_is_upgrade);
-  pending_transaction_invalidate_service_preview(widgets);
-
-  // Refresh status badges without rebuilding the package table.
-  package_table_refresh_statuses(widgets);
+  pending_transaction_refresh_affected_packages(widgets);
 }
 
 // -----------------------------------------------------------------------------
@@ -214,9 +208,7 @@ pending_transaction_on_reinstall_button_clicked(GtkButton *, gpointer user_data)
                                                        action_rows.installed_row.nevra,
                                                        action_rows.installed_row.nevra,
                                                        action_rows.install_is_upgrade);
-  pending_transaction_invalidate_service_preview(widgets);
-
-  package_table_refresh_statuses(widgets);
+  pending_transaction_refresh_affected_packages(widgets);
 }
 
 // -----------------------------------------------------------------------------

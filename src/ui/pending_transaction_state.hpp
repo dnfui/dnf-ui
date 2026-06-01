@@ -6,6 +6,8 @@
 // -----------------------------------------------------------------------------
 #pragma once
 
+#include "dnf_backend/dnf_backend.hpp"
+
 #include <string>
 #include <vector>
 
@@ -30,9 +32,11 @@ struct PendingTransactionWidgets {
   GtkButton *apply_button = nullptr;
   GtkButton *clear_pending_button = nullptr;
   GtkListBox *pending_list = nullptr;
+  bool show_required_package_changes = false;
   bool preview_request_in_progress = false;
   bool preview_upgrade_all = false;
   std::vector<PendingAction> actions;
+  TransactionPreview prepared_preview;
   std::string preview_transaction_path;
 };
 

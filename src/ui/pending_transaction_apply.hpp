@@ -14,6 +14,10 @@ struct SearchWidgets;
 // -----------------------------------------------------------------------------
 void pending_transaction_invalidate_service_preview(SearchWidgets *widgets);
 // -----------------------------------------------------------------------------
+// Prepare affected package status badges after pending actions change.
+// -----------------------------------------------------------------------------
+void pending_transaction_refresh_affected_packages(SearchWidgets *widgets);
+// -----------------------------------------------------------------------------
 // Return the status text shown while a preview request is running.
 // -----------------------------------------------------------------------------
 const char *pending_transaction_preview_busy_message();

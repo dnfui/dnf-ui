@@ -9,6 +9,7 @@
 #include "dnf_backend/dnf_backend.hpp"
 #include "i18n.hpp"
 #include "package_query_controller.hpp"
+#include "package_table_view.hpp"
 #include "pending_transaction_controller.hpp"
 #include "pending_transaction_request.hpp"
 #include "pending_transaction_view.hpp"
@@ -33,6 +34,7 @@ struct PreviewTaskData {
   TransactionPreview preview;
   std::string transaction_path;
   bool transaction_path_transferred = false;
+  bool show_summary = true;
 };
 
 // -----------------------------------------------------------------------------
@@ -86,6 +88,8 @@ pending_transaction_invalidate_service_preview(SearchWidgets *widgets)
 
   widgets->transaction.preview_transaction_path.clear();
   widgets->transaction.preview_upgrade_all = false;
+  widgets->transaction.prepared_preview = {};
+  package_table_refresh_statuses(widgets);
 }
 
 // -----------------------------------------------------------------------------
@@ -237,6 +241,7 @@ start_apply_transaction(SearchWidgets *widgets)
           // Clear pending actions and refresh the tab.
           widgets->transaction.actions.clear();
           pending_transaction_refresh_pending_tab(widgets);
+          package_table_refresh_statuses(widgets);
 
           ui_helpers_set_status(widgets->query.status_label, _("Transaction successful."), "green");
 
@@ -284,19 +289,21 @@ start_apply_transaction(SearchWidgets *widgets)
 }
 
 // -----------------------------------------------------------------------------
-// Prepare a service-backed transaction preview and show the confirmation dialog.
+// Prepare a service-backed transaction preview.
 // -----------------------------------------------------------------------------
 static void
-start_preview_request(SearchWidgets *widgets, TransactionRequest request)
+start_preview_request(SearchWidgets *widgets, TransactionRequest request, bool show_summary)
 {
-  pending_transaction_invalidate_service_preview(widgets);
   widgets->transaction.preview_upgrade_all = request.upgrade_all;
-  ui_helpers_set_status(widgets->query.status_label, _("Preparing transaction preview..."), "blue");
+  ui_helpers_set_status(widgets->query.status_label,
+                        show_summary ? _("Preparing transaction preview...") : _("Preparing affected package list..."),
+                        "blue");
   widgets_spinner_acquire(widgets->query.spinner);
   set_preview_request_busy_state(widgets, true);
 
   PreviewTaskData *td = new PreviewTaskData();
   td->request = std::move(request);
+  td->show_summary = show_summary;
 
   GCancellable *c = widgets_make_task_cancellable_for(GTK_WIDGET(widgets->query.entry));
   GTask *task = widgets_task_new_for_search_widgets(
@@ -319,13 +326,27 @@ start_preview_request(SearchWidgets *widgets, TransactionRequest request)
               error && error->message ? error->message : _("Unable to prepare transaction preview.");
           widgets->transaction.preview_upgrade_all = false;
           ui_helpers_set_status(widgets->query.status_label, status_message, "red");
-          transaction_review_show_error_dialog(widgets,
-                                               _("Transaction Preview Failed"),
-                                               _("The transaction could not be prepared. Review the details below."),
-                                               status_message);
+          if (!td || td->show_summary) {
+            transaction_review_show_error_dialog(widgets,
+                                                 _("Transaction Preview Failed"),
+                                                 _("The transaction could not be prepared. Review the details below."),
+                                                 status_message);
+          }
           if (error) {
             g_error_free(error);
           }
+          return;
+        }
+
+        if (!td->show_summary && !widgets->transaction.show_required_package_changes) {
+          if (!td->transaction_path.empty()) {
+            transaction_service_client_release_request_async(td->transaction_path);
+            td->transaction_path.clear();
+          }
+          widgets->transaction.preview_transaction_path.clear();
+          widgets->transaction.preview_upgrade_all = false;
+          widgets->transaction.prepared_preview = {};
+          package_table_refresh_statuses(widgets);
           return;
         }
 
@@ -336,15 +357,23 @@ start_preview_request(SearchWidgets *widgets, TransactionRequest request)
           }
           widgets->transaction.preview_transaction_path.clear();
           widgets->transaction.preview_upgrade_all = false;
+          widgets->transaction.prepared_preview = {};
+          package_table_refresh_statuses(widgets);
           ui_helpers_set_status(widgets->query.status_label, _("All packages are already up to date."), "green");
           return;
         }
 
         widgets->transaction.preview_transaction_path = td->transaction_path;
         widgets->transaction.preview_upgrade_all = td->request.upgrade_all;
+        widgets->transaction.prepared_preview = td->preview;
+        package_table_refresh_statuses(widgets);
         td->transaction_path_transferred = true;
-        transaction_review_show_summary_dialog(
-            widgets, td->preview, start_apply_transaction, pending_transaction_invalidate_service_preview);
+        if (td->show_summary) {
+          transaction_review_show_summary_dialog(
+              widgets, td->preview, start_apply_transaction, pending_transaction_invalidate_service_preview);
+        } else {
+          ui_helpers_set_status(widgets->query.status_label, _("Affected package list ready."), "green");
+        }
       });
 
   g_task_set_task_data(task, td, preview_task_data_free);
@@ -376,6 +405,42 @@ start_preview_request(SearchWidgets *widgets, TransactionRequest request)
 }
 
 // -----------------------------------------------------------------------------
+// Prepare affected package status badges after pending actions change.
+// -----------------------------------------------------------------------------
+void
+pending_transaction_refresh_affected_packages(SearchWidgets *widgets)
+{
+  if (!widgets) {
+    return;
+  }
+
+  pending_transaction_invalidate_service_preview(widgets);
+  if (!widgets->transaction.show_required_package_changes) {
+    return;
+  }
+  if (widgets->transaction.actions.empty()) {
+    return;
+  }
+
+  if (pending_transaction_preview_is_busy(widgets)) {
+    // A running preview owns the single prepared preview slot.
+    // Do not start another affected package refresh until it finishes.
+    return;
+  }
+
+  TransactionRequest request;
+  std::string error;
+  pending_transaction_build_request(widgets->transaction.actions, request);
+
+  if (!pending_transaction_validate_request(request, error)) {
+    ui_helpers_set_status(widgets->query.status_label, error.c_str(), "red");
+    return;
+  }
+
+  start_preview_request(widgets, std::move(request), false);
+}
+
+// -----------------------------------------------------------------------------
 // Prepare a transaction preview for all package upgrades.
 // -----------------------------------------------------------------------------
 void
@@ -401,7 +466,8 @@ pending_transaction_on_upgrade_all_button_clicked(GtkButton *, gpointer user_dat
     return;
   }
 
-  start_preview_request(widgets, std::move(request));
+  pending_transaction_invalidate_service_preview(widgets);
+  start_preview_request(widgets, std::move(request), true);
 }
 
 // -----------------------------------------------------------------------------
@@ -421,6 +487,14 @@ pending_transaction_on_apply_button_clicked(GtkButton *, gpointer user_data)
     return;
   }
 
+  if (!widgets->transaction.preview_transaction_path.empty() && !widgets->transaction.prepared_preview.empty()) {
+    transaction_review_show_summary_dialog(widgets,
+                                           widgets->transaction.prepared_preview,
+                                           start_apply_transaction,
+                                           pending_transaction_invalidate_service_preview);
+    return;
+  }
+
   TransactionRequest request;
   std::string error;
   pending_transaction_build_request(widgets->transaction.actions, request);
@@ -431,7 +505,8 @@ pending_transaction_on_apply_button_clicked(GtkButton *, gpointer user_data)
     return;
   }
 
-  start_preview_request(widgets, std::move(request));
+  pending_transaction_invalidate_service_preview(widgets);
+  start_preview_request(widgets, std::move(request), true);
 }
 
 // -----------------------------------------------------------------------------

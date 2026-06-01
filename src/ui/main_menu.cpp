@@ -7,6 +7,7 @@
 
 #include "i18n.hpp"
 #include "package_query_controller.hpp"
+#include "pending_transaction_apply.hpp"
 #include "ui_helpers.hpp"
 #include "widgets.hpp"
 
@@ -133,6 +134,23 @@ on_menu_show_info_changed(GSimpleAction *action, GVariant *value, gpointer user_
 }
 
 // -----------------------------------------------------------------------------
+// Show or hide required package changes in the package table.
+// -----------------------------------------------------------------------------
+static void
+on_menu_show_required_package_changes_changed(GSimpleAction *action, GVariant *value, gpointer user_data)
+{
+  MainMenuActionData *data = static_cast<MainMenuActionData *>(user_data);
+  if (!data || !data->widgets || !value) {
+    return;
+  }
+
+  gboolean enabled = g_variant_get_boolean(value);
+  data->widgets->transaction.show_required_package_changes = enabled;
+  g_simple_action_set_state(action, value);
+  pending_transaction_refresh_affected_packages(data->widgets);
+}
+
+// -----------------------------------------------------------------------------
 // Build the top menu bar shown above the package workflow controls
 // -----------------------------------------------------------------------------
 GtkWidget *
@@ -154,6 +172,7 @@ main_menu_create()
   GMenu *package_menu = g_menu_new();
   g_menu_append(package_menu, _("Clear List"), "win.clear-list");
   g_menu_append(package_menu, _("Clear Search Cache"), "win.clear-cache");
+  g_menu_append(package_menu, _("Show Required Package Changes"), "win.show-required-package-changes");
   g_menu_append_submenu(menu_bar, _("Package"), G_MENU_MODEL(package_menu));
   g_object_unref(package_menu);
 
@@ -184,7 +203,7 @@ main_menu_connect_actions(const MainMenuWidgets &menu_widgets, SearchWidgets *wi
         delete static_cast<MainMenuActionData *>(p);
       });
 
-  GActionEntry entries[6] = {};
+  GActionEntry entries[7] = {};
   entries[0].name = "quit";
   entries[0].activate = on_menu_quit;
   entries[1].name = "clear-list";
@@ -199,6 +218,9 @@ main_menu_connect_actions(const MainMenuWidgets &menu_widgets, SearchWidgets *wi
   entries[4].change_state = on_menu_show_info_changed;
   entries[5].name = "about";
   entries[5].activate = on_menu_about;
+  entries[6].name = "show-required-package-changes";
+  entries[6].state = "false";
+  entries[6].change_state = on_menu_show_required_package_changes_changed;
 
   GSimpleActionGroup *actions = g_simple_action_group_new();
   g_action_map_add_action_entries(G_ACTION_MAP(actions), entries, G_N_ELEMENTS(entries), data);
