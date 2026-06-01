@@ -125,7 +125,7 @@ set_preview_request_busy_state(SearchWidgets *widgets, bool busy)
   }
 
   if (busy) {
-    ui_helpers_set_icon_button(widgets->transaction.apply_button, "emblem-ok-symbolic", _("Preparing Preview..."));
+    ui_helpers_set_icon_button(widgets->transaction.apply_button, "object-select-symbolic", _("Preparing Preview..."));
     gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.apply_button), FALSE);
     gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.clear_pending_button), FALSE);
     return;

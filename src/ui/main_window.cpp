@@ -290,7 +290,7 @@ build_main_ui(AppWidgets *ui)
   gtk_box_append(GTK_BOX(hbox_tx_buttons), upgrade_all_button);
   ui->upgrade_all_button = upgrade_all_button;
 
-  GtkWidget *apply_button = ui_helpers_create_icon_button("emblem-ok-symbolic", _("Apply Transactions"));
+  GtkWidget *apply_button = ui_helpers_create_icon_button("object-select-symbolic", _("Apply Transactions"));
   gtk_box_append(GTK_BOX(hbox_tx_buttons), apply_button);
   ui->apply_button = apply_button;
 
