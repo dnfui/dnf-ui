@@ -140,6 +140,7 @@ help:
 	@printf '%-36s %s\n' 'uninstall' 'Remove the installed app and transaction service files.'
 	@printf '%-36s %s\n' 'serviceinstall' 'Install only the transaction service files.'
 	@printf '%-36s %s\n' 'serviceuninstall' 'Remove only the transaction service files.'
+	@printf '%-36s %s\n' 'nativeinstalltest' 'Build the RPM and reinstall it on the native system.'
 	@printf '\n%s\n' 'Native transaction service tests'
 	@printf '%s\n' '----------------------------------------'
 	@printf '%-36s %s\n' 'servicetest' 'Run the native session bus preview service test.'
@@ -311,6 +312,14 @@ serviceuninstall:
 	rm -f $(SERVICE_INSTALL_FILES)
 	$(call refresh_transaction_service_state)
 	@echo "*** Removed native transaction service files. ***"
+
+# Native install test:
+# - Builds a fresh RPM
+# - Removes any installed DNF UI package
+# - Installs the freshly built RPM
+.PHONY: nativeinstalltest
+nativeinstalltest:
+	@./utils/native_install_test.sh
 
 # -----------------------------------------------------------------------------
 # Native transaction service smoke tests
