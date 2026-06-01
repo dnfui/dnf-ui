@@ -25,6 +25,8 @@ mkdir -p \
   "$RPM_TOPDIR/SRPMS" \
   "$RPM_TMPDIR"
 
+# Package only tracked source files so ignored build outputs do not enter the
+# release archive.
 mapfile -d '' SOURCE_FILES < <(git -C "$PROJECT_ROOT" ls-files -z)
 
 tar \
@@ -42,6 +44,8 @@ rpmbuild -bs \
   --define "_tmppath $RPM_TMPDIR" \
   "$RPM_TOPDIR/SPECS/$(basename "$SPEC_FILE")"
 
+# Keep a stable symlink for scripts and CI steps that need the newest SRPM
+# without knowing its exact release suffix.
 LATEST_SRPM="$(
   find "$RPM_TOPDIR/SRPMS" -type f -name "*.src.rpm" -printf '%T@ %p\n' |
     sort -n |

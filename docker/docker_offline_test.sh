@@ -35,6 +35,8 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# Share only the DNF cache between the online and offline containers. The second
+# run disables networking, so any package data it sees must come from this cache.
 "$CONTAINER_RUNTIME" volume create "$CACHE_VOLUME_NAME" >/dev/null
 
 color_print "$FMT_GREEN" "*** Priming DNF cache online inside container... ***"

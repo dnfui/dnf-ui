@@ -54,6 +54,8 @@ fi
 SERVICE_LOG="$(mktemp)"
 POLKIT_LOG="$(mktemp)"
 
+# Keep service and polkit logs until cleanup so failures can print useful
+# diagnostics from the private bus test.
 cleanup() {
   if [ -n "${service_pid:-}" ]; then
     kill "$service_pid" >/dev/null 2>&1 || true
@@ -79,6 +81,8 @@ print_logs() {
   cat "$POLKIT_LOG" || true
 }
 
+# Preview and apply finish after the D-Bus method returns. Poll the Result
+# method until the request reaches the expected final state or fails.
 wait_for_result() {
   local transaction_path="$1"
   local expected_stage="$2"
@@ -122,6 +126,8 @@ wait_for_result() {
   done
 }
 
+# Release is checked from a separate process. A live request can still deny that
+# process while ownership cleanup is pending, so AccessDenied is retried.
 wait_for_release() {
   local transaction_path="$1"
   local deadline="$((SECONDS + TIMEOUT_SECONDS))"
@@ -197,11 +203,14 @@ if ! id "$TEST_USER" >/dev/null 2>&1; then
   useradd -m "$TEST_USER"
 fi
 
+# Install files into their packaged system locations inside the disposable
+# container so the smoke test exercises the same service contract as install.
 install -D -m 0755 "$SERVICE_BIN" "$TRANSACTION_SERVICE_BIN_DEST"
 install -D -m 0644 "$POLICY_FILE" "$TRANSACTION_SERVICE_POLICY_DEST"
 install -D -m 0644 "$BUS_POLICY_FILE" "$TRANSACTION_SERVICE_DBUS_POLICY_DEST"
 
 if [ -n "$ALLOW_APPLY" ]; then
+  # The apply test needs a deterministic polkit answer for the test user.
   install -d /etc/polkit-1/rules.d
   cat >"$RULES_FILE" <<'EOF'
 polkit.addRule(function(action, subject) {
@@ -218,6 +227,8 @@ fi
 mkdir -p /run/dbus
 dbus-uuidgen --ensure=/etc/machine-id
 
+# Start a private system bus instead of relying on any bus from the container
+# host environment.
 dbus_info="$(dbus-daemon --system --fork --nopidfile --print-address=1 --print-pid=1)"
 DBUS_SYSTEM_BUS_ADDRESS="$(printf "%s\n" "$dbus_info" | sed -n '1p')"
 dbus_pid="$(printf "%s\n" "$dbus_info" | sed -n '2p')"

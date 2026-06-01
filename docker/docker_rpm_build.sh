@@ -28,6 +28,8 @@ CONTAINER_RUN_ARGS=()
 CONTAINER_BUILD_COMMAND='
   set -e
 
+  # Docker normally starts as root. Create a matching user inside the container
+  # so files written into the bind mount keep the host user ownership.
   if ! getent group "$HOST_GID" >/dev/null; then
     groupadd -g "$HOST_GID" dnfui-builder
   fi
@@ -47,6 +49,8 @@ CONTAINER_BUILD_COMMAND='
 '
 
 if [ "$CONTAINER_RUNTIME" = "podman" ] && [ "$HOST_UID" != "0" ]; then
+  # Podman can preserve the host user directly, so the container does not need
+  # to create a matching build user first.
   CONTAINER_RUN_ARGS=(
     --userns=keep-id
     --user "$HOST_UID:$HOST_GID"

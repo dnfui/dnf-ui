@@ -38,6 +38,8 @@ export GDB_PORT
 
 rm -f /tmp/dnfui-gdb-session-bus
 
+# The host wrapper passes the same fixed socket address into the container.
+# Starting the bus here gives both the app and service a private D-Bus endpoint.
 dbus_info="$(dbus-daemon --session --fork --nopidfile --print-address=1 --print-pid=1 --address="$DBUS_SESSION_BUS_ADDRESS")"
 DBUS_SESSION_BUS_ADDRESS="$(printf "%s\n" "$dbus_info" | sed -n '1p')"
 dbus_pid="$(printf "%s\n" "$dbus_info" | sed -n '2p')"
@@ -55,7 +57,8 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Wait until the transaction service has claimed its D-Bus name:
+# Wait until the transaction service has claimed its D-Bus name before starting
+# the UI. Otherwise the first preview request can race service startup.
 gdbus wait --session "$TRANSACTION_SERVICE_NAME" >/dev/null
 
 # Start the UI under gdbserver in the same session bus environment:

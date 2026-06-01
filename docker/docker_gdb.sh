@@ -50,7 +50,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 HOST_DIR="$PROJECT_ROOT"
 
-# Pass through the host display server connection:
+# Pass through the host display server connection so the app started by
+# gdbserver can open its GTK window from inside the container.
 if [ "$XDG_SESSION_TYPE" = "wayland" ] && [ -n "$WAYLAND_DISPLAY" ]; then
   color_print "$FMT_BLUE" "*** Wayland detected ***"
   DISPLAY_OPTS=(
@@ -81,7 +82,8 @@ if "$CONTAINER_RUNTIME" container inspect "$CONTAINER_NAME" >/dev/null 2>&1; the
   "$CONTAINER_RUNTIME" rm -f "$CONTAINER_NAME" >/dev/null
 fi
 
-# Configure the DNF cache used by libdnf5 inside the container:
+# Configure the DNF cache used by libdnf5 inside the container. A persistent
+# cache makes repeated debug launches faster, while empty starts from scratch.
 CACHE_OPTS=()
 case "$CACHE_MODE" in
 "persistent")
@@ -100,6 +102,9 @@ esac
 
 # Start the debug container in the background:
 color_print "$FMT_GREEN" "*** Starting Docker GDB debug server... ***"
+# gdbserver needs ptrace access to control the debugged process.
+# The app uses a private session bus so debugging does not depend on the host
+# system service or host polkit policy.
 "$CONTAINER_RUNTIME" run -d \
   --name "$CONTAINER_NAME" \
   --init \

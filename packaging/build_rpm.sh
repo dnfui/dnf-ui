@@ -9,6 +9,8 @@ RPM_TMPDIR="${RPM_TMPDIR:-$RPM_TOPDIR/TMP}"
 
 PACKAGE_NAME="$(rpmspec -q --srpm --qf '%{NAME}\n' "$SPEC_FILE" | head -n 1)"
 
+# Build the SRPM first so local RPM builds and release publishing use the same
+# source archive path.
 "$SCRIPT_DIR/build_srpm.sh"
 
 rpmbuild -ba \
@@ -16,6 +18,8 @@ rpmbuild -ba \
   --define "_tmppath $RPM_TMPDIR" \
   "$RPM_TOPDIR/SPECS/$(basename "$SPEC_FILE")"
 
+# Point the convenience symlink at the newest installable RPM, not the debug
+# packages produced by the same build.
 LATEST_RPM="$(
   find "$RPM_TOPDIR/RPMS" -type f \
     -name "${PACKAGE_NAME}-*.rpm" \
