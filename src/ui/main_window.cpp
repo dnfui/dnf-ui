@@ -76,6 +76,7 @@ struct MainWindowCleanupData {
 // -----------------------------------------------------------------------------
 static GtkWidget *create_window(GtkApplication *app);
 static GtkWidget *create_scrolled_text_view(const char *text, GtkWrapMode wrap_mode, GtkTextBuffer **out_buffer);
+static gboolean toggle_stateful_window_action(GtkWidget *widget, const char *action_name);
 static void setup_shortcuts(GtkWidget *window, GtkWidget *entry);
 static void build_main_ui(AppWidgets *ui);
 static std::shared_ptr<SearchWidgets> create_search_widgets(const AppWidgets *ui);
@@ -133,6 +134,33 @@ create_scrolled_text_view(const char *text, GtkWrapMode wrap_mode, GtkTextBuffer
 }
 
 // -----------------------------------------------------------------------------
+// Toggle one stateful window action by name.
+// -----------------------------------------------------------------------------
+static gboolean
+toggle_stateful_window_action(GtkWidget *widget, const char *action_name)
+{
+  if (!widget || !action_name) {
+    return FALSE;
+  }
+
+  GActionGroup *actions = G_ACTION_GROUP(g_object_get_data(G_OBJECT(widget), "dnfui-menu-action-group"));
+  if (!actions) {
+    return FALSE;
+  }
+
+  GVariant *state = g_action_group_get_action_state(actions, action_name);
+  if (!state) {
+    return FALSE;
+  }
+
+  gboolean enabled = g_variant_get_boolean(state);
+  g_variant_unref(state);
+  g_action_group_change_action_state(actions, action_name, g_variant_new_boolean(!enabled));
+
+  return TRUE;
+}
+
+// -----------------------------------------------------------------------------
 // Setup window keyboard shortcuts
 // -----------------------------------------------------------------------------
 static void
@@ -169,6 +197,26 @@ setup_shortcuts(GtkWidget *window, GtkWidget *entry)
                                                    NULL));
 
   gtk_shortcut_controller_add_shortcut(GTK_SHORTCUT_CONTROLLER(shortcuts), focus_search);
+
+  // Toggle Package Info Panel with Ctrl+I.
+  GtkShortcut *toggle_info = gtk_shortcut_new(gtk_keyval_trigger_new(GDK_KEY_i, GDK_CONTROL_MASK),
+                                              gtk_callback_action_new(
+                                                  +[](GtkWidget *widget, GVariant *, gpointer) -> gboolean {
+                                                    return toggle_stateful_window_action(widget, "show-info");
+                                                  },
+                                                  NULL,
+                                                  NULL));
+  gtk_shortcut_controller_add_shortcut(GTK_SHORTCUT_CONTROLLER(shortcuts), toggle_info);
+
+  // Toggle History Panel with Ctrl+H.
+  GtkShortcut *toggle_history = gtk_shortcut_new(gtk_keyval_trigger_new(GDK_KEY_h, GDK_CONTROL_MASK),
+                                                 gtk_callback_action_new(
+                                                     +[](GtkWidget *widget, GVariant *, gpointer) -> gboolean {
+                                                       return toggle_stateful_window_action(widget, "show-history");
+                                                     },
+                                                     NULL,
+                                                     NULL));
+  gtk_shortcut_controller_add_shortcut(GTK_SHORTCUT_CONTROLLER(shortcuts), toggle_history);
 }
 
 // -----------------------------------------------------------------------------
