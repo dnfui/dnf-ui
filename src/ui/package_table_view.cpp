@@ -85,11 +85,13 @@ create_empty_package_view()
   gtk_label_set_markup(GTK_LABEL(title), title_markup);
   g_free(title_markup);
   gtk_label_set_xalign(GTK_LABEL(title), 0.0f);
+  gtk_widget_add_css_class(title, "package-empty-title");
   gtk_box_append(GTK_BOX(outer), title);
 
   GtkWidget *message = gtk_label_new(_("Search for packages or choose List Packages."));
   gtk_label_set_xalign(GTK_LABEL(message), 0.0f);
   gtk_label_set_wrap(GTK_LABEL(message), TRUE);
+  gtk_widget_add_css_class(message, "package-empty-message");
   gtk_box_append(GTK_BOX(outer), message);
 
   GtkWidget *shortcuts = gtk_label_new(_("Shortcuts\n"
@@ -99,6 +101,7 @@ create_empty_package_view()
                                          "Ctrl+Q or Ctrl+W: Quit"));
   gtk_label_set_xalign(GTK_LABEL(shortcuts), 0.0f);
   gtk_label_set_selectable(GTK_LABEL(shortcuts), TRUE);
+  gtk_widget_add_css_class(shortcuts, "package-empty-shortcuts");
   gtk_box_append(GTK_BOX(outer), shortcuts);
 
   return outer;
