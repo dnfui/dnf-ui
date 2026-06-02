@@ -68,6 +68,43 @@ refresh_visible_status_labels(GtkWidget *widget, SearchWidgets *widgets)
 }
 
 // -----------------------------------------------------------------------------
+// Build the message shown when the package table has no rows.
+// -----------------------------------------------------------------------------
+static GtkWidget *
+create_empty_package_view()
+{
+  GtkWidget *outer = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
+  gtk_widget_set_halign(outer, GTK_ALIGN_CENTER);
+  gtk_widget_set_valign(outer, GTK_ALIGN_CENTER);
+  gtk_widget_set_hexpand(outer, TRUE);
+  gtk_widget_set_vexpand(outer, TRUE);
+  gtk_widget_add_css_class(outer, "package-empty-state");
+
+  GtkWidget *title = gtk_label_new(nullptr);
+  gchar *title_markup = g_markup_printf_escaped("<b>%s</b>", _("No packages to show"));
+  gtk_label_set_markup(GTK_LABEL(title), title_markup);
+  g_free(title_markup);
+  gtk_label_set_xalign(GTK_LABEL(title), 0.0f);
+  gtk_box_append(GTK_BOX(outer), title);
+
+  GtkWidget *message = gtk_label_new(_("Search for packages or choose List Packages."));
+  gtk_label_set_xalign(GTK_LABEL(message), 0.0f);
+  gtk_label_set_wrap(GTK_LABEL(message), TRUE);
+  gtk_box_append(GTK_BOX(outer), message);
+
+  GtkWidget *shortcuts = gtk_label_new(_("Shortcuts\n"
+                                         "Ctrl+F: Focus search\n"
+                                         "Ctrl+H: Toggle history panel\n"
+                                         "Ctrl+I: Toggle package info panel\n"
+                                         "Ctrl+Q or Ctrl+W: Quit"));
+  gtk_label_set_xalign(GTK_LABEL(shortcuts), 0.0f);
+  gtk_label_set_selectable(GTK_LABEL(shortcuts), TRUE);
+  gtk_box_append(GTK_BOX(outer), shortcuts);
+
+  return outer;
+}
+
+// -----------------------------------------------------------------------------
 // Select the package row used by the context menu action.
 // -----------------------------------------------------------------------------
 static bool
@@ -364,6 +401,14 @@ package_table_refresh_statuses(SearchWidgets *widgets)
 void
 package_table_fill_package_view(SearchWidgets *widgets, const std::vector<PackageRow> &items)
 {
+  if (items.empty()) {
+    gtk_scrolled_window_set_child(widgets->results.list_scroller, create_empty_package_view());
+    widgets->results.listbox = nullptr;
+    gtk_label_set_text(widgets->results.count_label, _("Items: 0"));
+    package_info_clear_selected_package_state(widgets);
+    return;
+  }
+
   PackageColumnKind sort_kind = PackageColumnKind::STATUS;
   GtkSortType sort_order = GTK_SORT_ASCENDING;
   bool have_sort_state = get_package_view_sort_state(widgets, sort_kind, sort_order);

@@ -600,6 +600,12 @@ setup_css(SearchWidgets *widgets)
                                     ".package-summary { "
                                     "  opacity: 0.92; "
                                     "} "
+                                    ".package-empty-state { "
+                                    "  padding: 18px 22px; "
+                                    "  border-radius: 14px; "
+                                    "  border: 1px solid @borders; "
+                                    "  background-color: alpha(@theme_base_color, 0.75); "
+                                    "} "
                                     ".details-switcher { "
                                     "  margin: 6px; "
                                     "} ");
