@@ -69,6 +69,8 @@ utf8_casefold_copy(const std::string &text)
 // -----------------------------------------------------------------------------
 // Return true when one package matches the active search term using the same
 // name and description flag semantics as the main UI search controls.
+// Summary text is included with description search because it is shown as package
+// descriptive text in the table.
 // -----------------------------------------------------------------------------
 static bool
 package_matches_search(const libdnf5::rpm::Package &pkg,
@@ -86,6 +88,11 @@ package_matches_search(const libdnf5::rpm::Package &pkg,
 
   if (!search_options.search_in_description) {
     return false;
+  }
+
+  std::string summary = utf8_casefold_copy(pkg.get_summary());
+  if (summary.find(pattern_lower) != std::string::npos) {
+    return true;
   }
 
   std::string description = utf8_casefold_copy(pkg.get_description());

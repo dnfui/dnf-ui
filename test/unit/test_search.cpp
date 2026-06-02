@@ -4,6 +4,26 @@
 #include "test_utils.hpp"
 
 #include <string>
+#include <vector>
+
+namespace {
+
+// -----------------------------------------------------------------------------
+// Return true when search results include one package name.
+// -----------------------------------------------------------------------------
+bool
+contains_package_name(const std::vector<PackageRow> &rows, const std::string &name)
+{
+  for (const auto &row : rows) {
+    if (row.name == name) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+} // namespace
 
 // -----------------------------------------------------------------------------
 // Verify that contains search can find a common repository package.
@@ -49,6 +69,27 @@ TEST_CASE("Search description mode expands or equals name-only results")
   if (desc_search.size() < name_only.size()) {
     FAIL("Description search returned fewer results than name-only search");
   }
+}
+
+// -----------------------------------------------------------------------------
+// Verify that description search includes package summaries shown in the table.
+// -----------------------------------------------------------------------------
+TEST_CASE("Search description mode includes package summaries")
+{
+  reset_backend_globals();
+
+  set_backend_search_options(false, false);
+  auto name_only = dnf_backend_search_package_rows_interruptible("bourne", nullptr);
+
+  set_backend_search_options(true, false);
+  auto desc_search = dnf_backend_search_package_rows_interruptible("bourne", nullptr);
+
+  if (name_only.empty() && desc_search.empty()) {
+    SKIP("Current repository metadata does not provide the expected bash summary search fixture.");
+  }
+
+  REQUIRE_FALSE(contains_package_name(name_only, "bash"));
+  REQUIRE(contains_package_name(desc_search, "bash"));
 }
 
 // -----------------------------------------------------------------------------
