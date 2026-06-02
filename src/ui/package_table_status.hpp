@@ -21,13 +21,13 @@ const char *package_table_status_text(PackageInstallState state);
 // -----------------------------------------------------------------------------
 int package_table_status_rank(PackageInstallState state);
 // -----------------------------------------------------------------------------
-// Remove all status CSS classes from a status label.
+// Remove all status CSS classes from a Status cell.
 // -----------------------------------------------------------------------------
-void package_table_clear_status_css(GtkWidget *label);
+void package_table_clear_status_css(GtkWidget *cell);
 // -----------------------------------------------------------------------------
-// Update one package status label for the current row state.
+// Update one package Status cell for the current row state.
 // -----------------------------------------------------------------------------
-void package_table_update_status_label(GtkWidget *label, SearchWidgets *widgets, const PackageRow &row);
+void package_table_update_status_label(GtkWidget *cell, SearchWidgets *widgets, const PackageRow &row);
 
 // -----------------------------------------------------------------------------
 // EOF

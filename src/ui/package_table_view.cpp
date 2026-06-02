@@ -55,7 +55,7 @@ refresh_visible_status_labels(GtkWidget *widget, SearchWidgets *widgets)
     return;
   }
 
-  if (GTK_IS_LABEL(widget) && g_object_get_data(G_OBJECT(widget), "package-status-cell")) {
+  if (g_object_get_data(G_OBJECT(widget), "package-status-cell")) {
     PackageRow *row = static_cast<PackageRow *>(g_object_get_data(G_OBJECT(widget), "package-context-row"));
     if (row) {
       package_table_update_status_label(widget, widgets, *row);
@@ -105,6 +105,46 @@ create_empty_package_view()
   gtk_box_append(GTK_BOX(outer), shortcuts);
 
   return outer;
+}
+
+// -----------------------------------------------------------------------------
+// Return the text label inside a table cell.
+// -----------------------------------------------------------------------------
+static GtkWidget *
+table_cell_label(GtkWidget *cell)
+{
+  GtkWidget *label = static_cast<GtkWidget *>(g_object_get_data(G_OBJECT(cell), "package-status-label"));
+  return label ? label : cell;
+}
+
+// -----------------------------------------------------------------------------
+// Build the Status column cell with a symbolic icon and text label.
+// -----------------------------------------------------------------------------
+static GtkWidget *
+create_status_cell()
+{
+  GtkWidget *box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+  gtk_widget_set_margin_start(box, 6);
+  gtk_widget_set_margin_end(box, 6);
+  gtk_widget_set_margin_top(box, 4);
+  gtk_widget_set_margin_bottom(box, 4);
+  gtk_widget_add_css_class(box, "package-status");
+
+  GtkWidget *icon = gtk_image_new();
+  gtk_image_set_pixel_size(GTK_IMAGE(icon), 14);
+  gtk_widget_add_css_class(icon, "package-status-icon");
+  gtk_box_append(GTK_BOX(box), icon);
+
+  GtkWidget *label = gtk_label_new(nullptr);
+  gtk_label_set_ellipsize(GTK_LABEL(label), PANGO_ELLIPSIZE_END);
+  gtk_label_set_xalign(GTK_LABEL(label), 0.0f);
+  gtk_box_append(GTK_BOX(box), label);
+
+  g_object_set_data(G_OBJECT(box), "package-status-cell", GINT_TO_POINTER(1));
+  g_object_set_data(G_OBJECT(box), "package-status-label", label);
+  g_object_set_data(G_OBJECT(box), "package-status-icon", icon);
+
+  return box;
 }
 
 // -----------------------------------------------------------------------------
@@ -161,20 +201,22 @@ create_text_column(SearchWidgets *widgets, const char *title, PackageColumnKind 
         PackageColumnKind kind = static_cast<PackageColumnKind>(
             GPOINTER_TO_INT(g_object_get_data(G_OBJECT(factory), "package-column-kind")));
 
-        GtkWidget *label = gtk_label_new(nullptr);
-        gtk_widget_set_margin_start(label, 6);
-        gtk_widget_set_margin_end(label, 6);
-        gtk_widget_set_margin_top(label, 4);
-        gtk_widget_set_margin_bottom(label, 4);
+        GtkWidget *cell = nullptr;
+        GtkWidget *label = nullptr;
+        if (kind == PackageColumnKind::STATUS) {
+          cell = create_status_cell();
+          label = table_cell_label(cell);
+        } else {
+          label = gtk_label_new(nullptr);
+          gtk_widget_set_margin_start(label, 6);
+          gtk_widget_set_margin_end(label, 6);
+          gtk_widget_set_margin_top(label, 4);
+          gtk_widget_set_margin_bottom(label, 4);
+          cell = label;
+        }
         gtk_list_item_set_activatable(item, TRUE);
         gtk_label_set_ellipsize(GTK_LABEL(label), PANGO_ELLIPSIZE_END);
-        gtk_label_set_xalign(GTK_LABEL(label), kind == PackageColumnKind::STATUS ? 0.5f : 0.0f);
-
-        if (kind == PackageColumnKind::STATUS) {
-          gtk_widget_add_css_class(label, "package-status");
-          // Mark status cells so local status refreshes can update visible rows.
-          g_object_set_data(G_OBJECT(label), "package-status-cell", GINT_TO_POINTER(1));
-        }
+        gtk_label_set_xalign(GTK_LABEL(label), 0.0f);
         if (kind == PackageColumnKind::VERSION || kind == PackageColumnKind::ARCH || kind == PackageColumnKind::REPO) {
           gtk_widget_add_css_class(label, "package-meta");
         }
@@ -185,30 +227,30 @@ create_text_column(SearchWidgets *widgets, const char *title, PackageColumnKind 
         // Right-click opens the same package actions as the main buttons.
         GtkGesture *context_click = gtk_gesture_click_new();
         gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(context_click), GDK_BUTTON_SECONDARY);
-        g_signal_connect(
-            context_click,
-            "pressed",
-            G_CALLBACK(+[](GtkGestureClick *gesture, int, double x, double y, gpointer user_data) {
-              SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
-              GtkWidget *label = gtk_event_controller_get_widget(GTK_EVENT_CONTROLLER(gesture));
-              PackageRow *row = static_cast<PackageRow *>(g_object_get_data(G_OBJECT(label), "package-context-row"));
-              if (!row) {
-                return;
-              }
+        g_signal_connect(context_click,
+                         "pressed",
+                         G_CALLBACK(+[](GtkGestureClick *gesture, int, double x, double y, gpointer user_data) {
+                           SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
+                           GtkWidget *cell = gtk_event_controller_get_widget(GTK_EVENT_CONTROLLER(gesture));
+                           PackageRow *row =
+                               static_cast<PackageRow *>(g_object_get_data(G_OBJECT(cell), "package-context-row"));
+                           if (!row) {
+                             return;
+                           }
 
-              GtkWidget *view = gtk_widget_get_ancestor(label, GTK_TYPE_COLUMN_VIEW);
-              if (!view || !GTK_IS_COLUMN_VIEW(view)) {
-                return;
-              }
+                           GtkWidget *view = gtk_widget_get_ancestor(cell, GTK_TYPE_COLUMN_VIEW);
+                           if (!view || !GTK_IS_COLUMN_VIEW(view)) {
+                             return;
+                           }
 
-              package_table_show_context_menu(label, widgets, *row, x, y, [view](const std::string &nevra) {
-                return select_package_table_row(GTK_COLUMN_VIEW(view), nevra);
-              });
-            }),
-            g_object_get_data(G_OBJECT(factory), "package-table-widgets"));
-        gtk_widget_add_controller(label, GTK_EVENT_CONTROLLER(context_click));
+                           package_table_show_context_menu(cell, widgets, *row, x, y, [view](const std::string &nevra) {
+                             return select_package_table_row(GTK_COLUMN_VIEW(view), nevra);
+                           });
+                         }),
+                         g_object_get_data(G_OBJECT(factory), "package-table-widgets"));
+        gtk_widget_add_controller(cell, GTK_EVENT_CONTROLLER(context_click));
 
-        gtk_list_item_set_child(item, label);
+        gtk_list_item_set_child(item, cell);
       }),
       nullptr);
 
@@ -220,26 +262,27 @@ create_text_column(SearchWidgets *widgets, const char *title, PackageColumnKind 
                      PackageColumnKind kind = static_cast<PackageColumnKind>(
                          GPOINTER_TO_INT(g_object_get_data(G_OBJECT(factory), "package-column-kind")));
 
-                     GtkWidget *label = gtk_list_item_get_child(item);
+                     GtkWidget *cell = gtk_list_item_get_child(item);
+                     GtkWidget *label = table_cell_label(cell);
                      GObject *obj = G_OBJECT(gtk_list_item_get_item(item));
                      const PackageItem *package_item = package_item_from_object(obj);
 
                      if (!package_item) {
                        gtk_label_set_text(GTK_LABEL(label), "");
-                       gtk_widget_set_tooltip_text(label, nullptr);
-                       package_table_clear_status_css(label);
-                       g_object_set_data_full(G_OBJECT(label), "package-context-row", nullptr, nullptr);
+                       gtk_widget_set_tooltip_text(cell, nullptr);
+                       package_table_clear_status_css(cell);
+                       g_object_set_data_full(G_OBJECT(cell), "package-context-row", nullptr, nullptr);
                        return;
                      }
 
                      // Store the package row currently bound to this reused table cell.
                      g_object_set_data_full(
-                         G_OBJECT(label), "package-context-row", new PackageRow(package_item->row), +[](gpointer p) {
+                         G_OBJECT(cell), "package-context-row", new PackageRow(package_item->row), +[](gpointer p) {
                            delete static_cast<PackageRow *>(p);
                          });
 
                      if (kind == PackageColumnKind::STATUS) {
-                       package_table_update_status_label(label, widgets, package_item->row);
+                       package_table_update_status_label(cell, widgets, package_item->row);
                      } else {
                        std::string text = package_table_column_text(*package_item, kind);
                        gtk_label_set_text(GTK_LABEL(label), text.c_str());
