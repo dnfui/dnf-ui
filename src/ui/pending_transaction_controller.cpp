@@ -53,6 +53,12 @@ pending_transaction_on_install_button_clicked(GtkButton *, gpointer user_data)
     return;
   }
 
+  if (action_rows.has_installed_row && dnf_backend_is_package_self_protected(action_rows.installed_row)) {
+    ui_helpers_set_status(
+        widgets->query.status_label, self_protected_transaction_message(action_rows.installed_row).c_str(), "red");
+    return;
+  }
+
   // Add or remove the pending install or upgrade action.
   PendingAction::Type action_type = action_rows.install_is_upgrade ? PendingAction::UPGRADE : PendingAction::INSTALL;
   PendingAction::Type existing_type;
@@ -105,7 +111,7 @@ pending_transaction_on_remove_button_clicked(GtkButton *, gpointer user_data)
 
   PackageActionRows action_rows = package_action_rows_for_selection(pkg);
 
-  // Only block self-removal for the installed row.
+  // Removal checks the installed row.
   // Upgrade candidates use the currently installed NEVRA for removal.
   if (!action_rows.has_installed_row) {
     ui_helpers_set_status(widgets->query.status_label, _("Package is not installed."), "gray");

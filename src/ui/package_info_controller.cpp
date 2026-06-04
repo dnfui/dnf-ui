@@ -130,11 +130,12 @@ update_selected_package_actions(SearchWidgets *widgets, const PackageRow &select
   // Install and upgrade use the available package row.
   // Remove and reinstall use the installed package row.
   // Self-protected packages stay viewable, but the running app must not remove
-  // or reinstall the RPM that owns its current executable.
+  // or replace the RPM that owns its current executable.
   bool self_protected =
       action_rows.has_installed_row && dnf_backend_is_package_self_protected(action_rows.installed_row);
 
-  gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.install_button), action_rows.has_install_row);
+  gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.install_button),
+                           action_rows.has_install_row && !self_protected);
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.remove_button),
                            action_rows.has_installed_row && !self_protected);
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.reinstall_button),

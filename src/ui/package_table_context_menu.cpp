@@ -113,7 +113,7 @@ package_table_show_context_menu(GtkWidget *anchor,
 
   append_context_menu_action(GTK_BOX(box),
                              install_label,
-                             action_rows.has_install_row,
+                             action_rows.has_install_row && !self_protected,
                              G_CALLBACK(+[](GtkButton *button, gpointer user_data) {
                                if (GtkWidget *popover = gtk_widget_get_ancestor(GTK_WIDGET(button), GTK_TYPE_POPOVER)) {
                                  gtk_popover_popdown(GTK_POPOVER(popover));
