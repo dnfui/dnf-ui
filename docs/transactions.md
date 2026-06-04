@@ -85,7 +85,11 @@ When the user clicks Apply:
 When the user clicks Upgrade All, the GUI skips the pending action list and asks
 the service to start an upgrade-all request directly. If the resolved preview is
 empty, the GUI releases the request object and reports that all packages are
-already up to date. Empty previews cannot be applied.
+already up to date. Empty previews cannot be applied. If Upgrade All would
+upgrade the package that owns the running DNF UI executable, that package is
+skipped so the app is not replaced while it is running. Other available upgrades
+are still included in the same transaction. The same package can still be shown
+in package lists, but it is view-only while DNF UI is running.
 
 ```mermaid
 flowchart TD
@@ -182,8 +186,8 @@ checks that the caller is an active local desktop user. If that check fails, no
 request object is created and no backend preview work starts.
 
 Before the service creates a request object, it validates the shared request
-shape, rejects oversized requests, and rejects remove or reinstall requests for
-the package that owns the running DNF UI executable.
+shape, rejects oversized requests, and rejects explicit package changes for the
+package that owns the running DNF UI executable.
 
 Before resolving the preview, the service refreshes backend state:
 

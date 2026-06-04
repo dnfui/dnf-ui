@@ -97,12 +97,13 @@ Current local source:
 
 Why this matters:
 
-- Upgrade All is intentionally sent as one all-installed-packages upgrade job.
-  The GUI does not expand it into many package specs.
+- Upgrade All normally sends one all-installed-packages upgrade job.
+- When the running DNF UI package has an available upgrade, that package is
+  excluded so the running app is not replaced by its own transaction.
 - Do not document this as bit-for-bit equivalence with every possible `dnf`
   command-line configuration, plugin, or option. The maintained guarantee is
-  that DNF UI sends libdnf5's all-installed-packages RPM upgrade request through
-  the app's configured backend and requires a preview before apply.
+  that DNF UI sends the upgrade request through the app's configured backend and
+  requires a preview before apply.
 
 Tests:
 

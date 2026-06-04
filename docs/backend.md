@@ -116,13 +116,13 @@ shown without duplicating rows.
 
 ## Self protection
 
-DNF UI blocks removing or reinstalling the package that owns the running GUI
-executable from inside the app.
+DNF UI blocks modifying the package that owns the running GUI executable from
+inside the app.
 
 The backend finds the current executable path and asks libdnf5 which installed
-package owns it. The UI disables destructive actions for that exact installed
-row. The transaction service checks remove and reinstall requests again before
-it creates a preview request object.
+package owns it. The UI disables package changes for that exact installed row.
+The transaction service checks explicit package requests again before it creates
+a preview request object.
 
 The relevant functions are:
 
