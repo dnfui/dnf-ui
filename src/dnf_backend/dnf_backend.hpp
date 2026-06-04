@@ -215,13 +215,13 @@ bool dnf_backend_get_installed_package_row_by_name_arch(const PackageRow &row, P
 
 // -----------------------------------------------------------------------------
 // Return true when this installed package owns the running GUI executable.
-// That package must not be removed or reinstalled from within the app itself.
+// That package must not be modified from within the app itself.
 // -----------------------------------------------------------------------------
 bool dnf_backend_is_package_self_protected(const PackageRow &row);
 
 // -----------------------------------------------------------------------------
-// Return true when one installed remove or reinstall spec targets the running GUI
-// package and must be rejected before the transaction is previewed or applied.
+// Return true when one transaction spec targets the running GUI package
+// and must be rejected before the transaction is previewed or applied.
 // -----------------------------------------------------------------------------
 bool dnf_backend_is_self_protected_transaction_spec(const std::string &spec);
 

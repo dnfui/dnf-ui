@@ -60,7 +60,7 @@ pending_transaction_build_request(const std::vector<PendingAction> &actions, Tra
 }
 
 // -----------------------------------------------------------------------------
-// Reject any transaction that would remove or reinstall the package owning the running GUI.
+// Reject any transaction that would modify the package owning the running GUI.
 // The UI disables those actions already, but this keeps apply safe
 // even if a protected item somehow reaches the pending queue.
 // -----------------------------------------------------------------------------
@@ -69,9 +69,16 @@ pending_transaction_validate_request(const TransactionRequest &request, std::str
 {
   PendingRequestBaseDropGuard base_drop_guard;
 
+  for (const auto &spec : request.install) {
+    // Re-check install specs because upgrade actions are carried as installs of the newer package.
+    if (dnf_backend_is_self_protected_transaction_spec(spec)) {
+      error_out = _("DNF UI cannot upgrade the package that owns the running application while it is running.");
+      return false;
+    }
+  }
+
   for (const auto &spec : request.remove) {
-    // Re-check remove specs so stale UI state or bypassed button sensitivity
-    // cannot remove the running app.
+    // Re-check remove specs so stale UI state or bypassed button sensitivity cannot remove the running app.
     if (dnf_backend_is_self_protected_transaction_spec(spec)) {
       error_out = _("DNF UI cannot remove the package that owns the running application. Close DNF UI and remove it "
                     "from another tool.");

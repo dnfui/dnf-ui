@@ -18,7 +18,7 @@
 // -----------------------------------------------------------------------------
 void pending_transaction_build_request(const std::vector<PendingAction> &actions, TransactionRequest &request);
 // -----------------------------------------------------------------------------
-// Reject self-protected remove and reinstall requests before preview.
+// Reject self-protected package changes before preview.
 // -----------------------------------------------------------------------------
 bool pending_transaction_validate_request(const TransactionRequest &request, std::string &error_out);
 

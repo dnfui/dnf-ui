@@ -3,7 +3,7 @@
 // Installed package cache and UI install-state helpers
 //
 // Owns backend global state used by the UI to mark exact installed packages,
-// classify visible package rows, and prevent removing the running application
+// classify visible package rows, and prevent modifying the running application
 // package from inside the app itself.
 // -----------------------------------------------------------------------------
 #include "dnf_backend/dnf_internal.hpp"
@@ -11,6 +11,7 @@
 #include "base_manager.hpp"
 
 #include <atomic>
+#include <exception>
 #include <filesystem>
 #include <map>
 #include <mutex>
@@ -23,6 +24,7 @@
 #endif
 
 #include <libdnf5/rpm/package_query.hpp>
+#include <libdnf5/rpm/nevra.hpp>
 
 namespace {
 
@@ -42,7 +44,30 @@ std::map<std::string, PackageRow> g_installed_rows_by_name_arch;
 std::set<std::string> g_self_protected_package_names;
 
 // -----------------------------------------------------------------------------
-// Resolve the current GUI executable path so the app can block self-removal
+// Return true when one package spec names a protected package.
+// -----------------------------------------------------------------------------
+static bool
+package_spec_matches_protected_name(const std::string &spec, const std::set<std::string> &protected_names)
+{
+  if (protected_names.count(spec) > 0) {
+    return true;
+  }
+
+  try {
+    for (const auto &nevra : libdnf5::rpm::Nevra::parse(spec)) {
+      if (protected_names.count(nevra.get_name()) > 0) {
+        return true;
+      }
+    }
+  } catch (const std::exception &) {
+    return false;
+  }
+
+  return false;
+}
+
+// -----------------------------------------------------------------------------
+// Resolve the current GUI executable path so the app can block self-modification
 // without hard-coding the RPM package name.
 // -----------------------------------------------------------------------------
 std::vector<std::string>
@@ -65,7 +90,7 @@ namespace dnf_backend_internal {
 // -----------------------------------------------------------------------------
 // Collect installed package names that own the currently running GUI binary.
 // The result is stored in the installed-state snapshot and used to block
-// self-removal and self-reinstall actions from inside the app.
+// self-modification actions from inside the app.
 // -----------------------------------------------------------------------------
 std::set<std::string>
 collect_self_protected_package_names(libdnf5::Base &base)
@@ -290,7 +315,7 @@ dnf_backend_is_package_self_protected(const PackageRow &row)
 
 // -----------------------------------------------------------------------------
 // Resolve one queued transaction spec back to the installed rpmdb so request
-// validation can reject self-removal even if the UI state is outdated or bypassed.
+// validation can reject self-modification even if the UI state is outdated or bypassed.
 // -----------------------------------------------------------------------------
 bool
 dnf_backend_is_self_protected_transaction_spec(const std::string &spec)
@@ -303,6 +328,10 @@ dnf_backend_is_self_protected_transaction_spec(const std::string &spec)
 
   if (protected_names.empty()) {
     return false;
+  }
+
+  if (package_spec_matches_protected_name(spec, protected_names)) {
+    return true;
   }
 
   auto read = BaseManager::instance().acquire_system_only_read();

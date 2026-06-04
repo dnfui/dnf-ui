@@ -31,7 +31,7 @@ validate_transaction_request_for_service(const TransactionRequest &request, std:
 {
   error_out.clear();
 
-  if (request.remove.empty() && request.reinstall.empty()) {
+  if (request.install.empty() && request.remove.empty() && request.reinstall.empty()) {
     return true;
   }
 
@@ -42,6 +42,13 @@ validate_transaction_request_for_service(const TransactionRequest &request, std:
   } catch (const std::exception &e) {
     error_out = std::string(_("Unable to validate protected installed packages: ")) + e.what();
     return false;
+  }
+
+  for (const auto &spec : request.install) {
+    if (dnf_backend_is_self_protected_transaction_spec(spec)) {
+      error_out = _("DNF UI cannot upgrade the package that owns the running application while it is running.");
+      return false;
+    }
   }
 
   for (const auto &spec : request.remove) {

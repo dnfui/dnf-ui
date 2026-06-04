@@ -27,7 +27,7 @@ first_installed_package_row()
 } // namespace
 
 // -----------------------------------------------------------------------------
-// Verify that package installs do not need installed-package self-protection checks.
+// Verify that ordinary install requests do not match self-protected packages.
 // -----------------------------------------------------------------------------
 TEST_CASE("Transaction service validation accepts install-only requests")
 {
@@ -39,6 +39,23 @@ TEST_CASE("Transaction service validation accepts install-only requests")
 
   REQUIRE(validate_transaction_request_for_service(request, error));
   REQUIRE(error.empty());
+}
+
+// -----------------------------------------------------------------------------
+// Verify that the service blocks upgrading the package that owns the app.
+// -----------------------------------------------------------------------------
+TEST_CASE("Transaction service validation rejects self-protected upgrades")
+{
+  reset_backend_globals();
+  PackageRow row = first_installed_package_row();
+  ScopedEnvVar protected_name("DNFUI_TEST_SELF_PROTECTED_PACKAGE_NAME", row.name.c_str());
+
+  TransactionRequest request;
+  request.install.push_back(row.nevra);
+  std::string error;
+
+  REQUIRE_FALSE(validate_transaction_request_for_service(request, error));
+  REQUIRE(error == "DNF UI cannot upgrade the package that owns the running application while it is running.");
 }
 
 // -----------------------------------------------------------------------------
