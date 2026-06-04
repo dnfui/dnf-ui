@@ -75,7 +75,7 @@ appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/com.fedora.dnfui
 %{_unitdir}/dnfui-service.service
 
 %changelog
-* Tue June 02 2026 ErikMN <erik@example.invalid> - 0.1.7-1
+* Tue Jun 02 2026 ErikMN <erik@example.invalid> - 0.1.7-1
 - Cache improvements
 - Search improvements
 - Search timer
