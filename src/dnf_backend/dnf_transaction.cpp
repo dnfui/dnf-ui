@@ -10,11 +10,13 @@
 
 #include "base_manager.hpp"
 #include "debug_trace.hpp"
+#include "dnf_backend/dnf_internal.hpp"
 #include "dnf_backend/dnf_transaction_internal.hpp"
 
 #include <algorithm>
 #include <cstdlib>
 #include <memory>
+#include <set>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -90,6 +92,60 @@ add_remove_request(libdnf5::Base &base, libdnf5::Goal &goal, const std::string &
 }
 
 // -----------------------------------------------------------------------------
+// Remove packages with protected names from one package query.
+// -----------------------------------------------------------------------------
+static void
+remove_packages_by_name(libdnf5::Base &base,
+                        libdnf5::rpm::PackageQuery &query,
+                        const std::set<std::string> &protected_names)
+{
+  if (protected_names.empty()) {
+    return;
+  }
+
+  std::vector<std::string> names { protected_names.begin(), protected_names.end() };
+  libdnf5::rpm::PackageQuery protected_packages(base);
+  protected_packages.filter_name(names);
+  query.difference(protected_packages);
+}
+
+// -----------------------------------------------------------------------------
+// Add an upgrade-all request without upgrading the running application package.
+// -----------------------------------------------------------------------------
+static void
+add_upgrade_all_request(libdnf5::Base &base, libdnf5::Goal &goal, const TransactionProgressCallback &progress_cb)
+{
+  std::set<std::string> protected_names = dnf_backend_internal::collect_self_protected_package_names(base);
+  if (protected_names.empty()) {
+    // If the running app package cannot be identified, keep libdnf's normal Upgrade All behavior.
+    goal.add_rpm_upgrade();
+    return;
+  }
+
+  libdnf5::rpm::PackageQuery protected_upgrades(base);
+  protected_upgrades.filter_available();
+  protected_upgrades.filter_upgrades();
+  protected_upgrades.filter_name(std::vector<std::string> { protected_names.begin(), protected_names.end() });
+  if (protected_upgrades.empty()) {
+    // If the app itself is not upgradeable, there is nothing to exclude from Upgrade All.
+    goal.add_rpm_upgrade();
+    return;
+  }
+
+  // The app has an upgrade, so resolve all other upgrade candidates.
+  libdnf5::rpm::PackageQuery upgrades(base);
+  upgrades.filter_available();
+  upgrades.filter_upgrades();
+  upgrades.filter_latest_evr();
+  remove_packages_by_name(base, upgrades, protected_names);
+
+  if (!upgrades.empty()) {
+    goal.add_rpm_upgrade(upgrades);
+  }
+  tx::emit_progress_line(progress_cb, "Skipping DNF UI package while it is running.");
+}
+
+// -----------------------------------------------------------------------------
 // Resolve the transaction through one shared code path so preview and apply
 // use identical resolution logic.
 // -----------------------------------------------------------------------------
@@ -139,7 +195,7 @@ resolve_transaction_plan(libdnf5::Base &base,
   }
 
   if (upgrade_all && !test_skip_upgrade_all_goal_job_requested()) {
-    goal.add_rpm_upgrade();
+    add_upgrade_all_request(base, goal, progress_cb);
   }
 
   auto transaction = goal.resolve();
@@ -289,6 +345,23 @@ transaction_previews_match(const TransactionPreview &left, const TransactionPrev
 }
 
 #ifdef DNFUI_BUILD_TESTS
+// -----------------------------------------------------------------------------
+// Test-only access to the package-name exclusion used by upgrade-all self-protection.
+// -----------------------------------------------------------------------------
+bool
+dnf_backend_testonly_query_excludes_package_name(const std::string &package_name)
+{
+  auto [base, guard] = BaseManager::instance().acquire_write();
+  libdnf5::rpm::PackageQuery query(base);
+  query.filter_name(package_name);
+  if (query.empty()) {
+    return false;
+  }
+
+  remove_packages_by_name(base, query, { package_name });
+  return query.empty();
+}
+
 // -----------------------------------------------------------------------------
 // Test-only access to the preview comparison used before apply.
 // -----------------------------------------------------------------------------

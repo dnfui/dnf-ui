@@ -160,5 +160,16 @@ TEST_CASE("Transaction service validation rejects self-protected reinstalls")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that upgrade-all self-protection excludes packages by exact name.
+// -----------------------------------------------------------------------------
+TEST_CASE("Transaction service validation excludes self-protected package names from upgrade-all")
+{
+  reset_backend_globals();
+  PackageRow row = first_installed_package_row();
+
+  REQUIRE(dnf_backend_testonly_query_excludes_package_name(row.name));
+}
+
+// -----------------------------------------------------------------------------
 // EOF
 // -----------------------------------------------------------------------------
