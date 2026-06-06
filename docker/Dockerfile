@@ -7,7 +7,7 @@ RUN dnf install -y \
     desktop-file-utils \
     gtk4-devel \
     libdnf5-devel \
-    polkit-devel \
+    dnf5daemon-server \
     polkit \
     gcc-c++ \
     glibc-langpack-sv \
@@ -23,7 +23,6 @@ RUN dnf install -y \
     mesa-libEGL \
     mesa-libGL \
     mesa-libGLES \
-    systemd-rpm-macros \
     dbus-daemon \
     dbus-glib \
     procps-ng \

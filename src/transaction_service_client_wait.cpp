@@ -1,183 +1,219 @@
 // -----------------------------------------------------------------------------
 // transaction_service_client_wait.cpp
-// Wait and progress signal handling for the GUI-side transaction service client.
-// This file owns Finished and Progress signal subscriptions so the public client
-// flow can stay focused on preview and apply behavior.
+// Wait and progress signal handling for the GUI-side transaction client.
+// This prototype receives progress from Fedora dnf5daemon and forwards a small
+// set of useful messages to the existing transaction progress window.
 // -----------------------------------------------------------------------------
 #include "transaction_service_client_internal.hpp"
 
 #include "debug_trace.hpp"
-#include "dnf_backend/dnf_backend.hpp"
 #include "i18n.hpp"
-#include "service/transaction_service_dbus.hpp"
 
 #include <glib.h>
 
+#include <cstdint>
+#include <string>
+
 namespace {
 
-// -----------------------------------------------------------------------------
-// State shared between wait_for_transaction_stage and its Finished signal handler.
-// -----------------------------------------------------------------------------
-struct FinishedWaitState {
-  bool received = false;
-  bool service_disappeared = false;
-  std::string stage;
-  bool success = false;
-  std::string details;
-};
+constexpr const char *kDnfDaemonName = "org.rpm.dnf.v0";
 
 // -----------------------------------------------------------------------------
-// Receive one Progress signal from the service and pass its text to the UI
-// callback supplied by the apply task.
+// Read one string or object path child from a D-Bus signal parameter tuple.
+// -----------------------------------------------------------------------------
+std::string
+variant_child_text(GVariant *parameters, guint index)
+{
+  if (!parameters || g_variant_n_children(parameters) <= index) {
+    return {};
+  }
+
+  GVariant *child = g_variant_get_child_value(parameters, index);
+  std::string value;
+  if (g_variant_is_of_type(child, G_VARIANT_TYPE_STRING) || g_variant_is_of_type(child, G_VARIANT_TYPE_OBJECT_PATH)) {
+    value = g_variant_get_string(child, nullptr);
+  }
+  g_variant_unref(child);
+  return value;
+}
+
+// -----------------------------------------------------------------------------
+// Read one unsigned integer child from a D-Bus signal parameter tuple.
+// -----------------------------------------------------------------------------
+uint64_t
+variant_child_uint64(GVariant *parameters, guint index)
+{
+  if (!parameters || g_variant_n_children(parameters) <= index) {
+    return 0;
+  }
+
+  GVariant *child = g_variant_get_child_value(parameters, index);
+  uint64_t value = 0;
+  if (g_variant_is_of_type(child, G_VARIANT_TYPE_UINT64)) {
+    value = g_variant_get_uint64(child);
+  } else if (g_variant_is_of_type(child, G_VARIANT_TYPE_INT64)) {
+    gint64 signed_value = g_variant_get_int64(child);
+    value = signed_value > 0 ? static_cast<uint64_t>(signed_value) : 0;
+  } else if (g_variant_is_of_type(child, G_VARIANT_TYPE_UINT32)) {
+    value = g_variant_get_uint32(child);
+  } else if (g_variant_is_of_type(child, G_VARIANT_TYPE_INT32)) {
+    gint32 signed_value = g_variant_get_int32(child);
+    value = signed_value > 0 ? static_cast<uint64_t>(signed_value) : 0;
+  }
+  g_variant_unref(child);
+  return value;
+}
+
+// -----------------------------------------------------------------------------
+// Return true when a daemon signal belongs to the transaction session we started.
+// -----------------------------------------------------------------------------
+bool
+signal_matches_transaction(TransactionServiceProgressForwarder *forwarder, GVariant *parameters)
+{
+  if (!forwarder || forwarder->transaction_path.empty()) {
+    return false;
+  }
+
+  return variant_child_text(parameters, 0) == forwarder->transaction_path;
+}
+
+// -----------------------------------------------------------------------------
+// Forward one line to the UI progress callback.
+// -----------------------------------------------------------------------------
+void
+forward_progress_line(TransactionServiceProgressForwarder *forwarder, const std::string &line)
+{
+  if (!forwarder || !forwarder->progress_callback || !*forwarder->progress_callback || line.empty()) {
+    return;
+  }
+
+  DNFUI_TRACE("dnf5daemon progress line=%s", line.c_str());
+  (*forwarder->progress_callback)(line);
+}
+
+// -----------------------------------------------------------------------------
+// Receive one dnf5daemon progress signal and convert it to a user-facing line.
 // -----------------------------------------------------------------------------
 void
 on_transaction_progress_signal(GDBusConnection *,
                                const gchar *,
                                const gchar *,
                                const gchar *,
-                               const gchar *,
+                               const gchar *signal_name,
                                GVariant *parameters,
                                gpointer user_data)
 {
   auto *forwarder = static_cast<TransactionServiceProgressForwarder *>(user_data);
-  if (!forwarder || !forwarder->progress_callback || !*forwarder->progress_callback) {
+  if (!signal_matches_transaction(forwarder, parameters) || !signal_name) {
     return;
   }
 
-  const gchar *line = nullptr;
-  g_variant_get(parameters, "(&s)", &line);
-  if (!line || !*line) {
+  const std::string signal = signal_name;
+
+  if (signal == "download_add_new" && !forwarder->downloads_started) {
+    forwarder->downloads_started = true;
+    forward_progress_line(forwarder, _("Starting package downloads..."));
+  }
+
+  if (signal == "download_add_new") {
+    std::string description = variant_child_text(parameters, 2);
+    if (!description.empty()) {
+      forward_progress_line(forwarder, std::string(_("Downloading: ")) + description);
+    }
     return;
   }
 
-  DNFUI_TRACE("Transaction service client progress line=%s", line);
-  (*forwarder->progress_callback)(line);
+  if (signal == "download_progress") {
+    std::string download_id = variant_child_text(parameters, 1);
+    uint64_t total = variant_child_uint64(parameters, 2);
+    uint64_t downloaded = variant_child_uint64(parameters, 3);
+    if (download_id.empty() || total == 0) {
+      return;
+    }
+
+    int percent = static_cast<int>((downloaded * 100) / total);
+    auto [it, inserted] = forwarder->download_percent_by_id.emplace(download_id, -1);
+    if (!inserted && it->second == percent) {
+      return;
+    }
+
+    it->second = percent;
+    forward_progress_line(forwarder,
+                          std::string(_("Download progress: ")) + download_id + " (" + std::to_string(percent) + "%)");
+    return;
+  }
+
+  if (signal == "download_mirror_failure") {
+    std::string message = variant_child_text(parameters, 2);
+    forward_progress_line(forwarder, message.empty() ? _("Download mirror failed.") : message);
+    return;
+  }
+
+  if (signal == "download_end") {
+    std::string download_id = variant_child_text(parameters, 1);
+    uint64_t status = variant_child_uint64(parameters, 2);
+    if (status == 2) {
+      std::string message = variant_child_text(parameters, 3);
+      forward_progress_line(forwarder, message.empty() ? _("Package download failed.") : message);
+    } else if (!download_id.empty()) {
+      forward_progress_line(forwarder, std::string(_("Download ready: ")) + download_id);
+    }
+    return;
+  }
+
+  if (signal == "transaction_before_begin" && !forwarder->transaction_started) {
+    forwarder->transaction_started = true;
+    forward_progress_line(forwarder, _("Running transaction."));
+    return;
+  }
+
+  if (signal == "transaction_verify_start" && !forwarder->verify_started) {
+    forwarder->verify_started = true;
+    forward_progress_line(forwarder, _("Verifying package files."));
+    return;
+  }
+
+  if (signal == "transaction_transaction_start" && !forwarder->prepare_started) {
+    forwarder->prepare_started = true;
+    forward_progress_line(forwarder, _("Preparing transaction."));
+    return;
+  }
+
+  if (signal == "transaction_action_start") {
+    std::string nevra = variant_child_text(parameters, 1);
+    forward_progress_line(forwarder,
+                          nevra.empty() ? _("Processing package.") : std::string(_("Processing package: ")) + nevra);
+    return;
+  }
+
+  if (signal == "transaction_unpack_error") {
+    std::string nevra = variant_child_text(parameters, 1);
+    forward_progress_line(
+        forwarder, nevra.empty() ? _("Package unpack failed.") : std::string(_("Package unpack failed: ")) + nevra);
+  }
 }
 
 } // namespace
 
 // -----------------------------------------------------------------------------
-// Wait until the service transaction request leaves the given running stage.
-// Subscribes to the Finished D-Bus signal so the wait wakes up immediately
-// when the service reports a final state.
-// The context must already be the thread-default context of the calling thread.
-// That lets signal callbacks run on the same context that is being iterated.
+// dnf5daemon do_transaction waits through its own D-Bus method call.
+// This old service-stage helper is kept so the private helper list stays stable.
 // -----------------------------------------------------------------------------
 bool
-transaction_service_client_wait_for_transaction_stage(GDBusConnection *connection,
-                                                      const std::string &transaction_path,
-                                                      const char *running_stage,
-                                                      GMainContext *context,
+transaction_service_client_wait_for_transaction_stage(GDBusConnection *,
+                                                      const std::string &,
+                                                      const char *,
+                                                      GMainContext *,
                                                       TransactionServiceResult &result_out,
                                                       std::string &error_out)
 {
-  error_out.clear();
-
-  // Subscribe to Finished before the first state poll.
-  // This covers the short gap where the service could finish after the request
-  // starts but before the client begins waiting for the result.
-  FinishedWaitState wait_state;
-  guint finished_id = g_dbus_connection_signal_subscribe(
-      connection,
-      kTransactionServiceName,
-      kTransactionServiceRequestInterface,
-      "Finished",
-      transaction_path.c_str(),
-      nullptr,
-      G_DBUS_SIGNAL_FLAGS_NONE,
-      +[](GDBusConnection *,
-          const gchar *,
-          const gchar *,
-          const gchar *,
-          const gchar *,
-          GVariant *parameters,
-          gpointer user_data) {
-        auto *state = static_cast<FinishedWaitState *>(user_data);
-        const gchar *stage = nullptr;
-        gboolean success = FALSE;
-        const gchar *details = nullptr;
-        g_variant_get(parameters, "(&sbs)", &stage, &success, &details);
-        state->stage = stage ? stage : "";
-        state->success = success;
-        state->details = details ? details : "";
-        state->received = true;
-      },
-      &wait_state,
-      nullptr);
-
-  guint name_owner_changed_id = g_dbus_connection_signal_subscribe(
-      connection,
-      "org.freedesktop.DBus",
-      "org.freedesktop.DBus",
-      "NameOwnerChanged",
-      "/org/freedesktop/DBus",
-      kTransactionServiceName,
-      G_DBUS_SIGNAL_FLAGS_NONE,
-      +[](GDBusConnection *,
-          const gchar *,
-          const gchar *,
-          const gchar *,
-          const gchar *,
-          GVariant *parameters,
-          gpointer user_data) {
-        auto *state = static_cast<FinishedWaitState *>(user_data);
-        const gchar *name = nullptr;
-        const gchar *old_owner = nullptr;
-        const gchar *new_owner = nullptr;
-        g_variant_get(parameters, "(&s&s&s)", &name, &old_owner, &new_owner);
-        if (name && g_strcmp0(name, kTransactionServiceName) == 0 && old_owner && *old_owner &&
-            (!new_owner || !*new_owner)) {
-          state->service_disappeared = true;
-        }
-      },
-      &wait_state,
-      nullptr);
-
-  // One initial GetResult call handles the case where the service already
-  // reached a final state before our Finished subscription was registered.
-  if (!transaction_service_client_get_transaction_result(connection, transaction_path, result_out, error_out)) {
-    g_dbus_connection_signal_unsubscribe(connection, name_owner_changed_id);
-    g_dbus_connection_signal_unsubscribe(connection, finished_id);
-    return false;
-  }
-
-  // Block on context until the Finished signal fires or the initial poll
-  // already shows a final state. Any other signals pending on context
-  // (such as Progress callbacks in the apply path) are also dispatched here.
-  while (!wait_state.received && !wait_state.service_disappeared && result_out.stage == running_stage &&
-         !result_out.finished) {
-    g_main_context_iteration(context, TRUE);
-  }
-
-  g_dbus_connection_signal_unsubscribe(connection, name_owner_changed_id);
-  g_dbus_connection_signal_unsubscribe(connection, finished_id);
-
-  // Return a normal client error if the service disappears while the client
-  // is still waiting for the final state signal.
-  if (wait_state.service_disappeared && !wait_state.received) {
-    error_out = _("Transaction service disappeared while waiting for the result.");
-    return false;
-  }
-
-  // Fill the result from the final state signal and avoid a second GetResult call.
-  if (wait_state.received) {
-    result_out.stage = wait_state.stage;
-    result_out.finished = true;
-    result_out.success = wait_state.success;
-    result_out.details = wait_state.details;
-  }
-
-  DNFUI_TRACE("Transaction service client stage path=%s stage=%s finished=%d success=%d",
-              transaction_path.c_str(),
-              result_out.stage.c_str(),
-              result_out.finished ? 1 : 0,
-              result_out.success ? 1 : 0);
-
-  return true;
+  result_out = {};
+  error_out = _("dnf5daemon stage polling is not used by this prototype.");
+  return false;
 }
 
 // -----------------------------------------------------------------------------
-// Wait for a started preview request and read its structured preview.
+// Resolve a started daemon session and read its structured preview.
 // -----------------------------------------------------------------------------
 bool
 transaction_service_client_wait_for_started_transaction_preview(GDBusConnection *connection,
@@ -185,58 +221,33 @@ transaction_service_client_wait_for_started_transaction_preview(GDBusConnection 
                                                                 TransactionPreview &preview_out,
                                                                 std::string &error_out)
 {
-  TransactionServiceResult result;
-
-  // Create a dedicated main context for the duration of the preview wait.
-  // The Finished signal subscription inside wait_for_transaction_stage is
-  // dispatched on the thread-default context, so it and the iterated context
-  // must be the same object.
-  GMainContext *wait_context = g_main_context_new();
-  g_main_context_push_thread_default(wait_context);
-  bool stage_ok = transaction_service_client_wait_for_transaction_stage(
-      connection, transaction_path, "preview-running", wait_context, result, error_out);
-  g_main_context_pop_thread_default(wait_context);
-  g_main_context_unref(wait_context);
-
-  if (!stage_ok) {
-    std::string release_error;
-    transaction_service_client_release_transaction_request(connection, transaction_path, release_error);
-    return false;
+  if (transaction_service_client_get_transaction_preview(connection, transaction_path, preview_out, error_out)) {
+    return true;
   }
 
-  if (result.stage != "preview-ready" || !result.finished || !result.success) {
-    error_out = result.details.empty() ? _("Privileged transaction preview failed.") : result.details;
-    DNFUI_TRACE(
-        "Transaction service client preview failed path=%s error=%s", transaction_path.c_str(), error_out.c_str());
-    std::string release_error;
-    transaction_service_client_release_transaction_request(connection, transaction_path, release_error);
-    return false;
-  }
-
-  if (!transaction_service_client_get_transaction_preview(connection, transaction_path, preview_out, error_out)) {
-    DNFUI_TRACE(
-        "Transaction service client get preview failed path=%s error=%s", transaction_path.c_str(), error_out.c_str());
-    std::string release_error;
-    transaction_service_client_release_transaction_request(connection, transaction_path, release_error);
-    return false;
-  }
-
-  return true;
+  DNFUI_TRACE("dnf5daemon preview failed path=%s error=%s", transaction_path.c_str(), error_out.c_str());
+  std::string release_error;
+  transaction_service_client_release_transaction_request(connection, transaction_path, release_error);
+  return false;
 }
 
 // -----------------------------------------------------------------------------
-// Subscribe to Progress signals for one request object.
+// Subscribe to dnf5daemon signals for one transaction session.
 // -----------------------------------------------------------------------------
 guint
 transaction_service_client_subscribe_progress(GDBusConnection *connection,
                                               const std::string &transaction_path,
                                               TransactionServiceProgressForwarder *progress_forwarder)
 {
+  if (progress_forwarder) {
+    progress_forwarder->transaction_path = transaction_path;
+  }
+
   return g_dbus_connection_signal_subscribe(connection,
-                                            kTransactionServiceName,
-                                            kTransactionServiceRequestInterface,
-                                            "Progress",
-                                            transaction_path.c_str(),
+                                            kDnfDaemonName,
+                                            nullptr,
+                                            nullptr,
+                                            nullptr,
                                             nullptr,
                                             G_DBUS_SIGNAL_FLAGS_NONE,
                                             on_transaction_progress_signal,

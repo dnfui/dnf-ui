@@ -17,9 +17,9 @@
       dependable native desktop workflow.
     </p>
     <p>
-      Package changes are applied through a small privileged transaction service
-      with Polkit authorization, while the main graphical application continues
-      to run as the regular desktop user.
+      Package changes are applied through Fedora dnf5daemon with Polkit
+      authorization, while the main graphical application continues to run as
+      the regular desktop user.
     </p>
   </description>
   <provides>

@@ -47,10 +47,7 @@ dnfui_app = executable(
   dependencies: [
     libdnf5_dep,
     gtk4_dep,
-    polkit_dep,
   ],
   install: true,
   install_tag: 'runtime',
 )
-
-subdir('service')

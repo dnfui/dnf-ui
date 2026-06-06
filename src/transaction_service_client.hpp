@@ -1,8 +1,8 @@
 // -----------------------------------------------------------------------------
 // src/transaction_service_client.hpp
-// GUI client helpers for the transaction service
-// Declares the small D-Bus client API used by the GTK frontend to prepare,
-// apply, and release service-owned transaction requests.
+// GUI client helpers for the dnf5daemon transaction path
+// Declares the small client API used by the GTK frontend to prepare, apply, and
+// release transaction requests.
 // -----------------------------------------------------------------------------
 #pragma once
 
@@ -13,14 +13,14 @@ struct TransactionRequest;
 struct TransactionPreview;
 
 // -----------------------------------------------------------------------------
-// Prepare one transaction through the service and return its resolved preview.
+// Prepare one transaction through dnf5daemon and return its resolved preview.
 // -----------------------------------------------------------------------------
 bool transaction_service_client_preview_request(const TransactionRequest &request,
                                                 TransactionPreview &preview_out,
                                                 std::string &transaction_path_out,
                                                 std::string &error_out);
 // -----------------------------------------------------------------------------
-// Prepare an upgrade-all transaction through the service.
+// Prepare an upgrade-all transaction through dnf5daemon.
 // -----------------------------------------------------------------------------
 bool transaction_service_client_preview_upgrade_all_request(TransactionPreview &preview_out,
                                                             std::string &transaction_path_out,

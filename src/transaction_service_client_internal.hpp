@@ -1,6 +1,6 @@
 // -----------------------------------------------------------------------------
 // transaction_service_client_internal.hpp
-// Private helpers for the GUI-side transaction service client.
+// Private helpers for the GUI-side transaction client.
 // This is not a public API.
 // It keeps raw D-Bus calls and wait handling out of the high-level preview and apply flow.
 // -----------------------------------------------------------------------------
@@ -9,6 +9,7 @@
 #include <gio/gio.h>
 
 #include <functional>
+#include <map>
 #include <string>
 
 struct TransactionPreview;
@@ -26,6 +27,12 @@ struct TransactionServiceResult {
 
 struct TransactionServiceProgressForwarder {
   const std::function<void(const std::string &)> *progress_callback = nullptr;
+  std::string transaction_path;
+  bool downloads_started = false;
+  bool transaction_started = false;
+  bool verify_started = false;
+  bool prepare_started = false;
+  std::map<std::string, int> download_percent_by_id;
 };
 
 // -----------------------------------------------------------------------------

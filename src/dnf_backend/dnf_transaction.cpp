@@ -442,9 +442,9 @@ dnf_backend_preview_transaction(const std::vector<std::string> &install_nevras,
 }
 
 // -----------------------------------------------------------------------------
-// Apply a resolved package transaction after the caller has completed authorization.
-// The transaction service enforces Polkit before invoking this function.
-// Direct backend callers are expected to run in tests or another already-authorized context.
+// Apply a resolved package transaction through libdnf.
+// This helper does not perform authorization. The dnf5daemon client path handles
+// privileged apply outside this backend.
 // -----------------------------------------------------------------------------
 bool
 dnf_backend_apply_transaction(const std::vector<std::string> &install_nevras,
