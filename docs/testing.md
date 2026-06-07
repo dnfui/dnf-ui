@@ -122,11 +122,11 @@ Fedora package review expects `rpmlint` output for the source RPM and all binary
 RPMs produced by the build. It is also normal to check that the source RPM builds
 in `mock`.
 
-Build RPMs with the packaging helper scripts and run `rpmlint`:
+Build RPMs with the Make targets and run `rpmlint`:
 
 ```sh
-./packaging/build_srpm.sh
-./packaging/build_rpm.sh
+make srpm
+make rpm
 rpmlint dnf-ui-latest.src.rpm rpmbuild/RPMS/*/*.rpm
 ```
 

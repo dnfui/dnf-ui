@@ -39,7 +39,7 @@ else
   MESON_DEBUG_TRACE = false
 endif
 
-ifneq ($(filter test $(TEST_BIN_NAME) memcheck memcheck-smoke,$(MAKECMDGOALS)),)
+ifneq ($(filter test $(TEST_BIN_NAME) memcheck memcheck-smoke memcheck-tests memory-check run-memcheck-tests,$(MAKECMDGOALS)),)
   MESON_BUILD_TESTS = true
 else
   MESON_BUILD_TESTS = false
@@ -82,6 +82,9 @@ help:
 	@printf '%-36s %s\n' 'dnfui-tests' 'Build the test binary.'
 	@printf '%-36s %s\n' 'run' 'Build and run the desktop app locally.'
 	@printf '%-36s %s\n' 'test' 'Build and run the local test suite.'
+	@printf '%-36s %s\n' 'srpm' 'Build the source tarball and source RPM.'
+	@printf '%-36s %s\n' 'rpm' 'Build binary and source RPMs.'
+	@printf '%-36s %s\n' 'nativeinstalltest' 'Build the RPM and reinstall it on the native system.'
 	@printf '\n%s\n' 'Docker'
 	@printf '%s\n' '----------------------------------------'
 	@printf '%-36s %s\n' 'dockersetup' 'Build the Docker development image.'
@@ -90,10 +93,17 @@ help:
 	@printf '%-36s %s\n' 'dockerrunoffline' 'Run the desktop app in Docker without networking.'
 	@printf '%-36s %s\n' 'dockerruncoldoffline' 'Run the desktop app in Docker without networking or repo cache.'
 	@printf '%-36s %s\n' 'dockerofflinetest' 'Run the Docker offline smoke tests.'
+	@printf '%-36s %s\n' 'dockergdb' 'Run the desktop app under GDB in Docker.'
+	@printf '%-36s %s\n' 'dockergdbstop' 'Stop the Docker GDB container if it is still running.'
+	@printf '%-36s %s\n' 'dockersrpm' 'Build the source RPM in Docker.'
+	@printf '%-36s %s\n' 'dockerrpm' 'Build binary and source RPMs in Docker.'
 	@printf '\n%s\n' 'Developer utilities'
 	@printf '%s\n' '----------------------------------------'
 	@printf '%-36s %s\n' 'memcheck' 'Run the default Valgrind Memcheck smoke test.'
 	@printf '%-36s %s\n' 'memcheck-smoke' 'Run a quick automated Valgrind Memcheck smoke test.'
+	@printf '%-36s %s\n' 'memcheck-tests' 'Run the automated test binary under Valgrind Memcheck.'
+	@printf '%-36s %s\n' 'memory-check' 'Run the main automated memory checks.'
+	@printf '%-36s %s\n' 'run-memcheck-tests' 'Run the shared automated Memcheck test command.'
 	@printf '%-36s %s\n' 'memcheck-app' 'Run the desktop app under Valgrind Memcheck.'
 	@printf '%-36s %s\n' 'valgrind' 'Alias for running the desktop app under Valgrind Memcheck.'
 	@printf '%-36s %s\n' 'cppcheck' 'Run cppcheck on the source tree.'
@@ -142,6 +152,22 @@ test: dnfui-tests
 	@echo "*** Running test suite ***"
 	@./$(TEST_BIN_NAME)
 
+# Build the source RPM from tracked files:
+.PHONY: srpm
+srpm:
+	@./packaging/build_srpm.sh
+
+# Build binary and source RPMs from tracked files:
+.PHONY: rpm
+rpm:
+	@./packaging/build_rpm.sh
+
+# Build and reinstall the RPM on the native system:
+.PHONY: nativeinstalltest
+nativeinstalltest:
+	$(call require_non_root,native install test)
+	@./utils/native_install_test.sh
+
 # -----------------------------------------------------------------------------
 # Docker targets
 # -----------------------------------------------------------------------------
@@ -176,6 +202,26 @@ dockerruncoldoffline:
 dockerofflinetest:
 	@DEBUG_TRACE="$(DEBUG_TRACE)" ./docker/docker_offline_test.sh
 
+# Run the app under GDB in Docker:
+.PHONY: dockergdb
+dockergdb:
+	@THEME="$(THEME)" DEBUG_TRACE="$(DEBUG_TRACE)" ./docker/docker_gdb.sh
+
+# Stop the Docker GDB container:
+.PHONY: dockergdbstop
+dockergdbstop:
+	@./docker/docker_gdb_stop.sh
+
+# Build the source RPM in Docker:
+.PHONY: dockersrpm
+dockersrpm:
+	@./docker/docker_rpm_build.sh srpm
+
+# Build binary and source RPMs in Docker:
+.PHONY: dockerrpm
+dockerrpm:
+	@./docker/docker_rpm_build.sh rpm
+
 # -----------------------------------------------------------------------------
 # Developer utility targets
 # -----------------------------------------------------------------------------
@@ -188,6 +234,23 @@ memcheck: memcheck-smoke
 .PHONY: memcheck-smoke
 memcheck-smoke: dnfui-tests
 	@MEMCHECK_TIMEOUT="$(MEMCHECK_SMOKE_TIMEOUT)" $(MEMCHECK) test ./$(TEST_BIN_NAME) "$(MEMCHECK_SMOKE_FILTER)"
+
+# Run the test binary under Valgrind Memcheck:
+.PHONY: memcheck-tests
+memcheck-tests: run-memcheck-tests
+
+# Run the main automated memory checks:
+.PHONY: memory-check
+memory-check: memcheck-tests
+
+# Run the shared automated Memcheck test command:
+.PHONY: run-memcheck-tests
+run-memcheck-tests: dnfui-tests
+	@if [ -n "$(MEMCHECK_TEST_FILTER)" ]; then \
+		MEMCHECK_TIMEOUT="$(MEMCHECK_TEST_TIMEOUT)" $(MEMCHECK) test ./$(TEST_BIN_NAME) "$(MEMCHECK_TEST_FILTER)"; \
+	else \
+		MEMCHECK_TIMEOUT="$(MEMCHECK_TEST_TIMEOUT)" $(MEMCHECK) test ./$(TEST_BIN_NAME); \
+	fi
 
 # Run the desktop app under Valgrind Memcheck:
 .PHONY: memcheck-app

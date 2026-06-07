@@ -73,7 +73,7 @@ jobs:
               fi
 
               git config --global --add safe.directory /workspace
-              ./packaging/build_rpm.sh
+              make rpm
 
               mkdir -p artifacts
               cp "$(readlink -f dnf-ui-latest.rpm)" artifacts/

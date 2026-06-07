@@ -99,13 +99,25 @@ Fedora RPM packaging is included for this application.
 Build a source RPM from the current tracked working tree:
 
 ```sh
-./packaging/build_srpm.sh
+make srpm
 ```
 
 Build binary and source RPMs locally:
 
 ```sh
-./packaging/build_rpm.sh
+make rpm
+```
+
+Build a source RPM in Docker:
+
+```sh
+make dockersrpm
+```
+
+Build binary and source RPMs in Docker:
+
+```sh
+make dockerrpm
 ```
 
 Artifacts are written under `./rpmbuild/`.
@@ -113,7 +125,8 @@ Artifacts are written under `./rpmbuild/`.
 Notes:
 
 - The RPM package is built from `dnf-ui.spec`
-- `build_srpm.sh` includes files tracked by Git in the generated source tarball
+- `make srpm` includes files tracked by Git in the generated source tarball
+- The Docker RPM targets use the existing Fedora development image and write artifacts into the same `./rpmbuild/` tree
 
 Run `rpmlint` on the source RPM and binary RPMs:
 
@@ -130,3 +143,20 @@ mock -r fedora-rawhide-x86_64 --rebuild dnf-ui-latest.src.rpm
 ```
 
 Use a different `-r` value if you want to build for another Fedora release or architecture.
+
+## Docker GDB
+
+Run the app under GDB in the development container:
+
+```sh
+make dockergdb
+```
+
+Stop the GDB container if it is still running:
+
+```sh
+make dockergdbstop
+```
+
+The Docker GDB target starts a system bus in the container and checks that
+dnf5daemon can be activated before launching GDB.

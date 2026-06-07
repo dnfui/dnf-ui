@@ -57,11 +57,11 @@ Do **not** add untrusted users to the `mock` group. Mock group membership is pow
 
 ## 3. Build the SRPM
 
-The repository already has packaging helpers:
+The repository already has packaging targets:
 
 ```bash
-./packaging/build_srpm.sh
-./packaging/build_rpm.sh
+make srpm
+make rpm
 ```
 
 The SRPM helper creates a source tarball from tracked Git files, builds the SRPM, and updates this convenience symlink:
@@ -81,7 +81,7 @@ Commit anything that must be included in the COPR build.
 Build the SRPM:
 
 ```bash
-./packaging/build_srpm.sh
+make srpm
 ```
 
 Show the real SRPM path:
@@ -93,7 +93,7 @@ readlink -f dnf-ui-latest.src.rpm
 Optional local binary RPM build:
 
 ```bash
-./packaging/build_rpm.sh
+make rpm
 ```
 
 This also updates:
@@ -315,7 +315,7 @@ Add a new changelog entry at the top of the changelog:
 Then build, test, and upload:
 
 ```bash
-./packaging/build_srpm.sh
+make srpm
 
 mock -r fedora-<current>-x86_64 --rebuild dnf-ui-latest.src.rpm
 mock -r fedora-<previous>-x86_64 --rebuild dnf-ui-latest.src.rpm
@@ -363,7 +363,7 @@ Add a changelog entry:
 Then build, test, and upload:
 
 ```bash
-./packaging/build_srpm.sh
+make srpm
 
 mock -r fedora-<current>-x86_64 --rebuild dnf-ui-latest.src.rpm
 mock -r fedora-<previous>-x86_64 --rebuild dnf-ui-latest.src.rpm

@@ -113,7 +113,7 @@ jobs:
                 rpm-build
 
               git config --global --add safe.directory /workspace
-              ./packaging/build_rpm.sh
+              make rpm
               test -L dnf-ui-latest.rpm
               test -L dnf-ui-latest.src.rpm
             '

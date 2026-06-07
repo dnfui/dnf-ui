@@ -76,7 +76,7 @@ jobs:
               fi
 
               git config --global --add safe.directory /workspace
-              ./packaging/build_srpm.sh
+              make srpm
 
               mkdir -p ~/.config
               chmod 700 ~/.config
