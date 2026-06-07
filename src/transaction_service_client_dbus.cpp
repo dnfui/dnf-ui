@@ -24,6 +24,10 @@
 
 namespace {
 
+// -----------------------------------------------------------------------------
+// D-Bus names from Fedora dnf5daemon.
+// Keep these in sync with the external API assumptions document.
+// -----------------------------------------------------------------------------
 constexpr const char *kDnfDaemonName = "org.rpm.dnf.v0";
 constexpr const char *kDnfDaemonManagerPath = "/org/rpm/dnf/v0";
 constexpr const char *kDnfDaemonSessionManagerInterface = "org.rpm.dnf.v0.SessionManager";
@@ -177,6 +181,24 @@ apply_options_parameters()
   g_variant_builder_init(&options, G_VARIANT_TYPE("a{sv}"));
   g_variant_builder_add(&options, "{sv}", "interactive", g_variant_new_boolean(TRUE));
   return g_variant_new("(a{sv})", &options);
+}
+
+// -----------------------------------------------------------------------------
+// Return true when D-Bus reports that dnf5daemon is missing or cannot start.
+// Other daemon errors are kept unchanged so useful details are not hidden.
+// -----------------------------------------------------------------------------
+bool
+daemon_is_unavailable_error(GError *error)
+{
+  if (!error) {
+    return false;
+  }
+
+  return g_error_matches(error, G_DBUS_ERROR, G_DBUS_ERROR_SERVICE_UNKNOWN) ||
+      g_error_matches(error, G_DBUS_ERROR, G_DBUS_ERROR_NAME_HAS_NO_OWNER) ||
+      g_error_matches(error, G_DBUS_ERROR, G_DBUS_ERROR_SPAWN_EXEC_FAILED) ||
+      g_error_matches(error, G_DBUS_ERROR, G_DBUS_ERROR_SPAWN_FAILED) ||
+      g_error_matches(error, G_DBUS_ERROR, G_DBUS_ERROR_SPAWN_SERVICE_NOT_FOUND);
 }
 
 // -----------------------------------------------------------------------------
@@ -411,7 +433,11 @@ open_daemon_session(GDBusConnection *connection, std::string &transaction_path_o
                                                 nullptr,
                                                 &error);
   if (!reply) {
-    error_out = error ? error->message : _("Could not open a dnf5daemon session.");
+    if (daemon_is_unavailable_error(error)) {
+      error_out = _("dnf5daemon is not available. Make sure dnf5daemon-server is installed and running.");
+    } else {
+      error_out = error ? error->message : _("Could not open a dnf5daemon session.");
+    }
     g_clear_error(&error);
     return false;
   }

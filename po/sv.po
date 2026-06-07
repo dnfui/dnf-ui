@@ -258,6 +258,9 @@ msgstr "Transaktionsbegäran köades."
 msgid "Connecting to transaction service..."
 msgstr "Ansluter till transaktionstjänsten..."
 
+msgid "dnf5daemon is not available. Make sure dnf5daemon-server is installed and running."
+msgstr "dnf5daemon är inte tillgänglig. Kontrollera att dnf5daemon-server är installerad och körs."
+
 msgid "Privileged transaction preview ready."
 msgstr "Privilegierad transaktionsgranskning är klar."
 

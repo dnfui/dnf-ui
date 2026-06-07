@@ -206,15 +206,25 @@ Code:
 - [src/transaction_service_client_dbus.cpp](../src/transaction_service_client_dbus.cpp)
 - [src/transaction_service_client_wait.cpp](../src/transaction_service_client_wait.cpp)
 
+Checked against:
+
+- Fedora Docker image package `dnf5daemon-server-5.4.2.1-1.fc44.x86_64`
+- official dnf5daemon D-Bus API documentation linked above
+- local D-Bus introspection using the same connection that opened the session
+
 Assumptions:
 
 - dnf5daemon is available on the system bus as `org.rpm.dnf.v0`.
-- Sessions are opened through `org.rpm.dnf.v0.SessionManager.open_session`.
-- Package specs are marked on the session through the rpm interface methods
-  `install`, `remove`, `reinstall`, and `upgrade`.
-- Preview is resolved through `org.rpm.dnf.v0.Goal.resolve`.
-- Apply is started through `org.rpm.dnf.v0.Goal.do_transaction`.
-- Session cleanup uses `org.rpm.dnf.v0.SessionManager.close_session`.
+- The session manager object path is `/org/rpm/dnf/v0`.
+- Sessions are opened through `org.rpm.dnf.v0.SessionManager.open_session(a{sv}) -> (o)`.
+- Session cleanup uses `org.rpm.dnf.v0.SessionManager.close_session(o) -> (b)`.
+- Package specs are marked on the session through these rpm interface methods:
+  `install(as, a{sv})`, `remove(as, a{sv})`, `reinstall(as, a{sv})`, and `upgrade(as, a{sv})`.
+- Preview is resolved through `org.rpm.dnf.v0.Goal.resolve(a{sv}) -> (a(sssa{sv}a{sv})u)`.
+- Resolver result `0` means success, `1` means success with warnings, and `2`
+  means resolve failure.
+- Resolve failures are read through `org.rpm.dnf.v0.Goal.get_transaction_problems_string() -> (as)`.
+- Apply is started through `org.rpm.dnf.v0.Goal.do_transaction(a{sv}) -> ()`.
 - Signal subscriptions invoke callbacks in the subscribing thread's
   thread-default main context.
 - A dnf5daemon session is tied to the D-Bus connection that created it.
@@ -224,6 +234,11 @@ Assumptions:
   can leave the Polkit prompt open.
 - Unsupported daemon transaction item types or actions must fail preview instead
   of being hidden.
+- The progress window listens to selected dnf5daemon signals:
+  `download_add_new`, `download_progress`, `download_end`,
+  `download_mirror_failure`, `transaction_before_begin`,
+  `transaction_verify_start`, `transaction_transaction_start`,
+  `transaction_action_start`, and `transaction_unpack_error`.
 
 Why this matters:
 
@@ -234,6 +249,8 @@ Why this matters:
   app understands.
 - The UI must not report timeout failure while dnf5daemon is still waiting for
   the user's Polkit answer.
+- The signal list is intentionally small. It gives the user useful transaction
+  stages without turning the progress window into a debug log.
 
 Tests:
 
