@@ -94,6 +94,38 @@ TEST_CASE("dnf5daemon client previews install requests", "[dnf5daemon]")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that releasing a preview session really closes it in dnf5daemon.
+// This is the same path used when the user closes the preview dialog.
+// -----------------------------------------------------------------------------
+TEST_CASE("dnf5daemon client releases preview sessions", "[dnf5daemon]")
+{
+  require_dnf5daemon_test_enabled();
+  transaction_service_client_reset_for_tests();
+
+  const std::string install_spec = dnf5daemon_test_install_spec();
+  TransactionRequest request;
+  request.install.push_back(install_spec);
+
+  TransactionPreview preview;
+  std::string transaction_path;
+  std::string error;
+
+  REQUIRE(transaction_service_client_preview_request(request, preview, transaction_path, error));
+  REQUIRE_FALSE(transaction_path.empty());
+
+  transaction_service_client_release_request(transaction_path);
+
+  std::vector<std::string> progress_lines;
+  bool applied_after_release = transaction_service_client_apply_started_request(
+      transaction_path, [&](const std::string &line) { progress_lines.push_back(line); }, error);
+
+  transaction_service_client_reset_for_tests();
+
+  REQUIRE_FALSE(applied_after_release);
+  REQUIRE_FALSE(error.empty());
+}
+
+// -----------------------------------------------------------------------------
 // Verify that the client can apply an install transaction through dnf5daemon.
 // -----------------------------------------------------------------------------
 TEST_CASE("dnf5daemon client applies install requests", "[dnf5daemon]")
