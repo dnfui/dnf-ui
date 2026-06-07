@@ -36,6 +36,11 @@ remove_test_package() {
   dnf5 -y remove "$INSTALL_SPEC" >/dev/null 2>&1 || true
 }
 
+install_test_package() {
+  dnf5 -y install "$INSTALL_SPEC" >/dev/null 2>&1
+  rpm -q "$INSTALL_NAME" >/dev/null
+}
+
 run_daemon_test() {
   local test_name="$1"
 
@@ -67,6 +72,11 @@ remove_test_package
 
 run_daemon_test "dnf5daemon client applies install requests"
 rpm -q "$INSTALL_NAME" >/dev/null
+remove_test_package
+
+install_test_package
+run_daemon_test "dnf5daemon client previews remove requests"
+run_daemon_test "dnf5daemon client previews reinstall requests"
 remove_test_package
 
 run_daemon_test "dnf5daemon client reports resolve failure"

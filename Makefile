@@ -90,6 +90,7 @@ help:
 	@printf '%-36s %s\n' 'dockersetup' 'Build the Docker development image.'
 	@printf '%-36s %s\n' 'dockerlogin' 'Open a shell in the Docker development container.'
 	@printf '%-36s %s\n' 'dockerrun' 'Run the desktop app in Docker.'
+	@printf '%-36s %s\n' 'dockertest' 'Run the backend test suite in Docker.'
 	@printf '%-36s %s\n' 'dockerrunoffline' 'Run the desktop app in Docker without networking.'
 	@printf '%-36s %s\n' 'dockerruncoldoffline' 'Run the desktop app in Docker without networking or repo cache.'
 	@printf '%-36s %s\n' 'dockerofflinetest' 'Run the Docker offline smoke tests.'
@@ -187,6 +188,21 @@ dockerlogin:
 .PHONY: dockerrun
 dockerrun:
 	@THEME="$(THEME)" DEBUG_TRACE="$(DEBUG_TRACE)" ./docker/docker_build.sh
+
+# Run the backend test suite in Docker:
+.PHONY: dockertest
+dockertest:
+	@$(CONTAINER_RUNTIME) run --rm \
+		--name dnfui-test \
+		--init \
+		-w /workspace \
+		-e FINAL \
+		-e ASAN \
+		-e DEBUG_TRACE \
+		-e DNFUI_MESON_BUILD_ROOT=/tmp/dnfui-build \
+		-v "$(CURDIR):/workspace" \
+		dnfui-dev \
+		bash -lc 'BUILD_DIR="$$(./utils/meson_build.sh build-dir)" && ./utils/meson_build.sh tests && "$$BUILD_DIR/test/dnfui-tests" "~[dnf5daemon]" "~[offline]"'
 
 # Run the app in Docker with networking disabled:
 .PHONY: dockerrunoffline

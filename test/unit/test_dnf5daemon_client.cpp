@@ -127,6 +127,60 @@ TEST_CASE("dnf5daemon client applies install requests", "[dnf5daemon]")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that the client can preview removing an installed package.
+// -----------------------------------------------------------------------------
+TEST_CASE("dnf5daemon client previews remove requests", "[dnf5daemon]")
+{
+  require_dnf5daemon_test_enabled();
+  transaction_service_client_reset_for_tests();
+
+  const std::string install_spec = dnf5daemon_test_install_spec();
+  TransactionRequest request;
+  request.remove.push_back(install_spec);
+
+  TransactionPreview preview;
+  std::string transaction_path;
+  std::string error;
+
+  REQUIRE(transaction_service_client_preview_request(request, preview, transaction_path, error));
+  REQUIRE_FALSE(transaction_path.empty());
+
+  bool preview_contains_package = preview_section_contains_name(preview.remove, install_spec);
+
+  transaction_service_client_release_request(transaction_path);
+  transaction_service_client_reset_for_tests();
+
+  REQUIRE(preview_contains_package);
+}
+
+// -----------------------------------------------------------------------------
+// Verify that the client can preview reinstalling an installed package.
+// -----------------------------------------------------------------------------
+TEST_CASE("dnf5daemon client previews reinstall requests", "[dnf5daemon]")
+{
+  require_dnf5daemon_test_enabled();
+  transaction_service_client_reset_for_tests();
+
+  const std::string install_spec = dnf5daemon_test_install_spec();
+  TransactionRequest request;
+  request.reinstall.push_back(install_spec);
+
+  TransactionPreview preview;
+  std::string transaction_path;
+  std::string error;
+
+  REQUIRE(transaction_service_client_preview_request(request, preview, transaction_path, error));
+  REQUIRE_FALSE(transaction_path.empty());
+
+  bool preview_contains_package = preview_section_contains_name(preview.reinstall, install_spec);
+
+  transaction_service_client_release_request(transaction_path);
+  transaction_service_client_reset_for_tests();
+
+  REQUIRE(preview_contains_package);
+}
+
+// -----------------------------------------------------------------------------
 // Verify that daemon resolver failures are returned as normal client errors.
 // -----------------------------------------------------------------------------
 TEST_CASE("dnf5daemon client reports resolve failure", "[dnf5daemon]")
