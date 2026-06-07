@@ -12,6 +12,7 @@ BUILD_DIR="$("$PROJECT_ROOT/utils/meson_build.sh" build-dir)"
 TEST_BIN="$BUILD_DIR/test/dnfui-tests"
 STARTED_SYSTEM_BUS_PID=""
 INSTALL_SPEC="${DNFUI_TEST_DNF5DAEMON_INSTALL_SPEC:-cowsay}"
+INSTALL_NAME="${DNFUI_TEST_DNF5DAEMON_INSTALL_NAME:-$INSTALL_SPEC}"
 
 start_system_bus() {
   mkdir -p /run/dbus
@@ -31,6 +32,17 @@ stop_system_bus() {
   fi
 }
 
+remove_test_package() {
+  dnf5 -y remove "$INSTALL_SPEC" >/dev/null 2>&1 || true
+}
+
+run_daemon_test() {
+  local test_name="$1"
+
+  echo "*** Running dnf5daemon test: $test_name ***"
+  "$TEST_BIN" "$test_name"
+}
+
 echo "*** Building tests ***"
 "$PROJECT_ROOT/utils/meson_build.sh" tests
 
@@ -48,7 +60,14 @@ gdbus introspect --system --dest org.rpm.dnf.v0 --object-path /org/rpm/dnf/v0 >/
 
 echo "*** Preparing package metadata ***"
 dnf5 makecache >/dev/null
-dnf5 -y remove "$INSTALL_SPEC" >/dev/null 2>&1 || true
+remove_test_package
 
-echo "*** Running dnf5daemon tests ***"
-"$TEST_BIN" "[dnf5daemon]"
+run_daemon_test "dnf5daemon client previews install requests"
+remove_test_package
+
+run_daemon_test "dnf5daemon client applies install requests"
+rpm -q "$INSTALL_NAME" >/dev/null
+remove_test_package
+
+run_daemon_test "dnf5daemon client reports resolve failure"
+run_daemon_test "dnf5daemon client reports unavailable daemon"

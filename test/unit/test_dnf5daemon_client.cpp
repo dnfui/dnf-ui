@@ -14,6 +14,7 @@
 
 #include <algorithm>
 #include <string>
+#include <vector>
 
 namespace {
 
@@ -38,6 +39,17 @@ preview_section_contains_name(const std::vector<std::string> &items, const std::
 {
   return std::any_of(
       items.begin(), items.end(), [&](const std::string &item) { return item.rfind(name + "-", 0) == 0; });
+}
+
+// -----------------------------------------------------------------------------
+// Return true when progress contains the expected message.
+// -----------------------------------------------------------------------------
+bool
+progress_contains(const std::vector<std::string> &progress_lines, const std::string &expected)
+{
+  return std::any_of(progress_lines.begin(), progress_lines.end(), [&](const std::string &line) {
+    return line.find(expected) != std::string::npos;
+  });
 }
 
 // -----------------------------------------------------------------------------
@@ -72,10 +84,46 @@ TEST_CASE("dnf5daemon client previews install requests", "[dnf5daemon]")
 
   REQUIRE(transaction_service_client_preview_request(request, preview, transaction_path, error));
   REQUIRE_FALSE(transaction_path.empty());
-  REQUIRE(preview_section_contains_name(preview.install, install_spec));
+
+  bool preview_contains_package = preview_section_contains_name(preview.install, install_spec);
 
   transaction_service_client_release_request(transaction_path);
   transaction_service_client_reset_for_tests();
+
+  REQUIRE(preview_contains_package);
+}
+
+// -----------------------------------------------------------------------------
+// Verify that the client can apply an install transaction through dnf5daemon.
+// -----------------------------------------------------------------------------
+TEST_CASE("dnf5daemon client applies install requests", "[dnf5daemon]")
+{
+  require_dnf5daemon_test_enabled();
+  transaction_service_client_reset_for_tests();
+
+  const std::string install_spec = dnf5daemon_test_install_spec();
+  TransactionRequest request;
+  request.install.push_back(install_spec);
+
+  TransactionPreview preview;
+  std::string transaction_path;
+  std::string error;
+
+  REQUIRE(transaction_service_client_preview_request(request, preview, transaction_path, error));
+  REQUIRE_FALSE(transaction_path.empty());
+
+  bool preview_contains_package = preview_section_contains_name(preview.install, install_spec);
+
+  std::vector<std::string> progress_lines;
+  bool applied = transaction_service_client_apply_started_request(
+      transaction_path, [&](const std::string &line) { progress_lines.push_back(line); }, error);
+
+  transaction_service_client_release_request(transaction_path);
+  transaction_service_client_reset_for_tests();
+
+  REQUIRE(preview_contains_package);
+  REQUIRE(applied);
+  REQUIRE(progress_contains(progress_lines, "Transaction applied successfully."));
 }
 
 // -----------------------------------------------------------------------------
