@@ -11,6 +11,7 @@
 
 #include <glib.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <string>
 
@@ -132,12 +133,16 @@ on_transaction_progress_signal(GDBusConnection *,
     }
 
     int percent = static_cast<int>((downloaded * 100) / total);
-    auto [it, inserted] = forwarder->download_percent_by_id.emplace(download_id, -1);
-    if (!inserted && it->second == percent) {
+    percent = std::clamp(percent, 0, 100);
+    int bucket = percent / 10;
+
+    // Report progress once per 10% range so large transactions do not flood the GTK progress window.
+    auto [it, inserted] = forwarder->download_bucket_by_id.emplace(download_id, -1);
+    if (!inserted && it->second == bucket) {
       return;
     }
 
-    it->second = percent;
+    it->second = bucket;
     forward_progress_line(forwarder,
                           std::string(_("Download progress: ")) + download_id + " (" + std::to_string(percent) + "%)");
     return;

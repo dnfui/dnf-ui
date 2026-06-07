@@ -22,7 +22,7 @@ struct TransactionServiceProgressForwarder {
   bool transaction_started = false;
   bool verify_started = false;
   bool prepare_started = false;
-  std::map<std::string, int> download_percent_by_id;
+  std::map<std::string, int> download_bucket_by_id;
 };
 
 // -----------------------------------------------------------------------------
