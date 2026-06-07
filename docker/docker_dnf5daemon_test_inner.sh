@@ -81,6 +81,8 @@ rpm -q "$INSTALL_NAME" >/dev/null
 remove_test_package
 
 install_test_package
+run_daemon_test "dnf5daemon client releases sessions after failed apply"
+install_test_package
 run_daemon_test "dnf5daemon client previews remove requests"
 run_daemon_test "dnf5daemon client previews reinstall requests"
 remove_test_package

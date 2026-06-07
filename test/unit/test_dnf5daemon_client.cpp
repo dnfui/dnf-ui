@@ -184,6 +184,48 @@ TEST_CASE("dnf5daemon client applies install requests", "[dnf5daemon]")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that release still closes the daemon session after apply fails.
+// A second daemon session changes the package state after the first preview.
+// -----------------------------------------------------------------------------
+TEST_CASE("dnf5daemon client releases sessions after failed apply", "[dnf5daemon]")
+{
+  require_dnf5daemon_test_enabled();
+  transaction_service_client_reset_for_tests();
+
+  const std::string install_spec = dnf5daemon_test_install_spec();
+  TransactionRequest remove_request;
+  remove_request.remove.push_back(install_spec);
+
+  TransactionPreview first_preview;
+  std::string first_transaction_path;
+  std::string error;
+
+  REQUIRE(transaction_service_client_preview_request(remove_request, first_preview, first_transaction_path, error));
+  REQUIRE_FALSE(first_transaction_path.empty());
+  REQUIRE(transaction_service_client_session_exists_for_tests(first_transaction_path));
+
+  TransactionPreview second_preview;
+  std::string second_transaction_path;
+  REQUIRE(transaction_service_client_preview_request(remove_request, second_preview, second_transaction_path, error));
+  REQUIRE_FALSE(second_transaction_path.empty());
+
+  std::vector<std::string> progress_lines;
+  REQUIRE(transaction_service_client_apply_started_request(
+      second_transaction_path, [&](const std::string &line) { progress_lines.push_back(line); }, error));
+  transaction_service_client_release_request(second_transaction_path);
+
+  bool failed_apply = transaction_service_client_apply_started_request(
+      first_transaction_path, [&](const std::string &line) { progress_lines.push_back(line); }, error);
+  transaction_service_client_release_request(first_transaction_path);
+  bool session_exists_after_release = transaction_service_client_session_exists_for_tests(first_transaction_path);
+  transaction_service_client_reset_for_tests();
+
+  REQUIRE_FALSE(failed_apply);
+  REQUIRE_FALSE(error.empty());
+  REQUIRE_FALSE(session_exists_after_release);
+}
+
+// -----------------------------------------------------------------------------
 // Verify that the client can preview removing an installed package.
 // -----------------------------------------------------------------------------
 TEST_CASE("dnf5daemon client previews remove requests", "[dnf5daemon]")
