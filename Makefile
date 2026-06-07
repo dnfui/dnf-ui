@@ -39,7 +39,7 @@ else
   MESON_DEBUG_TRACE = false
 endif
 
-ifneq ($(filter test dnf5daemontest $(TEST_BIN_NAME) memcheck memcheck-smoke memcheck-tests memory-check run-memcheck-tests,$(MAKECMDGOALS)),)
+ifneq ($(filter test $(TEST_BIN_NAME) memcheck memcheck-smoke memcheck-tests memory-check run-memcheck-tests,$(MAKECMDGOALS)),)
   MESON_BUILD_TESTS = true
 else
   MESON_BUILD_TESTS = false
@@ -157,10 +157,8 @@ test: dnfui-tests
 
 # Run native dnf5daemon transaction client tests:
 .PHONY: dnf5daemontest
-dnf5daemontest: dnfui-tests
-	@echo "*** Running native dnf5daemon transaction client tests ***"
-	@echo "*** These tests may install and remove $${DNFUI_TEST_DNF5DAEMON_INSTALL_SPEC:-cowsay}. ***"
-	@DNFUI_TEST_DNF5DAEMON=1 ./$(TEST_BIN_NAME) "[dnf5daemon]"
+dnf5daemontest:
+	@./utils/native_dnf5daemon_test.sh
 
 # Build the source RPM from tracked files:
 .PHONY: srpm

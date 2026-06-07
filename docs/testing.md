@@ -73,6 +73,22 @@ Run the dnf5daemon transaction client tests in Docker:
 make dockerdnf5daemontest
 ```
 
+Run the dnf5daemon transaction client tests on native Fedora:
+
+```sh
+make dnf5daemontest
+```
+
+The native dnf5daemon tests may install and remove `cowsay` unless
+`DNFUI_TEST_DNF5DAEMON_INSTALL_SPEC` is set to another package.
+The script restores whether the test package was installed before the run.
+Native apply tests are skipped by default because they require dnf5daemon
+authorization. Run them explicitly with:
+
+```sh
+DNFUI_NATIVE_DNF5DAEMON_APPLY=1 make dnf5daemontest
+```
+
 Run the Docker app target with networking disabled:
 
 ```sh

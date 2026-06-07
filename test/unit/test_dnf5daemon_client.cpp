@@ -13,6 +13,7 @@
 #include <glib.h>
 
 #include <algorithm>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -50,6 +51,22 @@ progress_contains(const std::vector<std::string> &progress_lines, const std::str
   return std::any_of(progress_lines.begin(), progress_lines.end(), [&](const std::string &line) {
     return line.find(expected) != std::string::npos;
   });
+}
+
+// -----------------------------------------------------------------------------
+// Return progress lines as one string so Catch2 can show them on failure.
+// -----------------------------------------------------------------------------
+std::string
+joined_progress_lines(const std::vector<std::string> &progress_lines)
+{
+  std::ostringstream out;
+  for (const auto &line : progress_lines) {
+    if (out.tellp() > 0) {
+      out << "\n";
+    }
+    out << line;
+  }
+  return out.str();
 }
 
 // -----------------------------------------------------------------------------
@@ -178,6 +195,8 @@ TEST_CASE("dnf5daemon client applies install requests", "[dnf5daemon]")
   transaction_service_client_reset_for_tests();
 
   REQUIRE(preview_contains_package);
+  INFO(error);
+  INFO(joined_progress_lines(progress_lines));
   REQUIRE(applied);
   REQUIRE(progress_contains(progress_lines, "Transaction applied successfully."));
   REQUIRE_FALSE(session_exists_after_release);
@@ -221,6 +240,8 @@ TEST_CASE("dnf5daemon client releases sessions after failed apply", "[dnf5daemon
   transaction_service_client_reset_for_tests();
 
   REQUIRE_FALSE(failed_apply);
+  INFO(error);
+  INFO(joined_progress_lines(progress_lines));
   REQUIRE_FALSE(error.empty());
   REQUIRE_FALSE(session_exists_after_release);
 }
