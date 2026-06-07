@@ -93,6 +93,7 @@ help:
 	@printf '%-36s %s\n' 'dockerrunoffline' 'Run the desktop app in Docker without networking.'
 	@printf '%-36s %s\n' 'dockerruncoldoffline' 'Run the desktop app in Docker without networking or repo cache.'
 	@printf '%-36s %s\n' 'dockerofflinetest' 'Run the Docker offline smoke tests.'
+	@printf '%-36s %s\n' 'dockerdnf5daemontest' 'Run dnf5daemon transaction client tests in Docker.'
 	@printf '%-36s %s\n' 'dockergdb' 'Run the desktop app under GDB in Docker.'
 	@printf '%-36s %s\n' 'dockergdbstop' 'Stop the Docker GDB container if it is still running.'
 	@printf '%-36s %s\n' 'dockersrpm' 'Build the source RPM in Docker.'
@@ -201,6 +202,11 @@ dockerruncoldoffline:
 .PHONY: dockerofflinetest
 dockerofflinetest:
 	@DEBUG_TRACE="$(DEBUG_TRACE)" ./docker/docker_offline_test.sh
+
+# Run dnf5daemon transaction client tests in Docker:
+.PHONY: dockerdnf5daemontest
+dockerdnf5daemontest:
+	@DEBUG_TRACE="$(DEBUG_TRACE)" ./docker/docker_dnf5daemon_test.sh
 
 # Run the app under GDB in Docker:
 .PHONY: dockergdb

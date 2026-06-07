@@ -67,6 +67,12 @@ Run the offline cached metadata smoke tests separately:
 make dockerofflinetest
 ```
 
+Run the dnf5daemon transaction client tests in Docker:
+
+```sh
+make dockerdnf5daemontest
+```
+
 Run the Docker app target with networking disabled:
 
 ```sh
@@ -114,6 +120,7 @@ MEMCHECK_SMOKE_TIMEOUT=10m make memcheck
 ## Docker notes
 
 - `make dockerrun` starts a system bus in the container and uses dnf5daemon
+- `make dockerdnf5daemontest` runs preview and failure checks against dnf5daemon
 - Use native Fedora to test the real desktop Polkit prompt
 
 ## Fedora review checks

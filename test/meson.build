@@ -8,6 +8,7 @@ dnfui_tests = executable(
   files(
     'unit/test_backend.cpp',
     'unit/test_config.cpp',
+    'unit/test_dnf5daemon_client.cpp',
     'unit/test_offline.cpp',
     'unit/test_package_action_rows.cpp',
     'unit/test_package_table_sort.cpp',
