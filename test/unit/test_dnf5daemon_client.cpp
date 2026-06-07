@@ -165,6 +165,7 @@ TEST_CASE("dnf5daemon client applies install requests", "[dnf5daemon]")
 
   REQUIRE(transaction_service_client_preview_request(request, preview, transaction_path, error));
   REQUIRE_FALSE(transaction_path.empty());
+  REQUIRE(transaction_service_client_session_exists_for_tests(transaction_path));
 
   bool preview_contains_package = preview_section_contains_name(preview.install, install_spec);
 
@@ -173,11 +174,13 @@ TEST_CASE("dnf5daemon client applies install requests", "[dnf5daemon]")
       transaction_path, [&](const std::string &line) { progress_lines.push_back(line); }, error);
 
   transaction_service_client_release_request(transaction_path);
+  bool session_exists_after_release = transaction_service_client_session_exists_for_tests(transaction_path);
   transaction_service_client_reset_for_tests();
 
   REQUIRE(preview_contains_package);
   REQUIRE(applied);
   REQUIRE(progress_contains(progress_lines, "Transaction applied successfully."));
+  REQUIRE_FALSE(session_exists_after_release);
 }
 
 // -----------------------------------------------------------------------------

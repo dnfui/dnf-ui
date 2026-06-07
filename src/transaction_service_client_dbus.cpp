@@ -782,6 +782,53 @@ transaction_service_client_reset_for_tests()
   cache.connection = nullptr;
   cache.allow_erasing_sessions.clear();
 }
+
+// -----------------------------------------------------------------------------
+// Return true when dnf5daemon still exposes one session path.
+// Tests use this to verify that release code does not leave old sessions behind.
+// -----------------------------------------------------------------------------
+bool
+transaction_service_client_session_exists_for_tests(const std::string &transaction_path)
+{
+  if (transaction_path.empty()) {
+    return false;
+  }
+
+  GDBusConnection *connection = nullptr;
+  TransactionServiceConnectionCache &cache = get_transaction_service_connection_cache();
+  {
+    std::lock_guard<std::mutex> lock(cache.mutex);
+    if (cache.connection && !g_dbus_connection_is_closed(cache.connection)) {
+      connection = G_DBUS_CONNECTION(g_object_ref(cache.connection));
+    }
+  }
+
+  if (!connection) {
+    return false;
+  }
+
+  GError *error = nullptr;
+  GVariant *reply = g_dbus_connection_call_sync(connection,
+                                                kDnfDaemonName,
+                                                transaction_path.c_str(),
+                                                "org.freedesktop.DBus.Introspectable",
+                                                "Introspect",
+                                                nullptr,
+                                                G_VARIANT_TYPE("(s)"),
+                                                G_DBUS_CALL_FLAGS_NONE,
+                                                -1,
+                                                nullptr,
+                                                &error);
+  g_clear_error(&error);
+  g_object_unref(connection);
+
+  if (!reply) {
+    return false;
+  }
+
+  g_variant_unref(reply);
+  return true;
+}
 #endif
 
 // -----------------------------------------------------------------------------

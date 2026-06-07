@@ -48,6 +48,11 @@ void transaction_service_client_release_request_async(const std::string &transac
 // session bus cleanly between runs.
 // -----------------------------------------------------------------------------
 void transaction_service_client_reset_for_tests();
+
+// -----------------------------------------------------------------------------
+// Return true when the cached daemon connection can still see a session path.
+// -----------------------------------------------------------------------------
+bool transaction_service_client_session_exists_for_tests(const std::string &transaction_path);
 #endif
 
 // -----------------------------------------------------------------------------
