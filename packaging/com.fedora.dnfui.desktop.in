@@ -6,5 +6,6 @@ Exec=dnfui
 Icon=com.fedora.dnfui
 Terminal=false
 StartupNotify=true
+StartupWMClass=com.fedora.dnfui
 Categories=Settings;PackageManager;GTK;
 Keywords=dnf;packages;rpm;fedora;updates;
