@@ -39,7 +39,7 @@ else
   MESON_DEBUG_TRACE = false
 endif
 
-ifneq ($(filter test $(TEST_BIN_NAME) memcheck memcheck-smoke memcheck-tests memory-check run-memcheck-tests,$(MAKECMDGOALS)),)
+ifneq ($(filter test dnf5daemontest $(TEST_BIN_NAME) memcheck memcheck-smoke memcheck-tests memory-check run-memcheck-tests,$(MAKECMDGOALS)),)
   MESON_BUILD_TESTS = true
 else
   MESON_BUILD_TESTS = false
@@ -82,6 +82,7 @@ help:
 	@printf '%-36s %s\n' 'dnfui-tests' 'Build the test binary.'
 	@printf '%-36s %s\n' 'run' 'Build and run the desktop app locally.'
 	@printf '%-36s %s\n' 'test' 'Build and run the local test suite.'
+	@printf '%-36s %s\n' 'dnf5daemontest' 'Run native dnf5daemon transaction client tests.'
 	@printf '%-36s %s\n' 'srpm' 'Build the source tarball and source RPM.'
 	@printf '%-36s %s\n' 'rpm' 'Build binary and source RPMs.'
 	@printf '%-36s %s\n' 'nativeinstalltest' 'Build the RPM and reinstall it on the native system.'
@@ -153,6 +154,13 @@ run: dnfui
 test: dnfui-tests
 	@echo "*** Running test suite ***"
 	@./$(TEST_BIN_NAME)
+
+# Run native dnf5daemon transaction client tests:
+.PHONY: dnf5daemontest
+dnf5daemontest: dnfui-tests
+	@echo "*** Running native dnf5daemon transaction client tests ***"
+	@echo "*** These tests may install and remove $${DNFUI_TEST_DNF5DAEMON_INSTALL_SPEC:-cowsay}. ***"
+	@DNFUI_TEST_DNF5DAEMON=1 ./$(TEST_BIN_NAME) "[dnf5daemon]"
 
 # Build the source RPM from tracked files:
 .PHONY: srpm
