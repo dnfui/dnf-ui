@@ -53,6 +53,7 @@ jobs:
                 dbus-daemon \
                 desktop-file-utils \
                 gcc-c++ \
+                gettext \
                 git \
                 glib2-devel \
                 gtk4-devel \
