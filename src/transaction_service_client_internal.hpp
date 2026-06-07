@@ -15,16 +15,6 @@
 struct TransactionPreview;
 struct TransactionRequest;
 
-// -----------------------------------------------------------------------------
-// Transaction service result state returned by GetResult.
-// -----------------------------------------------------------------------------
-struct TransactionServiceResult {
-  std::string stage;
-  bool finished = false;
-  bool success = false;
-  std::string details;
-};
-
 struct TransactionServiceProgressForwarder {
   const std::function<void(const std::string &)> *progress_callback = nullptr;
   std::string transaction_path;
@@ -49,11 +39,6 @@ bool transaction_service_client_start_upgrade_all_transaction_request(GDBusConne
                                                                       std::string &transaction_path_out,
                                                                       std::string &error_out);
 
-bool transaction_service_client_get_transaction_result(GDBusConnection *connection,
-                                                       const std::string &transaction_path,
-                                                       TransactionServiceResult &result_out,
-                                                       std::string &error_out);
-
 bool transaction_service_client_get_transaction_preview(GDBusConnection *connection,
                                                         const std::string &transaction_path,
                                                         TransactionPreview &preview_out,
@@ -70,13 +55,6 @@ bool transaction_service_client_release_transaction_request(GDBusConnection *con
 // -----------------------------------------------------------------------------
 // Wait and progress signal handling.
 // -----------------------------------------------------------------------------
-bool transaction_service_client_wait_for_transaction_stage(GDBusConnection *connection,
-                                                           const std::string &transaction_path,
-                                                           const char *running_stage,
-                                                           GMainContext *context,
-                                                           TransactionServiceResult &result_out,
-                                                           std::string &error_out);
-
 bool transaction_service_client_wait_for_started_transaction_preview(GDBusConnection *connection,
                                                                      const std::string &transaction_path,
                                                                      TransactionPreview &preview_out,

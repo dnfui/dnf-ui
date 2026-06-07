@@ -121,15 +121,14 @@ inside the app.
 
 The backend finds the current executable path and asks libdnf5 which installed
 package owns it. The UI disables package changes for that exact installed row.
-The transaction service checks explicit package requests again before it creates
-a preview request object.
+The pending transaction request is checked again before it is sent to
+dnf5daemon.
 
 The relevant functions are:
 
 - `dnf_backend_is_package_self_protected`
 - `dnf_backend_is_self_protected_transaction_spec`
 - `pending_transaction_validate_request`
-- `validate_transaction_request_for_service`
 
 ## Package details
 
@@ -163,19 +162,20 @@ contains the libdnf download and rpm progress callback adapters.
 [src/dnf_backend/dnf_transaction_format.cpp](../src/dnf_backend/dnf_transaction_format.cpp)
 contains shared transaction text formatting.
 
-It resolves a preview before apply, then applies the transaction if the service
-authorizes it. Download progress is reported through a callback so the service
-can forward progress lines to the GUI.
+It can resolve previews and apply transactions locally, but the normal GUI apply
+path goes through dnf5daemon. The local apply path remains for tests and shared
+preview formatting while dnf5daemon coverage is completed.
 
 The preview builder fails closed when libdnf resolves an action that the
 preview model cannot represent. That keeps the GUI review step from showing a
 partial transaction summary.
 
-Upgrade-all requests use libdnf5's all-installed-packages upgrade job instead of
-expanding the request into many package specs in the GUI.
+Upgrade-all requests in the GUI build explicit upgrade specs and send them to
+dnf5daemon.
 
-The GUI should not call transaction apply directly. Apply should go through the
-transaction service so Polkit can authorize it.
+The GUI should not call local transaction apply directly. Apply should go
+through dnf5daemon so the privileged package operation stays outside the GTK
+process.
 
 ## Internal helpers
 

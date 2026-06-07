@@ -22,7 +22,8 @@ Install the native build dependencies listed by the project:
 sudo dnf install $(grep -vE '^\s*(#|$)' docs/fedora-native-dependencies.txt)
 ```
 
-The dependency file covers native builds, tests, package validation, RPM builds, translations, mock builds, and local transaction service smoke tests.
+The dependency file covers native builds, tests, package validation, RPM builds,
+translations, mock builds, and dnf5daemon based app testing.
 
 ## 2. Mock setup
 
@@ -59,8 +60,8 @@ Do **not** add untrusted users to the `mock` group. Mock group membership is pow
 The repository already has packaging helpers:
 
 ```bash
-make srpm
-make rpm
+./packaging/build_srpm.sh
+./packaging/build_rpm.sh
 ```
 
 The SRPM helper creates a source tarball from tracked Git files, builds the SRPM, and updates this convenience symlink:
@@ -80,7 +81,7 @@ Commit anything that must be included in the COPR build.
 Build the SRPM:
 
 ```bash
-make srpm
+./packaging/build_srpm.sh
 ```
 
 Show the real SRPM path:
@@ -92,7 +93,7 @@ readlink -f dnf-ui-latest.src.rpm
 Optional local binary RPM build:
 
 ```bash
-make rpm
+./packaging/build_rpm.sh
 ```
 
 This also updates:
@@ -261,11 +262,11 @@ Smoke checks:
 ```bash
 rpm -q dnf-ui
 rpm -ql dnf-ui
-systemctl status dnfui-service.service
+rpm -q dnf5daemon-server
 ```
 
-The systemd service may be inactive until D-Bus activates it.
-That is fine if the app can trigger package actions and Polkit authorization appears when needed.
+The app should trigger package actions through dnf5daemon, and Polkit
+authorization should appear when a transaction is applied.
 
 ## 9. User install instructions
 
@@ -314,7 +315,7 @@ Add a new changelog entry at the top of the changelog:
 Then build, test, and upload:
 
 ```bash
-make srpm
+./packaging/build_srpm.sh
 
 mock -r fedora-<current>-x86_64 --rebuild dnf-ui-latest.src.rpm
 mock -r fedora-<previous>-x86_64 --rebuild dnf-ui-latest.src.rpm
@@ -362,7 +363,7 @@ Add a changelog entry:
 Then build, test, and upload:
 
 ```bash
-make srpm
+./packaging/build_srpm.sh
 
 mock -r fedora-<current>-x86_64 --rebuild dnf-ui-latest.src.rpm
 mock -r fedora-<previous>-x86_64 --rebuild dnf-ui-latest.src.rpm

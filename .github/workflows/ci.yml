@@ -31,7 +31,7 @@ jobs:
             fedora:latest \
             bash -lc '
               set -euo pipefail
-              trap '\''chown -R "${HOST_UID}:${HOST_GID}" build dnfui dnfui-service dnfui-tests 2>/dev/null || true'\'' EXIT
+              trap '\''chown -R "${HOST_UID}:${HOST_GID}" build dnfui dnfui-tests 2>/dev/null || true'\'' EXIT
 
               dnf -y install \
                 appstream \
@@ -44,10 +44,7 @@ jobs:
                 gtk4-devel \
                 libdnf5-devel \
                 meson \
-                ninja-build \
-                polkit-devel \
-                systemd-devel \
-                systemd-rpm-macros
+                ninja-build
 
               meson setup build/ci \
                 --prefix /usr \
@@ -66,28 +63,6 @@ jobs:
                 -Dfinal_build=true
               meson compile -C build/final
             '
-
-  docker-service-tests:
-    name: Docker service smoke tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Build Docker test image
-        run: ./docker/docker_setup.sh
-
-      - name: Run Docker service test matrix
-        env:
-          DOCKER_USE_TTY: "0"
-        run: |
-          make dockerservicetest
-          make dockerservicepreviewfailuretest
-          make dockerservicecanceltest
-          make dockerserviceapplytest
-          make dockerservicesystemtest
-          make dockerservicesystemdisconnecttest
-          make dockerservicesystemapplytest
 
   docker-offline-tests:
     name: Docker offline smoke tests
@@ -135,13 +110,10 @@ jobs:
                 make \
                 meson \
                 ninja-build \
-                polkit-devel \
-                rpm-build \
-                systemd-devel \
-                systemd-rpm-macros
+                rpm-build
 
               git config --global --add safe.directory /workspace
-              make rpm
+              ./packaging/build_rpm.sh
               test -L dnf-ui-latest.rpm
               test -L dnf-ui-latest.src.rpm
             '

@@ -60,10 +60,7 @@ jobs:
                 make \
                 meson \
                 ninja-build \
-                polkit-devel \
-                rpm-build \
-                systemd-devel \
-                systemd-rpm-macros
+                rpm-build
 
               if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
                 spec_version="$(rpmspec -q --qf "%{VERSION}\n" dnf-ui.spec | head -n1)"
@@ -76,7 +73,7 @@ jobs:
               fi
 
               git config --global --add safe.directory /workspace
-              make rpm
+              ./packaging/build_rpm.sh
 
               mkdir -p artifacts
               cp "$(readlink -f dnf-ui-latest.rpm)" artifacts/

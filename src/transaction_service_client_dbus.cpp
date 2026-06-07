@@ -1,8 +1,7 @@
 // -----------------------------------------------------------------------------
 // transaction_service_client_dbus.cpp
 // Raw D-Bus calls used by the GUI-side transaction client.
-// This prototype talks to Fedora dnf5daemon instead of the old dnf-ui service.
-// The public client API is kept stable so the GTK code does not change here.
+// Talks to DNF5 dnf5daemon while keeping the GTK-facing transaction API small.
 // -----------------------------------------------------------------------------
 #include "transaction_service_client_internal.hpp"
 
@@ -561,20 +560,6 @@ transaction_service_client_start_upgrade_all_transaction_request(GDBusConnection
 
   g_variant_unref(reply);
   return true;
-}
-
-// -----------------------------------------------------------------------------
-// The dnf5daemon prototype resolves previews directly and does not poll result state.
-// -----------------------------------------------------------------------------
-bool
-transaction_service_client_get_transaction_result(GDBusConnection *,
-                                                  const std::string &,
-                                                  TransactionServiceResult &result_out,
-                                                  std::string &error_out)
-{
-  result_out = {};
-  error_out = _("dnf5daemon result polling is not used by this prototype.");
-  return false;
 }
 
 // -----------------------------------------------------------------------------

@@ -13,7 +13,6 @@ The project uses:
 - Docker helpers under [docker](../docker)
 
 The Catch2 tests are the fastest place to check backend and client behavior.
-New dnf5daemon-focused tests still need to be added on this prototype branch.
 
 ## Test dependencies
 
@@ -50,8 +49,9 @@ These tests protect:
 
 ## Daemon smoke tests
 
-The app now talks to Fedora dnf5daemon for privileged transactions.
-Daemon-focused smoke tests still need to be added on this prototype branch.
+The app now talks to DNF5 dnf5daemon for privileged transactions.
+Use Docker and native Fedora testing to verify preview, apply, cancel, failure,
+and session cleanup behavior.
 
 ## Common commands
 
@@ -91,9 +91,6 @@ Run a quick smoke test under Valgrind Memcheck:
 make memcheck
 ```
 
-The full automated Memcheck targets are disabled on the dnf5daemon prototype
-branch until the old service tests are replaced.
-
 Run the desktop app under Valgrind Memcheck:
 
 ```sh
@@ -125,20 +122,17 @@ Fedora package review expects `rpmlint` output for the source RPM and all binary
 RPMs produced by the build. It is also normal to check that the source RPM builds
 in `mock`.
 
-The old Makefile RPM targets are disabled on the dnf5daemon prototype branch
-until the package layout is checked for the daemon route.
-
-After packaging is checked, build RPMs with the current packaging script or a
-replacement Make target and run `rpmlint`:
+Build RPMs with the packaging helper scripts and run `rpmlint`:
 
 ```sh
+./packaging/build_srpm.sh
+./packaging/build_rpm.sh
 rpmlint dnf-ui-latest.src.rpm rpmbuild/RPMS/*/*.rpm
 ```
 
 Keep the `rpmlint` output so it can be included in the Fedora package review.
 
-Build the source RPM in a clean Fedora build environment after the source RPM
-build command has been restored:
+Build the source RPM in a clean Fedora build environment:
 
 ```sh
 mock -r fedora-rawhide-x86_64 --rebuild dnf-ui-latest.src.rpm
@@ -157,8 +151,7 @@ For documentation-only changes, run `git diff --check`.
 For comments inside C++ source files, also run a target that compiles the changed
 files.
 
-For backend query changes, run the relevant Catch2 tests once the dnf5daemon
-prototype test suite has been updated.
+For backend query changes, run the relevant Catch2 tests.
 
 For transaction changes, test the dnf5daemon Docker path and then verify apply
 behavior on native Fedora with a real desktop Polkit prompt.

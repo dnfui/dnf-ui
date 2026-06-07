@@ -36,33 +36,22 @@ meson compile -C build/debug
 ./build/debug/src/dnfui
 ```
 
-## Native service install for development
+## Native transaction testing
 
-For native Polkit testing from the source tree, install the service files with:
+For native Polkit testing from the source tree, build the app and run it as a
+regular desktop user:
 
 ```sh
 make
-sudo make serviceinstall
-```
-
-Then run the app as a regular desktop user:
-
-```sh
 ./dnfui
 ```
 
 When you apply a transaction, the desktop Polkit prompt should appear.
 
-Remove the development service install with:
-
-```sh
-sudo make serviceuninstall
-```
-
 **NOTE:**
 
 - Choose a non critical installed package for native apply tests
-- `serviceinstall` is just a development helper for installing the app without RPM packaging
+- Package changes go through DNF5 dnf5daemon
 
 ## Docker
 
@@ -110,25 +99,13 @@ Fedora RPM packaging is included for this application.
 Build a source RPM from the current tracked working tree:
 
 ```sh
-make srpm
+./packaging/build_srpm.sh
 ```
 
 Build binary and source RPMs locally:
 
 ```sh
-make rpm
-```
-
-Build a source RPM in Docker:
-
-```sh
-make dockersrpm
-```
-
-Build binary and source RPMs in Docker:
-
-```sh
-make dockerrpm
+./packaging/build_rpm.sh
 ```
 
 Artifacts are written under `./rpmbuild/`.
@@ -136,8 +113,7 @@ Artifacts are written under `./rpmbuild/`.
 Notes:
 
 - The RPM package is built from `dnf-ui.spec`
-- `make srpm` includes files tracked by Git in the generated source tarball
-- The Docker RPM targets use the existing Fedora development image and write artifacts into the same `./rpmbuild/` tree
+- `build_srpm.sh` includes files tracked by Git in the generated source tarball
 
 Run `rpmlint` on the source RPM and binary RPMs:
 

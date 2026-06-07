@@ -2,7 +2,7 @@
 set -e
 
 # Docker GUI run helper for manual testing.
-# The GUI talks to dnf5daemon on the system bus in this prototype.
+# The GUI talks to dnf5daemon on the system bus.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"

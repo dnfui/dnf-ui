@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build and reinstall the app as a native Fedora RPM test.
-# This uses the existing project RPM build target.
+# This uses the project RPM helper script.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -21,8 +21,9 @@ else
   echo "*** $PACKAGE_NAME is not installed, skipping uninstall ***"
 fi
 
-# Build a fresh RPM with the normal project target.
-make distclean && make rpm
+# Build a fresh RPM with the normal project helper.
+make distclean
+"$PROJECT_ROOT/packaging/build_rpm.sh"
 
 # Install the latest RPM produced by the build.
 sudo dnf install -y "$LATEST_RPM"

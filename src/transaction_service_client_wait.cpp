@@ -1,8 +1,8 @@
 // -----------------------------------------------------------------------------
 // transaction_service_client_wait.cpp
 // Wait and progress signal handling for the GUI-side transaction client.
-// This prototype receives progress from Fedora dnf5daemon and forwards a small
-// set of useful messages to the existing transaction progress window.
+// Receives progress from DNF5 dnf5daemon and forwards a small set of useful
+// messages to the existing transaction progress window.
 // -----------------------------------------------------------------------------
 #include "transaction_service_client_internal.hpp"
 
@@ -194,23 +194,6 @@ on_transaction_progress_signal(GDBusConnection *,
 }
 
 } // namespace
-
-// -----------------------------------------------------------------------------
-// dnf5daemon do_transaction waits through its own D-Bus method call.
-// This old service-stage helper is kept so the private helper list stays stable.
-// -----------------------------------------------------------------------------
-bool
-transaction_service_client_wait_for_transaction_stage(GDBusConnection *,
-                                                      const std::string &,
-                                                      const char *,
-                                                      GMainContext *,
-                                                      TransactionServiceResult &result_out,
-                                                      std::string &error_out)
-{
-  result_out = {};
-  error_out = _("dnf5daemon stage polling is not used by this prototype.");
-  return false;
-}
 
 // -----------------------------------------------------------------------------
 // Resolve a started daemon session and read its structured preview.

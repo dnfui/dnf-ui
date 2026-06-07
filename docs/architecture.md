@@ -6,7 +6,7 @@ Use it as the first map when reading the code. The deeper documents are:
 
 - [UI internals](ui.md)
 - [Backend internals](backend.md)
-- [Transaction service internals](transactions.md)
+- [Transaction flow](transactions.md)
 - [Testing](testing.md)
 - [External API assumptions](api-assumptions.md)
 - [Project rules](project-rules.md)
@@ -17,8 +17,8 @@ DNF UI is a GTK 4 package manager frontend for Fedora.
 
 The main application stays unprivileged. It searches packages, shows package
 details, lets the user mark package actions, and shows a review step. Package
-apply work is sent to a small D-Bus transaction service, where Polkit can
-authorize the privileged step.
+changes are sent to DNF5 dnf5daemon, which owns the privileged package work
+and Polkit behavior.
 
 ## Key terms
 
@@ -31,8 +31,8 @@ authorize the privileged step.
   exact package build.
 - EVR means epoch, version, and release. The backend uses it when comparing
   package versions.
-- D-Bus is the local message bus used by the GUI and transaction service to call each other.
-- Polkit is the authorization service used before privileged package apply work.
+- D-Bus is the local message bus used by the GUI to call dnf5daemon.
+- Polkit is the authorization service used by dnf5daemon before privileged package apply work.
 - GTask is the GLib helper used to run slow work away from the GTK thread and return results safely.
 
 ## Main parts
@@ -43,7 +43,7 @@ The application is split into five main areas:
 - UI controllers
 - libdnf5 backend
 - Shared transaction request model
-- D-Bus transaction service and GUI client
+- dnf5daemon transaction client
 
 ```mermaid
 flowchart TD
@@ -52,8 +52,7 @@ flowchart TD
     Window --> Controllers[UI controllers]
     Controllers --> Backend[dnf_backend]
     Controllers --> Client[transaction_service_client.cpp]
-    Client --> Service[service/transaction_service.cpp]
-    Service --> Backend
+    Client --> Daemon[DNF5 dnf5daemon]
 ```
 
 ## Startup
@@ -161,51 +160,39 @@ is important because it lets the UI answer:
 
 Search, browsing, and details stay inside the GUI process.
 
-Preview and apply go through the transaction service:
+Preview and apply go through DNF5 dnf5daemon:
 
 - GUI client: [src/transaction_service_client.cpp](../src/transaction_service_client.cpp)
 - GUI client D-Bus calls: [src/transaction_service_client_dbus.cpp](../src/transaction_service_client_dbus.cpp)
 - GUI client wait handling: [src/transaction_service_client_wait.cpp](../src/transaction_service_client_wait.cpp)
-- service runtime and shutdown: [src/service/transaction_service.cpp](../src/service/transaction_service.cpp)
-- service request objects: [src/service/transaction_service_request_objects.cpp](../src/service/transaction_service_request_objects.cpp)
-- service request validation: [src/service/transaction_service_validation.cpp](../src/service/transaction_service_validation.cpp)
-- service preview and apply workers: [src/service/transaction_service_workers.cpp](../src/service/transaction_service_workers.cpp)
-- service authorization: [src/service/transaction_service_authorization.cpp](../src/service/transaction_service_authorization.cpp)
-- service signals: [src/service/transaction_service_signals.cpp](../src/service/transaction_service_signals.cpp)
-- shared D-Bus names: [src/service/transaction_service_dbus.hpp](../src/service/transaction_service_dbus.hpp)
 - shared request model: [src/transaction_request.hpp](../src/transaction_request.hpp)
 
 ```mermaid
 flowchart TD
     Pending[Pending transaction controller] --> Request[TransactionRequest]
-    Request --> Client[GUI D-Bus client]
-    Client --> Service[Transaction service]
-    Service --> Preview[Resolve preview]
+    Request --> Client[Transaction client]
+    Client --> Daemon[DNF5 dnf5daemon]
+    Daemon --> Preview[Resolve preview]
     Preview --> Confirm[GUI confirmation dialog]
-    Confirm --> Apply[Apply request]
-    Apply --> Auth[Polkit authorization]
+    Confirm --> Apply[Apply through dnf5daemon]
+    Apply --> Auth[dnf5daemon Polkit behavior]
     Auth --> Run[Run transaction]
     Run --> Refresh[GUI refreshes package state]
 ```
 
-The service creates one D-Bus request object for each transaction request. The
-GUI reads preview and final result state from that object and releases it when it
-is no longer needed. On the system bus, request object methods are accepted only
-from the client that created the request.
+The client opens one dnf5daemon session for each prepared transaction. The GUI
+shows the resolved preview, applies through the same session if the user
+confirms, and closes the session when it is no longer needed.
 
 ## Packaging
 
-Service install files live under [packaging](../packaging).
+Packaging metadata lives under [packaging](../packaging).
 
-The important files are:
+DNF UI requires Fedora `dnf5daemon-server` for package changes. It does not
+install its own transaction service, Polkit policy, D-Bus policy, or systemd
+unit for package apply work.
 
-- [packaging/com.fedora.Dnfui.Transaction1.service](../packaging/com.fedora.Dnfui.Transaction1.service)
-- [packaging/com.fedora.Dnfui.Transaction1.conf](../packaging/com.fedora.Dnfui.Transaction1.conf)
-- [packaging/com.fedora.dnfui.policy](../packaging/com.fedora.dnfui.policy)
-- [packaging/dnfui-service.service](../packaging/dnfui-service.service)
-
-Systemd hardening decisions for the transaction service are documented in
-[docs/systemd-hardening.md](systemd-hardening.md).
+The security boundary is described in [docs/systemd-hardening.md](systemd-hardening.md).
 
 Meson owns the real build and install rules. The `Makefile` is a task runner for
 common developer commands.
@@ -226,8 +213,6 @@ A practical reading order for new contributors:
 10. [src/base_manager.cpp](../src/base_manager.cpp)
 11. [src/dnf_backend/dnf_query.cpp](../src/dnf_backend/dnf_query.cpp)
 12. [src/transaction_service_client.cpp](../src/transaction_service_client.cpp)
-13. [docs/transactions.md](transactions.md)
-14. [src/service/transaction_service.cpp](../src/service/transaction_service.cpp)
-15. [src/service/transaction_service_request_objects.cpp](../src/service/transaction_service_request_objects.cpp)
-16. [src/service/transaction_service_validation.cpp](../src/service/transaction_service_validation.cpp)
-17. [src/service/transaction_service_workers.cpp](../src/service/transaction_service_workers.cpp)
+13. [src/transaction_service_client_dbus.cpp](../src/transaction_service_client_dbus.cpp)
+14. [src/transaction_service_client_wait.cpp](../src/transaction_service_client_wait.cpp)
+15. [docs/transactions.md](transactions.md)
