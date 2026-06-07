@@ -70,6 +70,9 @@ remove_test_package
 run_daemon_test "dnf5daemon client previews install requests"
 remove_test_package
 
+run_daemon_test "dnf5daemon client previews upgrade-all requests"
+remove_test_package
+
 run_daemon_test "dnf5daemon client releases preview sessions"
 remove_test_package
 

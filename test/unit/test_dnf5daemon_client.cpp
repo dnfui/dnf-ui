@@ -94,6 +94,28 @@ TEST_CASE("dnf5daemon client previews install requests", "[dnf5daemon]")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that the client can ask dnf5daemon for an upgrade-all preview.
+// A fully updated test container may return an empty preview, which is still a
+// successful preview result.
+// -----------------------------------------------------------------------------
+TEST_CASE("dnf5daemon client previews upgrade-all requests", "[dnf5daemon]")
+{
+  require_dnf5daemon_test_enabled();
+  transaction_service_client_reset_for_tests();
+
+  TransactionPreview preview;
+  std::string transaction_path;
+  std::string error;
+
+  REQUIRE(transaction_service_client_preview_upgrade_all_request(preview, transaction_path, error));
+
+  if (!transaction_path.empty()) {
+    transaction_service_client_release_request(transaction_path);
+  }
+  transaction_service_client_reset_for_tests();
+}
+
+// -----------------------------------------------------------------------------
 // Verify that releasing a preview session really closes it in dnf5daemon.
 // This is the same path used when the user closes the preview dialog.
 // -----------------------------------------------------------------------------
