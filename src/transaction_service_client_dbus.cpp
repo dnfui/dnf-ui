@@ -34,6 +34,11 @@ constexpr const char *kDnfDaemonSessionManagerInterface = "org.rpm.dnf.v0.Sessio
 constexpr const char *kDnfDaemonRpmInterface = "org.rpm.dnf.v0.rpm.Rpm";
 constexpr const char *kDnfDaemonGoalInterface = "org.rpm.dnf.v0.Goal";
 
+// -----------------------------------------------------------------------------
+// DNF UI needs this package for future transaction previews and applies.
+// -----------------------------------------------------------------------------
+constexpr const char *kRequiredDaemonServerPackage = "dnf5daemon-server";
+
 struct TransactionServiceConnectionCache {
   std::mutex mutex;
   GDBusConnection *connection = nullptr;
@@ -202,6 +207,16 @@ daemon_is_unavailable_error(GError *error)
 }
 
 // -----------------------------------------------------------------------------
+// Return true when D-Bus rejects access to the daemon service.
+// This can happen if the daemon package or its policy is broken.
+// -----------------------------------------------------------------------------
+bool
+daemon_is_access_denied_error(GError *error)
+{
+  return error && g_error_matches(error, G_DBUS_ERROR, G_DBUS_ERROR_ACCESS_DENIED);
+}
+
+// -----------------------------------------------------------------------------
 // Convert one string to lower case for daemon enum matching.
 // -----------------------------------------------------------------------------
 std::string
@@ -296,9 +311,17 @@ append_daemon_preview_item(TransactionPreview &preview,
     return false;
   }
 
+  const std::string name = map_lookup_string(object, "name");
+  const std::string lower_action = ascii_lower(action);
+
+  // NOTE: Without dnf5daemon-server, DNF UI cannot apply future package changes.
+  if (lower_action == "remove" && name == kRequiredDaemonServerPackage) {
+    error_out = _("This transaction would remove dnf5daemon-server, which DNF UI needs to apply package changes.");
+    return false;
+  }
+
   const std::string label = package_label_from_daemon_object(object);
   const long long install_size = map_lookup_int64(object, "install_size");
-  const std::string lower_action = ascii_lower(action);
 
   if (lower_action == "install") {
     preview.install.push_back(label);
@@ -435,6 +458,9 @@ open_daemon_session(GDBusConnection *connection, std::string &transaction_path_o
   if (!reply) {
     if (daemon_is_unavailable_error(error)) {
       error_out = _("dnf5daemon is not available. Make sure dnf5daemon-server is installed and running.");
+    } else if (daemon_is_access_denied_error(error)) {
+      error_out = _("dnf5daemon is installed, but DNF UI is not allowed to talk to it. "
+                    "Reinstall dnf5daemon-server or check the D-Bus policy.");
     } else {
       error_out = error ? error->message : _("Could not open a dnf5daemon session.");
     }

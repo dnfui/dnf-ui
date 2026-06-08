@@ -75,6 +75,8 @@ transaction_service_client_preview_request(const TransactionRequest &request,
 
   if (!transaction_service_client_wait_for_started_transaction_preview(
           connection, transaction_path_out, preview_out, error_out)) {
+    std::string release_error;
+    transaction_service_client_release_transaction_request(connection, transaction_path_out, release_error);
     transaction_path_out.clear();
     g_object_unref(connection);
     return false;
@@ -111,6 +113,8 @@ transaction_service_client_preview_upgrade_all_request(TransactionPreview &previ
 
   if (!transaction_service_client_wait_for_started_transaction_preview(
           connection, transaction_path_out, preview_out, error_out)) {
+    std::string release_error;
+    transaction_service_client_release_transaction_request(connection, transaction_path_out, release_error);
     transaction_path_out.clear();
     g_object_unref(connection);
     return false;

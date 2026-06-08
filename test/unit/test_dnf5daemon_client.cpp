@@ -301,6 +301,31 @@ TEST_CASE("dnf5daemon client previews reinstall requests", "[dnf5daemon]")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that DNF UI refuses a transaction that would remove its transaction backend.
+// Upgrading dnf5daemon-server is allowed, but removing it would leave the app unable to apply later package changes.
+// -----------------------------------------------------------------------------
+TEST_CASE("dnf5daemon client rejects removing dnf5daemon-server", "[dnf5daemon]")
+{
+  require_dnf5daemon_test_enabled();
+  transaction_service_client_reset_for_tests();
+
+  TransactionRequest request;
+  request.remove.push_back("dnf5daemon-server");
+
+  TransactionPreview preview;
+  std::string transaction_path;
+  std::string error;
+
+  REQUIRE_FALSE(transaction_service_client_preview_request(request, preview, transaction_path, error));
+  REQUIRE(transaction_path.empty());
+  REQUIRE_FALSE(error.empty());
+  REQUIRE(error.find("dnf5daemon-server") != std::string::npos);
+  REQUIRE(preview.empty());
+
+  transaction_service_client_reset_for_tests();
+}
+
+// -----------------------------------------------------------------------------
 // Verify that daemon resolver failures are returned as normal client errors.
 // -----------------------------------------------------------------------------
 TEST_CASE("dnf5daemon client reports resolve failure", "[dnf5daemon]")

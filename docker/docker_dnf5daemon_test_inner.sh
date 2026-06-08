@@ -87,5 +87,6 @@ run_daemon_test "dnf5daemon client previews remove requests"
 run_daemon_test "dnf5daemon client previews reinstall requests"
 remove_test_package
 
+run_daemon_test "dnf5daemon client rejects removing dnf5daemon-server"
 run_daemon_test "dnf5daemon client reports resolve failure"
 run_daemon_test "dnf5daemon client reports unavailable daemon"

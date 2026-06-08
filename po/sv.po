@@ -261,6 +261,12 @@ msgstr "Ansluter till transaktionstjänsten..."
 msgid "dnf5daemon is not available. Make sure dnf5daemon-server is installed and running."
 msgstr "dnf5daemon är inte tillgänglig. Kontrollera att dnf5daemon-server är installerad och körs."
 
+msgid "dnf5daemon is installed, but DNF UI is not allowed to talk to it. Reinstall dnf5daemon-server or check the D-Bus policy."
+msgstr "dnf5daemon är installerad, men DNF UI får inte prata med den. Installera om dnf5daemon-server eller kontrollera D-Bus-policyn."
+
+msgid "This transaction would remove dnf5daemon-server, which DNF UI needs to apply package changes."
+msgstr "Den här transaktionen skulle ta bort dnf5daemon-server, som DNF UI behöver för att verkställa paketändringar."
+
 msgid "Privileged transaction preview ready."
 msgstr "Privilegierad transaktionsgranskning är klar."
 

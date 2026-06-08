@@ -87,5 +87,6 @@ else
   echo "*** Skipping native apply tests. Set DNFUI_NATIVE_DNF5DAEMON_APPLY=1 to run them. ***"
 fi
 
+run_daemon_test "dnf5daemon client rejects removing dnf5daemon-server"
 run_daemon_test "dnf5daemon client reports resolve failure"
 run_daemon_test "dnf5daemon client reports unavailable daemon"

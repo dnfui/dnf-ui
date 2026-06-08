@@ -228,6 +228,8 @@ Assumptions:
 - Signal subscriptions invoke callbacks in the subscribing thread's
   thread-default main context.
 - A dnf5daemon session is tied to the D-Bus connection that created it.
+- DNF UI rejects previews that would remove `dnf5daemon-server`, because later
+  package changes depend on that daemon.
 - The app keeps one shared system bus connection so the session used for preview
   is still valid when the user later applies.
 - `do_transaction` may need longer than a normal D-Bus timeout because the user
