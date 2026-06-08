@@ -83,6 +83,7 @@ help:
 	@printf '%-36s %s\n' 'run' 'Build and run the desktop app locally.'
 	@printf '%-36s %s\n' 'test' 'Build and run the local test suite.'
 	@printf '%-36s %s\n' 'dnf5daemontest' 'Run native dnf5daemon transaction client tests.'
+	@printf '%-36s %s\n' 'dnf5daemonapplytest' 'Run native dnf5daemon tests including apply.'
 	@printf '%-36s %s\n' 'srpm' 'Build the source tarball and source RPM.'
 	@printf '%-36s %s\n' 'rpm' 'Build binary and source RPMs.'
 	@printf '%-36s %s\n' 'nativeinstalltest' 'Build the RPM and reinstall it on the native system.'
@@ -159,6 +160,11 @@ test: dnfui-tests
 .PHONY: dnf5daemontest
 dnf5daemontest:
 	@./utils/native_dnf5daemon_test.sh
+
+# Run native dnf5daemon tests including real apply calls:
+.PHONY: dnf5daemonapplytest
+dnf5daemonapplytest:
+	@DNFUI_NATIVE_DNF5DAEMON_APPLY=1 ./utils/native_dnf5daemon_test.sh
 
 # Build the source RPM from tracked files:
 .PHONY: srpm

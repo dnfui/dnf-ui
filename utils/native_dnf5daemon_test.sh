@@ -72,6 +72,8 @@ remove_test_package
 
 if [ "$RUN_APPLY_TESTS" = "1" ]; then
   echo "*** Running native apply tests. These require dnf5daemon authorization. ***"
+  echo "*** Run this target from a desktop session with a Polkit agent, not over SSH. ***"
+  echo "*** dnf5daemon-server-polkit can be installed on a test machine to allow apply without a prompt. ***"
 
   run_daemon_test "dnf5daemon client applies install requests"
   rpm -q "$INSTALL_NAME" >/dev/null

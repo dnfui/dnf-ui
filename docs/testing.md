@@ -86,8 +86,15 @@ Native apply tests are skipped by default because they require dnf5daemon
 authorization. Run them explicitly with:
 
 ```sh
-DNFUI_NATIVE_DNF5DAEMON_APPLY=1 make dnf5daemontest
+make dnf5daemonapplytest
 ```
+
+On a native Fedora test machine, installing `dnf5daemon-server-polkit` lets the
+apply tests run without a desktop authorization prompt.
+
+Without that package, run `make dnf5daemonapplytest` from the desktop session
+where a Polkit authentication agent can show the authorization dialog. Running
+the apply target over SSH may fail with `Not authorized`.
 
 Run the Docker app target with networking disabled:
 
