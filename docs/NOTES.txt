@@ -5,19 +5,19 @@ Useful commands:
 --------------------------------------------------------------------------------
 
 sudo dnf install meson ninja-build
-sudo dnf install libdnf5-devel libdnf-cli-devel
+sudo dnf install libdnf5-devel
 sudo dnf install gtk4-devel
-sudo dnf install polkit-devel polkit
+sudo dnf install dnf5daemon-server polkit
 sudo dnf install catch-devel
 
 sudo dnf --disablerepo='rpmfusion*' install gtk4-devel
 
 --------------------------------------------------------------------------------
-Run all tests:
+Build and test:
 --------------------------------------------------------------------------------
 
-Meson handles the real build and install logic.
-The Makefile is a thin task runner for the common commands below.
+Meson handles the real build logic.
+The Makefile is a thin task runner for common commands.
 
 Native C++ tests:
 
@@ -25,98 +25,50 @@ export DEBUG_TRACE=y
 
 make test
 
-Run the full native test matrix:
-SERVICE_TEST_INSTALL_SPEC=cowsay make nativetests
+Docker app run:
 
-Native transaction service tests:
-SERVICE_TEST_INSTALL_SPEC=cowsay make servicetest
-SERVICE_TEST_INSTALL_SPEC=cowsay make servicecanceltest
-sudo SERVICE_TEST_REINSTALL_NEVRA=<installed-non-critical-package> make serviceapplytest
+make dockerrun
 
-Native system bus transaction service tests:
-sudo make serviceinstall
-SERVICE_TEST_INSTALL_SPEC=cowsay make servicesystemtest
-SERVICE_TEST_REINSTALL_NEVRA=<installed-non-critical-package> make servicesystemapplytest
-SERVICE_TEST_INSTALL_SPEC=cowsay make servicesystemdisconnecttest
-sudo make serviceuninstall
+Docker offline test:
 
-Docker C++ tests:
-make dockertest
+make dockerofflinetest
 
-Run the full Docker-backed test matrix:
-make dockertests
+Docker Swedish translation test:
 
-Docker RPM builds:
-make dockersrpm
-make dockerrpm
-
-Docker transaction service tests:
-make dockerservicetest
-make dockerservicecanceltest
-make dockerserviceapplytest
-
-Docker system bus transaction service tests:
-make dockerservicesystemtest
-make dockerservicesystemapplytest
-make dockerservicesystemdisconnecttest
+LANG=sv_SE.UTF-8 LANGUAGE=sv make dockerrun
 
 --------------------------------------------------------------------------------
 Native Polkit test:
 --------------------------------------------------------------------------------
 
 make
-sudo make serviceinstall
-
-SERVICE_TEST_INSTALL_SPEC=cowsay make servicesystemtest
-SERVICE_TEST_REINSTALL_NEVRA=<installed-non-critical-package> make servicesystemapplytest
-
 ./dnfui
 
-Run dnfui as a regular desktop user and apply a transaction to test the
-desktop Polkit prompt.
+Run dnfui as a regular desktop user and apply a harmless transaction to test the
+desktop Polkit prompt through dnf5daemon.
 
-serviceinstall is a native development make target, not the final packaging flow.
-serviceinstall installs the Meson built service files from the current build tree.
-Choose a non critical installed package for native apply tests.
-
-sudo make serviceuninstall
+Use native Fedora for the real desktop Polkit prompt.
+Use Docker for container smoke testing with a system bus and dnf5daemon.
 
 --------------------------------------------------------------------------------
-Transaction service overview:
+Transaction overview:
 --------------------------------------------------------------------------------
 
 The GUI runs as the regular user.
-Preview and apply both go through the transaction service.
-Native Fedora uses the system bus path and Polkit for apply authorization.
-Docker GUI testing uses the session bus path for convenience.
-The dockerservicesystem targets exercise the real system bus authorization flow.
-
---------------------------------------------------------------------------------
-Docker service test:
---------------------------------------------------------------------------------
-
-make dockerservicesystemtest DEBUG_TRACE=y
-make dockerservicesystemapplytest DEBUG_TRACE=y
-make dockerservicesystemdisconnecttest DEBUG_TRACE=y
-make dockerrun DEBUG_TRACE=y
-
-Docker Swedish translation test:
-LANG=sv_SE.UTF-8 LANGUAGE=sv make dockerrun
-
-Use native Fedora to test the real desktop Polkit prompt.
-Use Docker to test the service boundary and package transactions.
-
-make dockerrun uses the session bus service path for container testing.
-Use the dockerservicesystem targets to test the real system bus Polkit flow.
+Preview and apply go through DNF5 dnf5daemon.
+dnf5daemon owns the privileged package operation and Polkit behavior.
 
 --------------------------------------------------------------------------------
 Useful links:
 --------------------------------------------------------------------------------
 
-dnf-5 api:
+dnf5 API:
 https://libdnf.readthedocs.io/en/dnf-5-devel/index.html
 
-Catch2
+dnf5daemon:
+https://dnf5.readthedocs.io/en/latest/dnf_daemon/dnf5daemon_dbus_api.8.html
+
+Catch2:
 https://github.com/catchorg/Catch2
 https://github.com/catchorg/Catch2/blob/devel/docs/tutorial.md
 

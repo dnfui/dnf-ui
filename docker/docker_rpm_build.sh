@@ -19,12 +19,14 @@ MODE="${1:-}"
 
 # Make this script work from any directory:
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
 . "$SCRIPT_DIR/container_runtime.sh"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 HOST_DIR="$PROJECT_ROOT"
 HOST_UID="$(id -u)"
 HOST_GID="$(id -g)"
 CONTAINER_RUN_ARGS=()
+# shellcheck disable=SC2016
 CONTAINER_BUILD_COMMAND='
   set -e
 
@@ -57,6 +59,7 @@ if [ "$CONTAINER_RUNTIME" = "podman" ] && [ "$HOST_UID" != "0" ]; then
     --passwd
     --passwd-entry "dnfui-builder:x:$HOST_UID:$HOST_GID:DNF UI Builder:/tmp/dnfui-home:/bin/bash"
   )
+# shellcheck disable=SC2016
   CONTAINER_BUILD_COMMAND='
     set -e
     mkdir -p "$HOME"

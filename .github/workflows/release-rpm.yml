@@ -53,6 +53,7 @@ jobs:
                 dbus-daemon \
                 desktop-file-utils \
                 gcc-c++ \
+                gettext \
                 git \
                 glib2-devel \
                 gtk4-devel \
@@ -60,10 +61,7 @@ jobs:
                 make \
                 meson \
                 ninja-build \
-                polkit-devel \
-                rpm-build \
-                systemd-devel \
-                systemd-rpm-macros
+                rpm-build
 
               if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
                 spec_version="$(rpmspec -q --qf "%{VERSION}\n" dnf-ui.spec | head -n1)"

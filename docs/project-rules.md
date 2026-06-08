@@ -19,9 +19,9 @@ This file states the rules that should stay true as DNF UI changes.
 
 - The main GTK application stays unprivileged.
 - The UI must **never** apply package changes directly.
-- Package apply work **must** go through the transaction service.
+- Package apply work **must** go through dnf5daemon.
 - Polkit authorization belongs at the privileged apply boundary.
-- The service must validate requests even when the UI already did.
+- DNF UI must validate requests before sending them to dnf5daemon.
 - Preview and apply **must** stay separate so the user can review the transaction
   before changing the system.
 
@@ -41,7 +41,7 @@ This file states the rules that should stay true as DNF UI changes.
 ## libdnf5 access
 
 - GTK code should **never** use libdnf5 types directly.
-- libdnf5 access **must** stay behind the backend API or the transaction service.
+- libdnf5 access **must** stay behind the backend API or the transaction client.
 - Shared Base access **must** stay serialized.
 - A system-only Base should be used for installed-only checks.
 - Dropping the cached Base is a memory choice and should be reviewed when query

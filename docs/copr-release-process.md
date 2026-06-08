@@ -22,7 +22,8 @@ Install the native build dependencies listed by the project:
 sudo dnf install $(grep -vE '^\s*(#|$)' docs/fedora-native-dependencies.txt)
 ```
 
-The dependency file covers native builds, tests, package validation, RPM builds, translations, mock builds, and local transaction service smoke tests.
+The dependency file covers native builds, tests, package validation, RPM builds,
+translations, mock builds, and dnf5daemon based app testing.
 
 ## 2. Mock setup
 
@@ -56,7 +57,7 @@ Do **not** add untrusted users to the `mock` group. Mock group membership is pow
 
 ## 3. Build the SRPM
 
-The repository already has packaging helpers:
+The repository already has packaging targets:
 
 ```bash
 make srpm
@@ -261,11 +262,11 @@ Smoke checks:
 ```bash
 rpm -q dnf-ui
 rpm -ql dnf-ui
-systemctl status dnfui-service.service
+rpm -q dnf5daemon-server
 ```
 
-The systemd service may be inactive until D-Bus activates it.
-That is fine if the app can trigger package actions and Polkit authorization appears when needed.
+The app should trigger package actions through dnf5daemon, and Polkit
+authorization should appear when a transaction is applied.
 
 ## 9. User install instructions
 

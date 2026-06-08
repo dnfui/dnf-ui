@@ -32,6 +32,7 @@ Inside the Docker image, critical libdnf5 declarations can be checked under
 ## Source links
 
 - libdnf5 C++ API overview: <https://dnf5.readthedocs.io/en/latest/api/c%2B%2B/libdnf5.html>
+- dnf5daemon D-Bus API: <https://dnf5.readthedocs.io/en/latest/dnf_daemon/dnf5daemon_dbus_api.8.html>
 - GIO `GTask`: <https://docs.gtk.org/gio/class.Task.html>
 - GIO `GCancellable`: <https://docs.gtk.org/gio/class.Cancellable.html>
 - GIO `GDBusConnection::register_object`: <https://docs.gtk.org/gio/method.DBusConnection.register_object.html>
@@ -82,22 +83,22 @@ Maintenance check:
 
 Code:
 
-- [src/dnf_backend/dnf_transaction.cpp](../src/dnf_backend/dnf_transaction.cpp)
-- [src/dnf_backend/dnf_transaction_callbacks.cpp](../src/dnf_backend/dnf_transaction_callbacks.cpp)
-- [src/service/transaction_service_workers.cpp](../src/service/transaction_service_workers.cpp)
+- [src/transaction_service_client_dbus.cpp](../src/transaction_service_client_dbus.cpp)
+- [src/dnf_backend/dnf_query.cpp](../src/dnf_backend/dnf_query.cpp)
 
 Assumption:
 
-- `Goal::add_rpm_upgrade()` without a package spec adds an upgrade job for all
-  installed packages, unless limited by the provided goal settings.
+- dnf5daemon `upgrade` with explicit package specs marks those packages for
+  upgrade in the daemon session.
 
-Current local source:
+Source:
 
-- `/usr/include/libdnf5/base/goal.hpp`
+- DNF5 dnf5daemon D-Bus API
 
 Why this matters:
 
-- Upgrade All normally sends one all-installed-packages upgrade job.
+- Upgrade All builds explicit upgrade specs in the GUI process and sends them to
+  dnf5daemon.
 - When the running DNF UI package has an available upgrade, that package is
   excluded so the running app is not replaced by its own transaction.
 - Do not document this as bit-for-bit equivalence with every possible `dnf`
@@ -109,7 +110,6 @@ Tests:
 
 - transaction request validation tests
 - transaction preview tests
-- transaction service preview tests
 - empty upgrade-all preview test path
 
 Maintenance check:
@@ -198,102 +198,116 @@ Maintenance check:
   have either cancellation coverage or a clear reason why cancellation is not
   supported.
 
-## GDBus transaction objects
+## dnf5daemon D-Bus transaction flow
 
 Code:
 
-- [src/service/transaction_service.cpp](../src/service/transaction_service.cpp)
-- [src/service/transaction_service_manager.cpp](../src/service/transaction_service_manager.cpp)
-- [src/service/transaction_service_request_objects.cpp](../src/service/transaction_service_request_objects.cpp)
-- [src/service/transaction_service_signals.cpp](../src/service/transaction_service_signals.cpp)
-- [src/service/transaction_service_introspection.cpp](../src/service/transaction_service_introspection.cpp)
 - [src/transaction_service_client.cpp](../src/transaction_service_client.cpp)
 - [src/transaction_service_client_dbus.cpp](../src/transaction_service_client_dbus.cpp)
 - [src/transaction_service_client_wait.cpp](../src/transaction_service_client_wait.cpp)
 
+Checked against:
+
+- Fedora Docker image package `dnf5daemon-server-5.4.2.1-1.fc44.x86_64`
+- official dnf5daemon D-Bus API documentation linked above
+- local D-Bus introspection using the same connection that opened the session
+
 Assumptions:
 
-- `g_dbus_connection_register_object()` dispatches vtable callbacks in the thread-default main context
-  used when the object was registered.
-- `GDBusMethodInvocation` is the object used to return a method result or error.
-- `g_dbus_method_invocation_return_value()` finishes a method call and takes
-  ownership of the invocation.
+- dnf5daemon is available on the system bus as `org.rpm.dnf.v0`.
+- The session manager object path is `/org/rpm/dnf/v0`.
+- Sessions are opened through `org.rpm.dnf.v0.SessionManager.open_session(a{sv}) -> (o)`.
+- Session cleanup uses `org.rpm.dnf.v0.SessionManager.close_session(o) -> (b)`.
+- Package specs are marked on the session through these rpm interface methods:
+  `install(as, a{sv})`, `remove(as, a{sv})`, `reinstall(as, a{sv})`, and `upgrade(as, a{sv})`.
+- Preview is resolved through `org.rpm.dnf.v0.Goal.resolve(a{sv}) -> (a(sssa{sv}a{sv})u)`.
+- Resolver result `0` means success, `1` means success with warnings, and `2`
+  means resolve failure.
+- Resolve failures are read through `org.rpm.dnf.v0.Goal.get_transaction_problems_string() -> (as)`.
+- Apply is started through `org.rpm.dnf.v0.Goal.do_transaction(a{sv}) -> ()`.
 - Signal subscriptions invoke callbacks in the subscribing thread's
   thread-default main context.
-- On the system bus, a transaction request object belongs to the unique bus name
-  that created it.
-- The installed D-Bus policy allows standard introspection and only the transaction manager and request methods
-  the service exposes.
+- A dnf5daemon session is tied to the D-Bus connection that created it.
+- DNF UI rejects previews that would remove `dnf5daemon-server`, because later
+  package changes depend on that daemon.
+- The app keeps one shared system bus connection so the session used for preview
+  is still valid when the user later applies.
+- A resolved preview is not a system-wide DNF lock. If another package tool
+  changes state before Apply, the apply call must fail and require a new preview.
+- `do_transaction` may need longer than a normal D-Bus timeout because the user
+  can leave the Polkit prompt open.
+- Unsupported daemon transaction item types or actions must fail preview instead
+  of being hidden.
+- The progress window listens to selected dnf5daemon signals:
+  `download_add_new`, `download_progress`, `download_end`,
+  `download_mirror_failure`, `transaction_before_begin`,
+  `transaction_verify_start`, `transaction_transaction_start`,
+  `transaction_action_start`, and `transaction_unpack_error`.
 
 Why this matters:
 
-- The service may keep an apply invocation while Polkit authorization is pending,
-  but each D-Bus method call must still receive exactly one final reply.
-- The GUI client can wait for `Finished` signals while also handling service
-  disappearance as a normal error path.
-- Another local process should not be able to read, cancel, apply, or release a request object it did not create.
+- A closed or replaced D-Bus connection invalidates sessions created through it.
+- The GUI must close daemon sessions after preview cancel, preview failure,
+  apply success, and apply failure.
+- The preview dialog must reflect the complete transaction action set that the
+  app understands.
+- The UI must not report timeout failure while dnf5daemon is still waiting for
+  the user's Polkit answer.
+- The signal list is intentionally small. It gives the user useful transaction
+  stages without turning the progress window into a debug log.
 
 Tests:
 
-- transaction service client tests
-- transaction service preview smoke test
-- transaction service cancel smoke test
-- transaction service disconnect tests
+- dnf5daemon transaction tests need to cover preview, apply, release, daemon
+  failure, authorization failure, and disconnect behavior
 
 Maintenance check:
 
-- If a method stores `GDBusMethodInvocation`, verify every success, failure,
-  shutdown, and release path returns or clears it exactly once.
-- If request object methods are added, update the D-Bus policy and the owner
-  check together.
+- If any hard-coded daemon method, interface, object path, or reply signature is
+  changed, verify it against the DNF5 dnf5daemon version DNF UI targets.
+- If session handling changes, test preview cancel, apply success, apply failure,
+  and window close while a session exists.
 
-## Polkit authorization
+## Polkit authorization through dnf5daemon
 
 Code:
 
-- [src/service/transaction_service_authorization.cpp](../src/service/transaction_service_authorization.cpp)
-- [packaging/com.fedora.dnfui.policy](../packaging/com.fedora.dnfui.policy)
+- [src/transaction_service_client_dbus.cpp](../src/transaction_service_client_dbus.cpp)
 
 Assumptions:
 
-- Polkit authorization checks decide whether a subject is allowed to perform one
-  action id.
-- `POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION` is appropriate only
-  for requests that come from a user action.
-- DNF UI applies this only to the system-bus Apply step.
-- The session-bus service path skips Polkit for development and tests.
+- dnf5daemon owns the Polkit check for privileged package changes.
+- DNF UI asks dnf5daemon to apply with interactive authorization enabled.
+- DNF UI does not install its own transaction Polkit policy.
 
 Why this matters:
 
 - The GUI stays unprivileged.
 - Preview can be prepared without granting package modification rights.
-- The privileged step is limited to the user-confirmed Apply operation.
+- The privileged step is handled by Fedora's existing DNF daemon.
 
 Tests:
 
-- system bus service smoke tests
-- session bus service tests
+- dnf5daemon apply tests
 - native manual Polkit prompt test
 
 Maintenance check:
 
-- Any new privileged operation needs a policy decision before implementation.
-  It should not be added only because the session-bus development path works.
-- Session-bus tests do not prove Polkit behavior. Policy or authorization
-  changes need the matching system-bus tests and a native prompt check when
-  possible.
+- Changes to privileged apply behavior must be tested through dnf5daemon on
+  native Fedora. Docker is useful, but it does not prove the desktop Polkit
+  prompt path.
 
 ## Dependency update checklist
 
-When updating Fedora base images, libdnf5, GTK, GLib, GIO, or Polkit, revalidate
-the affected entries in this document.
+When updating Fedora base images, libdnf5, GTK, GLib, GIO, or dnf5daemon,
+revalidate the affected entries in this document.
 
 Minimum checks:
 
 - confirm the local headers still contain the API behavior this document cites
 - run `git diff --check`
 - run the affected unit tests
-- run the matching Docker service tests for transaction-service changes
+- run the matching dnf5daemon transaction tests for transaction changes
 - run a native Polkit prompt test for authorization changes when possible
 
 ## Documentation and test gaps

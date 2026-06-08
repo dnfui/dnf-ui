@@ -15,7 +15,7 @@ constexpr size_t kTransactionRequestMaxItems = 256;
 constexpr size_t kTransactionRequestMaxSpecLength = 4096;
 
 // -----------------------------------------------------------------------------
-// Transaction request shared by the GUI and privileged transaction service
+// Transaction request shared by the GUI and transaction client.
 // -----------------------------------------------------------------------------
 struct TransactionRequest {
   // Upgrade all installed packages.

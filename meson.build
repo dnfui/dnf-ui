@@ -43,20 +43,10 @@ src_inc = include_directories('src')
 
 libdnf5_dep = dependency('libdnf5')
 gtk4_dep = dependency('gtk4')
-polkit_dep = dependency('polkit-gobject-1')
-systemd_dep = dependency('systemd', required: false)
 
-polkit_action_dir = join_paths(get_option('datadir'), 'polkit-1', 'actions')
-dbus_system_service_dir = join_paths(get_option('datadir'), 'dbus-1', 'system-services')
-dbus_system_policy_dir = join_paths(get_option('sysconfdir'), 'dbus-1', 'system.d')
-systemd_system_unit_dir = join_paths(get_option('prefix'), 'lib', 'systemd', 'system')
 desktop_file_dir = join_paths(get_option('datadir'), 'applications')
 metainfo_dir = join_paths(get_option('datadir'), 'metainfo')
 app_icon_root_dir = join_paths(get_option('datadir'), 'icons', 'hicolor')
-
-if systemd_dep.found()
-  systemd_system_unit_dir = systemd_dep.get_variable(pkgconfig: 'systemdsystemunitdir')
-endif
 
 subdir('src')
 subdir('packaging')

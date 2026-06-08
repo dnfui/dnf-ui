@@ -48,7 +48,7 @@ format_specs(const std::vector<std::string> &specs)
 
 // -----------------------------------------------------------------------------
 // Send one progress line to the caller.
-// In normal UI use the caller is the transaction service, which turns this line into a D-Bus Progress signal.
+// The caller decides whether the line goes to the progress window or a test callback.
 // -----------------------------------------------------------------------------
 void
 emit_progress_line(const TransactionProgressCallback &progress_cb, const std::string &message)

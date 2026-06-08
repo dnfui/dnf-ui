@@ -1,6 +1,6 @@
 // -----------------------------------------------------------------------------
 // transaction_service_client.cpp
-// GUI-side D-Bus client for the transaction service.
+// GUI-side D-Bus client for dnf5daemon transactions.
 // Owns the public preview, apply, and release flow used by the GTK frontend.
 // Raw D-Bus calls and signal waiting live in the private client helper files.
 // -----------------------------------------------------------------------------
@@ -75,6 +75,8 @@ transaction_service_client_preview_request(const TransactionRequest &request,
 
   if (!transaction_service_client_wait_for_started_transaction_preview(
           connection, transaction_path_out, preview_out, error_out)) {
+    std::string release_error;
+    transaction_service_client_release_transaction_request(connection, transaction_path_out, release_error);
     transaction_path_out.clear();
     g_object_unref(connection);
     return false;
@@ -111,6 +113,8 @@ transaction_service_client_preview_upgrade_all_request(TransactionPreview &previ
 
   if (!transaction_service_client_wait_for_started_transaction_preview(
           connection, transaction_path_out, preview_out, error_out)) {
+    std::string release_error;
+    transaction_service_client_release_transaction_request(connection, transaction_path_out, release_error);
     transaction_path_out.clear();
     g_object_unref(connection);
     return false;
@@ -122,9 +126,9 @@ transaction_service_client_preview_upgrade_all_request(TransactionPreview &previ
 }
 
 // -----------------------------------------------------------------------------
-// Apply a previously previewed transaction request through the service.
-// Progress is not returned by Apply itself. Progress arrives as D-Bus signals
-// on the request object while this function waits for the final result.
+// Apply a previously previewed transaction request through dnf5daemon.
+// The apply call waits until the daemon finishes. Progress arrives as D-Bus
+// signals while the call is running.
 // -----------------------------------------------------------------------------
 bool
 transaction_service_client_apply_started_request(const std::string &transaction_path,
@@ -134,7 +138,7 @@ transaction_service_client_apply_started_request(const std::string &transaction_
   error_out.clear();
 
   if (transaction_path.empty()) {
-    error_out = _("Transaction service request path is empty.");
+    error_out = _("dnf5daemon session path is empty.");
     return false;
   }
 
@@ -144,7 +148,7 @@ transaction_service_client_apply_started_request(const std::string &transaction_
     }
   };
 
-  append_progress(_("Connecting to transaction service..."));
+  append_progress(_("Connecting to dnf5daemon..."));
 
   std::string connect_error;
   GDBusConnection *connection = transaction_service_client_connect(connect_error);
@@ -154,10 +158,10 @@ transaction_service_client_apply_started_request(const std::string &transaction_
   }
 
   bool ok = false;
-  TransactionServiceResult result;
   GMainContext *signal_context = g_main_context_new();
   g_main_context_push_thread_default(signal_context);
-  TransactionServiceProgressForwarder progress_forwarder { &progress_callback };
+  TransactionServiceProgressForwarder progress_forwarder;
+  progress_forwarder.progress_callback = &progress_callback;
   guint progress_subscription_id = 0;
 
   do {
@@ -173,18 +177,7 @@ transaction_service_client_apply_started_request(const std::string &transaction_
       break;
     }
 
-    append_progress(_("Waiting for privileged apply to finish..."));
-    if (!transaction_service_client_wait_for_transaction_stage(
-            connection, transaction_path, "apply-running", signal_context, result, error_out)) {
-      break;
-    }
-
-    if (result.stage != "apply-succeeded" || !result.finished || !result.success) {
-      error_out = result.details.empty() ? _("Privileged apply failed.") : result.details;
-      break;
-    }
-
-    append_progress(result.details.empty() ? _("Transaction applied successfully.") : result.details);
+    append_progress(_("Transaction applied successfully."));
     DNFUI_TRACE("Transaction service client apply done path=%s", transaction_path.c_str());
     ok = true;
   } while (false);
@@ -205,7 +198,7 @@ transaction_service_client_apply_started_request(const std::string &transaction_
 }
 
 // -----------------------------------------------------------------------------
-// Release a finished service request after it has been applied or discarded.
+// Release a finished daemon session after it has been applied or discarded.
 // -----------------------------------------------------------------------------
 void
 transaction_service_client_release_request(const std::string &transaction_path)

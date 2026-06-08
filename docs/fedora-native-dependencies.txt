@@ -3,7 +3,7 @@
 # Keep this list in sync with dnf-ui.spec and the Dockerfile.
 #
 # The list covers native builds, unit tests, package validation, RPM builds,
-# translations, and local transaction service smoke tests.
+# translations, and dnf5daemon based app testing.
 
 appstream
 catch-devel
@@ -21,8 +21,5 @@ mock
 ninja-build
 pkgconf
 polkit
-polkit-devel
 rpmlint
 rpm-build
-systemd-devel
-systemd-rpm-macros

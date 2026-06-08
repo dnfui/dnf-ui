@@ -146,7 +146,7 @@ handles preview and apply work.
 
 It is responsible for:
 
-- asking the transaction service for a preview
+- asking the transaction client for a preview
 - showing the review dialog
 - starting apply after confirmation
 - clearing pending actions after a successful apply

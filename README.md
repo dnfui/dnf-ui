@@ -64,7 +64,7 @@ There are other applications for this like [GNOME Software](https://apps.gnome.o
 - Mark packages for install, reinstall, and removal
 - Upgrade all installed packages with available updates
 - Review a transaction summary before applying changes
-- Apply transactions through a privileged system service with Polkit authorization
+- Apply transactions through DNF5 dnf5daemon with Polkit authorization
 - Cancel long-running package queries
 - Search history
 
@@ -110,7 +110,7 @@ Run the native test suite:
 make test
 ```
 
-For native service testing, Docker commands, and local RPM packaging, see
+For native transaction testing, Docker commands, and local RPM packaging, see
 [docs/development.md](docs/development.md).
 
 For the full test matrix, see [docs/testing.md](docs/testing.md).
@@ -118,13 +118,13 @@ For the full test matrix, see [docs/testing.md](docs/testing.md).
 For architecture notes and source-backed external API assumptions, start with
 [docs/architecture.md](docs/architecture.md).
 
-## Transaction service
+## Package transactions
 
-DNF UI uses a small privileged transaction service called `dnfui-service`.
+DNF UI uses DNF5's **dnf5daemon** for package changes.
 
 `dnfui` runs as the regular desktop user. Transaction preview and apply go
-through the D-Bus service. On the native system bus, preview start is limited to
-the active local user and apply has separate Polkit authorization.
+through dnf5daemon on the system bus, and dnf5daemon handles the privileged
+package operation and Polkit behavior.
 
 This keeps the main application **unprivileged** while still allowing normal desktop
 authentication when a transaction is applied.

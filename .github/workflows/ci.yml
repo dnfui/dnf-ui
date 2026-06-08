@@ -31,7 +31,7 @@ jobs:
             fedora:latest \
             bash -lc '
               set -euo pipefail
-              trap '\''chown -R "${HOST_UID}:${HOST_GID}" build dnfui dnfui-service dnfui-tests 2>/dev/null || true'\'' EXIT
+              trap '\''chown -R "${HOST_UID}:${HOST_GID}" build dnfui dnfui-tests 2>/dev/null || true'\'' EXIT
 
               dnf -y install \
                 appstream \
@@ -39,15 +39,13 @@ jobs:
                 dbus-daemon \
                 desktop-file-utils \
                 gcc-c++ \
+                gettext \
                 git \
                 glib2-devel \
                 gtk4-devel \
                 libdnf5-devel \
                 meson \
-                ninja-build \
-                polkit-devel \
-                systemd-devel \
-                systemd-rpm-macros
+                ninja-build
 
               meson setup build/ci \
                 --prefix /usr \
@@ -67,8 +65,8 @@ jobs:
               meson compile -C build/final
             '
 
-  docker-service-tests:
-    name: Docker service smoke tests
+  docker-tests:
+    name: Docker tests
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -77,17 +75,11 @@ jobs:
       - name: Build Docker test image
         run: ./docker/docker_setup.sh
 
-      - name: Run Docker service test matrix
-        env:
-          DOCKER_USE_TTY: "0"
-        run: |
-          make dockerservicetest
-          make dockerservicepreviewfailuretest
-          make dockerservicecanceltest
-          make dockerserviceapplytest
-          make dockerservicesystemtest
-          make dockerservicesystemdisconnecttest
-          make dockerservicesystemapplytest
+      - name: Run Docker backend tests
+        run: make dockertest
+
+      - name: Run dnf5daemon transaction tests
+        run: make dockerdnf5daemontest
 
   docker-offline-tests:
     name: Docker offline smoke tests
@@ -128,6 +120,7 @@ jobs:
                 dbus-daemon \
                 desktop-file-utils \
                 gcc-c++ \
+                gettext \
                 git \
                 glib2-devel \
                 gtk4-devel \
@@ -135,10 +128,7 @@ jobs:
                 make \
                 meson \
                 ninja-build \
-                polkit-devel \
-                rpm-build \
-                systemd-devel \
-                systemd-rpm-macros
+                rpm-build
 
               git config --global --add safe.directory /workspace
               make rpm

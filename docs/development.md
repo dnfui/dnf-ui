@@ -36,33 +36,22 @@ meson compile -C build/debug
 ./build/debug/src/dnfui
 ```
 
-## Native service install for development
+## Native transaction testing
 
-For native Polkit testing from the source tree, install the service files with:
+For native Polkit testing from the source tree, build the app and run it as a
+regular desktop user:
 
 ```sh
 make
-sudo make serviceinstall
-```
-
-Then run the app as a regular desktop user:
-
-```sh
 ./dnfui
 ```
 
 When you apply a transaction, the desktop Polkit prompt should appear.
 
-Remove the development service install with:
-
-```sh
-sudo make serviceuninstall
-```
-
 **NOTE:**
 
 - Choose a non critical installed package for native apply tests
-- `serviceinstall` is just a development helper for installing the app without RPM packaging
+- Package changes go through DNF5 dnf5daemon
 
 ## Docker
 
@@ -154,3 +143,20 @@ mock -r fedora-rawhide-x86_64 --rebuild dnf-ui-latest.src.rpm
 ```
 
 Use a different `-r` value if you want to build for another Fedora release or architecture.
+
+## Docker GDB
+
+Run the app under GDB in the development container:
+
+```sh
+make dockergdb
+```
+
+Stop the GDB container if it is still running:
+
+```sh
+make dockergdbstop
+```
+
+The Docker GDB target starts a system bus in the container and checks that
+dnf5daemon can be activated before launching GDB.

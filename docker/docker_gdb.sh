@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 set -e
 
-# Docker GDB host helper that starts the debug container and waits until
-# gdbserver is ready for VS Code to connect.
+# Docker GDB server wrapper for VS Code debugging.
+# It uses the same dnf5daemon system bus setup as the normal Docker run target.
 
 FMT_RED=$(printf '\033[31m')
-FMT_GREEN=$(printf '\033[32m')
 FMT_BLUE=$(printf '\033[34m')
 FMT_RESET=$(printf '\033[0m')
 
@@ -18,12 +17,15 @@ color_print() {
 IMAGE_NAME="dnfui-dev"
 CONTAINER_NAME="dnfui-gdb"
 THEME_MODE="${THEME:-default}"
-GDB_PORT="${GDB_PORT:-2345}"
-CACHE_MODE="${CACHE_MODE:-persistent}"
 CACHE_VOLUME_NAME="${CACHE_VOLUME_NAME:-dnfui-repo-cache}"
-SESSION_BUS_ADDRESS="unix:path=/tmp/dnfui-gdb-session-bus"
+GDB_WAIT_TIMEOUT="${GDB_WAIT_TIMEOUT:-120}"
 
-# Configure the optional GTK theme override:
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/container_runtime.sh"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+HOST_DIR="$PROJECT_ROOT"
+
 THEME_OPTS=()
 case "$THEME_MODE" in
 "" | "default")
@@ -43,16 +45,14 @@ case "$THEME_MODE" in
   ;;
 esac
 
-# Make this script work from any directory:
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck disable=SC1091
-. "$SCRIPT_DIR/container_runtime.sh"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-HOST_DIR="$PROJECT_ROOT"
+LOCALE_OPTS=()
+for locale_var in LANG LANGUAGE LC_ALL; do
+  if [ -n "${!locale_var:-}" ]; then
+    LOCALE_OPTS+=(-e "$locale_var=${!locale_var}")
+  fi
+done
 
-# Pass through the host display server connection so the app started by
-# gdbserver can open its GTK window from inside the container.
-if [ "$XDG_SESSION_TYPE" = "wayland" ] && [ -n "$WAYLAND_DISPLAY" ]; then
+if [ "${XDG_SESSION_TYPE:-}" = "wayland" ] && [ -n "${WAYLAND_DISPLAY:-}" ]; then
   color_print "$FMT_BLUE" "*** Wayland detected ***"
   DISPLAY_OPTS=(
     -e WAYLAND_DISPLAY="$WAYLAND_DISPLAY"
@@ -65,93 +65,62 @@ else
     xhost +local:docker >/dev/null 2>&1 || true
   fi
   DISPLAY_OPTS=(
-    -e DISPLAY="$DISPLAY"
+    -e DISPLAY="${DISPLAY:-}"
     -v /tmp/.X11-unix:/tmp/.X11-unix
   )
 fi
 
-# Require the development image before starting the container:
 if ! container_image_exists "$IMAGE_NAME"; then
   color_print "$FMT_RED" "$(container_missing_image_message)"
   exit 1
 fi
 
-# Remove any previous debug container before starting a new one:
 if "$CONTAINER_RUNTIME" container inspect "$CONTAINER_NAME" >/dev/null 2>&1; then
-  color_print "$FMT_BLUE" "*** Removing existing GDB container ***"
-  "$CONTAINER_RUNTIME" rm -f "$CONTAINER_NAME" >/dev/null
+  "$CONTAINER_RUNTIME" stop "$CONTAINER_NAME" >/dev/null 2>&1 || true
 fi
 
-# Configure the DNF cache used by libdnf5 inside the container. A persistent
-# cache makes repeated debug launches faster, while empty starts from scratch.
-CACHE_OPTS=()
-case "$CACHE_MODE" in
-"persistent")
-  color_print "$FMT_BLUE" "*** DNF cache: persistent volume $CACHE_VOLUME_NAME ***"
-  CACHE_OPTS=(-v "$CACHE_VOLUME_NAME:/var/cache/libdnf5")
-  ;;
-"empty")
-  color_print "$FMT_BLUE" "*** DNF cache: empty tmpfs ***"
-  CACHE_OPTS=(--tmpfs /var/cache/libdnf5)
-  ;;
-*)
-  color_print "$FMT_RED" "*** Invalid CACHE_MODE value: $CACHE_MODE. Use persistent or empty. ***"
-  exit 1
-  ;;
-esac
-
-# Start the debug container in the background:
-color_print "$FMT_GREEN" "*** Starting Docker GDB debug server... ***"
-# gdbserver needs ptrace access to control the debugged process.
-# The app uses a private session bus so debugging does not depend on the host
-# system service or host polkit policy.
-"$CONTAINER_RUNTIME" run -d \
+"$CONTAINER_RUNTIME" run --rm -d \
   --name "$CONTAINER_NAME" \
   --init \
   --cap-add=SYS_PTRACE \
   --security-opt seccomp=unconfined \
-  -p "127.0.0.1:$GDB_PORT:$GDB_PORT" \
   -w /workspace \
   "${DISPLAY_OPTS[@]}" \
   "${THEME_OPTS[@]}" \
+  "${LOCALE_OPTS[@]}" \
   --device /dev/dri \
   -e GSETTINGS_BACKEND=memory \
   -e FINAL \
   -e ASAN \
   -e DEBUG_TRACE \
-  -e GDB_PORT="$GDB_PORT" \
-  -e DNFUI_TRANSACTION_BUS=session \
-  -e DBUS_SESSION_BUS_ADDRESS="$SESSION_BUS_ADDRESS" \
   -v "$HOST_DIR:/workspace" \
-  "${CACHE_OPTS[@]}" \
+  -v "$CACHE_VOLUME_NAME:/var/cache/libdnf5" \
   "$IMAGE_NAME" \
-  bash /workspace/docker/docker_gdb_inner.sh >/dev/null
+  bash /workspace/docker/docker_gdb_inner.sh
 
-ready="no"
+echo "*** Docker GDB server container started: $CONTAINER_NAME ***"
 
-# Wait until gdbserver is listening before letting VS Code continue:
-for _ in $(seq 1 120); do
+# VS Code validates the remote program path as soon as the pre-launch task
+# returns. Wait until the container has built the app and gdbserver is ready.
+waited=0
+while [ "$waited" -lt "$GDB_WAIT_TIMEOUT" ]; do
   if ! "$CONTAINER_RUNTIME" container inspect "$CONTAINER_NAME" >/dev/null 2>&1; then
-    color_print "$FMT_RED" "*** Docker GDB container exited before gdbserver was ready ***"
-    "$CONTAINER_RUNTIME" logs "$CONTAINER_NAME" 2>&1 || true
+    color_print "$FMT_RED" "*** Docker GDB container exited before gdbserver started. ***"
+    "$CONTAINER_RUNTIME" logs "$CONTAINER_NAME" 2>/dev/null || true
     exit 1
   fi
 
-  if "$CONTAINER_RUNTIME" logs --tail 200 "$CONTAINER_NAME" 2>&1 | grep -q "Listening on port "; then
-    ready="yes"
-    break
+  if "$CONTAINER_RUNTIME" logs "$CONTAINER_NAME" 2>&1 | grep -q "Listening on port 2345"; then
+    echo "*** Docker GDB server is listening on port 2345. ***"
+    echo "*** VS Code can now attach through DEBUG DOCKER. ***"
+    exit 0
   fi
 
   sleep 1
+  waited=$((waited + 1))
 done
 
-# Print the latest container log output for the VS Code task terminal:
-"$CONTAINER_RUNTIME" logs --tail 200 "$CONTAINER_NAME" 2>&1 || true
-
-if [ "$ready" != "yes" ]; then
-  color_print "$FMT_RED" "*** Docker GDB server did not start ***"
-  exit 1
-fi
-
-color_print "$FMT_GREEN" "*** Docker GDB server is ready ***"
-exit 0
+color_print "$FMT_RED" "*** Timed out waiting for Docker GDB server. ***"
+"$CONTAINER_RUNTIME" logs "$CONTAINER_NAME" 2>/dev/null || true
+"$CONTAINER_RUNTIME" stop "$CONTAINER_NAME" >/dev/null 2>&1 || true
+exit 1
