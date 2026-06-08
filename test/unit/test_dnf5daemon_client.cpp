@@ -243,6 +243,7 @@ TEST_CASE("dnf5daemon client releases sessions after failed apply", "[dnf5daemon
   INFO(error);
   INFO(joined_progress_lines(progress_lines));
   REQUIRE_FALSE(error.empty());
+  REQUIRE(error.find("The approved transaction was not applied.") != std::string::npos);
   REQUIRE_FALSE(session_exists_after_release);
 }
 

@@ -101,6 +101,10 @@ freeze the window.
 Preview resolves the current daemon session and converts the daemon reply into
 `TransactionPreview`.
 
+The preview dialog does not lock DNF for other tools. If package state changes
+before Apply, dnf5daemon may reject the prepared transaction. DNF UI then closes
+that session and the user must prepare a new preview.
+
 The preview dialog only shows actions the app understands:
 
 - install

@@ -274,6 +274,24 @@ map_lookup_int64(GVariant *map, const char *key)
 }
 
 // -----------------------------------------------------------------------------
+// Build the user-facing error shown when dnf5daemon cannot apply a preview.
+// The daemon message is kept because it often contains the real failure reason.
+// -----------------------------------------------------------------------------
+std::string
+daemon_apply_error_message(GError *error)
+{
+  std::string message = _("The approved transaction was not applied. Prepare the preview again before retrying.");
+
+  if (error && error->message && *error->message) {
+    message += "\n\n";
+    message += _("Details: ");
+    message += error->message;
+  }
+
+  return message;
+}
+
+// -----------------------------------------------------------------------------
 // Build the package label used by the existing preview dialog.
 // -----------------------------------------------------------------------------
 std::string
@@ -743,7 +761,7 @@ transaction_service_client_start_apply_request(GDBusConnection *connection,
   }
 
   if (state.error) {
-    error_out = state.error->message;
+    error_out = daemon_apply_error_message(state.error);
     g_clear_error(&state.error);
     return false;
   }

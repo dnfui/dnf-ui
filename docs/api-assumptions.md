@@ -232,6 +232,8 @@ Assumptions:
   package changes depend on that daemon.
 - The app keeps one shared system bus connection so the session used for preview
   is still valid when the user later applies.
+- A resolved preview is not a system-wide DNF lock. If another package tool
+  changes state before Apply, the apply call must fail and require a new preview.
 - `do_transaction` may need longer than a normal D-Bus timeout because the user
   can leave the Polkit prompt open.
 - Unsupported daemon transaction item types or actions must fail preview instead

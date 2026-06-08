@@ -267,6 +267,12 @@ msgstr "dnf5daemon är installerad, men DNF UI får inte prata med den. Installe
 msgid "This transaction would remove dnf5daemon-server, which DNF UI needs to apply package changes."
 msgstr "Den här transaktionen skulle ta bort dnf5daemon-server, som DNF UI behöver för att verkställa paketändringar."
 
+msgid "The approved transaction was not applied. Prepare the preview again before retrying."
+msgstr "Den godkända transaktionen verkställdes inte. Förbered förhandsgranskningen igen innan du försöker igen."
+
+msgid "Details: "
+msgstr "Detaljer: "
+
 msgid "Privileged transaction preview ready."
 msgstr "Privilegierad transaktionsgranskning är klar."
 
