@@ -107,6 +107,36 @@ pending_transaction_preview_is_busy(SearchWidgets *widgets)
 }
 
 // -----------------------------------------------------------------------------
+// Enable or disable the controls that can start a new transaction preview.
+// -----------------------------------------------------------------------------
+void
+pending_transaction_set_preview_controls_sensitive(SearchWidgets *widgets, bool sensitive)
+{
+  if (!widgets) {
+    return;
+  }
+
+  if (widgets->transaction.pending_list) {
+    gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.pending_list), sensitive);
+  }
+  if (widgets->transaction.upgrade_all_button) {
+    gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.upgrade_all_button), sensitive);
+  }
+
+  if (!sensitive) {
+    if (widgets->transaction.apply_button) {
+      gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.apply_button), FALSE);
+    }
+    if (widgets->transaction.clear_pending_button) {
+      gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.clear_pending_button), FALSE);
+    }
+    return;
+  }
+
+  pending_transaction_refresh_pending_tab(widgets);
+}
+
+// -----------------------------------------------------------------------------
 // Enable or disable controls while a preview request is running.
 // -----------------------------------------------------------------------------
 static void
@@ -117,21 +147,12 @@ set_preview_request_busy_state(SearchWidgets *widgets, bool busy)
   }
 
   widgets->transaction.preview_request_in_progress = busy;
-  if (widgets->transaction.pending_list) {
-    gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.pending_list), !busy);
-  }
-  if (widgets->transaction.upgrade_all_button) {
-    gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.upgrade_all_button), !busy);
-  }
+  pending_transaction_set_preview_controls_sensitive(widgets, !busy);
 
   if (busy) {
     ui_helpers_set_icon_button(widgets->transaction.apply_button, "object-select-symbolic", _("Preparing Preview..."));
-    gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.apply_button), FALSE);
-    gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.clear_pending_button), FALSE);
     return;
   }
-
-  pending_transaction_refresh_pending_tab(widgets);
 }
 
 // -----------------------------------------------------------------------------

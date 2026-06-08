@@ -39,6 +39,8 @@ static const char *base_repo_state_trace_name(BaseRepoState state);
 #endif
 
 static std::atomic<bool> g_installed_refresh_running { false };
+// Keep one periodic installed-refresh source for the whole application process.
+static guint g_periodic_installed_refresh_source_id = 0;
 
 struct StartupWarmupData {
   SearchWidgets *widgets = nullptr;
@@ -95,8 +97,14 @@ app_run_dnfui(int argc, char **argv)
 static void
 setup_periodic_tasks(void)
 {
+  // GtkApplication can activate more than once for the same process.
+  // Keep one periodic refresh source even when another activation presents a window.
+  if (g_periodic_installed_refresh_source_id != 0) {
+    return;
+  }
+
   // --- Periodic refresh of installed package names every 5 minutes ---
-  g_timeout_add_seconds(300, on_periodic_installed_refresh_tick, nullptr);
+  g_periodic_installed_refresh_source_id = g_timeout_add_seconds(300, on_periodic_installed_refresh_tick, nullptr);
 }
 
 // -----------------------------------------------------------------------------

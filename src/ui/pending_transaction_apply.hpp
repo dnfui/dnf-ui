@@ -21,6 +21,10 @@ const char *pending_transaction_preview_busy_message();
 // Return true when a preview request is running.
 // -----------------------------------------------------------------------------
 bool pending_transaction_preview_is_busy(SearchWidgets *widgets);
+// -----------------------------------------------------------------------------
+// Enable or disable the controls that can start a new transaction preview.
+// -----------------------------------------------------------------------------
+void pending_transaction_set_preview_controls_sensitive(SearchWidgets *widgets, bool sensitive);
 
 // -----------------------------------------------------------------------------
 // EOF

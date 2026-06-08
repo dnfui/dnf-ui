@@ -8,6 +8,8 @@
 #include "base_manager.hpp"
 #include "i18n.hpp"
 #include "package_query_controller.hpp"
+#include "package_query_controller_internal.hpp"
+#include "pending_transaction_apply.hpp"
 #include "ui_helpers.hpp"
 #include "widgets_internal.hpp"
 
@@ -170,9 +172,13 @@ widgets_on_rebuild_task_finished(GObject *, GAsyncResult *res, gpointer user_dat
   // This handler receives that pointer and deletes it after use.
   BaseRepoState *refresh_state = static_cast<BaseRepoState *>(g_task_propagate_pointer(task, &error));
 
-  // Refresh temporarily disables the main Search button while the rebuild runs.
-  // Restore it once the background refresh finishes so the query UI unlocks.
-  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.search_button), TRUE);
+  // Re-enable the shared controls before status updates and view reload so the
+  // window returns to its normal interaction state after refresh.
+  package_query_set_idle_controls_sensitive(widgets, true);
+  if (widgets->results.list_scroller) {
+    gtk_widget_set_sensitive(GTK_WIDGET(widgets->results.list_scroller), TRUE);
+  }
+  pending_transaction_set_preview_controls_sensitive(widgets, true);
 
   repository_refresh_running = false;
 
@@ -211,6 +217,20 @@ widgets_on_refresh_button_clicked(GtkButton *, gpointer user_data)
     return;
   }
 
+  // Rebuild and query workers both serialize on the shared Base.
+  // Keep refresh out of the way when a normal package query is already running.
+  if (package_query_has_active_package_list_request(widgets)) {
+    ui_helpers_set_status(widgets->query.status_label, _("Wait for the current package query to finish."), "blue");
+    return;
+  }
+
+  // Preview preparation also uses the backend and should finish before a
+  // repository rebuild starts changing the cached Base generation.
+  if (pending_transaction_preview_is_busy(widgets)) {
+    ui_helpers_set_status(widgets->query.status_label, pending_transaction_preview_busy_message(), "blue");
+    return;
+  }
+
   bool expected = false;
   if (!repository_refresh_running.compare_exchange_strong(expected, true)) {
     ui_helpers_set_status(widgets->query.status_label, _("Repository refresh is already running."), "gray");
@@ -221,7 +241,13 @@ widgets_on_refresh_button_clicked(GtkButton *, gpointer user_data)
   // not reuse rows from repository state that is changing.
   package_query_clear_search_cache();
   ui_helpers_set_status(widgets->query.status_label, _("Refreshing repositories..."), "blue");
-  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.search_button), FALSE);
+  // Keep the query and preview controls aligned with the backend rebuild state
+  // so the user cannot queue work that only waits behind the refresh.
+  package_query_set_idle_controls_sensitive(widgets, false);
+  if (widgets->results.list_scroller) {
+    gtk_widget_set_sensitive(GTK_WIDGET(widgets->results.list_scroller), FALSE);
+  }
+  pending_transaction_set_preview_controls_sensitive(widgets, false);
 
   GCancellable *c = widgets_make_task_cancellable_for(GTK_WIDGET(widgets->query.entry));
   GTask *task = widgets_task_new_for_search_widgets(widgets, c, widgets_on_rebuild_task_finished);

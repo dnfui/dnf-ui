@@ -121,6 +121,26 @@ package_query_has_active_package_list_request(const SearchWidgets *widgets)
 }
 
 // -----------------------------------------------------------------------------
+// Enable or disable the idle package query controls.
+// -----------------------------------------------------------------------------
+void
+package_query_set_idle_controls_sensitive(SearchWidgets *widgets, bool sensitive)
+{
+  if (!widgets) {
+    return;
+  }
+
+  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.entry), sensitive);
+  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.desc_checkbox), sensitive);
+  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.exact_checkbox), sensitive);
+  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.history_list), sensitive);
+  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.list_button), sensitive);
+  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.list_available_button), sensitive);
+  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.list_upgradeable_button), sensitive);
+  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.search_button), sensitive);
+}
+
+// -----------------------------------------------------------------------------
 // Return the button that currently works as Stop.
 // -----------------------------------------------------------------------------
 static GtkButton *
@@ -216,14 +236,7 @@ package_query_begin_package_list_request(SearchWidgets *widgets,
   ui_helpers_set_icon_button(widgets->query.list_available_button, "view-list-symbolic", _("List Packages"));
   ui_helpers_set_icon_button(widgets->query.list_upgradeable_button, "view-list-symbolic", _("List Upgradable"));
   ui_helpers_set_icon_button(stop_button, "process-stop-symbolic", _("Stop"));
-  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.entry), FALSE);
-  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.desc_checkbox), FALSE);
-  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.exact_checkbox), FALSE);
-  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.history_list), FALSE);
-  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.search_button), FALSE);
-  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.list_button), FALSE);
-  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.list_available_button), FALSE);
-  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.list_upgradeable_button), FALSE);
+  package_query_set_idle_controls_sensitive(widgets, false);
   gtk_widget_set_sensitive(GTK_WIDGET(stop_button), TRUE);
 }
 
@@ -241,14 +254,7 @@ restore_package_list_controls(SearchWidgets *widgets)
   ui_helpers_set_icon_button(widgets->query.list_button, "view-list-symbolic", _("List Installed"));
   ui_helpers_set_icon_button(widgets->query.list_available_button, "view-list-symbolic", _("List Packages"));
   ui_helpers_set_icon_button(widgets->query.list_upgradeable_button, "view-list-symbolic", _("List Upgradable"));
-  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.entry), TRUE);
-  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.desc_checkbox), TRUE);
-  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.exact_checkbox), TRUE);
-  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.history_list), TRUE);
-  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.list_button), TRUE);
-  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.list_available_button), TRUE);
-  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.list_upgradeable_button), TRUE);
-  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.search_button), TRUE);
+  package_query_set_idle_controls_sensitive(widgets, true);
 }
 
 // -----------------------------------------------------------------------------

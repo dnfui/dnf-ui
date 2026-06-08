@@ -46,6 +46,10 @@ void package_query_show_duration_label(SearchWidgets *widgets, const char *title
 // -----------------------------------------------------------------------------
 bool package_query_has_active_package_list_request(const SearchWidgets *widgets);
 // -----------------------------------------------------------------------------
+// Enable or disable the idle package query controls.
+// -----------------------------------------------------------------------------
+void package_query_set_idle_controls_sensitive(SearchWidgets *widgets, bool sensitive);
+// -----------------------------------------------------------------------------
 // Put one query button into Stop mode while a worker owns it.
 // -----------------------------------------------------------------------------
 void package_query_begin_package_list_request(SearchWidgets *widgets,
