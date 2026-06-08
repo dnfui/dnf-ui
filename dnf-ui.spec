@@ -1,5 +1,5 @@
 Name:           dnf-ui
-Version:        0.1.7
+Version:        0.2.0
 Release:        1%{?dist}
 Summary:        GTK frontend for DNF5
 
@@ -57,6 +57,13 @@ appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/com.fedora.dnfui
 %{_datadir}/metainfo/com.fedora.dnfui.metainfo.xml
 
 %changelog
+* Mon Jun 08 2026 ErikMN <erik@example.invalid> - 0.2.0-1
+- Use DNF5 dnf5daemon for transaction preview and apply
+- Remove the custom privileged transaction service
+- Add dnf5daemon transaction tests and native apply test target
+- Improve stale-preview apply failures
+- Block removal of dnf5daemon-server from DNF UI
+
 * Tue Jun 02 2026 ErikMN <erik@example.invalid> - 0.1.7-1
 - Cache improvements
 - Search improvements
