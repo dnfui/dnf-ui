@@ -19,6 +19,10 @@
 
 namespace {
 
+// Controls which repository sources are loaded into a temporary libdnf5 Base.
+// FULL uses the normal enabled repositories.
+// CACHE_ONLY_METADATA uses already cached repository metadata when live repo loading failed.
+// SYSTEM_ONLY loads only the local installed package database and skips available repositories.
 enum class RepoLoadMode {
   FULL,
   CACHE_ONLY_METADATA,
