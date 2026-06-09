@@ -82,6 +82,7 @@ help:
 	@printf '%-36s %s\n' 'dnfui-tests' 'Build the test binary.'
 	@printf '%-36s %s\n' 'run' 'Build and run the desktop app locally.'
 	@printf '%-36s %s\n' 'test' 'Build and run the local test suite.'
+	@printf '%-36s %s\n' 'fedora-deps' 'Install Fedora packages needed for native development.'
 	@printf '%-36s %s\n' 'dnf5daemontest' 'Run native dnf5daemon transaction client tests.'
 	@printf '%-36s %s\n' 'dnf5daemonapplytest' 'Run native dnf5daemon tests including apply.'
 	@printf '%-36s %s\n' 'srpm' 'Build the source tarball and source RPM.'
@@ -155,6 +156,11 @@ run: dnfui
 test: dnfui-tests
 	@echo "*** Running test suite ***"
 	@./$(TEST_BIN_NAME)
+
+# Install Fedora packages needed for native development:
+.PHONY: fedora-deps
+fedora-deps:
+	@./utils/install_fedora_dependencies.sh
 
 # Run native dnf5daemon transaction client tests:
 .PHONY: dnf5daemontest
