@@ -484,6 +484,7 @@ create_search_widgets(const AppWidgets *ui)
   widgets->query.list_button = GTK_BUTTON(ui->list_button);
   widgets->query.list_available_button = GTK_BUTTON(ui->list_available_button);
   widgets->query.list_upgradeable_button = GTK_BUTTON(ui->list_upgradeable_button);
+  widgets->query.refresh_button = GTK_BUTTON(ui->refresh_button);
   widgets->query.status_label = GTK_LABEL(ui->status_label);
   widgets->query.desc_checkbox = GTK_CHECK_BUTTON(ui->desc_checkbox);
   widgets->query.exact_checkbox = GTK_CHECK_BUTTON(ui->exact_checkbox);

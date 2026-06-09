@@ -225,8 +225,17 @@ msgstr "Förråd uppdaterade."
 msgid "Refreshing repositories..."
 msgstr "Uppdaterar förråd..."
 
+msgid "Repository refresh cancelled."
+msgstr "Förrådsuppdatering avbröts."
+
+msgid "Repository refresh cancelled. Finishing current repo check in the background."
+msgstr "Förrådsuppdatering avbröts. Slutför aktuell förrådskontroll i bakgrunden."
+
 msgid "Repository refresh is already running."
 msgstr "Förrådsuppdatering körs redan."
+
+msgid "Repository refresh is still stopping."
+msgstr "Förrådsuppdatering stoppas fortfarande."
 
 msgid "Repo refresh failed."
 msgstr "Förrådsuppdatering misslyckades."

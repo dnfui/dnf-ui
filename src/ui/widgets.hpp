@@ -28,6 +28,7 @@ struct PackageQueryWidgets {
   GtkButton *list_button = nullptr;
   GtkButton *list_available_button = nullptr;
   GtkButton *list_upgradeable_button = nullptr;
+  GtkButton *refresh_button = nullptr;
   GtkLabel *status_label = nullptr;
   GtkCheckButton *desc_checkbox = nullptr;
   GtkCheckButton *exact_checkbox = nullptr;
