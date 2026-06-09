@@ -45,14 +45,16 @@ incremented. UI tasks use that value to reject outdated results after refreshes
 and transactions.
 
 The shared cached Base also has an id that changes whenever the shared Base is
-created, replaced, or dropped. The package search cache uses it so rows from one
-cached Base are not reused after that Base was discarded and recreated under the
-same generation.
+created, replaced, or dropped. This is useful for code that needs to know when
+the exact cached Base object changed, but a Base drop does not mean package rows
+are stale.
 
 The package search cache also keeps its own cache epoch. That epoch advances
 when the UI explicitly clears cached search rows, even if the backend Base
 generation has not changed yet. This keeps older search workers from storing
-old rows back into a cache state the UI already invalidated.
+old rows back into a cache state the UI already invalidated. Search cache
+validity depends on the Base generation and this cache epoch, not on the cached
+Base id.
 
 ## Query flow
 

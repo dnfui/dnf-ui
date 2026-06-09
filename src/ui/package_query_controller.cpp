@@ -81,16 +81,14 @@ perform_search(SearchWidgets *widgets, const std::string &term)
   }
 
   // Look up saved rows before starting a new backend query.
-  // Reuse only results produced from the current Base generation, Base epoch,
-  // and cache epoch so refreshes, Base drops, transactions, and explicit cache
-  // clears cannot serve outdated package rows back into the UI.
+  // Base drops do not invalidate search results because they only release memory.
+  // Generation and cache epoch still reject rows after refreshes, transactions, or explicit cache clears.
   const std::string key = package_query_cache_key_for(term);
   const uint64_t generation = BaseManager::instance().current_generation();
-  const uint64_t base_epoch = BaseManager::instance().current_base_epoch();
   const uint64_t cache_epoch = package_query_cache_current_epoch();
   const gint64 started_at_us = g_get_monotonic_time();
   std::vector<PackageRow> cached_packages;
-  if (package_query_cache_lookup(key, generation, base_epoch, cache_epoch, cached_packages)) {
+  if (package_query_cache_lookup(key, generation, cache_epoch, cached_packages)) {
     // Show saved rows and skip the worker thread.
     package_query_set_displayed_search_query(
         widgets, term, search_options.search_in_description, search_options.exact_match);
@@ -107,7 +105,7 @@ perform_search(SearchWidgets *widgets, const std::string &term)
   }
 
   // No cache match, so start a worker thread search.
-  package_query_start_search_task(widgets, term, key, generation, base_epoch, cache_epoch, search_options);
+  package_query_start_search_task(widgets, term, key, generation, cache_epoch, search_options);
 }
 
 // -----------------------------------------------------------------------------

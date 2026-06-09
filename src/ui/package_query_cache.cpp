@@ -14,13 +14,11 @@ namespace {
 constexpr size_t kMaxSearchCacheEntries = 3;
 
 // Cache one visible result set per search term and search option combination.
-// Entries are tied to the BaseManager generation, the shared Base epoch, and the cache epoch.
+// Entries are tied to the BaseManager generation and the cache epoch.
 // Generation tracks backend rebuilds.
-// The Base epoch tracks when the shared cached Base was replaced or dropped.
 // The cache epoch tracks UI actions that intentionally invalidate cached search rows.
 struct CachedSearchResults {
   uint64_t generation;
-  uint64_t base_epoch;
   uint64_t cache_epoch;
   uint64_t last_used;
   std::vector<PackageRow> packages;
@@ -91,13 +89,12 @@ package_query_cache_current_epoch()
 
 // -----------------------------------------------------------------------------
 // Look up cached rows before starting a new backend query.
-// Reuse only results produced from the current Base generation, Base epoch, and cache epoch.
-// This prevents Base drops, refreshes, transactions, and explicit cache invalidation from showing outdated metadata.
+// Reuse only results produced from the current Base generation and cache epoch.
+// Base drops are a memory choice and do not make package rows stale by themselves.
 // -----------------------------------------------------------------------------
 bool
 package_query_cache_lookup(const std::string &key,
                            uint64_t generation,
-                           uint64_t base_epoch,
                            uint64_t cache_epoch,
                            std::vector<PackageRow> &out_packages)
 {
@@ -107,8 +104,7 @@ package_query_cache_lookup(const std::string &key,
     return false;
   }
 
-  if (it->second.generation != generation || it->second.base_epoch != base_epoch ||
-      it->second.cache_epoch != cache_epoch) {
+  if (it->second.generation != generation || it->second.cache_epoch != cache_epoch) {
     g_search_cache.erase(it);
     return false;
   }
@@ -120,12 +116,11 @@ package_query_cache_lookup(const std::string &key,
 
 // -----------------------------------------------------------------------------
 // Save rows so the same search can be shown faster next time.
-// Search results are reusable only while the backend Base generation, shared Base id, and cache epoch stay the same.
+// Search results are reusable while package state and the cache epoch stay the same.
 // -----------------------------------------------------------------------------
 void
 package_query_cache_store(const std::string &key,
                           uint64_t generation,
-                          uint64_t base_epoch,
                           uint64_t cache_epoch,
                           const std::vector<PackageRow> &packages)
 {
@@ -134,7 +129,7 @@ package_query_cache_store(const std::string &key,
     return;
   }
 
-  g_search_cache[key] = CachedSearchResults { generation, base_epoch, cache_epoch, ++g_cache_use_counter, packages };
+  g_search_cache[key] = CachedSearchResults { generation, cache_epoch, ++g_cache_use_counter, packages };
   package_query_cache_prune_locked();
 }
 

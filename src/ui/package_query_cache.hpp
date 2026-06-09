@@ -28,19 +28,17 @@ void package_query_cache_clear();
 // -----------------------------------------------------------------------------
 uint64_t package_query_cache_current_epoch();
 // -----------------------------------------------------------------------------
-// Look up cached package rows for one key, generation, Base epoch, and cache epoch.
+// Look up cached package rows for one key, generation, and cache epoch.
 // -----------------------------------------------------------------------------
 bool package_query_cache_lookup(const std::string &key,
                                 uint64_t generation,
-                                uint64_t base_epoch,
                                 uint64_t cache_epoch,
                                 std::vector<PackageRow> &out_packages);
 // -----------------------------------------------------------------------------
-// Store package rows for one key, generation, Base epoch, and cache epoch.
+// Store package rows for one key, generation, and cache epoch.
 // -----------------------------------------------------------------------------
 void package_query_cache_store(const std::string &key,
                                uint64_t generation,
-                               uint64_t base_epoch,
                                uint64_t cache_epoch,
                                const std::vector<PackageRow> &packages);
 

@@ -4,6 +4,7 @@
 // -----------------------------------------------------------------------------
 #include <catch2/catch_test_macros.hpp>
 
+#include "base_manager.hpp"
 #include "test_utils.hpp"
 #include "ui/package_query_cache.hpp"
 
@@ -53,7 +54,6 @@ TEST_CASE("Package query cache key includes search options")
 TEST_CASE("Package query cache returns rows for matching key and generation")
 {
   package_query_cache_clear();
-  const uint64_t base_epoch = 3;
   const uint64_t cache_epoch = package_query_cache_current_epoch();
 
   const std::string key = "name:contains:demo";
@@ -63,9 +63,9 @@ TEST_CASE("Package query cache returns rows for matching key and generation")
   };
   std::vector<PackageRow> loaded;
 
-  package_query_cache_store(key, 7, base_epoch, cache_epoch, stored);
+  package_query_cache_store(key, 7, cache_epoch, stored);
 
-  REQUIRE(package_query_cache_lookup(key, 7, base_epoch, cache_epoch, loaded));
+  REQUIRE(package_query_cache_lookup(key, 7, cache_epoch, loaded));
   REQUIRE(loaded.size() == 2);
   REQUIRE(loaded[0].nevra == "demo-1-1.x86_64");
   REQUIRE(loaded[1].nevra == "demo-libs-1-1.x86_64");
@@ -77,7 +77,6 @@ TEST_CASE("Package query cache returns rows for matching key and generation")
 TEST_CASE("Package query cache rejects and removes stale generations")
 {
   package_query_cache_clear();
-  const uint64_t base_epoch = 3;
   const uint64_t cache_epoch = package_query_cache_current_epoch();
 
   const std::string key = "name:contains:demo";
@@ -86,10 +85,10 @@ TEST_CASE("Package query cache rejects and removes stale generations")
   };
   std::vector<PackageRow> loaded;
 
-  package_query_cache_store(key, 7, base_epoch, cache_epoch, stored);
+  package_query_cache_store(key, 7, cache_epoch, stored);
 
-  REQUIRE_FALSE(package_query_cache_lookup(key, 8, base_epoch, cache_epoch, loaded));
-  REQUIRE_FALSE(package_query_cache_lookup(key, 7, base_epoch, cache_epoch, loaded));
+  REQUIRE_FALSE(package_query_cache_lookup(key, 8, cache_epoch, loaded));
+  REQUIRE_FALSE(package_query_cache_lookup(key, 7, cache_epoch, loaded));
 }
 
 // -----------------------------------------------------------------------------
@@ -98,7 +97,6 @@ TEST_CASE("Package query cache rejects and removes stale generations")
 TEST_CASE("Package query cache clear removes stored rows")
 {
   package_query_cache_clear();
-  const uint64_t base_epoch = 3;
   const uint64_t cache_epoch = package_query_cache_current_epoch();
 
   const std::string key = "name:contains:demo";
@@ -107,10 +105,10 @@ TEST_CASE("Package query cache clear removes stored rows")
   };
   std::vector<PackageRow> loaded;
 
-  package_query_cache_store(key, 7, base_epoch, cache_epoch, stored);
+  package_query_cache_store(key, 7, cache_epoch, stored);
   package_query_cache_clear();
 
-  REQUIRE_FALSE(package_query_cache_lookup(key, 7, base_epoch, cache_epoch, loaded));
+  REQUIRE_FALSE(package_query_cache_lookup(key, 7, cache_epoch, loaded));
 }
 
 // -----------------------------------------------------------------------------
@@ -132,7 +130,6 @@ TEST_CASE("Package query cache clear advances cache epoch")
 TEST_CASE("Package query cache rejects rows from an older cache epoch")
 {
   package_query_cache_clear();
-  const uint64_t base_epoch = 3;
   const uint64_t cache_epoch = package_query_cache_current_epoch();
 
   const std::string key = "name:contains:demo";
@@ -141,19 +138,21 @@ TEST_CASE("Package query cache rejects rows from an older cache epoch")
   };
   std::vector<PackageRow> loaded;
 
-  package_query_cache_store(key, 7, base_epoch, cache_epoch, stored);
+  package_query_cache_store(key, 7, cache_epoch, stored);
   package_query_cache_clear();
 
-  REQUIRE_FALSE(package_query_cache_lookup(key, 7, base_epoch, cache_epoch, loaded));
+  REQUIRE_FALSE(package_query_cache_lookup(key, 7, cache_epoch, loaded));
 }
 
 // -----------------------------------------------------------------------------
-// Verify that cached rows are rejected after the shared Base lifetime changes.
+// Verify that cached rows survive Base drops when package state has not changed.
 // -----------------------------------------------------------------------------
-TEST_CASE("Package query cache rejects rows from an older Base epoch")
+TEST_CASE("Package query cache keeps rows after Base drops")
 {
   package_query_cache_clear();
+  BaseManager::instance().reset_for_tests();
   const uint64_t cache_epoch = package_query_cache_current_epoch();
+  const uint64_t generation = BaseManager::instance().current_generation();
 
   const std::string key = "name:contains:demo";
   std::vector<PackageRow> stored = {
@@ -161,10 +160,15 @@ TEST_CASE("Package query cache rejects rows from an older Base epoch")
   };
   std::vector<PackageRow> loaded;
 
-  package_query_cache_store(key, 7, 3, cache_epoch, stored);
+  package_query_cache_store(key, generation, cache_epoch, stored);
+  BaseManager::instance().ensure_system_only_initialized_if_needed();
+  const uint64_t base_epoch = BaseManager::instance().current_base_epoch();
+  BaseManager::instance().drop_cached_base();
 
-  REQUIRE_FALSE(package_query_cache_lookup(key, 7, 4, cache_epoch, loaded));
-  REQUIRE_FALSE(package_query_cache_lookup(key, 7, 3, cache_epoch, loaded));
+  REQUIRE(BaseManager::instance().current_base_epoch() > base_epoch);
+  REQUIRE(package_query_cache_lookup(key, generation, cache_epoch, loaded));
+  REQUIRE(loaded.size() == 1);
+  REQUIRE(loaded[0].nevra == "demo-1-1.x86_64");
 }
 
 // -----------------------------------------------------------------------------
@@ -173,7 +177,6 @@ TEST_CASE("Package query cache rejects rows from an older Base epoch")
 TEST_CASE("Package query cache ignores store requests from an older cache epoch")
 {
   package_query_cache_clear();
-  const uint64_t base_epoch = 3;
   const uint64_t stale_epoch = package_query_cache_current_epoch();
 
   const std::string key = "name:contains:demo";
@@ -186,9 +189,9 @@ TEST_CASE("Package query cache ignores store requests from an older cache epoch"
   const uint64_t current_epoch = package_query_cache_current_epoch();
   REQUIRE(current_epoch > stale_epoch);
 
-  package_query_cache_store(key, 7, base_epoch, stale_epoch, stored);
+  package_query_cache_store(key, 7, stale_epoch, stored);
 
-  REQUIRE_FALSE(package_query_cache_lookup(key, 7, base_epoch, current_epoch, loaded));
+  REQUIRE_FALSE(package_query_cache_lookup(key, 7, current_epoch, loaded));
 }
 
 // -----------------------------------------------------------------------------
@@ -197,7 +200,6 @@ TEST_CASE("Package query cache ignores store requests from an older cache epoch"
 TEST_CASE("Package query cache evicts oldest entries")
 {
   package_query_cache_clear();
-  const uint64_t base_epoch = 3;
   const uint64_t cache_epoch = package_query_cache_current_epoch();
 
   std::vector<PackageRow> stored = {
@@ -205,13 +207,13 @@ TEST_CASE("Package query cache evicts oldest entries")
   };
   std::vector<PackageRow> loaded;
 
-  package_query_cache_store("name:contains:one", 7, base_epoch, cache_epoch, stored);
-  package_query_cache_store("name:contains:two", 7, base_epoch, cache_epoch, stored);
-  package_query_cache_store("name:contains:three", 7, base_epoch, cache_epoch, stored);
-  package_query_cache_store("name:contains:four", 7, base_epoch, cache_epoch, stored);
+  package_query_cache_store("name:contains:one", 7, cache_epoch, stored);
+  package_query_cache_store("name:contains:two", 7, cache_epoch, stored);
+  package_query_cache_store("name:contains:three", 7, cache_epoch, stored);
+  package_query_cache_store("name:contains:four", 7, cache_epoch, stored);
 
-  REQUIRE_FALSE(package_query_cache_lookup("name:contains:one", 7, base_epoch, cache_epoch, loaded));
-  REQUIRE(package_query_cache_lookup("name:contains:two", 7, base_epoch, cache_epoch, loaded));
-  REQUIRE(package_query_cache_lookup("name:contains:three", 7, base_epoch, cache_epoch, loaded));
-  REQUIRE(package_query_cache_lookup("name:contains:four", 7, base_epoch, cache_epoch, loaded));
+  REQUIRE_FALSE(package_query_cache_lookup("name:contains:one", 7, cache_epoch, loaded));
+  REQUIRE(package_query_cache_lookup("name:contains:two", 7, cache_epoch, loaded));
+  REQUIRE(package_query_cache_lookup("name:contains:three", 7, cache_epoch, loaded));
+  REQUIRE(package_query_cache_lookup("name:contains:four", 7, cache_epoch, loaded));
 }

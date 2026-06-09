@@ -30,9 +30,6 @@ struct SearchTaskData {
   // BaseManager generation recorded when the task starts.
   // Used to drop outdated results if the backend Base is rebuilt before the task ends.
   uint64_t generation;
-  // Shared Base id recorded when the task starts.
-  // Used to stop cache reuse after the shared Base was dropped or replaced.
-  uint64_t base_epoch;
   // Search-cache epoch recorded when the task starts.
   // Used to avoid storing rows back into a cache state the UI invalidated
   // while the worker was still running.
@@ -379,10 +376,9 @@ on_search_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
 
   if (packages) {
     // Save rows so the same search can be shown faster next time.
-    // Search results are reusable only while the backend Base generation, shared Base id,
-    // and cache epoch still match the state recorded when the task began.
-    if (td && td->cache_key && td->base_epoch == BaseManager::instance().current_base_epoch()) {
-      package_query_cache_store(td->cache_key, td->generation, td->base_epoch, td->cache_epoch, *packages);
+    // Dropping the cached Base releases memory, but it does not make this result stale.
+    if (td && td->cache_key) {
+      package_query_cache_store(td->cache_key, td->generation, td->cache_epoch, *packages);
     }
 
     if (td) {
@@ -490,7 +486,6 @@ package_query_start_search_task(SearchWidgets *widgets,
                                 const std::string &term,
                                 const std::string &cache_key,
                                 uint64_t generation,
-                                uint64_t base_epoch,
                                 uint64_t cache_epoch,
                                 const DnfBackendSearchOptions &search_options)
 {
@@ -502,7 +497,6 @@ package_query_start_search_task(SearchWidgets *widgets,
   td->request_id = widgets->query_state.next_package_list_request_id++;
   td->started_at_us = g_get_monotonic_time();
   td->generation = generation;
-  td->base_epoch = base_epoch;
   td->cache_epoch = cache_epoch;
   td->search_in_description = search_options.search_in_description;
   td->exact_match = search_options.exact_match;
