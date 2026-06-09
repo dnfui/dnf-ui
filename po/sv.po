@@ -306,6 +306,9 @@ msgstr "Verkställer väntande ändringar. Se transaktionsfönstret för detalje
 msgid "Applying package upgrades. See transaction window for details."
 msgstr "Verkställer paketuppgraderingar. Se transaktionsfönstret för detaljer."
 
+msgid "Wait for the current transaction to finish."
+msgstr "Vänta tills den aktuella transaktionen har verkställts."
+
 #, c-format
 msgid "Found %zu package."
 msgid_plural "Found %zu packages."

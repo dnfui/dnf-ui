@@ -19,6 +19,8 @@
 #include "widgets.hpp"
 #include "widgets_internal.hpp"
 
+#include <utility>
+
 // Data owned by the apply task.
 // The worker uses transaction_path to call the service, and progress_window receives text lines while the service
 // applies.
@@ -104,6 +106,24 @@ bool
 pending_transaction_preview_is_busy(SearchWidgets *widgets)
 {
   return widgets && widgets->transaction.preview_request_in_progress;
+}
+
+// -----------------------------------------------------------------------------
+// Return the status text shown while an apply request is running.
+// -----------------------------------------------------------------------------
+const char *
+pending_transaction_apply_busy_message()
+{
+  return _("Wait for the current transaction to finish.");
+}
+
+// -----------------------------------------------------------------------------
+// Return true when an apply request is running.
+// -----------------------------------------------------------------------------
+bool
+pending_transaction_apply_is_busy(SearchWidgets *widgets)
+{
+  return widgets && widgets->transaction.apply_in_progress;
 }
 
 // -----------------------------------------------------------------------------
@@ -217,8 +237,14 @@ start_apply_transaction(SearchWidgets *widgets)
     return;
   }
 
+  widgets->transaction.apply_in_progress = true;
+  pending_transaction_set_preview_controls_sensitive(widgets, false);
+
   ApplyTaskData *td = new ApplyTaskData;
-  td->transaction_path = widgets->transaction.preview_transaction_path;
+  // Apply now owns this dnf5daemon session path.
+  // Pending action changes must not release it while the daemon is applying the transaction.
+  td->transaction_path = std::move(widgets->transaction.preview_transaction_path);
+  widgets->transaction.preview_transaction_path.clear();
   size_t pending_count = widgets->transaction.preview_upgrade_all ? 0 : widgets->transaction.actions.size();
   td->progress_window = transaction_progress_create_window(widgets, pending_count);
   // Keep the progress state alive while the apply worker may still receive service progress.
@@ -247,14 +273,12 @@ start_apply_transaction(SearchWidgets *widgets)
 
         // Release this task's spinner slot.
         widgets_spinner_release(widgets->query.spinner);
+        widgets->transaction.apply_in_progress = false;
 
         transaction_progress_finish(td ? td->progress_window : nullptr, success, "");
 
         if (success) {
           pending_transaction_invalidate_service_preview(widgets);
-          if (td) {
-            td->transaction_path.clear();
-          }
           // Clear pending actions and refresh the tab.
           widgets->transaction.actions.clear();
           pending_transaction_refresh_pending_tab(widgets);
@@ -265,9 +289,7 @@ start_apply_transaction(SearchWidgets *widgets)
           rebuild_after_tx_async(widgets);
         } else {
           pending_transaction_invalidate_service_preview(widgets);
-          if (td) {
-            td->transaction_path.clear();
-          }
+          pending_transaction_refresh_pending_tab(widgets);
           std::string details = error ? error->message : _("Transaction failed.");
           ui_helpers_set_status(widgets->query.status_label, details.c_str(), "red");
           // Show the full backend error in a copyable dialog instead of only in the status bar.
@@ -408,6 +430,11 @@ pending_transaction_on_upgrade_all_button_clicked(GtkButton *, gpointer user_dat
     return;
   }
 
+  if (pending_transaction_apply_is_busy(widgets)) {
+    ui_helpers_set_status(widgets->query.status_label, pending_transaction_apply_busy_message(), "blue");
+    return;
+  }
+
   if (!widgets->transaction.actions.empty()) {
     ui_helpers_set_status(
         widgets->query.status_label, _("Clear pending package actions before upgrading all packages."), "blue");
@@ -434,6 +461,11 @@ pending_transaction_on_apply_button_clicked(GtkButton *, gpointer user_data)
   SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
   if (pending_transaction_preview_is_busy(widgets)) {
     ui_helpers_set_status(widgets->query.status_label, pending_transaction_preview_busy_message(), "blue");
+    return;
+  }
+
+  if (pending_transaction_apply_is_busy(widgets)) {
+    ui_helpers_set_status(widgets->query.status_label, pending_transaction_apply_busy_message(), "blue");
     return;
   }
 

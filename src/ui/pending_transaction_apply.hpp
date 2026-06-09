@@ -22,6 +22,14 @@ const char *pending_transaction_preview_busy_message();
 // -----------------------------------------------------------------------------
 bool pending_transaction_preview_is_busy(SearchWidgets *widgets);
 // -----------------------------------------------------------------------------
+// Return the status text shown while an apply request is running.
+// -----------------------------------------------------------------------------
+const char *pending_transaction_apply_busy_message();
+// -----------------------------------------------------------------------------
+// Return true when an apply request is running.
+// -----------------------------------------------------------------------------
+bool pending_transaction_apply_is_busy(SearchWidgets *widgets);
+// -----------------------------------------------------------------------------
 // Enable or disable the controls that can start a new transaction preview.
 // -----------------------------------------------------------------------------
 void pending_transaction_set_preview_controls_sensitive(SearchWidgets *widgets, bool sensitive);

@@ -28,14 +28,32 @@ self_protected_transaction_message(const PackageRow &pkg)
 }
 
 // -----------------------------------------------------------------------------
+// Return true when pending actions must not be changed.
+// -----------------------------------------------------------------------------
+static bool
+pending_transaction_action_is_busy(SearchWidgets *widgets)
+{
+  if (pending_transaction_preview_is_busy(widgets)) {
+    ui_helpers_set_status(widgets->query.status_label, pending_transaction_preview_busy_message(), "blue");
+    return true;
+  }
+
+  if (pending_transaction_apply_is_busy(widgets)) {
+    ui_helpers_set_status(widgets->query.status_label, pending_transaction_apply_busy_message(), "blue");
+    return true;
+  }
+
+  return false;
+}
+
+// -----------------------------------------------------------------------------
 // Handle marking the selected package for install.
 // -----------------------------------------------------------------------------
 void
 pending_transaction_on_install_button_clicked(GtkButton *, gpointer user_data)
 {
   SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
-  if (pending_transaction_preview_is_busy(widgets)) {
-    ui_helpers_set_status(widgets->query.status_label, pending_transaction_preview_busy_message(), "blue");
+  if (pending_transaction_action_is_busy(widgets)) {
     return;
   }
 
@@ -97,8 +115,7 @@ void
 pending_transaction_on_remove_button_clicked(GtkButton *, gpointer user_data)
 {
   SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
-  if (pending_transaction_preview_is_busy(widgets)) {
-    ui_helpers_set_status(widgets->query.status_label, pending_transaction_preview_busy_message(), "blue");
+  if (pending_transaction_action_is_busy(widgets)) {
     return;
   }
 
@@ -164,8 +181,7 @@ void
 pending_transaction_on_reinstall_button_clicked(GtkButton *, gpointer user_data)
 {
   SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
-  if (pending_transaction_preview_is_busy(widgets)) {
-    ui_helpers_set_status(widgets->query.status_label, pending_transaction_preview_busy_message(), "blue");
+  if (pending_transaction_action_is_busy(widgets)) {
     return;
   }
 
@@ -232,8 +248,7 @@ void
 pending_transaction_on_clear_pending_button_clicked(GtkButton *, gpointer user_data)
 {
   SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
-  if (pending_transaction_preview_is_busy(widgets)) {
-    ui_helpers_set_status(widgets->query.status_label, pending_transaction_preview_busy_message(), "blue");
+  if (pending_transaction_action_is_busy(widgets)) {
     return;
   }
 
