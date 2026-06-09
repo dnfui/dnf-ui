@@ -155,6 +155,24 @@ widgets_on_rebuild_task(GTask *task, gpointer, gpointer, GCancellable *)
 }
 
 // -----------------------------------------------------------------------------
+// Force repository metadata refresh on a worker thread.
+// Used only when the user clicks Refresh Repositories.
+// -----------------------------------------------------------------------------
+void
+widgets_on_force_rebuild_task(GTask *task, gpointer, gpointer, GCancellable *)
+{
+  try {
+    BaseRepoState refresh_state = BaseManager::instance().rebuild(BaseRefreshMode::FORCE_METADATA_CHECK);
+    // GTask completion transfers this heap value back to the GTK thread.
+    // widgets_on_rebuild_task_finished() deletes it after reading the result.
+    g_task_return_pointer(
+        task, new BaseRepoState(refresh_state), [](gpointer p) { delete static_cast<BaseRepoState *>(p); });
+  } catch (const std::exception &e) {
+    g_task_return_error(task, g_error_new_literal(G_IO_ERROR, G_IO_ERROR_FAILED, e.what()));
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Finish repository refresh on the GTK thread.
 // -----------------------------------------------------------------------------
 void
@@ -206,6 +224,23 @@ widgets_on_rebuild_task_finished(GObject *, GAsyncResult *res, gpointer user_dat
 }
 
 // -----------------------------------------------------------------------------
+// Finish user-triggered repository refresh and release its spinner slot.
+// -----------------------------------------------------------------------------
+void
+widgets_on_force_rebuild_task_finished(GObject *source_object, GAsyncResult *res, gpointer user_data)
+{
+  SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
+
+  widgets_on_rebuild_task_finished(source_object, res, user_data);
+
+  if (!widgets || widgets->window_state.destroyed) {
+    return;
+  }
+
+  widgets_spinner_release(widgets->query.spinner);
+}
+
+// -----------------------------------------------------------------------------
 // Handle the Refresh Repositories button.
 // Starts a Base rebuild through the shared widget controller layer.
 // -----------------------------------------------------------------------------
@@ -241,6 +276,7 @@ widgets_on_refresh_button_clicked(GtkButton *, gpointer user_data)
   // not reuse rows from repository state that is changing.
   package_query_clear_search_cache();
   ui_helpers_set_status(widgets->query.status_label, _("Refreshing repositories..."), "blue");
+  widgets_spinner_acquire(widgets->query.spinner);
   // Keep the query and preview controls aligned with the backend rebuild state
   // so the user cannot queue work that only waits behind the refresh.
   package_query_set_idle_controls_sensitive(widgets, false);
@@ -250,8 +286,8 @@ widgets_on_refresh_button_clicked(GtkButton *, gpointer user_data)
   pending_transaction_set_preview_controls_sensitive(widgets, false);
 
   GCancellable *c = widgets_make_task_cancellable_for(GTK_WIDGET(widgets->query.entry));
-  GTask *task = widgets_task_new_for_search_widgets(widgets, c, widgets_on_rebuild_task_finished);
-  g_task_run_in_thread(task, widgets_on_rebuild_task);
+  GTask *task = widgets_task_new_for_search_widgets(widgets, c, widgets_on_force_rebuild_task_finished);
+  g_task_run_in_thread(task, widgets_on_force_rebuild_task);
   g_object_unref(task);
   g_object_unref(c);
 }

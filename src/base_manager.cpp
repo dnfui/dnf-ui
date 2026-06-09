@@ -8,10 +8,13 @@
 
 #include <libdnf5/conf/const.hpp>
 #include <libdnf5/repo/repo.hpp>
+#include <libdnf5/repo/repo_cache.hpp>
 
 #include <cstdlib>
+#include <filesystem>
 #include <iostream>
 #include <stdexcept>
+#include <system_error>
 
 #ifdef __GLIBC__
 #include <malloc.h>
@@ -72,6 +75,62 @@ create_configured_base(RepoLoadMode mode, bool load_changelog_metadata)
 }
 
 // -----------------------------------------------------------------------------
+// Mark repository metadata caches as expired before loading repos.
+// This follows DNF's documented expire-cache behavior.
+// -----------------------------------------------------------------------------
+static void
+expire_repository_metadata_cache(libdnf5::Base &base)
+{
+  const std::filesystem::path cachedir { base.get_config().get_cachedir_option().get_value() };
+
+  // Expiring the cache makes the next repo load check whether repository metadata needs to be refreshed.
+  std::error_code iter_error;
+  const std::filesystem::directory_iterator cache_dirs(cachedir, iter_error);
+
+  if (iter_error) {
+    // A missing cache directory is fine on a fresh system or after cleanup.
+    // Other errors should be visible in logs, but should not stop the refresh.
+    if (iter_error != std::errc::no_such_file_or_directory) {
+      std::cerr << "Warning: failed to read repository cache directory " << cachedir.string() << ": "
+                << iter_error.message() << std::endl;
+      DNFUI_TRACE("BaseManager failed to read repository cache directory %s: %s",
+                  cachedir.string().c_str(),
+                  iter_error.message().c_str());
+    }
+    return;
+  }
+
+  for (const auto &dir_entry : cache_dirs) {
+    std::error_code entry_error;
+    if (!dir_entry.is_directory(entry_error)) {
+      if (entry_error) {
+        const std::string path = dir_entry.path().string();
+        std::cerr << "Warning: failed to inspect repo cache path " << path << ": " << entry_error.message()
+                  << std::endl;
+        DNFUI_TRACE(
+            "BaseManager failed to inspect repo cache path %s: %s", path.c_str(), entry_error.message().c_str());
+      }
+      continue;
+    }
+
+    const std::string path = dir_entry.path().string();
+
+    try {
+      libdnf5::repo::RepoCache cache(base.get_weak_ptr(), dir_entry.path());
+      cache.write_attribute(libdnf5::repo::RepoCache::ATTRIBUTE_EXPIRED);
+    } catch (const std::exception &e) {
+      // Keep going. A failed expire attempt should not make the app unusable.
+      // The following repo load can still succeed, or the existing fallback
+      // path can use cached metadata or installed packages only.
+      std::cerr << "Warning: failed to expire repo cache " << path << ": " << e.what() << std::endl;
+      DNFUI_TRACE("BaseManager failed to expire repo cache %s: %s", path.c_str(), e.what());
+    }
+  }
+
+  DNFUI_TRACE("BaseManager finished repository metadata cache expiration attempt");
+}
+
+// -----------------------------------------------------------------------------
 // Load repository data for one already configured Base. Startup fallback should
 // only trigger when this step fails for the full repo set.
 // -----------------------------------------------------------------------------
@@ -109,10 +168,13 @@ load_repo_data(libdnf5::Base &base, RepoLoadMode mode)
 // Build one Base and load repository data for the requested mode.
 // -----------------------------------------------------------------------------
 static BuiltBase
-build_base_for_mode(RepoLoadMode mode, bool load_changelog_metadata)
+build_base_for_mode(RepoLoadMode mode, bool load_changelog_metadata, BaseRefreshMode refresh_mode)
 {
   BuiltBase result;
   result.base = create_configured_base(mode, load_changelog_metadata);
+  if (mode == RepoLoadMode::FULL && refresh_mode == BaseRefreshMode::FORCE_METADATA_CHECK) {
+    expire_repository_metadata_cache(*result.base);
+  }
   load_repo_data(*result.base, mode);
   if (mode == RepoLoadMode::CACHE_ONLY_METADATA) {
     result.repo_state = BaseRepoState::CACHED_METADATA;
@@ -128,10 +190,11 @@ build_base_for_mode(RepoLoadMode mode, bool load_changelog_metadata)
 // installed-package-only mode so the app stays usable when the network is down.
 // -----------------------------------------------------------------------------
 static BuiltBase
-build_base_with_offline_fallback(bool load_changelog_metadata = false)
+build_base_with_offline_fallback(bool load_changelog_metadata = false,
+                                 BaseRefreshMode refresh_mode = BaseRefreshMode::NORMAL)
 {
   try {
-    return build_base_for_mode(RepoLoadMode::FULL, load_changelog_metadata);
+    return build_base_for_mode(RepoLoadMode::FULL, load_changelog_metadata, refresh_mode);
   } catch (const std::exception &repo_error) {
     std::cerr << "Warning: repo load failed: " << repo_error.what() << std::endl;
     DNFUI_TRACE("BaseManager load repos failed: %s", repo_error.what());
@@ -139,13 +202,13 @@ build_base_with_offline_fallback(bool load_changelog_metadata = false)
     DNFUI_TRACE("BaseManager live repo load failed, trying cached metadata fallback: %s", repo_error.what());
 
     try {
-      return build_base_for_mode(RepoLoadMode::CACHE_ONLY_METADATA, load_changelog_metadata);
+      return build_base_for_mode(RepoLoadMode::CACHE_ONLY_METADATA, load_changelog_metadata, BaseRefreshMode::NORMAL);
     } catch (const std::exception &cache_error) {
       std::cerr << "Warning: cached repo metadata load failed: " << cache_error.what() << std::endl;
       DNFUI_TRACE("BaseManager cached repo load failed, trying system-only fallback: %s", cache_error.what());
 
       try {
-        return build_base_for_mode(RepoLoadMode::SYSTEM_ONLY, load_changelog_metadata);
+        return build_base_for_mode(RepoLoadMode::SYSTEM_ONLY, load_changelog_metadata, BaseRefreshMode::NORMAL);
       } catch (const std::exception &fallback_error) {
         throw std::runtime_error(
             "DNF backend initialization failed after repo load error: " + std::string(repo_error.what()) +
@@ -277,7 +340,7 @@ BaseManager::acquire_write()
 // Rebuild the cached Base after repository refresh or transaction work.
 // -----------------------------------------------------------------------------
 BaseRepoState
-BaseManager::rebuild()
+BaseManager::rebuild(BaseRefreshMode refresh_mode)
 {
   // Allow only one Base rebuild at a time.
   std::unique_lock lock(base_mutex);
@@ -285,7 +348,7 @@ BaseManager::rebuild()
   // Build the replacement first so a refresh failure does not discard the last
   // usable Base. Offline fallback keeps the UI query paths working from cached
   // metadata or, as a last resort, from the local rpmdb only.
-  BuiltBase rebuilt = build_base_with_offline_fallback();
+  BuiltBase rebuilt = build_base_with_offline_fallback(false, refresh_mode);
   if (!rebuilt.base) {
     throw std::runtime_error("Repository rebuild failed (Base is null).");
   }
@@ -360,7 +423,7 @@ BaseManager::ensure_system_only_initialized_if_needed()
 std::shared_ptr<libdnf5::Base>
 BaseManager::build_initialized_system_only_base()
 {
-  return build_base_for_mode(RepoLoadMode::SYSTEM_ONLY, false).base;
+  return build_base_for_mode(RepoLoadMode::SYSTEM_ONLY, false, BaseRefreshMode::NORMAL).base;
 }
 
 // -----------------------------------------------------------------------------

@@ -81,6 +81,14 @@ enum class BaseRepoState {
   INSTALLED_ONLY,
 };
 
+// Requested metadata freshness for Base rebuilds.
+// NORMAL follows libdnf metadata expiration rules.
+// FORCE_METADATA_CHECK expires existing repository metadata before loading repos.
+enum class BaseRefreshMode {
+  NORMAL,
+  FORCE_METADATA_CHECK,
+};
+
 // -----------------------------------------------------------------------------
 // Shared access point for the cached libdnf5 Base instance.
 // -----------------------------------------------------------------------------
@@ -131,9 +139,9 @@ class BaseManager {
   BaseRepoState current_repo_state() const;
 
   // -----------------------------------------------------------------------------
-  // Rebuild the cached Base from live metadata with fallback.
+  // Rebuild the cached Base from repository metadata with fallback.
   // -----------------------------------------------------------------------------
-  BaseRepoState rebuild();
+  BaseRepoState rebuild(BaseRefreshMode refresh_mode = BaseRefreshMode::NORMAL);
   // -----------------------------------------------------------------------------
   // Rebuild the cached Base from the local rpmdb only.
   // -----------------------------------------------------------------------------

@@ -35,9 +35,17 @@ void widgets_spinner_release(GtkSpinner *spinner);
 // -----------------------------------------------------------------------------
 void widgets_on_rebuild_task(GTask *task, gpointer, gpointer, GCancellable *);
 // -----------------------------------------------------------------------------
+// Force repository metadata refresh on a background task thread.
+// -----------------------------------------------------------------------------
+void widgets_on_force_rebuild_task(GTask *task, gpointer, gpointer, GCancellable *);
+// -----------------------------------------------------------------------------
 // Finish repository rebuild handling on the GTK thread.
 // -----------------------------------------------------------------------------
 void widgets_on_rebuild_task_finished(GObject *, GAsyncResult *res, gpointer user_data);
+// -----------------------------------------------------------------------------
+// Finish forced repository refresh handling on the GTK thread.
+// -----------------------------------------------------------------------------
+void widgets_on_force_rebuild_task_finished(GObject *, GAsyncResult *res, gpointer user_data);
 
 // -----------------------------------------------------------------------------
 // EOF
