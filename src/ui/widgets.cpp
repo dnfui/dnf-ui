@@ -18,6 +18,7 @@
 namespace {
 
 constexpr const char *kTaskSearchWidgetsHoldKey = "dnfui-task-search-widgets-hold";
+constexpr const char *kTaskStartedAtUsKey = "dnfui-task-started-at-us";
 
 // Prevent starting more than one repository refresh task at the same time.
 std::atomic<bool> repository_refresh_running { false };
@@ -229,6 +230,7 @@ widgets_on_rebuild_task_finished(GObject *, GAsyncResult *res, gpointer user_dat
 void
 widgets_on_force_rebuild_task_finished(GObject *source_object, GAsyncResult *res, gpointer user_data)
 {
+  GTask *task = G_TASK(res);
   SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
 
   widgets_on_rebuild_task_finished(source_object, res, user_data);
@@ -238,6 +240,9 @@ widgets_on_force_rebuild_task_finished(GObject *source_object, GAsyncResult *res
   }
 
   widgets_spinner_release(widgets->query.spinner);
+
+  const gint64 *started_at_us = static_cast<const gint64 *>(g_object_get_data(G_OBJECT(task), kTaskStartedAtUsKey));
+  package_query_show_duration_label(widgets, _("Refresh Repositories"), started_at_us ? *started_at_us : 0);
 }
 
 // -----------------------------------------------------------------------------
@@ -287,6 +292,9 @@ widgets_on_refresh_button_clicked(GtkButton *, gpointer user_data)
 
   GCancellable *c = widgets_make_task_cancellable_for(GTK_WIDGET(widgets->query.entry));
   GTask *task = widgets_task_new_for_search_widgets(widgets, c, widgets_on_force_rebuild_task_finished);
+  auto *started_at_us = new gint64(g_get_monotonic_time());
+  g_object_set_data_full(
+      G_OBJECT(task), kTaskStartedAtUsKey, started_at_us, [](gpointer p) { delete static_cast<gint64 *>(p); });
   g_task_run_in_thread(task, widgets_on_force_rebuild_task);
   g_object_unref(task);
   g_object_unref(c);
