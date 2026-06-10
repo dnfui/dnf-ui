@@ -261,6 +261,9 @@ msgstr "Behörighetskontroll för verkställning pågår redan."
 msgid "Package state changed after the preview was prepared. Review the transaction again before applying."
 msgstr "Paketläget ändrades efter att förhandsgranskningen skapades. Granska transaktionen igen innan du verkställer den."
 
+msgid "Unknown pending package action."
+msgstr "Okänd väntande paketåtgärd."
+
 msgid "Queued transaction request."
 msgstr "Transaktionsbegäran köades."
 

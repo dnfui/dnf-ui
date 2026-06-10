@@ -16,7 +16,9 @@
 // -----------------------------------------------------------------------------
 // Convert pending UI actions into a transaction request.
 // -----------------------------------------------------------------------------
-void pending_transaction_build_request(const std::vector<PendingAction> &actions, TransactionRequest &request);
+bool pending_transaction_build_request(const std::vector<PendingAction> &actions,
+                                       TransactionRequest &request,
+                                       std::string &error_out);
 // -----------------------------------------------------------------------------
 // Reject self-protected package changes before preview.
 // -----------------------------------------------------------------------------

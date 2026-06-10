@@ -24,39 +24,56 @@ struct PendingRequestBaseDropGuard {
 // -----------------------------------------------------------------------------
 // Split the pending queue into install, remove, and reinstall transaction specs.
 // -----------------------------------------------------------------------------
-static void
+static bool
 build_pending_transaction_specs(const std::vector<PendingAction> &actions,
                                 std::vector<std::string> &install,
                                 std::vector<std::string> &remove,
-                                std::vector<std::string> &reinstall)
+                                std::vector<std::string> &reinstall,
+                                std::string &error_out)
 {
   install.clear();
   remove.clear();
   reinstall.clear();
+  error_out.clear();
 
   install.reserve(actions.size());
   remove.reserve(actions.size());
   reinstall.reserve(actions.size());
 
   for (const auto &action : actions) {
-    if (action.type == PendingAction::INSTALL || action.type == PendingAction::UPGRADE) {
+    switch (action.type) {
+    case PendingAction::INSTALL:
+    case PendingAction::UPGRADE:
       install.push_back(action.nevra);
-    } else if (action.type == PendingAction::REINSTALL) {
-      reinstall.push_back(action.nevra);
-    } else {
+      break;
+    case PendingAction::REMOVE:
       remove.push_back(action.nevra);
+      break;
+    case PendingAction::REINSTALL:
+      reinstall.push_back(action.nevra);
+      break;
+    default:
+      install.clear();
+      remove.clear();
+      reinstall.clear();
+      error_out = _("Unknown pending package action.");
+      return false;
     }
   }
+
+  return true;
 }
 
 // -----------------------------------------------------------------------------
 // Convert marked UI actions into a transaction request.
 // -----------------------------------------------------------------------------
-void
-pending_transaction_build_request(const std::vector<PendingAction> &actions, TransactionRequest &request)
+bool
+pending_transaction_build_request(const std::vector<PendingAction> &actions,
+                                  TransactionRequest &request,
+                                  std::string &error_out)
 {
   request.upgrade_all = false;
-  build_pending_transaction_specs(actions, request.install, request.remove, request.reinstall);
+  return build_pending_transaction_specs(actions, request.install, request.remove, request.reinstall, error_out);
 }
 
 // -----------------------------------------------------------------------------

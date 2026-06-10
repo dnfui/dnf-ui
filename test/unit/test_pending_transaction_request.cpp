@@ -24,8 +24,10 @@ TEST_CASE("Pending transaction request builder splits actions by operation type"
   };
 
   TransactionRequest request;
+  std::string error;
 
-  pending_transaction_build_request(actions, request);
+  REQUIRE(pending_transaction_build_request(actions, request, error));
+  REQUIRE(error.empty());
 
   REQUIRE(request.install ==
           std::vector<std::string> {
@@ -53,12 +55,14 @@ TEST_CASE("Pending transaction request builder clears stale request data")
   request.install.push_back("old-install");
   request.remove.push_back("old-remove");
   request.reinstall.push_back("old-reinstall");
+  std::string error;
 
   std::vector<PendingAction> actions = {
     { PendingAction::REMOVE, "demo-remove-1-1.x86_64" },
   };
 
-  pending_transaction_build_request(actions, request);
+  REQUIRE(pending_transaction_build_request(actions, request, error));
+  REQUIRE(error.empty());
 
   REQUIRE_FALSE(request.upgrade_all);
   REQUIRE(request.install.empty());
@@ -66,6 +70,26 @@ TEST_CASE("Pending transaction request builder clears stale request data")
           std::vector<std::string> {
               "demo-remove-1-1.x86_64",
           });
+  REQUIRE(request.reinstall.empty());
+}
+
+// -----------------------------------------------------------------------------
+// Verify that unknown pending action values are rejected instead of becoming removals.
+// -----------------------------------------------------------------------------
+TEST_CASE("Pending transaction request builder rejects unknown action types")
+{
+  std::vector<PendingAction> actions = {
+    { PendingAction::INSTALL, "demo-install-1-1.x86_64" },
+    { static_cast<PendingAction::Type>(999), "demo-unknown-1-1.x86_64" },
+  };
+
+  TransactionRequest request;
+  std::string error;
+
+  REQUIRE_FALSE(pending_transaction_build_request(actions, request, error));
+  REQUIRE_FALSE(error.empty());
+  REQUIRE(request.install.empty());
+  REQUIRE(request.remove.empty());
   REQUIRE(request.reinstall.empty());
 }
 

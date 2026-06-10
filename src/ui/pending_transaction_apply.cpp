@@ -476,7 +476,10 @@ pending_transaction_on_apply_button_clicked(GtkButton *, gpointer user_data)
 
   TransactionRequest request;
   std::string error;
-  pending_transaction_build_request(widgets->transaction.actions, request);
+  if (!pending_transaction_build_request(widgets->transaction.actions, request, error)) {
+    ui_helpers_set_status(widgets->query.status_label, error.c_str(), "red");
+    return;
+  }
 
   // Refuse self-protected transactions before asking the service to preview them.
   if (!pending_transaction_validate_request(request, error)) {
