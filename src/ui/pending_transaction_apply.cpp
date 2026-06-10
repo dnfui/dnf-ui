@@ -279,9 +279,9 @@ start_apply_transaction(SearchWidgets *widgets)
 
         if (success) {
           pending_transaction_invalidate_service_preview(widgets);
-          // Clear pending actions and refresh the tab.
+          // Clear pending actions and restore the transaction controls.
           widgets->transaction.actions.clear();
-          pending_transaction_refresh_pending_tab(widgets);
+          pending_transaction_set_preview_controls_sensitive(widgets, true);
 
           ui_helpers_set_status(widgets->query.status_label, _("Transaction successful."), "green");
 
@@ -289,7 +289,7 @@ start_apply_transaction(SearchWidgets *widgets)
           rebuild_after_tx_async(widgets);
         } else {
           pending_transaction_invalidate_service_preview(widgets);
-          pending_transaction_refresh_pending_tab(widgets);
+          pending_transaction_set_preview_controls_sensitive(widgets, true);
           std::string details = error ? error->message : _("Transaction failed.");
           ui_helpers_set_status(widgets->query.status_label, details.c_str(), "red");
           // Show the full backend error in a copyable dialog instead of only in the status bar.
