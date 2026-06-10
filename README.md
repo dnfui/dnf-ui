@@ -9,17 +9,17 @@
 [![Release RPM](https://github.com/ErikMN/dnf-ui/actions/workflows/release-rpm.yml/badge.svg)](https://github.com/ErikMN/dnf-ui/actions/workflows/release-rpm.yml)
 [![Publish COPR](https://github.com/ErikMN/dnf-ui/actions/workflows/publish-copr.yml/badge.svg)](https://github.com/ErikMN/dnf-ui/actions/workflows/publish-copr.yml)
 
-DNF UI is a graphical frontend for Fedora's DNF5 (Dandified YUM) package manager, inspired by [Synaptic](https://github.com/mvo5/synaptic).
-It is built with GTK 4 and [libdnf5](https://github.com/rpm-software-management/dnf5) and aims to provide a **fast** and
-**dependable** package management workflow for Fedora.
+**DNF UI** is a graphical frontend for Fedora's DNF5 (Dandified YUM) package manager, inspired by [Synaptic](https://github.com/mvo5/synaptic).
+It is built with [GTK 4](https://docs.gtk.org/gtk4/) and [libdnf5](https://github.com/rpm-software-management/dnf5) and
+aims to provide a **fast** and **dependable** package management workflow for Fedora.
 
 ## Supported platform
 
-DNF UI targets Fedora systems using modern DNF5, which was introduced in Fedora 38.
+DNF UI targets Fedora systems using modern **DNF5**, which was introduced in Fedora 38.
 
 ## Status
 
-DNF UI is in active early development.
+DNF UI is in **active** early development.
 The project is **usable for testing** and is becoming more mature with each release.
 Some interfaces, behavior, and features may still change while the application
 continues to evolve.
@@ -41,7 +41,7 @@ sudo dnf install dnf-ui
 ## Goals and principles
 
 - User experience first!
-- Stability, reliability and predictability
+- Reliable and fast
 - Strong focus on code quality and maintainability
 - No unnecessary complexity or bloat
 
@@ -78,11 +78,11 @@ only)`.
 As a long-time user of Synaptic I wanted a similar tool on Fedora.
 I want a package manager frontend which is native, fast, reliable, and easy to use.
 
-This project is also a practical way for me to learn more about DNF, GTK, and building a
-maintainable desktop application.
+This project is also a practical way for me to learn more about how to build a
+stable and maintainable desktop application.
 The goal is not to experiment for its own sake, but to also build something genuinely useful for me and others.
 
-If you are looking for other graphical package managers with a longer track-record there are among others:
+Other graphical package managers with a longer history include:
 
 - [dnfdragora](https://github.com/manatools/dnfdragora)
 - [yumex-ng](https://github.com/timlau/yumex-ng)
