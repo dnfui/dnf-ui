@@ -23,6 +23,7 @@
 // Function forward declarations
 // -----------------------------------------------------------------------------
 static void activate(GtkApplication *app, gpointer user_data);
+static void on_main_window_destroyed(GtkWidget *widget, gpointer user_data);
 static void setup_periodic_tasks(void);
 static gboolean on_periodic_installed_refresh_tick(gpointer user_data);
 static void start_installed_refresh_task(void);
@@ -41,6 +42,10 @@ static const char *base_repo_state_trace_name(BaseRepoState state);
 static std::atomic<bool> g_installed_refresh_running { false };
 // Keep one periodic installed-refresh source for the whole application process.
 static guint g_periodic_installed_refresh_source_id = 0;
+// DNF UI has one shared backend state.
+// Keep one main window so global tasks do not have to decide which window owns
+// refresh, spinner, or transaction state.
+static GtkWidget *g_main_window = nullptr;
 
 struct StartupWarmupData {
   SearchWidgets *widgets = nullptr;
@@ -307,7 +312,14 @@ on_backend_warmup_task_finished(GObject *, GAsyncResult *result, gpointer user_d
 static void
 activate(GtkApplication *app, gpointer)
 {
+  if (g_main_window) {
+    gtk_window_present(GTK_WINDOW(g_main_window));
+    return;
+  }
+
   MainWindow main_window = main_window_create(app);
+  g_main_window = main_window.window;
+  g_signal_connect(main_window.window, "destroy", G_CALLBACK(on_main_window_destroyed), nullptr);
 
   setup_periodic_tasks();
 
@@ -320,6 +332,16 @@ activate(GtkApplication *app, gpointer)
   warmup->startup_cancellable = G_CANCELLABLE(g_object_ref(main_window.startup_cancellable));
   g_idle_add_full(G_PRIORITY_LOW, start_backend_warmup_idle, warmup, startup_warmup_data_free);
   g_object_unref(main_window.startup_cancellable);
+}
+
+// -----------------------------------------------------------------------------
+// Forget the main window after it is destroyed so the app can create a new one
+// if GTK activates the process again later.
+// -----------------------------------------------------------------------------
+static void
+on_main_window_destroyed(GtkWidget *, gpointer)
+{
+  g_main_window = nullptr;
 }
 
 // -----------------------------------------------------------------------------
