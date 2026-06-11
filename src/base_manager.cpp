@@ -12,10 +12,12 @@
 #include <libdnf5/repo/repo_cache.hpp>
 
 #include <cstdlib>
+#include <chrono>
 #include <filesystem>
 #include <iostream>
 #include <stdexcept>
 #include <system_error>
+#include <thread>
 
 #ifdef __GLIBC__
 #include <malloc.h>
@@ -39,10 +41,10 @@ struct BuiltBase {
 };
 
 // -----------------------------------------------------------------------------
-// Return true when the caller has requested that a rebuild stop.
+// Return true when the caller has requested that a Base operation stop.
 // -----------------------------------------------------------------------------
 static bool
-rebuild_cancel_requested(const std::shared_ptr<std::atomic<bool>> &cancel_requested)
+base_operation_cancel_requested(const std::shared_ptr<std::atomic<bool>> &cancel_requested)
 {
   return cancel_requested && cancel_requested->load(std::memory_order_relaxed);
 }
@@ -83,6 +85,9 @@ class CancelableDownloadCallbacks : public libdnf5::repo::DownloadCallbacks {
       return;
     }
 
+#ifndef DNFUI_DEBUG_TRACE
+    (void)callback_name;
+#endif
     bool expected = false;
     if (cancel_trace_written.compare_exchange_strong(expected, true, std::memory_order_relaxed)) {
       DNFUI_TRACE("BaseManager repository refresh stop requested from %s callback", callback_name);
@@ -91,7 +96,7 @@ class CancelableDownloadCallbacks : public libdnf5::repo::DownloadCallbacks {
 
   bool cancelled() const
   {
-    return rebuild_cancel_requested(cancel_requested);
+    return base_operation_cancel_requested(cancel_requested);
   }
 
   std::shared_ptr<std::atomic<bool>> cancel_requested;
@@ -102,12 +107,21 @@ class CancelableDownloadCallbacks : public libdnf5::repo::DownloadCallbacks {
 // Throw when the caller has requested that a rebuild stop.
 // -----------------------------------------------------------------------------
 static void
+throw_if_base_operation_cancelled(const std::shared_ptr<std::atomic<bool>> &cancel_requested, const char *message)
+{
+  if (base_operation_cancel_requested(cancel_requested)) {
+    DNFUI_TRACE("BaseManager operation stop observed");
+    throw BaseOperationCancelled(message ? message : "Base operation was cancelled.");
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Throw when the caller has requested that a rebuild stop.
+// -----------------------------------------------------------------------------
+static void
 throw_if_rebuild_cancelled(const std::shared_ptr<std::atomic<bool>> &cancel_requested)
 {
-  if (rebuild_cancel_requested(cancel_requested)) {
-    DNFUI_TRACE("BaseManager repository refresh stop observed");
-    throw BaseOperationCancelled("Repository refresh was cancelled.");
-  }
+  throw_if_base_operation_cancelled(cancel_requested, "Repository refresh was cancelled.");
 }
 
 // -----------------------------------------------------------------------------
@@ -389,6 +403,37 @@ BaseManager::acquire_read()
 }
 
 // -----------------------------------------------------------------------------
+// Return serialized read access, but stop if the caller cancels while waiting.
+// -----------------------------------------------------------------------------
+BaseRead
+BaseManager::acquire_read(std::shared_ptr<std::atomic<bool>> cancel_requested)
+{
+  // Keep the lock exclusive for the whole libdnf Base operation.
+  // PackageQuery work can touch shared Base internals even when the caller only reads data.
+  //
+  // lock() would wait here without checking Stop. Use short try_lock waits so a
+  // package list worker can stop while another Base operation is still running.
+  std::unique_lock<std::shared_mutex> lock(base_mutex, std::defer_lock);
+  while (!lock.try_lock()) {
+    throw_if_base_operation_cancelled(cancel_requested, "Package query was cancelled.");
+    // Avoid busy waiting while another worker owns BaseManager.
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+  }
+
+  throw_if_base_operation_cancelled(cancel_requested, "Package query was cancelled.");
+  if (!base_ptr) {
+    ensure_base_initialized(cancel_requested);
+  }
+  throw_if_base_operation_cancelled(cancel_requested, "Package query was cancelled.");
+  if (!base_ptr) {
+    // Never return a null Base reference.
+    throw std::runtime_error("DNF backend not initialized (Base is null).");
+  }
+
+  return { *base_ptr, BaseGuard(std::move(lock)), generation.load(std::memory_order_relaxed) };
+}
+
+// -----------------------------------------------------------------------------
 // Return serialized access to a temporary Base that loads changelog metadata.
 // -----------------------------------------------------------------------------
 TemporaryBaseRead
@@ -530,10 +575,10 @@ BaseManager::build_initialized_system_only_base()
 // Create the shared Base while the caller holds the write lock.
 // -----------------------------------------------------------------------------
 void
-BaseManager::ensure_base_initialized()
+BaseManager::ensure_base_initialized(std::shared_ptr<std::atomic<bool>> cancel_requested)
 {
   if (!base_ptr) {
-    BuiltBase built = build_base_with_offline_fallback();
+    BuiltBase built = build_base_with_offline_fallback(false, BaseRefreshMode::NORMAL, std::move(cancel_requested));
     base_ptr = built.base;
     repo_state = built.repo_state;
     base_epoch.fetch_add(1, std::memory_order_relaxed);

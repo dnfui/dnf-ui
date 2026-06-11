@@ -63,10 +63,23 @@ struct PackageListTaskData {
 };
 
 struct QueryBackendBaseDropGuard {
+  explicit QueryBackendBaseDropGuard(GCancellable *cancellable = nullptr)
+      : cancellable(cancellable)
+  {
+  }
+
   ~QueryBackendBaseDropGuard()
   {
+    // A stopped list worker may still be waiting for BaseManager.
+    // Do not block again just to release cached metadata.
+    if (cancellable && g_cancellable_is_cancelled(cancellable)) {
+      return;
+    }
     BaseManager::instance().drop_cached_base();
   }
+
+  private:
+  GCancellable *cancellable = nullptr;
 };
 
 // -----------------------------------------------------------------------------
@@ -75,7 +88,7 @@ struct QueryBackendBaseDropGuard {
 static void
 on_list_task(GTask *task, gpointer, gpointer, GCancellable *cancellable)
 {
-  QueryBackendBaseDropGuard base_drop_guard;
+  QueryBackendBaseDropGuard base_drop_guard(cancellable);
 
   try {
     // Query all installed packages.
@@ -160,7 +173,7 @@ on_list_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
 static void
 on_list_available_task(GTask *task, gpointer, gpointer, GCancellable *cancellable)
 {
-  QueryBackendBaseDropGuard base_drop_guard;
+  QueryBackendBaseDropGuard base_drop_guard(cancellable);
 
   try {
     auto *results = new std::vector<PackageRow>(dnf_backend_get_browse_package_rows_interruptible(cancellable));
@@ -239,7 +252,7 @@ on_list_available_task_finished(GObject *, GAsyncResult *res, gpointer user_data
 static void
 on_list_upgradeable_task(GTask *task, gpointer, gpointer, GCancellable *cancellable)
 {
-  QueryBackendBaseDropGuard base_drop_guard;
+  QueryBackendBaseDropGuard base_drop_guard(cancellable);
 
   try {
     auto *results = new std::vector<PackageRow>(dnf_backend_get_upgradeable_package_rows_interruptible(cancellable));

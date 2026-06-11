@@ -12,7 +12,9 @@
 #include "debug_trace.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <map>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -24,6 +26,56 @@
 #include <libdnf5/rpm/package_query.hpp>
 
 namespace dnf_backend_internal {
+
+// -----------------------------------------------------------------------------
+// Bridge a GCancellable into the atomic token used by BaseManager.
+// -----------------------------------------------------------------------------
+class BaseCancelToken {
+  public:
+  explicit BaseCancelToken(GCancellable *cancellable)
+      : cancellable(cancellable)
+      , cancel_requested(std::make_shared<std::atomic<bool>>(package_query_cancelled(cancellable)))
+  {
+    if (cancellable) {
+      handler_id = g_cancellable_connect(cancellable, G_CALLBACK(on_cancelled), cancel_requested.get(), nullptr);
+    }
+  }
+
+  ~BaseCancelToken()
+  {
+    if (cancellable && handler_id != 0) {
+      g_cancellable_disconnect(cancellable, handler_id);
+    }
+  }
+
+  std::shared_ptr<std::atomic<bool>> token() const
+  {
+    return cancel_requested;
+  }
+
+  private:
+  static void on_cancelled(GCancellable *, gpointer user_data)
+  {
+    auto *cancelled = static_cast<std::atomic<bool> *>(user_data);
+    if (cancelled) {
+      cancelled->store(true, std::memory_order_relaxed);
+    }
+  }
+
+  GCancellable *cancellable = nullptr;
+  gulong handler_id = 0;
+  std::shared_ptr<std::atomic<bool>> cancel_requested;
+};
+
+// -----------------------------------------------------------------------------
+// Return Base access for a package list worker that can still be stopped.
+// -----------------------------------------------------------------------------
+static BaseRead
+acquire_package_list_base_read(GCancellable *cancellable)
+{
+  BaseCancelToken cancel_token(cancellable);
+  return BaseManager::instance().acquire_read(cancel_token.token());
+}
 
 // -----------------------------------------------------------------------------
 // Keep the newest row for one package name and architecture tuple.
@@ -396,26 +448,30 @@ dnf_backend_get_installed_package_rows_interruptible(GCancellable *cancellable)
   InstalledQueryResult installed;
   std::set<std::string> protected_names;
   {
-    auto [base, guard, generation] = BaseManager::instance().acquire_read();
-    const DnfBackendSearchOptions search_options {};
-    installed = collect_installed_rows(base, cancellable, search_options);
-    if (package_query_cancelled(cancellable)) {
+    try {
+      auto [base, guard, generation] = acquire_package_list_base_read(cancellable);
+      const DnfBackendSearchOptions search_options {};
+      installed = collect_installed_rows(base, cancellable, search_options);
+      if (package_query_cancelled(cancellable)) {
+        return {};
+      }
+
+      // Installed listing is allowed to work from the local rpmdb alone.
+      // Repo annotation adds upgrade and local-only status when repo metadata
+      // is available, but it must not make the installed list fail.
+      annotate_installed_rows_with_repo_candidates_best_effort(
+          installed.rows, cancellable, [&base, &installed](GCancellable *annotation_cancellable) {
+            return collect_available_rows_for_installed_names(base, annotation_cancellable, installed.rows);
+          });
+      if (package_query_cancelled(cancellable)) {
+        return {};
+      }
+
+      refresh_installed_row_lookup(installed);
+      protected_names = collect_self_protected_package_names(base);
+    } catch (const BaseOperationCancelled &) {
       return {};
     }
-
-    // Installed listing is allowed to work from the local rpmdb alone. Repo
-    // annotation adds upgrade and local-only status when repo metadata is
-    // available, but it must not make the installed list fail.
-    annotate_installed_rows_with_repo_candidates_best_effort(
-        installed.rows, cancellable, [&base, &installed](GCancellable *annotation_cancellable) {
-          return collect_available_rows_for_installed_names(base, annotation_cancellable, installed.rows);
-        });
-    if (package_query_cancelled(cancellable)) {
-      return {};
-    }
-
-    refresh_installed_row_lookup(installed);
-    protected_names = collect_self_protected_package_names(base);
   }
 
   // Publish the new installed-package cache only after a complete uncancelled scan.
@@ -437,21 +493,25 @@ dnf_backend_get_browse_package_rows_interruptible(GCancellable *cancellable)
   InstalledQueryResult installed;
   std::set<std::string> protected_names;
   {
-    auto [base, guard, generation] = BaseManager::instance().acquire_read();
-    auto available_rows = collect_available_rows_by_name_arch(base, cancellable, search_options);
-    if (package_query_cancelled(cancellable)) {
+    try {
+      auto [base, guard, generation] = acquire_package_list_base_read(cancellable);
+      auto available_rows = collect_available_rows_by_name_arch(base, cancellable, search_options);
+      if (package_query_cancelled(cancellable)) {
+        return {};
+      }
+
+      // Browse uses the full installed set because installed-only packages must
+      // still be visible even when no enabled repo contains them.
+      installed = collect_installed_rows(base, cancellable, search_options);
+      if (package_query_cancelled(cancellable)) {
+        return {};
+      }
+
+      protected_names = collect_self_protected_package_names(base);
+      rows = visible_rows_from_maps(std::move(available_rows), installed.rows_by_name_arch);
+    } catch (const BaseOperationCancelled &) {
       return {};
     }
-
-    // Browse uses the full installed set because installed-only packages must
-    // still be visible even when no enabled repo contains them.
-    installed = collect_installed_rows(base, cancellable, search_options);
-    if (package_query_cancelled(cancellable)) {
-      return {};
-    }
-
-    protected_names = collect_self_protected_package_names(base);
-    rows = visible_rows_from_maps(std::move(available_rows), installed.rows_by_name_arch);
   }
 
   publish_installed_snapshot(std::move(installed), std::move(protected_names));
@@ -470,39 +530,43 @@ dnf_backend_get_upgradeable_package_rows_interruptible(GCancellable *cancellable
   InstalledQueryResult installed;
   std::set<std::string> protected_names;
   {
-    auto [base, guard, generation] = BaseManager::instance().acquire_read();
+    try {
+      auto [base, guard, generation] = acquire_package_list_base_read(cancellable);
 
-    libdnf5::rpm::PackageQuery query(base);
-    query.filter_available();
-    query.filter_upgrades();
-    query.filter_latest_evr();
+      libdnf5::rpm::PackageQuery query(base);
+      query.filter_available();
+      query.filter_upgrades();
+      query.filter_latest_evr();
 
-    // libdnf returns the available package that would satisfy each upgrade.
-    // That is the correct row to show here because the main action installs
-    // this newer package over the currently installed one.
-    std::map<std::string, PackageRow> rows_by_name_arch;
-    for (auto pkg : query) {
+      // libdnf returns the available package that would satisfy each upgrade.
+      // That is the correct row to show here because the main action installs
+      // this newer package over the currently installed one.
+      std::map<std::string, PackageRow> rows_by_name_arch;
+      for (auto pkg : query) {
+        if (package_query_cancelled(cancellable)) {
+          return {};
+        }
+
+        PackageRow row = make_package_row(pkg, PackageRepoCandidateRelation::UNKNOWN);
+        remember_newest_row(rows_by_name_arch, row);
+      }
+
+      // Even though the visible rows are available update candidates, the UI still
+      // needs the installed snapshot to resolve remove and reinstall actions back
+      // to the currently installed package.
+      installed = collect_installed_rows(base, cancellable, DnfBackendSearchOptions {});
       if (package_query_cancelled(cancellable)) {
         return {};
       }
 
-      PackageRow row = make_package_row(pkg, PackageRepoCandidateRelation::UNKNOWN);
-      remember_newest_row(rows_by_name_arch, row);
-    }
+      protected_names = collect_self_protected_package_names(base);
 
-    // Even though the visible rows are available update candidates, the UI still
-    // needs the installed snapshot to resolve remove and reinstall actions back
-    // to the currently installed package.
-    installed = collect_installed_rows(base, cancellable, DnfBackendSearchOptions {});
-    if (package_query_cancelled(cancellable)) {
+      rows.reserve(rows_by_name_arch.size());
+      for (auto &[key, row] : rows_by_name_arch) {
+        rows.push_back(row);
+      }
+    } catch (const BaseOperationCancelled &) {
       return {};
-    }
-
-    protected_names = collect_self_protected_package_names(base);
-
-    rows.reserve(rows_by_name_arch.size());
-    for (auto &[key, row] : rows_by_name_arch) {
-      rows.push_back(row);
     }
   }
 

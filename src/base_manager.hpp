@@ -116,6 +116,10 @@ class BaseManager {
   // -----------------------------------------------------------------------------
   BaseRead acquire_read();
   // -----------------------------------------------------------------------------
+  // Return serialized read access, stopping while waiting or initializing Base.
+  // -----------------------------------------------------------------------------
+  BaseRead acquire_read(std::shared_ptr<std::atomic<bool>> cancel_requested);
+  // -----------------------------------------------------------------------------
   // Return write access to the cached Base with its lock guard.
   // -----------------------------------------------------------------------------
   std::pair<libdnf5::Base &, BaseWriteGuard> acquire_write();
@@ -200,7 +204,7 @@ class BaseManager {
   // -----------------------------------------------------------------------------
   // Initialize the cached Base when it has not been built yet.
   // -----------------------------------------------------------------------------
-  void ensure_base_initialized();
+  void ensure_base_initialized(std::shared_ptr<std::atomic<bool>> cancel_requested = nullptr);
 
   std::shared_ptr<libdnf5::Base> base_ptr;
   BaseRepoState repo_state = BaseRepoState::LIVE_METADATA;
