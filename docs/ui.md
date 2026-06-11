@@ -201,6 +201,12 @@ UI code follows this pattern for slow work:
 This keeps the window responsive and prevents old results from replacing newer
 state.
 
+Stop is cooperative. A Stop button cancels the task state immediately, but the
+worker still has to reach a safe cancellation point before it can return. Package
+list workers can now stop while waiting for the shared Base. Repository refresh
+can stop repository downloads through libdnf callbacks, but not every libdnf step
+has a callback.
+
 ## Refresh rules
 
 Refreshing repositories or applying a transaction can change package metadata.

@@ -29,6 +29,8 @@ namespace dnf_backend_internal {
 
 // -----------------------------------------------------------------------------
 // Bridge a GCancellable into the atomic token used by BaseManager.
+// GLib cancellation is signalled through GCancellable.
+// BaseManager cannot use that type directly, so package list workers pass this small atomic flag instead.
 // -----------------------------------------------------------------------------
 class BaseCancelToken {
   public:
@@ -43,6 +45,8 @@ class BaseCancelToken {
 
   ~BaseCancelToken()
   {
+    // Disconnect before the object is destroyed.
+    // Otherwise GLib could call back with a pointer to an atomic flag that no longer exists.
     if (cancellable && handler_id != 0) {
       g_cancellable_disconnect(cancellable, handler_id);
     }
@@ -54,6 +58,8 @@ class BaseCancelToken {
   }
 
   private:
+  // Runs on the thread that cancels the task and wakes BaseManager checks that
+  // are waiting for a package list operation to stop.
   static void on_cancelled(GCancellable *, gpointer user_data)
   {
     auto *cancelled = static_cast<std::atomic<bool> *>(user_data);
@@ -64,6 +70,7 @@ class BaseCancelToken {
 
   GCancellable *cancellable = nullptr;
   gulong handler_id = 0;
+  // Shared with BaseManager while acquiring or initializing the shared Base.
   std::shared_ptr<std::atomic<bool>> cancel_requested;
 };
 

@@ -56,6 +56,28 @@ old rows back into a cache state the UI already invalidated. Search cache
 validity depends on the Base generation and this cache epoch, not on the cached
 Base id.
 
+## Base cancellation
+
+DNF UI has two places where Stop needs help from the backend:
+
+- repository refresh
+- package list workers waiting for the shared Base
+
+Repository refresh passes an atomic cancel flag into `BaseManager::rebuild`.
+`BaseManager` installs temporary libdnf download callbacks while loading
+repository metadata. When the user presses Stop, the UI sets the flag. The next
+download callback that sees the flag returns libdnf's error status, which tells
+libdnf to abort the download work.
+
+This is cooperative cancellation. It can stop repository downloads when libdnf
+reaches a callback, but it cannot kill an arbitrary libdnf call immediately.
+
+Package list workers use `GCancellable`, because that is the normal GLib task
+cancellation type. `dnf_query.cpp` converts that into the same atomic flag before
+calling `BaseManager::acquire_read`. This lets a stopped package list task give
+up while it is waiting for the shared Base lock or while Base initialization is
+starting.
+
 ## Query flow
 
 [src/dnf_backend/dnf_query.cpp](../src/dnf_backend/dnf_query.cpp) builds the

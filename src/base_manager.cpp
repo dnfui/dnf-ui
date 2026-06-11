@@ -51,7 +51,9 @@ base_operation_cancel_requested(const std::shared_ptr<std::atomic<bool>> &cancel
 
 // -----------------------------------------------------------------------------
 // Stop repository downloads when the caller cancels the rebuild.
-// libdnf treats ERROR as an instruction to abort all downloads.
+// libdnf calls these methods while downloading repository metadata.
+// Returning ERROR tells libdnf to abort the current download work.
+// This is cooperative cancellation, so it only runs when libdnf reaches one of these callbacks.
 // -----------------------------------------------------------------------------
 class CancelableDownloadCallbacks : public libdnf5::repo::DownloadCallbacks {
   public:
@@ -79,6 +81,8 @@ class CancelableDownloadCallbacks : public libdnf5::repo::DownloadCallbacks {
   }
 
   private:
+  // Log only the first callback that notices cancellation.
+  // NOTE: After Stop is pressed, libdnf may call several download callbacks before the load ends.
   void trace_cancel_once(const char *callback_name)
   {
     if (!cancelled()) {
@@ -99,6 +103,8 @@ class CancelableDownloadCallbacks : public libdnf5::repo::DownloadCallbacks {
     return base_operation_cancel_requested(cancel_requested);
   }
 
+  // Shared with the UI task that owns this refresh.
+  // The button sets this flag, and the libdnf callback reads it from the worker thread.
   std::shared_ptr<std::atomic<bool>> cancel_requested;
   std::atomic<bool> cancel_trace_written { false };
 };
