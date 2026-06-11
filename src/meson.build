@@ -15,6 +15,7 @@ app_sources = files(
   'i18n.cpp',
   'ui/main_menu.cpp',
   'ui/main_window.cpp',
+  'ui/main_window_layout.cpp',
   'main.cpp',
   'ui/package_action_rows.cpp',
   'ui/package_info_controller.cpp',

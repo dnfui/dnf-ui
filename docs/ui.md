@@ -7,7 +7,9 @@ For source-backed GTK and GIO assumptions, see
 
 ## Main idea
 
-`main_window.cpp` builds the widgets. Controller files own behavior.
+`main_window_layout.cpp` builds the widget tree. `main_window.cpp` creates
+shared widget state and connects behavior. Controller files own the behavior
+behind each part of the window.
 
 The shared widget state lives in [src/ui/widgets.hpp](../src/ui/widgets.hpp).
 Controller files receive a `SearchWidgets` pointer and use it to update the
@@ -19,8 +21,10 @@ pending transaction behavior in separate files.
 ## Window construction
 
 [src/ui/main_window.cpp](../src/ui/main_window.cpp) creates the main window.
+[src/ui/main_window_layout.cpp](../src/ui/main_window_layout.cpp) builds the
+GTK widget tree used by that window.
 
-It is responsible for:
+The layout file is responsible for:
 
 - creating the top menu
 - creating search and list buttons
@@ -28,6 +32,9 @@ It is responsible for:
 - creating the package details panel
 - creating the pending actions tab
 - creating transaction action buttons
+
+The main window file is responsible for:
+
 - connecting GTK signals to controller callbacks
 - saving window size and pane positions
 

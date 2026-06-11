@@ -49,6 +49,7 @@ The application is split into five main areas:
 flowchart TD
     Main[main.cpp] --> App[app.cpp]
     App --> Window[ui/main_window.cpp]
+    Window --> Layout[ui/main_window_layout.cpp]
     Window --> Controllers[UI controllers]
     Controllers --> Backend[dnf_backend]
     Controllers --> Client[transaction_service_client.cpp]
@@ -61,7 +62,8 @@ Startup follows a short path:
 
 - [src/main.cpp](../src/main.cpp) calls `app_run_dnfui`
 - [src/app.cpp](../src/app.cpp) creates the GTK application and handles activation
-- [src/ui/main_window.cpp](../src/ui/main_window.cpp) builds the main window and wires signals
+- [src/ui/main_window.cpp](../src/ui/main_window.cpp) creates the main window and wires signals
+- [src/ui/main_window_layout.cpp](../src/ui/main_window_layout.cpp) builds the main window widget tree
 
 After the window is created, `app.cpp` also starts two background tasks:
 
@@ -81,7 +83,8 @@ flowchart TD
 
 The main window is built once and the controller files own behavior.
 
-- [src/ui/main_window.cpp](../src/ui/main_window.cpp) builds the window, creates shared widget state, and connects signals.
+- [src/ui/main_window.cpp](../src/ui/main_window.cpp) creates shared widget state and connects signals.
+- [src/ui/main_window_layout.cpp](../src/ui/main_window_layout.cpp) builds the main window widget tree.
 - [src/ui/widgets.hpp](../src/ui/widgets.hpp) groups the widget pointers and shared UI state.
 - [src/ui/widgets.cpp](../src/ui/widgets.cpp) handles repository refresh callbacks and task helpers shared by controllers.
 - [src/ui/main_menu.cpp](../src/ui/main_menu.cpp) handles top menu actions.
@@ -204,15 +207,16 @@ A practical reading order for new contributors:
 1. [src/main.cpp](../src/main.cpp)
 2. [src/app.cpp](../src/app.cpp)
 3. [src/ui/main_window.cpp](../src/ui/main_window.cpp)
-4. [src/ui/widgets.hpp](../src/ui/widgets.hpp)
-5. [src/ui/package_query_controller.cpp](../src/ui/package_query_controller.cpp)
-6. [src/ui/pending_transaction_controller.cpp](../src/ui/pending_transaction_controller.cpp)
-7. [src/ui/pending_transaction_view.cpp](../src/ui/pending_transaction_view.cpp)
-8. [src/ui/pending_transaction_apply.cpp](../src/ui/pending_transaction_apply.cpp)
-9. [src/dnf_backend/dnf_backend.hpp](../src/dnf_backend/dnf_backend.hpp)
-10. [src/base_manager.cpp](../src/base_manager.cpp)
-11. [src/dnf_backend/dnf_query.cpp](../src/dnf_backend/dnf_query.cpp)
-12. [src/transaction_service_client.cpp](../src/transaction_service_client.cpp)
+4. [src/ui/main_window_layout.cpp](../src/ui/main_window_layout.cpp)
+5. [src/ui/widgets.hpp](../src/ui/widgets.hpp)
+6. [src/ui/package_query_controller.cpp](../src/ui/package_query_controller.cpp)
+7. [src/ui/pending_transaction_controller.cpp](../src/ui/pending_transaction_controller.cpp)
+8. [src/ui/pending_transaction_view.cpp](../src/ui/pending_transaction_view.cpp)
+9. [src/ui/pending_transaction_apply.cpp](../src/ui/pending_transaction_apply.cpp)
+10. [src/dnf_backend/dnf_backend.hpp](../src/dnf_backend/dnf_backend.hpp)
+11. [src/base_manager.cpp](../src/base_manager.cpp)
+12. [src/dnf_backend/dnf_query.cpp](../src/dnf_backend/dnf_query.cpp)
+13. [src/transaction_service_client.cpp](../src/transaction_service_client.cpp)
 13. [src/transaction_service_client_dbus.cpp](../src/transaction_service_client_dbus.cpp)
 14. [src/transaction_service_client_wait.cpp](../src/transaction_service_client_wait.cpp)
 15. [docs/transactions.md](transactions.md)
