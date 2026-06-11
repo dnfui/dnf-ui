@@ -7,6 +7,7 @@
 #include "debug_trace.hpp"
 
 #include <libdnf5/conf/const.hpp>
+#include <libdnf5/repo/download_callbacks.hpp>
 #include <libdnf5/repo/repo.hpp>
 #include <libdnf5/repo/repo_cache.hpp>
 
@@ -36,6 +37,78 @@ struct BuiltBase {
   std::shared_ptr<libdnf5::Base> base;
   BaseRepoState repo_state = BaseRepoState::LIVE_METADATA;
 };
+
+// -----------------------------------------------------------------------------
+// Return true when the caller has requested that a rebuild stop.
+// -----------------------------------------------------------------------------
+static bool
+rebuild_cancel_requested(const std::shared_ptr<std::atomic<bool>> &cancel_requested)
+{
+  return cancel_requested && cancel_requested->load(std::memory_order_relaxed);
+}
+
+// -----------------------------------------------------------------------------
+// Stop repository downloads when the caller cancels the rebuild.
+// libdnf treats ERROR as an instruction to abort all downloads.
+// -----------------------------------------------------------------------------
+class CancelableDownloadCallbacks : public libdnf5::repo::DownloadCallbacks {
+  public:
+  explicit CancelableDownloadCallbacks(std::shared_ptr<std::atomic<bool>> cancel_requested)
+      : cancel_requested(std::move(cancel_requested))
+  {
+  }
+
+  int progress(void *, double, double) override
+  {
+    trace_cancel_once("progress");
+    return cancelled() ? libdnf5::repo::DownloadCallbacks::ERROR : libdnf5::repo::DownloadCallbacks::OK;
+  }
+
+  int end(void *, TransferStatus, const char *) override
+  {
+    trace_cancel_once("end");
+    return cancelled() ? libdnf5::repo::DownloadCallbacks::ERROR : libdnf5::repo::DownloadCallbacks::OK;
+  }
+
+  int mirror_failure(void *, const char *, const char *, const char *) override
+  {
+    trace_cancel_once("mirror failure");
+    return cancelled() ? libdnf5::repo::DownloadCallbacks::ERROR : libdnf5::repo::DownloadCallbacks::OK;
+  }
+
+  private:
+  void trace_cancel_once(const char *callback_name)
+  {
+    if (!cancelled()) {
+      return;
+    }
+
+    bool expected = false;
+    if (cancel_trace_written.compare_exchange_strong(expected, true, std::memory_order_relaxed)) {
+      DNFUI_TRACE("BaseManager repository refresh stop requested from %s callback", callback_name);
+    }
+  }
+
+  bool cancelled() const
+  {
+    return rebuild_cancel_requested(cancel_requested);
+  }
+
+  std::shared_ptr<std::atomic<bool>> cancel_requested;
+  std::atomic<bool> cancel_trace_written { false };
+};
+
+// -----------------------------------------------------------------------------
+// Throw when the caller has requested that a rebuild stop.
+// -----------------------------------------------------------------------------
+static void
+throw_if_rebuild_cancelled(const std::shared_ptr<std::atomic<bool>> &cancel_requested)
+{
+  if (rebuild_cancel_requested(cancel_requested)) {
+    DNFUI_TRACE("BaseManager repository refresh stop observed");
+    throw BaseOperationCancelled("Repository refresh was cancelled.");
+  }
+}
 
 // -----------------------------------------------------------------------------
 // Build one fully configured Base before any repo metadata is loaded.
@@ -135,7 +208,7 @@ expire_repository_metadata_cache(libdnf5::Base &base)
 // only trigger when this step fails for the full repo set.
 // -----------------------------------------------------------------------------
 static void
-load_repo_data(libdnf5::Base &base, RepoLoadMode mode)
+load_repo_data(libdnf5::Base &base, RepoLoadMode mode, const std::shared_ptr<std::atomic<bool>> &cancel_requested)
 {
   auto repo_sack = base.get_repo_sack();
 
@@ -153,13 +226,15 @@ load_repo_data(libdnf5::Base &base, RepoLoadMode mode)
   }
 #endif
 
-  DNFUI_TRACE("BaseManager load repos start");
+  throw_if_rebuild_cancelled(cancel_requested);
+  DNFUI_TRACE("BaseManager load repos start mode=%d", static_cast<int>(mode));
   if (mode == RepoLoadMode::SYSTEM_ONLY) {
     repo_sack->load_repos(libdnf5::repo::Repo::Type::SYSTEM);
   } else {
     repo_sack->load_repos();
   }
-  DNFUI_TRACE("BaseManager load repos done");
+  DNFUI_TRACE("BaseManager load repos done mode=%d", static_cast<int>(mode));
+  throw_if_rebuild_cancelled(cancel_requested);
 }
 
 } // namespace
@@ -168,14 +243,25 @@ load_repo_data(libdnf5::Base &base, RepoLoadMode mode)
 // Build one Base and load repository data for the requested mode.
 // -----------------------------------------------------------------------------
 static BuiltBase
-build_base_for_mode(RepoLoadMode mode, bool load_changelog_metadata, BaseRefreshMode refresh_mode)
+build_base_for_mode(RepoLoadMode mode,
+                    bool load_changelog_metadata,
+                    BaseRefreshMode refresh_mode,
+                    const std::shared_ptr<std::atomic<bool>> &cancel_requested)
 {
   BuiltBase result;
+  throw_if_rebuild_cancelled(cancel_requested);
   result.base = create_configured_base(mode, load_changelog_metadata);
+  if (cancel_requested) {
+    result.base->set_download_callbacks(std::make_unique<CancelableDownloadCallbacks>(cancel_requested));
+  }
   if (mode == RepoLoadMode::FULL && refresh_mode == BaseRefreshMode::FORCE_METADATA_CHECK) {
+    throw_if_rebuild_cancelled(cancel_requested);
     expire_repository_metadata_cache(*result.base);
   }
-  load_repo_data(*result.base, mode);
+  load_repo_data(*result.base, mode, cancel_requested);
+  if (cancel_requested) {
+    result.base->set_download_callbacks(nullptr);
+  }
   if (mode == RepoLoadMode::CACHE_ONLY_METADATA) {
     result.repo_state = BaseRepoState::CACHED_METADATA;
   } else if (mode == RepoLoadMode::SYSTEM_ONLY) {
@@ -191,24 +277,38 @@ build_base_for_mode(RepoLoadMode mode, bool load_changelog_metadata, BaseRefresh
 // -----------------------------------------------------------------------------
 static BuiltBase
 build_base_with_offline_fallback(bool load_changelog_metadata = false,
-                                 BaseRefreshMode refresh_mode = BaseRefreshMode::NORMAL)
+                                 BaseRefreshMode refresh_mode = BaseRefreshMode::NORMAL,
+                                 std::shared_ptr<std::atomic<bool>> cancel_requested = nullptr)
 {
   try {
-    return build_base_for_mode(RepoLoadMode::FULL, load_changelog_metadata, refresh_mode);
+    return build_base_for_mode(RepoLoadMode::FULL, load_changelog_metadata, refresh_mode, cancel_requested);
+  } catch (const BaseOperationCancelled &) {
+    // Stop is not a repo load failure. Do not continue into fallback modes.
+    throw;
   } catch (const std::exception &repo_error) {
+    throw_if_rebuild_cancelled(cancel_requested);
     std::cerr << "Warning: repo load failed: " << repo_error.what() << std::endl;
     DNFUI_TRACE("BaseManager load repos failed: %s", repo_error.what());
     std::cerr << "Warning: live repo load failed, retrying from cached metadata: " << repo_error.what() << std::endl;
     DNFUI_TRACE("BaseManager live repo load failed, trying cached metadata fallback: %s", repo_error.what());
 
     try {
-      return build_base_for_mode(RepoLoadMode::CACHE_ONLY_METADATA, load_changelog_metadata, BaseRefreshMode::NORMAL);
+      return build_base_for_mode(
+          RepoLoadMode::CACHE_ONLY_METADATA, load_changelog_metadata, BaseRefreshMode::NORMAL, cancel_requested);
+    } catch (const BaseOperationCancelled &) {
+      // Stop is not a cache load failure. Do not continue into fallback modes.
+      throw;
     } catch (const std::exception &cache_error) {
+      throw_if_rebuild_cancelled(cancel_requested);
       std::cerr << "Warning: cached repo metadata load failed: " << cache_error.what() << std::endl;
       DNFUI_TRACE("BaseManager cached repo load failed, trying system-only fallback: %s", cache_error.what());
 
       try {
-        return build_base_for_mode(RepoLoadMode::SYSTEM_ONLY, load_changelog_metadata, BaseRefreshMode::NORMAL);
+        return build_base_for_mode(
+            RepoLoadMode::SYSTEM_ONLY, load_changelog_metadata, BaseRefreshMode::NORMAL, cancel_requested);
+      } catch (const BaseOperationCancelled &) {
+        // Stop is not a system load failure.
+        throw;
       } catch (const std::exception &fallback_error) {
         throw std::runtime_error(
             "DNF backend initialization failed after repo load error: " + std::string(repo_error.what()) +
@@ -340,7 +440,7 @@ BaseManager::acquire_write()
 // Rebuild the cached Base after repository refresh or transaction work.
 // -----------------------------------------------------------------------------
 BaseRepoState
-BaseManager::rebuild(BaseRefreshMode refresh_mode)
+BaseManager::rebuild(BaseRefreshMode refresh_mode, std::shared_ptr<std::atomic<bool>> cancel_requested)
 {
   // Allow only one Base rebuild at a time.
   std::unique_lock lock(base_mutex);
@@ -348,7 +448,7 @@ BaseManager::rebuild(BaseRefreshMode refresh_mode)
   // Build the replacement first so a refresh failure does not discard the last
   // usable Base. Offline fallback keeps the UI query paths working from cached
   // metadata or, as a last resort, from the local rpmdb only.
-  BuiltBase rebuilt = build_base_with_offline_fallback(false, refresh_mode);
+  BuiltBase rebuilt = build_base_with_offline_fallback(false, refresh_mode, std::move(cancel_requested));
   if (!rebuilt.base) {
     throw std::runtime_error("Repository rebuild failed (Base is null).");
   }
@@ -423,7 +523,7 @@ BaseManager::ensure_system_only_initialized_if_needed()
 std::shared_ptr<libdnf5::Base>
 BaseManager::build_initialized_system_only_base()
 {
-  return build_base_for_mode(RepoLoadMode::SYSTEM_ONLY, false, BaseRefreshMode::NORMAL).base;
+  return build_base_for_mode(RepoLoadMode::SYSTEM_ONLY, false, BaseRefreshMode::NORMAL, nullptr).base;
 }
 
 // -----------------------------------------------------------------------------

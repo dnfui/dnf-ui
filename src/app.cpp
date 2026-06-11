@@ -129,6 +129,13 @@ on_periodic_installed_refresh_tick(gpointer)
 static void
 start_installed_refresh_task(void)
 {
+  // Repository refresh already owns the shared backend work.
+  // Do not queue the periodic installed refresh behind it.
+  if (widgets_repository_refresh_is_running()) {
+    DNFUI_TRACE("Installed package refresh skipped because repository refresh is running");
+    return;
+  }
+
   if (g_installed_refresh_running.exchange(true)) {
     DNFUI_TRACE("Installed package refresh skipped because the previous refresh is still running");
     return;

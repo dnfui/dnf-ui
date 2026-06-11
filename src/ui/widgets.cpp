@@ -6,6 +6,7 @@
 // -----------------------------------------------------------------------------
 #include "widgets.hpp"
 #include "base_manager.hpp"
+#include "debug_trace.hpp"
 #include "i18n.hpp"
 #include "package_query_controller.hpp"
 #include "package_query_controller_internal.hpp"
@@ -23,8 +24,18 @@ constexpr const char *kTaskStartedAtUsKey = "dnfui-task-started-at-us";
 // Prevent starting more than one repository refresh task at the same time.
 std::atomic<bool> repository_refresh_running { false };
 GCancellable *repository_refresh_cancellable = nullptr;
+std::shared_ptr<std::atomic<bool>> repository_refresh_cancel_requested;
 bool repository_refresh_spinner_owned = false;
 
+}
+
+// -----------------------------------------------------------------------------
+// Return true while the repository refresh worker is running.
+// -----------------------------------------------------------------------------
+bool
+widgets_repository_refresh_is_running()
+{
+  return repository_refresh_running.load(std::memory_order_relaxed);
 }
 
 // -----------------------------------------------------------------------------
@@ -168,7 +179,7 @@ repository_refresh_set_button_idle(SearchWidgets *widgets)
 }
 
 // -----------------------------------------------------------------------------
-// Make the Refresh Repositories button stop the visible wait for the refresh.
+// Make the Refresh Repositories button show Stop while refresh is running.
 // -----------------------------------------------------------------------------
 static void
 repository_refresh_set_button_stop(SearchWidgets *widgets)
@@ -202,15 +213,24 @@ widgets_on_rebuild_task(GTask *task, gpointer, gpointer, GCancellable *)
 // Used only when the user clicks Refresh Repositories.
 // -----------------------------------------------------------------------------
 void
-widgets_on_force_rebuild_task(GTask *task, gpointer, gpointer, GCancellable *)
+widgets_on_force_rebuild_task(GTask *task, gpointer, gpointer task_data, GCancellable *)
 {
+  auto *cancel_requested = static_cast<std::shared_ptr<std::atomic<bool>> *>(task_data);
+
   try {
-    BaseRepoState refresh_state = BaseManager::instance().rebuild(BaseRefreshMode::FORCE_METADATA_CHECK);
+    DNFUI_TRACE("Repository refresh worker start");
+    BaseRepoState refresh_state = BaseManager::instance().rebuild(BaseRefreshMode::FORCE_METADATA_CHECK,
+                                                                  cancel_requested ? *cancel_requested : nullptr);
+    DNFUI_TRACE("Repository refresh worker done state=%d", static_cast<int>(refresh_state));
     // GTask completion transfers this heap value back to the GTK thread.
-    // widgets_on_rebuild_task_finished() deletes it after reading the result.
+    // The force refresh completion handler deletes it after reading the result.
     g_task_return_pointer(
         task, new BaseRepoState(refresh_state), [](gpointer p) { delete static_cast<BaseRepoState *>(p); });
+  } catch (const BaseOperationCancelled &e) {
+    DNFUI_TRACE("Repository refresh worker stopped: %s", e.what());
+    g_task_return_error(task, g_error_new_literal(G_IO_ERROR, G_IO_ERROR_CANCELLED, e.what()));
   } catch (const std::exception &e) {
+    DNFUI_TRACE("Repository refresh worker failed: %s", e.what());
     g_task_return_error(task, g_error_new_literal(G_IO_ERROR, G_IO_ERROR_FAILED, e.what()));
   }
 }
@@ -270,14 +290,25 @@ widgets_on_rebuild_task_finished(GObject *, GAsyncResult *res, gpointer user_dat
 // Finish user-triggered repository refresh and release its spinner slot.
 // -----------------------------------------------------------------------------
 void
-widgets_on_force_rebuild_task_finished(GObject *source_object, GAsyncResult *res, gpointer user_data)
+widgets_on_force_rebuild_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
 {
   GTask *task = G_TASK(res);
   SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
-  GCancellable *c = g_task_get_cancellable(task);
-  bool was_cancelled = c && g_cancellable_is_cancelled(c);
+  DNFUI_TRACE("Repository refresh completion start");
+  if (widgets_task_should_skip_completion(task, widgets)) {
+    DNFUI_TRACE("Repository refresh completion skipped");
+    repository_refresh_running = false;
+    repository_refresh_release_spinner(nullptr);
+    if (repository_refresh_cancellable) {
+      g_object_unref(repository_refresh_cancellable);
+      repository_refresh_cancellable = nullptr;
+    }
+    repository_refresh_cancel_requested.reset();
+    return;
+  }
 
-  widgets_on_rebuild_task_finished(source_object, res, user_data);
+  GError *error = nullptr;
+  BaseRepoState *refresh_state = static_cast<BaseRepoState *>(g_task_propagate_pointer(task, &error));
 
   if (!widgets || widgets->window_state.destroyed) {
     repository_refresh_release_spinner(nullptr);
@@ -285,28 +316,63 @@ widgets_on_force_rebuild_task_finished(GObject *source_object, GAsyncResult *res
       g_object_unref(repository_refresh_cancellable);
       repository_refresh_cancellable = nullptr;
     }
+    repository_refresh_cancel_requested.reset();
+    repository_refresh_running = false;
+    if (refresh_state) {
+      delete refresh_state;
+    }
+    if (error) {
+      g_error_free(error);
+    }
     return;
   }
 
+  package_query_set_idle_controls_sensitive(widgets, true);
+  if (widgets->results.list_scroller) {
+    gtk_widget_set_sensitive(GTK_WIDGET(widgets->results.list_scroller), TRUE);
+  }
+  pending_transaction_set_preview_controls_sensitive(widgets, true);
+
   repository_refresh_set_button_idle(widgets);
+  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.refresh_button), TRUE);
   repository_refresh_release_spinner(widgets);
+  repository_refresh_running = false;
 
   if (repository_refresh_cancellable) {
     g_object_unref(repository_refresh_cancellable);
     repository_refresh_cancellable = nullptr;
   }
+  repository_refresh_cancel_requested.reset();
 
-  if (was_cancelled) {
-    // Stop ends the UI wait, but libdnf may still finish the repo load later.
-    // Since this result is ignored, drop its rebuilt Base instead of keeping repository metadata in memory.
-    BaseManager::instance().drop_cached_base();
+  if (error && g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
+    DNFUI_TRACE("Repository refresh completion stopped");
+    ui_helpers_set_status(widgets->query.status_label, _("Repository refresh stopped."), "gray");
+    g_error_free(error);
+    return;
+  }
 
-    package_query_set_idle_controls_sensitive(widgets, true);
-    if (widgets->results.list_scroller) {
-      gtk_widget_set_sensitive(GTK_WIDGET(widgets->results.list_scroller), TRUE);
+  if (refresh_state) {
+    DNFUI_TRACE("Repository refresh completion done state=%d", static_cast<int>(*refresh_state));
+    // Search caches are bound to the old Base generation and must be dropped
+    // before the user can query against freshly refreshed repositories.
+    package_query_clear_search_cache();
+    if (*refresh_state == BaseRepoState::LIVE_METADATA) {
+      ui_helpers_set_status(widgets->query.status_label, _("Repositories refreshed."), "green");
+    } else if (*refresh_state == BaseRepoState::CACHED_METADATA) {
+      ui_helpers_set_status(
+          widgets->query.status_label, _("Live repo refresh failed. Using cached repository metadata."), "blue");
+    } else {
+      ui_helpers_set_status(
+          widgets->query.status_label, _("Live repo refresh failed. Showing installed packages only."), "blue");
     }
-    pending_transaction_set_preview_controls_sensitive(widgets, true);
-    ui_helpers_set_status(widgets->query.status_label, _("Repository refresh cancelled."), "gray");
+    package_query_reload_current_view(widgets);
+    delete refresh_state;
+  } else {
+    DNFUI_TRACE("Repository refresh completion failed: %s", error ? error->message : "unknown error");
+    ui_helpers_set_status(widgets->query.status_label, error ? error->message : _("Repo refresh failed."), "red");
+    if (error) {
+      g_error_free(error);
+    }
     return;
   }
 
@@ -342,26 +408,19 @@ widgets_on_refresh_button_clicked(GtkButton *, gpointer user_data)
 
   bool expected = false;
   // Only the first click may start a refresh task.
-  // While it is running, the button acts as Stop for the visible wait.
+  // While it is running, the button asks libdnf to stop repository downloads.
   if (!repository_refresh_running.compare_exchange_strong(expected, true)) {
-    if (repository_refresh_cancellable && !g_cancellable_is_cancelled(repository_refresh_cancellable)) {
-      // NOTE: libdnf repo loading cannot be stopped from here.
-      // Stop restores the UI now and the completion handler ignores the result later.
-      g_cancellable_cancel(repository_refresh_cancellable);
-      repository_refresh_release_spinner(widgets);
+    if (repository_refresh_cancel_requested && !repository_refresh_cancel_requested->load(std::memory_order_relaxed)) {
+      DNFUI_TRACE("Repository refresh stop requested from button");
+      repository_refresh_cancel_requested->store(true, std::memory_order_relaxed);
       repository_refresh_set_button_idle(widgets);
-      package_query_set_idle_controls_sensitive(widgets, true);
-      if (widgets->results.list_scroller) {
-        gtk_widget_set_sensitive(GTK_WIDGET(widgets->results.list_scroller), TRUE);
-      }
-      pending_transaction_set_preview_controls_sensitive(widgets, true);
-      ui_helpers_set_status(widgets->query.status_label,
-                            _("Repository refresh cancelled. Finishing current repo check in the background."),
-                            "gray");
+      gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.refresh_button), FALSE);
+      ui_helpers_set_status(widgets->query.status_label, _("Stopping repository refresh..."), "gray");
     } else {
       // The user already pressed Stop. Keep rejecting new refreshes until the
       // background repo load returns and clears repository_refresh_running.
-      ui_helpers_set_status(widgets->query.status_label, _("Repository refresh is still stopping."), "gray");
+      DNFUI_TRACE("Repository refresh stop requested again");
+      ui_helpers_set_status(widgets->query.status_label, _("Repository refresh is stopping."), "gray");
     }
     return;
   }
@@ -369,6 +428,7 @@ widgets_on_refresh_button_clicked(GtkButton *, gpointer user_data)
   // Once a rebuild starts, stop serving cached search results so the UI does
   // not reuse rows from repository state that is changing.
   package_query_clear_search_cache();
+  DNFUI_TRACE("Repository refresh start requested from button");
   ui_helpers_set_status(widgets->query.status_label, _("Refreshing repositories..."), "blue");
   widgets_spinner_acquire(widgets->query.spinner);
   repository_refresh_spinner_owned = true;
@@ -384,6 +444,10 @@ widgets_on_refresh_button_clicked(GtkButton *, gpointer user_data)
   GCancellable *c = widgets_make_task_cancellable_for(GTK_WIDGET(widgets->query.entry));
   GTask *task = widgets_task_new_for_search_widgets(widgets, c, widgets_on_force_rebuild_task_finished);
   repository_refresh_cancellable = G_CANCELLABLE(g_object_ref(c));
+  repository_refresh_cancel_requested = std::make_shared<std::atomic<bool>>(false);
+  g_task_set_task_data(task,
+                       new std::shared_ptr<std::atomic<bool>>(repository_refresh_cancel_requested),
+                       [](gpointer p) { delete static_cast<std::shared_ptr<std::atomic<bool>> *>(p); });
   auto *started_at_us = new gint64(g_get_monotonic_time());
   g_object_set_data_full(
       G_OBJECT(task), kTaskStartedAtUsKey, started_at_us, [](gpointer p) { delete static_cast<gint64 *>(p); });

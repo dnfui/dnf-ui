@@ -7,6 +7,7 @@
 #include <memory>
 #include <mutex>
 #include <shared_mutex>
+#include <stdexcept>
 
 #include <libdnf5/base/base.hpp>
 
@@ -90,6 +91,17 @@ enum class BaseRefreshMode {
 };
 
 // -----------------------------------------------------------------------------
+// Raised when a caller cancels a repository rebuild.
+// -----------------------------------------------------------------------------
+class BaseOperationCancelled : public std::runtime_error {
+  public:
+  explicit BaseOperationCancelled(const std::string &message)
+      : std::runtime_error(message)
+  {
+  }
+};
+
+// -----------------------------------------------------------------------------
 // Shared access point for the cached libdnf5 Base instance.
 // -----------------------------------------------------------------------------
 class BaseManager {
@@ -141,7 +153,8 @@ class BaseManager {
   // -----------------------------------------------------------------------------
   // Rebuild the cached Base from repository metadata with fallback.
   // -----------------------------------------------------------------------------
-  BaseRepoState rebuild(BaseRefreshMode refresh_mode = BaseRefreshMode::NORMAL);
+  BaseRepoState rebuild(BaseRefreshMode refresh_mode = BaseRefreshMode::NORMAL,
+                        std::shared_ptr<std::atomic<bool>> cancel_requested = nullptr);
   // -----------------------------------------------------------------------------
   // Rebuild the cached Base from the local rpmdb only.
   // -----------------------------------------------------------------------------
