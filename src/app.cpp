@@ -12,6 +12,7 @@
 #include "i18n.hpp"
 #include "ui/package_query_controller.hpp"
 #include "ui/main_window.hpp"
+#include "ui/pending_transaction_apply.hpp"
 #include "ui/ui_helpers.hpp"
 #include "ui/widgets.hpp"
 #include "ui/widgets_internal.hpp"
@@ -46,6 +47,7 @@ static guint g_periodic_installed_refresh_source_id = 0;
 // Keep one main window so global tasks do not have to decide which window owns
 // refresh, spinner, or transaction state.
 static GtkWidget *g_main_window = nullptr;
+static SearchWidgets *g_main_widgets = nullptr;
 
 struct StartupWarmupData {
   SearchWidgets *widgets = nullptr;
@@ -133,6 +135,11 @@ start_installed_refresh_task(void)
   // Do not queue the periodic installed refresh behind it.
   if (widgets_repository_refresh_is_running()) {
     DNFUI_TRACE("Installed package refresh skipped because repository refresh is running");
+    return;
+  }
+
+  if (pending_transaction_apply_is_busy(g_main_widgets)) {
+    DNFUI_TRACE("Installed package refresh skipped because apply is running");
     return;
   }
 
@@ -326,6 +333,7 @@ activate(GtkApplication *app, gpointer)
 
   MainWindow main_window = main_window_create(app);
   g_main_window = main_window.window;
+  g_main_widgets = main_window.widgets;
   g_signal_connect(main_window.window, "destroy", G_CALLBACK(on_main_window_destroyed), nullptr);
 
   setup_periodic_tasks();
@@ -349,6 +357,7 @@ static void
 on_main_window_destroyed(GtkWidget *, gpointer)
 {
   g_main_window = nullptr;
+  g_main_widgets = nullptr;
 }
 
 // -----------------------------------------------------------------------------
