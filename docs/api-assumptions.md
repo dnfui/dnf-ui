@@ -184,8 +184,8 @@ Why this matters:
 - Stop buttons cancel task state, but long libdnf5 calls may only stop after the next cancellable check.
 - Repository refresh Stop can interrupt repository downloads only when libdnf
   reaches a download callback.
-- Package list Stop can interrupt waiting for `BaseManager::acquire_read`, but
-  it still cannot kill arbitrary libdnf work that is already running.
+- Search and package list Stop can interrupt waiting for `BaseManager::acquire_read`,
+  but it still cannot kill arbitrary libdnf work that is already running.
 - DNF UI must not assume cancellation kills a worker thread. Cancelled workers
   can still finish later, so completion callbacks must be safe to ignore.
 - Completion callbacks must check destroyed widgets, selected NEVRA, backend

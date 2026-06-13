@@ -61,7 +61,7 @@ Base id.
 DNF UI has two places where Stop needs help from the backend:
 
 - repository refresh
-- package list workers waiting for the shared Base
+- package query workers waiting for the shared Base
 
 Repository refresh passes an atomic cancel flag into `BaseManager::rebuild`.
 `BaseManager` installs temporary libdnf download callbacks while loading
@@ -72,11 +72,11 @@ libdnf to abort the download work.
 This is cooperative cancellation. It can stop repository downloads when libdnf
 reaches a callback, but it cannot kill an arbitrary libdnf call immediately.
 
-Package list workers use `GCancellable`, because that is the normal GLib task
+Package query workers use `GCancellable`, because that is the normal GLib task
 cancellation type. `dnf_query.cpp` converts that into the same atomic flag before
-calling `BaseManager::acquire_read`. This lets a stopped package list task give
-up while it is waiting for the shared Base lock or while Base initialization is
-starting.
+calling `BaseManager::acquire_read`. This lets a stopped search or package list
+task give up while it is waiting for the shared Base lock or while Base
+initialization is starting.
 
 ## Query flow
 

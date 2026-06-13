@@ -30,7 +30,7 @@ namespace dnf_backend_internal {
 // -----------------------------------------------------------------------------
 // Bridge a GCancellable into the atomic token used by BaseManager.
 // GLib cancellation is signalled through GCancellable.
-// BaseManager cannot use that type directly, so package list workers pass this small atomic flag instead.
+// BaseManager cannot use that type directly, so query workers pass this small atomic flag instead.
 // -----------------------------------------------------------------------------
 class BaseCancelToken {
   public:
@@ -75,10 +75,10 @@ class BaseCancelToken {
 };
 
 // -----------------------------------------------------------------------------
-// Return Base access for a package list worker that can still be stopped.
+// Return Base access for a query worker that can still be stopped.
 // -----------------------------------------------------------------------------
 static BaseRead
-acquire_package_list_base_read(GCancellable *cancellable)
+acquire_interruptible_base_read(GCancellable *cancellable)
 {
   BaseCancelToken cancel_token(cancellable);
   return BaseManager::instance().acquire_read(cancel_token.token());
@@ -408,31 +408,35 @@ dnf_backend_search_package_rows_interruptible(const std::string &pattern, GCance
   InstalledQueryResult installed_snapshot;
   std::set<std::string> protected_names;
   {
-    auto [base, guard, generation] = BaseManager::instance().acquire_read();
-    auto available_rows = collect_available_rows_by_name_arch(base, cancellable, search_options, &pattern);
-    if (package_query_cancelled(cancellable)) {
+    try {
+      auto [base, guard, generation] = acquire_interruptible_base_read(cancellable);
+      auto available_rows = collect_available_rows_by_name_arch(base, cancellable, search_options, &pattern);
+      if (package_query_cancelled(cancellable)) {
+        return {};
+      }
+
+      // This scan is only for installed rows that match the search term. Those
+      // rows can still appear in the visible search result when no repo candidate
+      // is shown for the same package name and architecture.
+      InstalledQueryResult filtered_installed = collect_installed_rows(base, cancellable, search_options, &pattern);
+      if (package_query_cancelled(cancellable)) {
+        return {};
+      }
+
+      // The shared installed snapshot must contain every installed package, not
+      // only the rows that matched this search. The UI uses it later for package
+      // status, action buttons, and pending action handling.
+      const DnfBackendSearchOptions snapshot_search_options {};
+      installed_snapshot = collect_installed_rows(base, cancellable, snapshot_search_options);
+      if (package_query_cancelled(cancellable)) {
+        return {};
+      }
+
+      protected_names = collect_self_protected_package_names(base);
+      rows = visible_rows_from_maps(std::move(available_rows), filtered_installed.rows_by_name_arch);
+    } catch (const BaseOperationCancelled &) {
       return {};
     }
-
-    // This scan is only for installed rows that match the search term. Those
-    // rows can still appear in the visible search result when no repo candidate
-    // is shown for the same package name and architecture.
-    InstalledQueryResult filtered_installed = collect_installed_rows(base, cancellable, search_options, &pattern);
-    if (package_query_cancelled(cancellable)) {
-      return {};
-    }
-
-    // The shared installed snapshot must contain every installed package, not
-    // only the rows that matched this search. The UI uses it later for package
-    // status, action buttons, and pending action handling.
-    const DnfBackendSearchOptions snapshot_search_options {};
-    installed_snapshot = collect_installed_rows(base, cancellable, snapshot_search_options);
-    if (package_query_cancelled(cancellable)) {
-      return {};
-    }
-
-    protected_names = collect_self_protected_package_names(base);
-    rows = visible_rows_from_maps(std::move(available_rows), filtered_installed.rows_by_name_arch);
   }
 
   publish_installed_snapshot(std::move(installed_snapshot), std::move(protected_names));
@@ -456,7 +460,7 @@ dnf_backend_get_installed_package_rows_interruptible(GCancellable *cancellable)
   std::set<std::string> protected_names;
   {
     try {
-      auto [base, guard, generation] = acquire_package_list_base_read(cancellable);
+      auto [base, guard, generation] = acquire_interruptible_base_read(cancellable);
       const DnfBackendSearchOptions search_options {};
       installed = collect_installed_rows(base, cancellable, search_options);
       if (package_query_cancelled(cancellable)) {
@@ -501,7 +505,7 @@ dnf_backend_get_browse_package_rows_interruptible(GCancellable *cancellable)
   std::set<std::string> protected_names;
   {
     try {
-      auto [base, guard, generation] = acquire_package_list_base_read(cancellable);
+      auto [base, guard, generation] = acquire_interruptible_base_read(cancellable);
       auto available_rows = collect_available_rows_by_name_arch(base, cancellable, search_options);
       if (package_query_cancelled(cancellable)) {
         return {};
@@ -538,7 +542,7 @@ dnf_backend_get_upgradeable_package_rows_interruptible(GCancellable *cancellable
   std::set<std::string> protected_names;
   {
     try {
-      auto [base, guard, generation] = acquire_package_list_base_read(cancellable);
+      auto [base, guard, generation] = acquire_interruptible_base_read(cancellable);
 
       libdnf5::rpm::PackageQuery query(base);
       query.filter_available();
