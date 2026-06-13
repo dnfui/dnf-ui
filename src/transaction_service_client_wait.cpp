@@ -202,6 +202,7 @@ on_transaction_progress_signal(GDBusConnection *,
 
 // -----------------------------------------------------------------------------
 // Resolve a started daemon session and read its structured preview.
+// The caller opened the session and is responsible for closing it on failure.
 // -----------------------------------------------------------------------------
 bool
 transaction_service_client_wait_for_started_transaction_preview(GDBusConnection *connection,
@@ -214,8 +215,6 @@ transaction_service_client_wait_for_started_transaction_preview(GDBusConnection 
   }
 
   DNFUI_TRACE("dnf5daemon preview failed path=%s error=%s", transaction_path.c_str(), error_out.c_str());
-  std::string release_error;
-  transaction_service_client_release_transaction_request(connection, transaction_path, release_error);
   return false;
 }
 
