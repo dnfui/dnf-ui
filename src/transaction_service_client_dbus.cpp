@@ -511,16 +511,14 @@ transaction_service_client_connect(std::string &error_out)
   error_out.clear();
   TransactionServiceConnectionCache &cache = get_transaction_service_connection_cache();
 
-  {
-    std::lock_guard<std::mutex> lock(cache.mutex);
-    if (cache.connection && !g_dbus_connection_is_closed(cache.connection)) {
-      return G_DBUS_CONNECTION(g_object_ref(cache.connection));
-    }
+  std::lock_guard<std::mutex> lock(cache.mutex);
+  if (cache.connection && !g_dbus_connection_is_closed(cache.connection)) {
+    return G_DBUS_CONNECTION(g_object_ref(cache.connection));
+  }
 
-    if (cache.connection) {
-      g_object_unref(cache.connection);
-      cache.connection = nullptr;
-    }
+  if (cache.connection) {
+    g_object_unref(cache.connection);
+    cache.connection = nullptr;
   }
 
   GError *error = nullptr;
@@ -531,10 +529,7 @@ transaction_service_client_connect(std::string &error_out)
     return nullptr;
   }
 
-  {
-    std::lock_guard<std::mutex> lock(cache.mutex);
-    cache.connection = G_DBUS_CONNECTION(g_object_ref(connection));
-  }
+  cache.connection = G_DBUS_CONNECTION(g_object_ref(connection));
 
   return connection;
 }
