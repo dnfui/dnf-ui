@@ -16,7 +16,10 @@
 // -----------------------------------------------------------------------------
 struct PendingAction {
   enum Type { INSTALL, UPGRADE, REMOVE, REINSTALL } type;
+  // UI identity used for pending-list toggles and jumping back to package rows.
   std::string nevra;
+  // Package spec sent to dnf5daemon. Empty means use nevra.
+  std::string transaction_spec;
 };
 
 // -----------------------------------------------------------------------------
