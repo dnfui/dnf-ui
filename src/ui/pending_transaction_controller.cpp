@@ -171,7 +171,7 @@ pending_transaction_on_remove_button_clicked(GtkButton *, gpointer user_data)
       pending_transaction_remove_action(widgets, action_rows.install_row.nevra);
     }
     pending_transaction_remove_action(widgets, action_rows.installed_row.nevra);
-    widgets->transaction.actions.push_back({ PendingAction::REMOVE, action_rows.installed_row.nevra });
+    widgets->transaction.actions.push_back({ PendingAction::REMOVE, action_rows.installed_row.nevra, "" });
     pending_transaction_refresh_pending_tab(widgets);
     ui_helpers_set_status(
         widgets->query.status_label, (std::string(_("Marked for removal: ")) + pkg.name).c_str(), "blue");
@@ -239,7 +239,7 @@ pending_transaction_on_reinstall_button_clicked(GtkButton *, gpointer user_data)
       pending_transaction_remove_action(widgets, action_rows.install_row.nevra);
     }
     pending_transaction_remove_action(widgets, action_rows.installed_row.nevra);
-    widgets->transaction.actions.push_back({ PendingAction::REINSTALL, action_rows.installed_row.nevra });
+    widgets->transaction.actions.push_back({ PendingAction::REINSTALL, action_rows.installed_row.nevra, "" });
     pending_transaction_refresh_pending_tab(widgets);
     ui_helpers_set_status(
         widgets->query.status_label, (std::string(_("Marked for reinstall: ")) + pkg.name).c_str(), "blue");
