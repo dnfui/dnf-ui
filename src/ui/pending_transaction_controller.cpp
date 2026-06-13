@@ -28,6 +28,17 @@ self_protected_transaction_message(const PackageRow &pkg)
 }
 
 // -----------------------------------------------------------------------------
+// Return the package spec dnf5daemon accepts for upgrade requests.
+// Do not use the available package NEVRA here. dnf5daemon upgrade expects a
+// package selector for the installed package stream, for example "clang.x86_64".
+// -----------------------------------------------------------------------------
+static std::string
+daemon_upgrade_spec_for_row(const PackageRow &pkg)
+{
+  return pkg.arch.empty() ? pkg.name : pkg.name + "." + pkg.arch;
+}
+
+// -----------------------------------------------------------------------------
 // Return true when pending actions must not be changed.
 // -----------------------------------------------------------------------------
 static bool
@@ -93,7 +104,11 @@ pending_transaction_on_install_button_clicked(GtkButton *, gpointer user_data)
       pending_transaction_remove_action(widgets, action_rows.installed_row.nevra);
     }
     pending_transaction_remove_action(widgets, action_rows.install_row.nevra);
-    widgets->transaction.actions.push_back({ action_type, action_rows.install_row.nevra });
+    std::string transaction_spec;
+    if (action_rows.install_is_upgrade) {
+      transaction_spec = daemon_upgrade_spec_for_row(action_rows.install_row);
+    }
+    widgets->transaction.actions.push_back({ action_type, action_rows.install_row.nevra, transaction_spec });
     pending_transaction_refresh_pending_tab(widgets);
     const char *message = action_rows.install_is_upgrade ? _("Marked for upgrade: ") : _("Marked for install: ");
     ui_helpers_set_status(widgets->query.status_label, (std::string(message) + pkg.name).c_str(), "blue");
