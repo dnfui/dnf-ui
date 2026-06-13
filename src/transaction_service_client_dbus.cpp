@@ -343,12 +343,6 @@ mark_package_specs(GDBusConnection *connection,
   return true;
 }
 
-std::string
-daemon_upgrade_spec_for_row(const PackageRow &row)
-{
-  return row.arch.empty() ? row.name : row.name + "." + row.arch;
-}
-
 bool
 upgrade_all_specs(std::vector<std::string> &specs_out, std::string &error_out)
 {
@@ -359,7 +353,17 @@ upgrade_all_specs(std::vector<std::string> &specs_out, std::string &error_out)
     std::vector<PackageRow> upgrades = dnf_backend_get_upgradeable_package_rows_interruptible(nullptr);
     specs_out.reserve(upgrades.size());
     for (const auto &row : upgrades) {
-      specs_out.push_back(daemon_upgrade_spec_for_row(row));
+      PackageRow installed_row;
+      if (!dnf_backend_get_installed_package_row_by_name_arch(row, installed_row)) {
+        error_out = _("Could not resolve an installed package for an upgrade candidate.");
+        if (!row.nevra.empty()) {
+          error_out += " ";
+          error_out += row.nevra;
+        }
+        specs_out.clear();
+        return false;
+      }
+      specs_out.push_back(installed_row.nevra);
     }
     return true;
   } catch (const std::exception &e) {
