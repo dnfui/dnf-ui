@@ -37,6 +37,28 @@ release_request_task(GTask *task, gpointer, gpointer task_data, GCancellable *)
   g_task_return_boolean(task, TRUE);
 }
 
+// -----------------------------------------------------------------------------
+// Return true if a resolved daemon preview would modify the running DNF UI package.
+// Upgrade All is resolved by dnf5daemon, so the preview is the first reliable
+// place where DNF UI can see the daemon's final package choices.
+// -----------------------------------------------------------------------------
+bool
+transaction_preview_contains_self_protected_package(const TransactionPreview &preview)
+{
+  auto contains_self_protected_spec = [](const std::vector<std::string> &specs) {
+    for (const auto &spec : specs) {
+      if (dnf_backend_is_self_protected_transaction_spec(spec)) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  return contains_self_protected_spec(preview.install) || contains_self_protected_spec(preview.upgrade) ||
+      contains_self_protected_spec(preview.downgrade) || contains_self_protected_spec(preview.reinstall) ||
+      contains_self_protected_spec(preview.remove);
+}
+
 } // namespace
 
 // -----------------------------------------------------------------------------
@@ -116,6 +138,34 @@ transaction_service_client_preview_upgrade_all_request(TransactionPreview &previ
     std::string release_error;
     transaction_service_client_release_transaction_request(connection, transaction_path_out, release_error);
     transaction_path_out.clear();
+    g_object_unref(connection);
+    return false;
+  }
+
+  auto release_preview_session = [&]() {
+    std::string release_error;
+    transaction_service_client_release_transaction_request(connection, transaction_path_out, release_error);
+    transaction_path_out.clear();
+  };
+
+  try {
+    // A fresh app start may not have published the installed snapshot yet.
+    // Refresh from the local rpmdb before checking whether Upgrade All touches DNF UI itself.
+    dnf_backend_refresh_installed_nevras();
+    if (transaction_preview_contains_self_protected_package(preview_out)) {
+      release_preview_session();
+      error_out = _("Upgrade All would upgrade DNF UI itself. Upgrade DNF UI from a terminal instead.");
+      g_object_unref(connection);
+      return false;
+    }
+  } catch (const std::exception &e) {
+    release_preview_session();
+    error_out = e.what();
+    g_object_unref(connection);
+    return false;
+  } catch (...) {
+    release_preview_session();
+    error_out = _("Could not verify whether Upgrade All would modify DNF UI.");
     g_object_unref(connection);
     return false;
   }

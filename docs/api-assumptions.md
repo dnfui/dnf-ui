@@ -97,10 +97,10 @@ Source:
 
 Why this matters:
 
-- Upgrade All builds explicit upgrade specs in the GUI process and sends them to
-  dnf5daemon.
-- When the running DNF UI package has an available upgrade, that package is
-  excluded so the running app is not replaced by its own transaction.
+- Upgrade All calls dnf5daemon's native upgrade-all path by sending an empty
+  package list to the daemon's `upgrade` method.
+- If the resolved preview would upgrade DNF UI itself, the preview is rejected
+  before the user can apply it.
 - Do not document this as bit-for-bit equivalence with every possible `dnf`
   command-line configuration, plugin, or option. The maintained guarantee is
   that DNF UI sends the upgrade request through the app's configured backend and

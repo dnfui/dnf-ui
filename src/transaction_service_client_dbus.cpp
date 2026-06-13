@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------------
 #include "transaction_service_client_internal.hpp"
 
-#include "base_manager.hpp"
 #include "debug_trace.hpp"
 #include "dnf_backend/dnf_backend.hpp"
 #include "i18n.hpp"
@@ -43,16 +42,6 @@ struct TransactionServiceConnectionCache {
   std::mutex mutex;
   GDBusConnection *connection = nullptr;
   std::set<std::string> allow_erasing_sessions;
-};
-
-// -----------------------------------------------------------------------------
-// Drop the local package Base after upgrade-all self-protection checks.
-// -----------------------------------------------------------------------------
-struct DaemonClientBackendBaseDropGuard {
-  ~DaemonClientBackendBaseDropGuard()
-  {
-    BaseManager::instance().drop_cached_base();
-  }
 };
 
 // -----------------------------------------------------------------------------
@@ -141,39 +130,6 @@ package_specs_parameters(const std::vector<std::string> &specs)
   }
 
   return g_variant_new("(asa{sv})", &specs_builder, &options);
-}
-
-// -----------------------------------------------------------------------------
-// Return upgrade specs for upgrade-all while keeping the running app protected.
-// -----------------------------------------------------------------------------
-bool
-upgrade_all_specs(std::vector<std::string> &specs_out, bool &skipped_self_out, std::string &error_out)
-{
-  DaemonClientBackendBaseDropGuard base_drop_guard;
-
-  specs_out.clear();
-  skipped_self_out = false;
-  error_out.clear();
-
-  std::vector<PackageRow> upgrades = dnf_backend_get_upgradeable_package_rows_interruptible(nullptr);
-  for (const auto &row : upgrades) {
-    if (dnf_backend_is_package_self_protected(row)) {
-      skipped_self_out = true;
-      continue;
-    }
-    specs_out.push_back(row.nevra);
-  }
-
-  if (upgrades.empty()) {
-    return true;
-  }
-
-  if (specs_out.empty() && skipped_self_out) {
-    error_out = _("Only DNF UI itself is upgradeable. It cannot upgrade itself while running.");
-    return false;
-  }
-
-  return true;
 }
 
 // -----------------------------------------------------------------------------
@@ -588,20 +544,8 @@ transaction_service_client_start_upgrade_all_transaction_request(GDBusConnection
     return false;
   }
 
+  // dnf5daemon treats an empty upgrade list as native Upgrade All.
   std::vector<std::string> upgrade_specs;
-  bool skipped_self = false;
-  if (!upgrade_all_specs(upgrade_specs, skipped_self, error_out)) {
-    std::string release_error;
-    transaction_service_client_release_transaction_request(connection, transaction_path_out, release_error);
-    transaction_path_out.clear();
-    return false;
-  }
-
-  // Empty upgrade specs mean dnf5daemon upgrade-all, so never call upgrade with an empty list here.
-  if (upgrade_specs.empty()) {
-    return true;
-  }
-
   GError *error = nullptr;
   GVariant *reply = g_dbus_connection_call_sync(connection,
                                                 kDnfDaemonName,
