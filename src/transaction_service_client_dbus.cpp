@@ -14,7 +14,6 @@
 
 #include <algorithm>
 #include <cctype>
-#include <exception>
 #include <mutex>
 #include <set>
 #include <sstream>
@@ -104,6 +103,18 @@ package_specs_parameters(const std::vector<std::string> &specs)
   }
 
   return g_variant_new("(asa{sv})", &specs_builder, &options);
+}
+
+GVariant *
+rpm_upgrade_list_options()
+{
+  const char *attrs[] = { "name", "arch", nullptr };
+  GVariantBuilder options;
+  g_variant_builder_init(&options, G_VARIANT_TYPE("a{sv}"));
+  g_variant_builder_add(&options, "{sv}", "scope", g_variant_new_string("upgrades"));
+  g_variant_builder_add(&options, "{sv}", "package_attrs", g_variant_new_strv(attrs, -1));
+  g_variant_builder_add(&options, "{sv}", "latest-limit", g_variant_new_int32(1));
+  return g_variant_new("a{sv}", &options);
 }
 
 GVariant *
@@ -377,36 +388,62 @@ mark_package_specs(GDBusConnection *connection,
   return true;
 }
 
+std::string
+daemon_upgrade_spec_for_package(GVariant *package)
+{
+  const std::string name = map_lookup_string(package, "name");
+  const std::string arch = map_lookup_string(package, "arch");
+  if (name.empty()) {
+    return {};
+  }
+  return arch.empty() ? name : name + "." + arch;
+}
+
 bool
-upgrade_all_specs(std::vector<std::string> &specs_out, std::string &error_out)
+list_daemon_upgrade_specs(GDBusConnection *connection,
+                          const std::string &transaction_path,
+                          std::vector<std::string> &specs_out,
+                          std::string &error_out)
 {
   specs_out.clear();
   error_out.clear();
 
-  try {
-    std::vector<PackageRow> upgrades = dnf_backend_get_upgradeable_package_rows_interruptible(nullptr);
-    specs_out.reserve(upgrades.size());
-    for (const auto &row : upgrades) {
-      PackageRow installed_row;
-      if (!dnf_backend_get_installed_package_row_by_name_arch(row, installed_row)) {
-        error_out = _("Could not resolve an installed package for an upgrade candidate.");
-        if (!row.nevra.empty()) {
-          error_out += " ";
-          error_out += row.nevra;
-        }
-        specs_out.clear();
-        return false;
-      }
-      specs_out.push_back(installed_row.nevra);
-    }
-    return true;
-  } catch (const std::exception &e) {
-    error_out = e.what();
-    return false;
-  } catch (...) {
-    error_out = _("Could not list upgrade candidates.");
+  GError *error = nullptr;
+  GVariant *reply = g_dbus_connection_call_sync(connection,
+                                                kDnfDaemonName,
+                                                transaction_path.c_str(),
+                                                kDnfDaemonRpmInterface,
+                                                "list",
+                                                g_variant_new("(@a{sv})", rpm_upgrade_list_options()),
+                                                G_VARIANT_TYPE("(aa{sv})"),
+                                                G_DBUS_CALL_FLAGS_NONE,
+                                                -1,
+                                                nullptr,
+                                                &error);
+  if (!reply) {
+    error_out = error ? error->message : _("dnf5daemon could not list upgrade candidates.");
+    g_clear_error(&error);
     return false;
   }
+
+  GVariant *packages = nullptr;
+  g_variant_get(reply, "(@aa{sv})", &packages);
+
+  GVariantIter iter;
+  g_variant_iter_init(&iter, packages);
+  GVariant *package = nullptr;
+  while ((package = g_variant_iter_next_value(&iter)) != nullptr) {
+    std::string spec = daemon_upgrade_spec_for_package(package);
+    if (!spec.empty()) {
+      specs_out.push_back(spec);
+    }
+    g_variant_unref(package);
+  }
+
+  g_variant_unref(packages);
+  g_variant_unref(reply);
+
+  return true;
 }
 
 bool
@@ -554,7 +591,7 @@ transaction_service_client_start_upgrade_all_transaction_request(GDBusConnection
   }
 
   std::vector<std::string> upgrade_specs;
-  if (!upgrade_all_specs(upgrade_specs, error_out)) {
+  if (!list_daemon_upgrade_specs(connection, transaction_path_out, upgrade_specs, error_out)) {
     release_opened_session(connection, transaction_path_out);
     return false;
   }
