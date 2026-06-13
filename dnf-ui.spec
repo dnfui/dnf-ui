@@ -1,5 +1,5 @@
 Name:           dnf-ui
-Version:        0.2.0
+Version:        0.2.1
 Release:        1%{?dist}
 Summary:        GTK frontend for DNF5
 
@@ -57,6 +57,16 @@ appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/com.fedora.dnfui
 %{_datadir}/metainfo/com.fedora.dnfui.metainfo.xml
 
 %changelog
+* Sat Jun 13 2026 ErikMN <erik@example.invalid> - 0.2.1-1
+- Force repository metadata refresh when using the Refresh repositories button
+- Allow repository refresh to be stopped from the UI while the current repo check finishes
+- Improve transaction safety around dnf5daemon session handling
+- Use dnf5daemon's native Upgrade All handling
+- Block transactions that would remove dnf5daemon-server
+- Prevent Upgrade All from upgrading DNF UI itself
+- Avoid periodic installed-package refresh while a transaction is applying
+- Fix failed preview session cleanup
+
 * Mon Jun 08 2026 ErikMN <erik@example.invalid> - 0.2.0-1
 - Use DNF5 dnf5daemon for transaction preview and apply
 - Remove the custom privileged transaction service
