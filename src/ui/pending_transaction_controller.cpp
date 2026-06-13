@@ -28,6 +28,17 @@ self_protected_transaction_message(const PackageRow &pkg)
 }
 
 // -----------------------------------------------------------------------------
+// Return the daemon-facing selector for package upgrades.
+// dnf5daemon upgrade() expects a package specification, not the available update NEVRA.
+// Use name.arch so multilib packages such as librsvg2.i686 and librsvg2.x86_64 stay distinct.
+// -----------------------------------------------------------------------------
+static std::string
+daemon_upgrade_spec_for_row(const PackageRow &pkg)
+{
+  return pkg.arch.empty() ? pkg.name : pkg.name + "." + pkg.arch;
+}
+
+// -----------------------------------------------------------------------------
 // Return true when pending actions must not be changed.
 // -----------------------------------------------------------------------------
 static bool
@@ -57,14 +68,12 @@ pending_transaction_on_install_button_clicked(GtkButton *, gpointer user_data)
     return;
   }
 
-  // Read the selected package from the current package table.
   PackageRow pkg;
   if (!package_table_get_selected_package_row(widgets, pkg)) {
     ui_helpers_set_status(widgets->query.status_label, _("No package selected."), "gray");
     return;
   }
 
-  // Resolve the package ID to queue before adding an install or upgrade action.
   PackageActionRows action_rows = package_action_rows_for_selection(pkg);
   if (!action_rows.has_install_row) {
     ui_helpers_set_status(widgets->query.status_label, _("No install or upgrade action is available."), "gray");
@@ -77,7 +86,6 @@ pending_transaction_on_install_button_clicked(GtkButton *, gpointer user_data)
     return;
   }
 
-  // Add or remove the pending install or upgrade action.
   PendingAction::Type action_type = action_rows.install_is_upgrade ? PendingAction::UPGRADE : PendingAction::INSTALL;
   PendingAction::Type existing_type;
   bool has_existing = pending_transaction_get_action_type(widgets, action_rows.install_row.nevra, existing_type);
@@ -87,16 +95,17 @@ pending_transaction_on_install_button_clicked(GtkButton *, gpointer user_data)
     pending_transaction_refresh_pending_tab(widgets);
     ui_helpers_set_status(widgets->query.status_label, (std::string(_("Unmarked: ")) + pkg.name).c_str(), "gray");
   } else {
-    // Replace any related pending action with install or upgrade.
     pending_transaction_remove_action(widgets, pkg.nevra);
     if (action_rows.has_installed_row) {
       pending_transaction_remove_action(widgets, action_rows.installed_row.nevra);
     }
     pending_transaction_remove_action(widgets, action_rows.install_row.nevra);
+
     std::string transaction_spec;
-    if (action_rows.install_is_upgrade && action_rows.has_installed_row) {
-      transaction_spec = action_rows.installed_row.nevra;
+    if (action_rows.install_is_upgrade) {
+      transaction_spec = daemon_upgrade_spec_for_row(action_rows.installed_row);
     }
+
     widgets->transaction.actions.push_back({ action_type, action_rows.install_row.nevra, transaction_spec });
     pending_transaction_refresh_pending_tab(widgets);
     const char *message = action_rows.install_is_upgrade ? _("Marked for upgrade: ") : _("Marked for install: ");
@@ -107,8 +116,6 @@ pending_transaction_on_install_button_clicked(GtkButton *, gpointer user_data)
   ui_helpers_update_action_button_labels_for_selection(
       widgets, action_rows.install_row.nevra, installed_nevra, installed_nevra, action_rows.install_is_upgrade);
   pending_transaction_invalidate_service_preview(widgets);
-
-  // Refresh status badges without rebuilding the package table.
   package_table_refresh_statuses(widgets);
 }
 
@@ -123,7 +130,6 @@ pending_transaction_on_remove_button_clicked(GtkButton *, gpointer user_data)
     return;
   }
 
-  // Read the selected package from the current package table.
   PackageRow pkg;
   if (!package_table_get_selected_package_row(widgets, pkg)) {
     ui_helpers_set_status(widgets->query.status_label, _("No package selected."), "gray");
@@ -131,9 +137,6 @@ pending_transaction_on_remove_button_clicked(GtkButton *, gpointer user_data)
   }
 
   PackageActionRows action_rows = package_action_rows_for_selection(pkg);
-
-  // Removal checks the installed row.
-  // Upgrade candidates use the currently installed NEVRA for removal.
   if (!action_rows.has_installed_row) {
     ui_helpers_set_status(widgets->query.status_label, _("Package is not installed."), "gray");
     return;
@@ -145,7 +148,6 @@ pending_transaction_on_remove_button_clicked(GtkButton *, gpointer user_data)
     return;
   }
 
-  // Add or remove the pending remove action.
   PendingAction::Type existing_type;
   bool has_existing = pending_transaction_get_action_type(widgets, action_rows.installed_row.nevra, existing_type);
 
@@ -154,7 +156,6 @@ pending_transaction_on_remove_button_clicked(GtkButton *, gpointer user_data)
     pending_transaction_refresh_pending_tab(widgets);
     ui_helpers_set_status(widgets->query.status_label, (std::string(_("Unmarked: ")) + pkg.name).c_str(), "gray");
   } else {
-    // Replace any other pending action with remove.
     pending_transaction_remove_action(widgets, pkg.nevra);
     if (action_rows.has_install_row) {
       pending_transaction_remove_action(widgets, action_rows.install_row.nevra);
@@ -173,8 +174,6 @@ pending_transaction_on_remove_button_clicked(GtkButton *, gpointer user_data)
                                                        action_rows.installed_row.nevra,
                                                        action_rows.install_is_upgrade);
   pending_transaction_invalidate_service_preview(widgets);
-
-  // Refresh status badges without rebuilding the package table.
   package_table_refresh_statuses(widgets);
 }
 
@@ -196,8 +195,6 @@ pending_transaction_on_reinstall_button_clicked(GtkButton *, gpointer user_data)
   }
 
   PackageActionRows action_rows = package_action_rows_for_selection(pkg);
-
-  // Reinstall must check the installed package, not the visible update row.
   if (!action_rows.has_installed_row) {
     ui_helpers_set_status(widgets->query.status_label, _("Package is not installed."), "gray");
     return;
@@ -241,7 +238,6 @@ pending_transaction_on_reinstall_button_clicked(GtkButton *, gpointer user_data)
                                                        action_rows.installed_row.nevra,
                                                        action_rows.install_is_upgrade);
   pending_transaction_invalidate_service_preview(widgets);
-
   package_table_refresh_statuses(widgets);
 }
 
@@ -265,8 +261,6 @@ pending_transaction_on_clear_pending_button_clicked(GtkButton *, gpointer user_d
   widgets->transaction.actions.clear();
   pending_transaction_invalidate_service_preview(widgets);
   pending_transaction_refresh_pending_tab(widgets);
-
-  // Refresh status badges without rebuilding the package table.
   package_table_refresh_statuses(widgets);
 
   std::string msg = dnfui_i18n_format_count(count, "Cleared %zu pending action.", "Cleared %zu pending actions.");
