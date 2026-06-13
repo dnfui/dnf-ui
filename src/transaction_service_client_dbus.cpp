@@ -27,6 +27,7 @@ namespace {
 constexpr const char *kDnfDaemonName = "org.rpm.dnf.v0";
 constexpr const char *kDnfDaemonManagerPath = "/org/rpm/dnf/v0";
 constexpr const char *kDnfDaemonSessionManagerInterface = "org.rpm.dnf.v0.SessionManager";
+constexpr const char *kDnfDaemonBaseInterface = "org.rpm.dnf.v0.Base";
 constexpr const char *kDnfDaemonRpmInterface = "org.rpm.dnf.v0.rpm.Rpm";
 constexpr const char *kDnfDaemonGoalInterface = "org.rpm.dnf.v0.Goal";
 constexpr const char *kRequiredDaemonServerPackage = "dnf5daemon-server";
@@ -311,6 +312,39 @@ daemon_transaction_problems(GDBusConnection *connection, const std::string &tran
 }
 
 bool
+read_daemon_repositories(GDBusConnection *connection, const std::string &transaction_path, std::string &error_out)
+{
+  GError *error = nullptr;
+  GVariant *reply = g_dbus_connection_call_sync(connection,
+                                                kDnfDaemonName,
+                                                transaction_path.c_str(),
+                                                kDnfDaemonBaseInterface,
+                                                "read_all_repos",
+                                                nullptr,
+                                                G_VARIANT_TYPE("(b)"),
+                                                G_DBUS_CALL_FLAGS_NONE,
+                                                -1,
+                                                nullptr,
+                                                &error);
+  if (!reply) {
+    error_out = error ? error->message : _("dnf5daemon could not load repository metadata.");
+    g_clear_error(&error);
+    return false;
+  }
+
+  gboolean success = FALSE;
+  g_variant_get(reply, "(b)", &success);
+  g_variant_unref(reply);
+
+  if (!success) {
+    error_out = _("dnf5daemon did not load repository metadata.");
+    return false;
+  }
+
+  return true;
+}
+
+bool
 mark_package_specs(GDBusConnection *connection,
                    const std::string &transaction_path,
                    const char *method,
@@ -420,6 +454,18 @@ open_daemon_session(GDBusConnection *connection, std::string &transaction_path_o
   return true;
 }
 
+bool
+release_opened_session(GDBusConnection *connection, std::string &transaction_path)
+{
+  if (transaction_path.empty()) {
+    return true;
+  }
+  std::string release_error;
+  bool ok = transaction_service_client_release_transaction_request(connection, transaction_path, release_error);
+  transaction_path.clear();
+  return ok;
+}
+
 } // namespace
 
 GDBusConnection *
@@ -468,13 +514,16 @@ transaction_service_client_start_transaction_request(GDBusConnection *connection
     return false;
   }
 
+  if (!read_daemon_repositories(connection, transaction_path_out, error_out)) {
+    release_opened_session(connection, transaction_path_out);
+    return false;
+  }
+
   if (!mark_package_specs(connection, transaction_path_out, "install", request.install, error_out) ||
       !mark_package_specs(connection, transaction_path_out, "upgrade", request.upgrade, error_out) ||
       !mark_package_specs(connection, transaction_path_out, "remove", request.remove, error_out) ||
       !mark_package_specs(connection, transaction_path_out, "reinstall", request.reinstall, error_out)) {
-    std::string release_error;
-    transaction_service_client_release_transaction_request(connection, transaction_path_out, release_error);
-    transaction_path_out.clear();
+    release_opened_session(connection, transaction_path_out);
     return false;
   }
 
@@ -499,18 +548,19 @@ transaction_service_client_start_upgrade_all_transaction_request(GDBusConnection
     return false;
   }
 
+  if (!read_daemon_repositories(connection, transaction_path_out, error_out)) {
+    release_opened_session(connection, transaction_path_out);
+    return false;
+  }
+
   std::vector<std::string> upgrade_specs;
   if (!upgrade_all_specs(upgrade_specs, error_out)) {
-    std::string release_error;
-    transaction_service_client_release_transaction_request(connection, transaction_path_out, release_error);
-    transaction_path_out.clear();
+    release_opened_session(connection, transaction_path_out);
     return false;
   }
 
   if (!mark_package_specs(connection, transaction_path_out, "upgrade", upgrade_specs, error_out)) {
-    std::string release_error;
-    transaction_service_client_release_transaction_request(connection, transaction_path_out, release_error);
-    transaction_path_out.clear();
+    release_opened_session(connection, transaction_path_out);
     return false;
   }
 
