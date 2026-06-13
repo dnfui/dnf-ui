@@ -14,6 +14,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <exception>
 #include <mutex>
 #include <set>
 #include <sstream>
@@ -23,19 +24,11 @@
 
 namespace {
 
-// -----------------------------------------------------------------------------
-// D-Bus names from Fedora dnf5daemon.
-// Keep these in sync with the external API assumptions document.
-// -----------------------------------------------------------------------------
 constexpr const char *kDnfDaemonName = "org.rpm.dnf.v0";
 constexpr const char *kDnfDaemonManagerPath = "/org/rpm/dnf/v0";
 constexpr const char *kDnfDaemonSessionManagerInterface = "org.rpm.dnf.v0.SessionManager";
 constexpr const char *kDnfDaemonRpmInterface = "org.rpm.dnf.v0.rpm.Rpm";
 constexpr const char *kDnfDaemonGoalInterface = "org.rpm.dnf.v0.Goal";
-
-// -----------------------------------------------------------------------------
-// DNF UI needs this package for future transaction previews and applies.
-// -----------------------------------------------------------------------------
 constexpr const char *kRequiredDaemonServerPackage = "dnf5daemon-server";
 
 struct TransactionServiceConnectionCache {
@@ -44,10 +37,6 @@ struct TransactionServiceConnectionCache {
   std::set<std::string> allow_erasing_sessions;
 };
 
-// -----------------------------------------------------------------------------
-// Return the process-local cache that keeps daemon sessions alive.
-// dnf5daemon sessions are tied to the D-Bus connection that created them.
-// -----------------------------------------------------------------------------
 TransactionServiceConnectionCache &
 get_transaction_service_connection_cache()
 {
@@ -55,9 +44,6 @@ get_transaction_service_connection_cache()
   return cache;
 }
 
-// -----------------------------------------------------------------------------
-// Return an empty options map for dnf5daemon methods.
-// -----------------------------------------------------------------------------
 GVariant *
 empty_options()
 {
@@ -66,10 +52,6 @@ empty_options()
   return g_variant_new("a{sv}", &options);
 }
 
-// -----------------------------------------------------------------------------
-// Return resolve options for one daemon session.
-// Remove requests need allow_erasing so dependency removals match normal DNF behavior.
-// -----------------------------------------------------------------------------
 GVariant *
 resolve_options(const std::string &transaction_path)
 {
@@ -88,9 +70,6 @@ resolve_options(const std::string &transaction_path)
   return g_variant_new("a{sv}", &options);
 }
 
-// -----------------------------------------------------------------------------
-// Remember whether a daemon session needs allow_erasing during resolve.
-// -----------------------------------------------------------------------------
 void
 remember_allow_erasing_session(const std::string &transaction_path, bool allow_erasing)
 {
@@ -103,9 +82,6 @@ remember_allow_erasing_session(const std::string &transaction_path, bool allow_e
   cache.allow_erasing_sessions.insert(transaction_path);
 }
 
-// -----------------------------------------------------------------------------
-// Forget local state for a daemon session after it is closed.
-// -----------------------------------------------------------------------------
 void
 forget_daemon_session(const std::string &transaction_path)
 {
@@ -114,9 +90,6 @@ forget_daemon_session(const std::string &transaction_path)
   cache.allow_erasing_sessions.erase(transaction_path);
 }
 
-// -----------------------------------------------------------------------------
-// Return dnf5daemon method parameters for package spec methods.
-// -----------------------------------------------------------------------------
 GVariant *
 package_specs_parameters(const std::vector<std::string> &specs)
 {
@@ -132,9 +105,6 @@ package_specs_parameters(const std::vector<std::string> &specs)
   return g_variant_new("(asa{sv})", &specs_builder, &options);
 }
 
-// -----------------------------------------------------------------------------
-// Return dnf5daemon transaction options for an interactive apply.
-// -----------------------------------------------------------------------------
 GVariant *
 apply_options_parameters()
 {
@@ -144,10 +114,6 @@ apply_options_parameters()
   return g_variant_new("(a{sv})", &options);
 }
 
-// -----------------------------------------------------------------------------
-// Return true when D-Bus reports that dnf5daemon is missing or cannot start.
-// Other daemon errors are kept unchanged so useful details are not hidden.
-// -----------------------------------------------------------------------------
 bool
 daemon_is_unavailable_error(GError *error)
 {
@@ -162,19 +128,12 @@ daemon_is_unavailable_error(GError *error)
       g_error_matches(error, G_DBUS_ERROR, G_DBUS_ERROR_SPAWN_SERVICE_NOT_FOUND);
 }
 
-// -----------------------------------------------------------------------------
-// Return true when D-Bus rejects access to the daemon service.
-// This can happen if the daemon package or its policy is broken.
-// -----------------------------------------------------------------------------
 bool
 daemon_is_access_denied_error(GError *error)
 {
   return error && g_error_matches(error, G_DBUS_ERROR, G_DBUS_ERROR_ACCESS_DENIED);
 }
 
-// -----------------------------------------------------------------------------
-// Convert one string to lower case for daemon enum matching.
-// -----------------------------------------------------------------------------
 std::string
 ascii_lower(std::string value)
 {
@@ -183,9 +142,6 @@ ascii_lower(std::string value)
   return value;
 }
 
-// -----------------------------------------------------------------------------
-// Read one string field from a daemon object map.
-// -----------------------------------------------------------------------------
 std::string
 map_lookup_string(GVariant *map, const char *key)
 {
@@ -196,9 +152,6 @@ map_lookup_string(GVariant *map, const char *key)
   return "";
 }
 
-// -----------------------------------------------------------------------------
-// Read one signed size field from a daemon object map.
-// -----------------------------------------------------------------------------
 long long
 map_lookup_int64(GVariant *map, const char *key)
 {
@@ -229,10 +182,6 @@ map_lookup_int64(GVariant *map, const char *key)
   return 0;
 }
 
-// -----------------------------------------------------------------------------
-// Build the user-facing error shown when dnf5daemon cannot apply a preview.
-// The daemon message is kept because it often contains the real failure reason.
-// -----------------------------------------------------------------------------
 std::string
 daemon_apply_error_message(GError *error)
 {
@@ -247,9 +196,6 @@ daemon_apply_error_message(GError *error)
   return message;
 }
 
-// -----------------------------------------------------------------------------
-// Build the package label used by the existing preview dialog.
-// -----------------------------------------------------------------------------
 std::string
 package_label_from_daemon_object(GVariant *object)
 {
@@ -268,10 +214,6 @@ package_label_from_daemon_object(GVariant *object)
   return label.str();
 }
 
-// -----------------------------------------------------------------------------
-// Add one daemon transaction item to the preview model.
-// Unknown actions fail the whole preview so the dialog never hides work.
-// -----------------------------------------------------------------------------
 bool
 append_daemon_preview_item(TransactionPreview &preview,
                            const std::string &object_type,
@@ -288,7 +230,6 @@ append_daemon_preview_item(TransactionPreview &preview,
   const std::string name = map_lookup_string(object, "name");
   const std::string lower_action = ascii_lower(action);
 
-  // NOTE: Without dnf5daemon-server, DNF UI cannot apply future package changes.
   if (lower_action == "remove" && name == kRequiredDaemonServerPackage) {
     error_out = _("This transaction would remove dnf5daemon-server, which DNF UI needs to apply package changes.");
     return false;
@@ -330,9 +271,6 @@ append_daemon_preview_item(TransactionPreview &preview,
   return false;
 }
 
-// -----------------------------------------------------------------------------
-// Ask dnf5daemon for human-readable resolver problems.
-// -----------------------------------------------------------------------------
 std::string
 daemon_transaction_problems(GDBusConnection *connection, const std::string &transaction_path)
 {
@@ -372,9 +310,6 @@ daemon_transaction_problems(GDBusConnection *connection, const std::string &tran
   return out.str();
 }
 
-// -----------------------------------------------------------------------------
-// Call one dnf5daemon method that marks package specs for the session.
-// -----------------------------------------------------------------------------
 bool
 mark_package_specs(GDBusConnection *connection,
                    const std::string &transaction_path,
@@ -408,9 +343,34 @@ mark_package_specs(GDBusConnection *connection,
   return true;
 }
 
-// -----------------------------------------------------------------------------
-// Open one dnf5daemon session and return its object path.
-// -----------------------------------------------------------------------------
+std::string
+daemon_upgrade_spec_for_row(const PackageRow &row)
+{
+  return row.arch.empty() ? row.name : row.name + "." + row.arch;
+}
+
+bool
+upgrade_all_specs(std::vector<std::string> &specs_out, std::string &error_out)
+{
+  specs_out.clear();
+  error_out.clear();
+
+  try {
+    std::vector<PackageRow> upgrades = dnf_backend_get_upgradeable_package_rows_interruptible(nullptr);
+    specs_out.reserve(upgrades.size());
+    for (const auto &row : upgrades) {
+      specs_out.push_back(daemon_upgrade_spec_for_row(row));
+    }
+    return true;
+  } catch (const std::exception &e) {
+    error_out = e.what();
+    return false;
+  } catch (...) {
+    error_out = _("Could not list upgrade candidates.");
+    return false;
+  }
+}
+
 bool
 open_daemon_session(GDBusConnection *connection, std::string &transaction_path_out, std::string &error_out)
 {
@@ -458,9 +418,6 @@ open_daemon_session(GDBusConnection *connection, std::string &transaction_path_o
 
 } // namespace
 
-// -----------------------------------------------------------------------------
-// Connect to the system D-Bus used by dnf5daemon.
-// -----------------------------------------------------------------------------
 GDBusConnection *
 transaction_service_client_connect(std::string &error_out)
 {
@@ -486,13 +443,9 @@ transaction_service_client_connect(std::string &error_out)
   }
 
   cache.connection = G_DBUS_CONNECTION(g_object_ref(connection));
-
   return connection;
 }
 
-// -----------------------------------------------------------------------------
-// Start a dnf5daemon transaction session and mark selected package actions.
-// -----------------------------------------------------------------------------
 bool
 transaction_service_client_start_transaction_request(GDBusConnection *connection,
                                                      const TransactionRequest &request,
@@ -512,6 +465,7 @@ transaction_service_client_start_transaction_request(GDBusConnection *connection
   }
 
   if (!mark_package_specs(connection, transaction_path_out, "install", request.install, error_out) ||
+      !mark_package_specs(connection, transaction_path_out, "upgrade", request.upgrade, error_out) ||
       !mark_package_specs(connection, transaction_path_out, "remove", request.remove, error_out) ||
       !mark_package_specs(connection, transaction_path_out, "reinstall", request.reinstall, error_out)) {
     std::string release_error;
@@ -524,9 +478,6 @@ transaction_service_client_start_transaction_request(GDBusConnection *connection
   return true;
 }
 
-// -----------------------------------------------------------------------------
-// Start a dnf5daemon upgrade-all session.
-// -----------------------------------------------------------------------------
 bool
 transaction_service_client_start_upgrade_all_transaction_request(GDBusConnection *connection,
                                                                  std::string &transaction_path_out,
@@ -544,36 +495,24 @@ transaction_service_client_start_upgrade_all_transaction_request(GDBusConnection
     return false;
   }
 
-  // dnf5daemon treats an empty upgrade list as native Upgrade All.
   std::vector<std::string> upgrade_specs;
-  GError *error = nullptr;
-  GVariant *reply = g_dbus_connection_call_sync(connection,
-                                                kDnfDaemonName,
-                                                transaction_path_out.c_str(),
-                                                kDnfDaemonRpmInterface,
-                                                "upgrade",
-                                                package_specs_parameters(upgrade_specs),
-                                                nullptr,
-                                                G_DBUS_CALL_FLAGS_NONE,
-                                                -1,
-                                                nullptr,
-                                                &error);
-  if (!reply) {
-    error_out = error ? error->message : _("Could not mark upgrade-all in dnf5daemon.");
-    g_clear_error(&error);
+  if (!upgrade_all_specs(upgrade_specs, error_out)) {
     std::string release_error;
     transaction_service_client_release_transaction_request(connection, transaction_path_out, release_error);
     transaction_path_out.clear();
     return false;
   }
 
-  g_variant_unref(reply);
+  if (!mark_package_specs(connection, transaction_path_out, "upgrade", upgrade_specs, error_out)) {
+    std::string release_error;
+    transaction_service_client_release_transaction_request(connection, transaction_path_out, release_error);
+    transaction_path_out.clear();
+    return false;
+  }
+
   return true;
 }
 
-// -----------------------------------------------------------------------------
-// Resolve one prepared dnf5daemon session into the existing preview model.
-// -----------------------------------------------------------------------------
 bool
 transaction_service_client_get_transaction_preview(GDBusConnection *connection,
                                                    const std::string &transaction_path,
@@ -648,10 +587,6 @@ transaction_service_client_get_transaction_preview(GDBusConnection *connection,
   return true;
 }
 
-// -----------------------------------------------------------------------------
-// Apply the resolved dnf5daemon transaction.
-// The caller must have subscribed to progress signals before this is called.
-// -----------------------------------------------------------------------------
 bool
 transaction_service_client_start_apply_request(GDBusConnection *connection,
                                                const std::string &transaction_path,
@@ -708,9 +643,6 @@ transaction_service_client_start_apply_request(GDBusConnection *connection,
   return true;
 }
 
-// -----------------------------------------------------------------------------
-// Close a dnf5daemon session that is no longer needed by the GUI.
-// -----------------------------------------------------------------------------
 bool
 transaction_service_client_release_transaction_request(GDBusConnection *connection,
                                                        const std::string &transaction_path,
@@ -749,9 +681,6 @@ transaction_service_client_release_transaction_request(GDBusConnection *connecti
 }
 
 #ifdef DNFUI_BUILD_TESTS
-// -----------------------------------------------------------------------------
-// Close the cached daemon connection between tests.
-// -----------------------------------------------------------------------------
 void
 transaction_service_client_reset_for_tests()
 {
@@ -766,10 +695,6 @@ transaction_service_client_reset_for_tests()
   cache.allow_erasing_sessions.clear();
 }
 
-// -----------------------------------------------------------------------------
-// Return true when dnf5daemon still exposes one session path.
-// Tests use this to verify that release code does not leave old sessions behind.
-// -----------------------------------------------------------------------------
 bool
 transaction_service_client_session_exists_for_tests(const std::string &transaction_path)
 {
