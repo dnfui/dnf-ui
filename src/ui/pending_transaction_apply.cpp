@@ -6,6 +6,7 @@
 // -----------------------------------------------------------------------------
 #include "pending_transaction_apply.hpp"
 
+#include "debug_trace.hpp"
 #include "dnf_backend/dnf_backend.hpp"
 #include "i18n.hpp"
 #include "package_query_controller.hpp"
@@ -334,6 +335,11 @@ start_preview_request(SearchWidgets *widgets, TransactionRequest request)
 {
   pending_transaction_invalidate_service_preview(widgets);
   widgets->transaction.preview_upgrade_all = request.upgrade_all;
+  DNFUI_TRACE("Transaction preview request start upgrade_all=%d install=%zu remove=%zu reinstall=%zu",
+              request.upgrade_all ? 1 : 0,
+              request.install.size(),
+              request.remove.size(),
+              request.reinstall.size());
   ui_helpers_set_status(widgets->query.status_label, _("Preparing transaction preview..."), "blue");
   widgets_spinner_acquire(widgets->query.spinner);
   set_preview_request_busy_state(widgets, true);
@@ -360,6 +366,7 @@ start_preview_request(SearchWidgets *widgets, TransactionRequest request)
         if (!success || !td) {
           const char *status_message =
               error && error->message ? error->message : _("Unable to prepare transaction preview.");
+          DNFUI_TRACE("Transaction preview request failed error=%s", status_message);
           widgets->transaction.preview_upgrade_all = false;
           ui_helpers_set_status(widgets->query.status_label, status_message, "red");
           transaction_review_show_error_dialog(widgets,
@@ -373,6 +380,12 @@ start_preview_request(SearchWidgets *widgets, TransactionRequest request)
         }
 
         if (td->preview.empty()) {
+          DNFUI_TRACE("Transaction preview request empty upgrade_all=%d install=%zu remove=%zu reinstall=%zu path=%s",
+                      td->request.upgrade_all ? 1 : 0,
+                      td->request.install.size(),
+                      td->request.remove.size(),
+                      td->request.reinstall.size(),
+                      td->transaction_path.c_str());
           if (!td->transaction_path.empty()) {
             transaction_service_client_release_request_async(td->transaction_path);
             td->transaction_path.clear();
@@ -386,6 +399,9 @@ start_preview_request(SearchWidgets *widgets, TransactionRequest request)
         widgets->transaction.preview_transaction_path = td->transaction_path;
         widgets->transaction.preview_upgrade_all = td->request.upgrade_all;
         td->transaction_path_transferred = true;
+        DNFUI_TRACE("Transaction preview request ready upgrade_all=%d path=%s",
+                    td->request.upgrade_all ? 1 : 0,
+                    widgets->transaction.preview_transaction_path.c_str());
         transaction_review_show_summary_dialog(
             widgets, td->preview, start_apply_transaction, pending_transaction_invalidate_service_preview);
       });
@@ -397,12 +413,18 @@ start_preview_request(SearchWidgets *widgets, TransactionRequest request)
         std::string error;
         bool ok = false;
         if (td && td->request.upgrade_all) {
+          DNFUI_TRACE("Transaction preview worker start upgrade_all=1");
           ok = transaction_service_client_preview_upgrade_all_request(td->preview, td->transaction_path, error);
         } else if (td) {
+          DNFUI_TRACE("Transaction preview worker start upgrade_all=0 install=%zu remove=%zu reinstall=%zu",
+                      td->request.install.size(),
+                      td->request.remove.size(),
+                      td->request.reinstall.size());
           ok = transaction_service_client_preview_request(td->request, td->preview, td->transaction_path, error);
         }
 
         if (!ok) {
+          DNFUI_TRACE("Transaction preview worker failed error=%s", error.c_str());
           g_task_return_new_error(task,
                                   G_IO_ERROR,
                                   G_IO_ERROR_FAILED,
@@ -411,6 +433,9 @@ start_preview_request(SearchWidgets *widgets, TransactionRequest request)
           return;
         }
 
+        DNFUI_TRACE("Transaction preview worker done path=%s empty=%d",
+                    td ? td->transaction_path.c_str() : "",
+                    td && td->preview.empty() ? 1 : 0);
         g_task_return_boolean(task, TRUE);
       });
 

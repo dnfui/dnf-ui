@@ -175,6 +175,7 @@ static void
 expire_repository_metadata_cache(libdnf5::Base &base)
 {
   const std::filesystem::path cachedir { base.get_config().get_cachedir_option().get_value() };
+  DNFUI_TRACE("BaseManager repository cache expiration start cachedir=%s", cachedir.string().c_str());
 
   // Expiring the cache makes the next repo load check whether repository metadata needs to be refreshed.
   std::error_code iter_error;
@@ -211,6 +212,7 @@ expire_repository_metadata_cache(libdnf5::Base &base)
     try {
       libdnf5::repo::RepoCache cache(base.get_weak_ptr(), dir_entry.path());
       cache.write_attribute(libdnf5::repo::RepoCache::ATTRIBUTE_EXPIRED);
+      DNFUI_TRACE("BaseManager marked repository cache expired path=%s", path.c_str());
     } catch (const std::exception &e) {
       // Keep going. A failed expire attempt should not make the app unusable.
       // The following repo load can still succeed, or the existing fallback
@@ -269,6 +271,8 @@ build_base_for_mode(RepoLoadMode mode,
                     const std::shared_ptr<std::atomic<bool>> &cancel_requested)
 {
   BuiltBase result;
+  DNFUI_TRACE(
+      "BaseManager build base start mode=%d refresh=%d", static_cast<int>(mode), static_cast<int>(refresh_mode));
   throw_if_rebuild_cancelled(cancel_requested);
   result.base = create_configured_base(mode, load_changelog_metadata);
   if (cancel_requested) {
@@ -287,7 +291,8 @@ build_base_for_mode(RepoLoadMode mode,
   } else if (mode == RepoLoadMode::SYSTEM_ONLY) {
     result.repo_state = BaseRepoState::INSTALLED_ONLY;
   }
-  DNFUI_TRACE("BaseManager initialize done");
+  DNFUI_TRACE(
+      "BaseManager initialize done mode=%d state=%d", static_cast<int>(mode), static_cast<int>(result.repo_state));
   return result;
 }
 
@@ -304,6 +309,7 @@ build_base_with_offline_fallback(bool load_changelog_metadata = false,
     return build_base_for_mode(RepoLoadMode::FULL, load_changelog_metadata, refresh_mode, cancel_requested);
   } catch (const BaseOperationCancelled &) {
     // Stop is not a repo load failure. Do not continue into fallback modes.
+    DNFUI_TRACE("BaseManager live repo load stopped before fallback");
     throw;
   } catch (const std::exception &repo_error) {
     throw_if_rebuild_cancelled(cancel_requested);
@@ -317,6 +323,7 @@ build_base_with_offline_fallback(bool load_changelog_metadata = false,
           RepoLoadMode::CACHE_ONLY_METADATA, load_changelog_metadata, BaseRefreshMode::NORMAL, cancel_requested);
     } catch (const BaseOperationCancelled &) {
       // Stop is not a cache load failure. Do not continue into fallback modes.
+      DNFUI_TRACE("BaseManager cached repo load stopped before fallback");
       throw;
     } catch (const std::exception &cache_error) {
       throw_if_rebuild_cancelled(cancel_requested);
@@ -328,6 +335,7 @@ build_base_with_offline_fallback(bool load_changelog_metadata = false,
             RepoLoadMode::SYSTEM_ONLY, load_changelog_metadata, BaseRefreshMode::NORMAL, cancel_requested);
       } catch (const BaseOperationCancelled &) {
         // Stop is not a system load failure.
+        DNFUI_TRACE("BaseManager system-only load stopped");
         throw;
       } catch (const std::exception &fallback_error) {
         throw std::runtime_error(
