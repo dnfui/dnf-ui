@@ -93,6 +93,24 @@ forward_progress_line(TransactionServiceProgressForwarder *forwarder, const std:
 }
 
 // -----------------------------------------------------------------------------
+// Return the package text that belongs to one daemon download id.
+// -----------------------------------------------------------------------------
+std::string
+download_description(TransactionServiceProgressForwarder *forwarder, const std::string &download_id)
+{
+  if (!forwarder || download_id.empty()) {
+    return {};
+  }
+
+  auto it = forwarder->download_description_by_id.find(download_id);
+  if (it == forwarder->download_description_by_id.end()) {
+    return {};
+  }
+
+  return it->second;
+}
+
+// -----------------------------------------------------------------------------
 // Receive one dnf5daemon progress signal and convert it to a user-facing line.
 // -----------------------------------------------------------------------------
 void
@@ -117,7 +135,11 @@ on_transaction_progress_signal(GDBusConnection *,
   }
 
   if (signal == "download_add_new") {
+    std::string download_id = variant_child_text(parameters, 1);
     std::string description = variant_child_text(parameters, 2);
+    if (!download_id.empty() && !description.empty()) {
+      forwarder->download_description_by_id[download_id] = description;
+    }
     if (!description.empty()) {
       forward_progress_line(forwarder, std::string(_("Downloading: ")) + description);
     }
@@ -143,8 +165,11 @@ on_transaction_progress_signal(GDBusConnection *,
     }
 
     it->second = bucket;
+    std::string description = download_description(forwarder, download_id);
     forward_progress_line(forwarder,
-                          std::string(_("Download progress: ")) + download_id + " (" + std::to_string(percent) + "%)");
+                          std::string(_("Download progress: ")) +
+                              (description.empty() ? _("package download") : description) + " (" +
+                              std::to_string(percent) + "%)");
     return;
   }
 
@@ -161,7 +186,10 @@ on_transaction_progress_signal(GDBusConnection *,
       std::string message = variant_child_text(parameters, 3);
       forward_progress_line(forwarder, message.empty() ? _("Package download failed.") : message);
     } else if (!download_id.empty()) {
-      forward_progress_line(forwarder, std::string(_("Download ready: ")) + download_id);
+      std::string description = download_description(forwarder, download_id);
+      if (!description.empty()) {
+        forward_progress_line(forwarder, std::string(_("Download ready: ")) + description);
+      }
     }
     return;
   }
