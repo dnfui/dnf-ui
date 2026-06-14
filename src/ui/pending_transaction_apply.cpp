@@ -20,12 +20,17 @@
 #include "widgets.hpp"
 #include "widgets_internal.hpp"
 
+#include <condition_variable>
+#include <memory>
+#include <mutex>
+#include <sstream>
 #include <utility>
 
 // Data owned by the apply task.
 // The worker uses transaction_path to call the service, and progress_window receives text lines while the service
 // applies.
 struct ApplyTaskData {
+  SearchWidgets *widgets = nullptr;
   std::string transaction_path;
   TransactionProgressWindow *progress_window;
 };
@@ -37,6 +42,19 @@ struct PreviewTaskData {
   std::string transaction_path;
   bool transaction_path_transferred = false;
 };
+
+struct KeyImportPromptState {
+  SearchWidgets *widgets = nullptr;
+  TransactionKeyImportRequest request;
+  std::mutex mutex;
+  std::condition_variable condition;
+  bool done = false;
+  bool accepted = false;
+};
+
+using KeyImportPromptStatePtr = std::shared_ptr<KeyImportPromptState>;
+
+constexpr const char *kKeyImportPromptStateKey = "dnfui-key-import-prompt-state";
 
 // -----------------------------------------------------------------------------
 // Free data owned by one apply task.
@@ -70,6 +88,213 @@ preview_task_data_free(gpointer p)
     transaction_service_client_release_request_async(d->transaction_path);
   }
   delete d;
+}
+
+// -----------------------------------------------------------------------------
+// Return repository key identities as text for the key import prompt.
+// -----------------------------------------------------------------------------
+static std::string
+key_import_user_ids_text(const std::vector<std::string> &user_ids)
+{
+  std::ostringstream out;
+  for (const auto &user_id : user_ids) {
+    if (user_id.empty()) {
+      continue;
+    }
+    if (out.tellp() > 0) {
+      out << "\n";
+    }
+    out << user_id;
+  }
+
+  return out.str();
+}
+
+// -----------------------------------------------------------------------------
+// Finish the key import prompt and wake the apply worker.
+// -----------------------------------------------------------------------------
+static void
+finish_key_import_prompt(GtkWindow *dialog, bool accepted)
+{
+  KeyImportPromptStatePtr state;
+  if (dialog) {
+    auto *stored =
+        static_cast<KeyImportPromptStatePtr *>(g_object_get_data(G_OBJECT(dialog), kKeyImportPromptStateKey));
+    if (stored) {
+      state = *stored;
+    }
+  }
+
+  if (state) {
+    std::lock_guard<std::mutex> lock(state->mutex);
+    if (!state->done) {
+      state->accepted = accepted;
+      state->done = true;
+      state->condition.notify_one();
+    }
+  }
+
+  if (dialog) {
+    gtk_window_destroy(dialog);
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Show the repository key import prompt on the GTK thread.
+// -----------------------------------------------------------------------------
+static gboolean
+show_key_import_prompt_on_main(gpointer user_data)
+{
+  std::unique_ptr<KeyImportPromptStatePtr> holder(static_cast<KeyImportPromptStatePtr *>(user_data));
+  KeyImportPromptStatePtr state = holder ? *holder : nullptr;
+  if (!state || !state->widgets || state->widgets->window_state.destroyed) {
+    if (state) {
+      std::lock_guard<std::mutex> lock(state->mutex);
+      state->done = true;
+      state->accepted = false;
+      state->condition.notify_one();
+    }
+    return G_SOURCE_REMOVE;
+  }
+
+  GtkWindow *dialog = GTK_WINDOW(gtk_window_new());
+  gtk_window_set_title(dialog, _("Repository Signing Key"));
+  gtk_window_set_default_size(dialog, 620, 360);
+  gtk_window_set_modal(dialog, TRUE);
+
+  GtkRoot *root = gtk_widget_get_root(GTK_WIDGET(state->widgets->query.entry));
+  if (root && GTK_IS_WINDOW(root)) {
+    GtkWindow *parent = GTK_WINDOW(root);
+    if (GtkApplication *app = gtk_window_get_application(parent)) {
+      gtk_window_set_application(dialog, app);
+    }
+    gtk_window_set_transient_for(dialog, parent);
+  }
+
+  auto *dialog_state = new KeyImportPromptStatePtr(state);
+  g_object_set_data_full(G_OBJECT(dialog), kKeyImportPromptStateKey, dialog_state, [](gpointer p) {
+    delete static_cast<KeyImportPromptStatePtr *>(p);
+  });
+
+  GtkWidget *outer = gtk_box_new(GTK_ORIENTATION_VERTICAL, 12);
+  gtk_widget_set_margin_start(outer, 12);
+  gtk_widget_set_margin_end(outer, 12);
+  gtk_widget_set_margin_top(outer, 12);
+  gtk_widget_set_margin_bottom(outer, 12);
+  gtk_window_set_child(dialog, outer);
+
+  GtkWidget *title = gtk_label_new(nullptr);
+  gchar *title_markup = g_markup_printf_escaped("<b>%s</b>", _("Trust this repository signing key?"));
+  gtk_label_set_markup(GTK_LABEL(title), title_markup);
+  g_free(title_markup);
+  gtk_label_set_xalign(GTK_LABEL(title), 0.0f);
+  gtk_box_append(GTK_BOX(outer), title);
+
+  GtkWidget *intro = gtk_label_new(_("The repository cannot be used until its signing key is trusted."));
+  gtk_label_set_xalign(GTK_LABEL(intro), 0.0f);
+  gtk_label_set_wrap(GTK_LABEL(intro), TRUE);
+  gtk_box_append(GTK_BOX(outer), intro);
+
+  GtkWidget *details = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
+  gtk_box_append(GTK_BOX(outer), details);
+
+  auto append_detail = [&](const char *label, const std::string &value) {
+    if (value.empty()) {
+      return;
+    }
+
+    GtkWidget *row = gtk_box_new(GTK_ORIENTATION_VERTICAL, 2);
+    gtk_box_append(GTK_BOX(details), row);
+
+    GtkWidget *heading = gtk_label_new(nullptr);
+    gchar *markup = g_markup_printf_escaped("<b>%s</b>", label);
+    gtk_label_set_markup(GTK_LABEL(heading), markup);
+    g_free(markup);
+    gtk_label_set_xalign(GTK_LABEL(heading), 0.0f);
+    gtk_box_append(GTK_BOX(row), heading);
+
+    GtkWidget *text = gtk_label_new(value.c_str());
+    gtk_label_set_xalign(GTK_LABEL(text), 0.0f);
+    gtk_label_set_wrap(GTK_LABEL(text), TRUE);
+    gtk_label_set_selectable(GTK_LABEL(text), TRUE);
+    gtk_widget_set_focusable(text, FALSE);
+    gtk_box_append(GTK_BOX(row), text);
+  };
+
+  append_detail(_("Key ID"), state->request.key_id);
+  append_detail(_("Fingerprint"), state->request.fingerprint);
+  append_detail(_("Repository"), key_import_user_ids_text(state->request.user_ids));
+  append_detail(_("Key URL"), state->request.key_url);
+
+  GtkWidget *button_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+  gtk_widget_set_halign(button_box, GTK_ALIGN_END);
+  gtk_box_append(GTK_BOX(outer), button_box);
+
+  GtkWidget *reject_button = gtk_button_new_with_label(_("Reject"));
+  gtk_box_append(GTK_BOX(button_box), reject_button);
+
+  GtkWidget *trust_button = gtk_button_new_with_label(_("Trust Key"));
+  gtk_widget_add_css_class(trust_button, "suggested-action");
+  gtk_box_append(GTK_BOX(button_box), trust_button);
+
+  g_signal_connect(reject_button,
+                   "clicked",
+                   G_CALLBACK(+[](GtkButton *button, gpointer) {
+                     GtkRoot *root = gtk_widget_get_root(GTK_WIDGET(button));
+                     if (root && GTK_IS_WINDOW(root)) {
+                       finish_key_import_prompt(GTK_WINDOW(root), false);
+                     }
+                   }),
+                   nullptr);
+
+  g_signal_connect(trust_button,
+                   "clicked",
+                   G_CALLBACK(+[](GtkButton *button, gpointer) {
+                     GtkRoot *root = gtk_widget_get_root(GTK_WIDGET(button));
+                     if (root && GTK_IS_WINDOW(root)) {
+                       finish_key_import_prompt(GTK_WINDOW(root), true);
+                     }
+                   }),
+                   nullptr);
+
+  g_signal_connect(dialog,
+                   "destroy",
+                   G_CALLBACK(+[](GtkWidget *widget, gpointer) {
+                     auto *stored = static_cast<KeyImportPromptStatePtr *>(
+                         g_object_get_data(G_OBJECT(widget), kKeyImportPromptStateKey));
+                     KeyImportPromptStatePtr state = stored ? *stored : nullptr;
+                     if (!state) {
+                       return;
+                     }
+
+                     std::lock_guard<std::mutex> lock(state->mutex);
+                     if (!state->done) {
+                       state->accepted = false;
+                       state->done = true;
+                       state->condition.notify_one();
+                     }
+                   }),
+                   nullptr);
+
+  gtk_window_present(dialog);
+  return G_SOURCE_REMOVE;
+}
+
+// -----------------------------------------------------------------------------
+// Ask the user whether the daemon may import a repository signing key.
+// -----------------------------------------------------------------------------
+static bool
+confirm_repository_key_import(SearchWidgets *widgets, const TransactionKeyImportRequest &request)
+{
+  auto state = std::make_shared<KeyImportPromptState>();
+  state->widgets = widgets;
+  state->request = request;
+
+  g_main_context_invoke(nullptr, show_key_import_prompt_on_main, new KeyImportPromptStatePtr(state));
+
+  std::unique_lock<std::mutex> lock(state->mutex);
+  state->condition.wait(lock, [&]() { return state->done; });
+  return state->accepted;
 }
 
 // -----------------------------------------------------------------------------
@@ -242,6 +467,7 @@ start_apply_transaction(SearchWidgets *widgets)
   pending_transaction_set_preview_controls_sensitive(widgets, false);
 
   ApplyTaskData *td = new ApplyTaskData;
+  td->widgets = widgets;
   // Apply now owns this dnf5daemon session path.
   // Pending action changes must not release it while the daemon is applying the transaction.
   td->transaction_path = std::move(widgets->transaction.preview_transaction_path);
@@ -315,6 +541,9 @@ start_apply_transaction(SearchWidgets *widgets)
         bool ok = transaction_service_client_apply_started_request(
             td->transaction_path,
             [td](const std::string &message) { transaction_progress_append(td->progress_window, message); },
+            [td](const TransactionKeyImportRequest &request) {
+              return confirm_repository_key_import(td->widgets, request);
+            },
             err);
         if (ok) {
           g_task_return_boolean(t, TRUE);

@@ -8,9 +8,20 @@
 
 #include <functional>
 #include <string>
+#include <vector>
 
 struct TransactionRequest;
 struct TransactionPreview;
+
+struct TransactionKeyImportRequest {
+  std::string key_id;
+  std::vector<std::string> user_ids;
+  std::string fingerprint;
+  std::string key_url;
+  unsigned long long timestamp = 0;
+};
+
+using TransactionKeyImportCallback = std::function<bool(const TransactionKeyImportRequest &)>;
 
 // -----------------------------------------------------------------------------
 // Prepare one transaction through dnf5daemon and return its resolved preview.
@@ -31,6 +42,7 @@ bool transaction_service_client_preview_upgrade_all_request(TransactionPreview &
 // -----------------------------------------------------------------------------
 bool transaction_service_client_apply_started_request(const std::string &transaction_path,
                                                       const std::function<void(const std::string &)> &progress_callback,
+                                                      const TransactionKeyImportCallback &key_import_callback,
                                                       std::string &error_out);
 
 // -----------------------------------------------------------------------------

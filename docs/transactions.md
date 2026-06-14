@@ -126,6 +126,14 @@ can make the GUI report failure while the authorization dialog is still open.
 
 The GUI does not perform authorization itself. dnf5daemon owns that boundary.
 
+## Repository Signing Keys
+
+When dnf5daemon needs a repository signing key during apply, DNF UI shows the
+key details and asks the user whether to trust it.
+
+The transaction client still owns the daemon protocol. The UI only answers yes
+or no, and the client sends that answer back to the same daemon session.
+
 ## Progress
 
 The transaction client subscribes to dnf5daemon progress signals and forwards a

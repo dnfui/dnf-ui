@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <string>
+#include <vector>
 
 namespace {
 
@@ -66,6 +67,30 @@ variant_child_uint64(GVariant *parameters, guint index)
 }
 
 // -----------------------------------------------------------------------------
+// Read one string array child from a D-Bus signal parameter tuple.
+// -----------------------------------------------------------------------------
+std::vector<std::string>
+variant_child_string_array(GVariant *parameters, guint index)
+{
+  std::vector<std::string> values;
+  if (!parameters || g_variant_n_children(parameters) <= index) {
+    return values;
+  }
+
+  GVariant *child = g_variant_get_child_value(parameters, index);
+  if (g_variant_is_of_type(child, G_VARIANT_TYPE_STRING_ARRAY)) {
+    GVariantIter iter;
+    const gchar *value = nullptr;
+    g_variant_iter_init(&iter, child);
+    while (g_variant_iter_next(&iter, "&s", &value)) {
+      values.emplace_back(value ? value : "");
+    }
+  }
+  g_variant_unref(child);
+  return values;
+}
+
+// -----------------------------------------------------------------------------
 // Return true when a daemon signal belongs to the transaction session we started.
 // -----------------------------------------------------------------------------
 bool
@@ -111,10 +136,49 @@ download_description(TransactionServiceProgressForwarder *forwarder, const std::
 }
 
 // -----------------------------------------------------------------------------
+// Ask the UI whether dnf5daemon should trust one repository signing key.
+// -----------------------------------------------------------------------------
+void
+handle_key_import_request(GDBusConnection *connection,
+                          TransactionServiceProgressForwarder *forwarder,
+                          GVariant *parameters)
+{
+  TransactionKeyImportRequest request;
+  request.key_id = variant_child_text(parameters, 1);
+  request.user_ids = variant_child_string_array(parameters, 2);
+  request.fingerprint = variant_child_text(parameters, 3);
+  request.key_url = variant_child_text(parameters, 4);
+  request.timestamp = variant_child_uint64(parameters, 5);
+
+  forward_progress_line(forwarder, _("Repository signing key approval is required."));
+  DNFUI_TRACE("dnf5daemon key import request path=%s key=%s",
+              forwarder ? forwarder->transaction_path.c_str() : "",
+              request.key_id.c_str());
+
+  bool confirmed = false;
+  if (forwarder && forwarder->key_import_callback && *forwarder->key_import_callback) {
+    confirmed = (*forwarder->key_import_callback)(request);
+  }
+
+  std::string confirm_error;
+  if (!transaction_service_client_confirm_key(
+          connection, forwarder ? forwarder->transaction_path : "", request.key_id, confirmed, confirm_error)) {
+    if (forwarder) {
+      forwarder->key_confirm_error = confirm_error;
+    }
+    forward_progress_line(forwarder, confirm_error);
+    return;
+  }
+
+  forward_progress_line(forwarder,
+                        confirmed ? _("Repository signing key accepted.") : _("Repository signing key rejected."));
+}
+
+// -----------------------------------------------------------------------------
 // Receive one dnf5daemon progress signal and convert it to a user-facing line.
 // -----------------------------------------------------------------------------
 void
-on_transaction_progress_signal(GDBusConnection *,
+on_transaction_progress_signal(GDBusConnection *connection,
                                const gchar *,
                                const gchar *,
                                const gchar *,
@@ -128,6 +192,11 @@ on_transaction_progress_signal(GDBusConnection *,
   }
 
   const std::string signal = signal_name;
+
+  if (signal == "repo_key_import_request") {
+    handle_key_import_request(connection, forwarder, parameters);
+    return;
+  }
 
   if (signal == "download_add_new" && !forwarder->downloads_started) {
     forwarder->downloads_started = true;

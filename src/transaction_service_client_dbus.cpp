@@ -31,6 +31,7 @@ constexpr const char *kDnfDaemonName = "org.rpm.dnf.v0";
 constexpr const char *kDnfDaemonManagerPath = "/org/rpm/dnf/v0";
 constexpr const char *kDnfDaemonSessionManagerInterface = "org.rpm.dnf.v0.SessionManager";
 constexpr const char *kDnfDaemonRpmInterface = "org.rpm.dnf.v0.rpm.Rpm";
+constexpr const char *kDnfDaemonRpmRepoInterface = "org.rpm.dnf.v0.rpm.Repo";
 constexpr const char *kDnfDaemonGoalInterface = "org.rpm.dnf.v0.Goal";
 
 // -----------------------------------------------------------------------------
@@ -697,6 +698,7 @@ transaction_service_client_get_transaction_preview(GDBusConnection *connection,
 bool
 transaction_service_client_start_apply_request(GDBusConnection *connection,
                                                const std::string &transaction_path,
+                                               TransactionServiceProgressForwarder *progress_forwarder,
                                                std::string &error_out)
 {
   error_out.clear();
@@ -716,6 +718,7 @@ transaction_service_client_start_apply_request(GDBusConnection *connection,
     context = g_main_context_default();
   }
 
+  GCancellable *call_cancellable = g_cancellable_new();
   g_dbus_connection_call(
       connection,
       kDnfDaemonName,
@@ -726,7 +729,7 @@ transaction_service_client_start_apply_request(GDBusConnection *connection,
       nullptr,
       G_DBUS_CALL_FLAGS_NONE,
       G_MAXINT,
-      nullptr,
+      call_cancellable,
       +[](GObject *source, GAsyncResult *result, gpointer user_data) {
         auto *wait_state = static_cast<ApplyWaitState *>(user_data);
         GVariant *reply = g_dbus_connection_call_finish(G_DBUS_CONNECTION(source), result, &wait_state->error);
@@ -737,8 +740,23 @@ transaction_service_client_start_apply_request(GDBusConnection *connection,
       },
       &state);
 
+  bool cancel_requested = false;
   while (!state.done) {
     g_main_context_iteration(context, TRUE);
+    if (!cancel_requested && progress_forwarder && !progress_forwarder->key_confirm_error.empty()) {
+      // The key answer failed, so stop waiting on do_transaction and report that error.
+      g_cancellable_cancel(call_cancellable);
+      cancel_requested = true;
+    }
+  }
+  g_object_unref(call_cancellable);
+
+  if (progress_forwarder && !progress_forwarder->key_confirm_error.empty()) {
+    error_out = progress_forwarder->key_confirm_error;
+    if (state.error) {
+      g_clear_error(&state.error);
+    }
+    return false;
   }
 
   if (state.error) {
@@ -788,6 +806,55 @@ transaction_service_client_release_transaction_request(GDBusConnection *connecti
   g_variant_unref(reply);
   forget_daemon_session(transaction_path);
   return success;
+}
+
+// -----------------------------------------------------------------------------
+// Confirm or reject a repository signing key requested by dnf5daemon.
+// -----------------------------------------------------------------------------
+bool
+transaction_service_client_confirm_key(GDBusConnection *connection,
+                                       const std::string &transaction_path,
+                                       const std::string &key_id,
+                                       bool confirmed,
+                                       std::string &error_out)
+{
+  error_out.clear();
+
+  if (!connection || transaction_path.empty() || key_id.empty()) {
+    error_out = _("dnf5daemon key import request is incomplete.");
+    return false;
+  }
+
+  DNFUI_TRACE("dnf5daemon confirm key start path=%s key=%s confirmed=%d",
+              transaction_path.c_str(),
+              key_id.c_str(),
+              confirmed ? 1 : 0);
+  GError *error = nullptr;
+  GVariant *reply = g_dbus_connection_call_sync(
+      connection,
+      kDnfDaemonName,
+      transaction_path.c_str(),
+      kDnfDaemonRpmRepoInterface,
+      "confirm_key_with_options",
+      g_variant_new("(sb@a{sv})", key_id.c_str(), confirmed ? TRUE : FALSE, empty_options()),
+      nullptr,
+      G_DBUS_CALL_FLAGS_NONE,
+      G_MAXINT,
+      nullptr,
+      &error);
+  if (!reply) {
+    error_out = error ? error->message : _("Could not answer the dnf5daemon key import request.");
+    DNFUI_TRACE("dnf5daemon confirm key failed path=%s key=%s error=%s",
+                transaction_path.c_str(),
+                key_id.c_str(),
+                error_out.c_str());
+    g_clear_error(&error);
+    return false;
+  }
+
+  g_variant_unref(reply);
+  DNFUI_TRACE("dnf5daemon confirm key done path=%s key=%s", transaction_path.c_str(), key_id.c_str());
+  return true;
 }
 
 #ifdef DNFUI_BUILD_TESTS

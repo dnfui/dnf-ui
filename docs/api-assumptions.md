@@ -230,6 +230,8 @@ Assumptions:
   means resolve failure.
 - Resolve failures are read through `org.rpm.dnf.v0.Goal.get_transaction_problems_string() -> (as)`.
 - Apply is started through `org.rpm.dnf.v0.Goal.do_transaction(a{sv}) -> ()`.
+- During apply, dnf5daemon may emit `repo_key_import_request`. The client must
+  answer with `org.rpm.dnf.v0.rpm.Repo.confirm_key_with_options(s, b, a{sv})`.
 - Signal subscriptions invoke callbacks in the subscribing thread's
   thread-default main context.
 - A dnf5daemon session is tied to the D-Bus connection that created it.
@@ -258,6 +260,8 @@ Why this matters:
   app understands.
 - The UI must not report timeout failure while dnf5daemon is still waiting for
   the user's Polkit answer.
+- Repository signing key import is a user trust decision. The app must not
+  accept a daemon key request without asking the user.
 - The signal list is intentionally small. It gives the user useful transaction
   stages without turning the progress window into a debug log.
 
@@ -265,6 +269,8 @@ Tests:
 
 - dnf5daemon transaction tests need to cover preview, apply, release, daemon
   failure, authorization failure, and disconnect behavior
+- Repository signing key import needs a native manual test with a repository
+  whose key has not already been imported.
 
 Maintenance check:
 

@@ -183,6 +183,7 @@ transaction_service_client_preview_upgrade_all_request(TransactionPreview &previ
 bool
 transaction_service_client_apply_started_request(const std::string &transaction_path,
                                                  const std::function<void(const std::string &)> &progress_callback,
+                                                 const TransactionKeyImportCallback &key_import_callback,
                                                  std::string &error_out)
 {
   error_out.clear();
@@ -212,6 +213,7 @@ transaction_service_client_apply_started_request(const std::string &transaction_
   g_main_context_push_thread_default(signal_context);
   TransactionServiceProgressForwarder progress_forwarder;
   progress_forwarder.progress_callback = &progress_callback;
+  progress_forwarder.key_import_callback = &key_import_callback;
   guint progress_subscription_id = 0;
 
   do {
@@ -223,7 +225,7 @@ transaction_service_client_apply_started_request(const std::string &transaction_
     append_progress(_("Privileged transaction preview ready."));
     append_progress(_("Requesting authorization and starting apply..."));
 
-    if (!transaction_service_client_start_apply_request(connection, transaction_path, error_out)) {
+    if (!transaction_service_client_start_apply_request(connection, transaction_path, &progress_forwarder, error_out)) {
       break;
     }
 

@@ -96,6 +96,91 @@ Without that package, run `make dnf5daemonapplytest` from the desktop session
 where a Polkit authentication agent can show the authorization dialog. Running
 the apply target over SSH may fail with `Not authorized`.
 
+For repository signing key changes, test on a native Fedora machine with a
+repository whose key is not already trusted. Applying a package from that
+repository should show the DNF UI key prompt. Accepting it should let the daemon
+continue. Rejecting it should fail the transaction without importing the key.
+
+### Native repository key prompt test
+
+Use a disposable Fedora VM or test machine. Do not use your main system for this
+test.
+
+The useful case is a repo with a valid key that has not been imported yet. A repo
+with a wrong key can test failure handling, but it cannot prove the accept path
+because package signature verification should still fail.
+
+One practical way to create the prompt is to enable a COPR or other external repo
+that contains a small harmless package:
+
+```sh
+sudo dnf copr enable OWNER/PROJECT
+```
+
+If the COPR command is not available, install the Fedora COPR plugin on the test
+machine or add the repo file manually under `/etc/yum.repos.d/`.
+
+Before applying anything from that repo, save the imported key list:
+
+```sh
+rpm -qa 'gpg-pubkey*' | sort > /tmp/dnfui-gpg-keys-before.txt
+```
+
+Run DNF UI from the branch and apply a package from the external repo:
+
+```sh
+make run
+```
+
+Reject test:
+
+- Click `Reject` in the DNF UI key prompt.
+- The transaction should fail.
+- The key list should not change.
+
+```sh
+rpm -qa 'gpg-pubkey*' | sort > /tmp/dnfui-gpg-keys-after-reject.txt
+diff -u /tmp/dnfui-gpg-keys-before.txt /tmp/dnfui-gpg-keys-after-reject.txt
+```
+
+Accept test:
+
+- Start the same transaction again.
+- Click `Trust Key` in the DNF UI key prompt.
+- The transaction should continue.
+- The key list should contain one new key for the external repo.
+
+```sh
+rpm -qa 'gpg-pubkey*' | sort > /tmp/dnfui-gpg-keys-after-accept.txt
+diff -u /tmp/dnfui-gpg-keys-before.txt /tmp/dnfui-gpg-keys-after-accept.txt
+```
+
+Restore the disposable test machine:
+
+```sh
+sudo dnf remove PACKAGE_NAME
+sudo dnf copr remove OWNER/PROJECT
+sudo dnf clean metadata
+```
+
+If the repo was added manually, remove its repo file instead of using
+`dnf copr remove`:
+
+```sh
+sudo rm /etc/yum.repos.d/REPO_FILE.repo
+sudo dnf clean metadata
+```
+
+If the accept test imported a key and the machine is disposable, remove only the
+new `gpg-pubkey` package shown by the before and after diff:
+
+```sh
+sudo rpm -e gpg-pubkey-KEYID-TIMESTAMP
+```
+
+Do not remove `gpg-pubkey` packages on your main system unless you know exactly
+which repo owns the key. A key can be shared by more than one repo.
+
 Run the Docker app target with networking disabled:
 
 ```sh
