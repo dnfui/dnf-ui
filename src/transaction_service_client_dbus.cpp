@@ -31,6 +31,7 @@ constexpr const char *kDnfDaemonName = "org.rpm.dnf.v0";
 constexpr const char *kDnfDaemonManagerPath = "/org/rpm/dnf/v0";
 constexpr const char *kDnfDaemonSessionManagerInterface = "org.rpm.dnf.v0.SessionManager";
 constexpr const char *kDnfDaemonRpmInterface = "org.rpm.dnf.v0.rpm.Rpm";
+constexpr const char *kDnfDaemonRpmRepoInterface = "org.rpm.dnf.v0.rpm.Repo";
 constexpr const char *kDnfDaemonGoalInterface = "org.rpm.dnf.v0.Goal";
 
 // -----------------------------------------------------------------------------
@@ -53,6 +54,18 @@ get_transaction_service_connection_cache()
 {
   static TransactionServiceConnectionCache cache;
   return cache;
+}
+
+// -----------------------------------------------------------------------------
+// Return options for daemon calls that may need user authentication.
+// -----------------------------------------------------------------------------
+GVariant *
+interactive_options()
+{
+  GVariantBuilder options;
+  g_variant_builder_init(&options, G_VARIANT_TYPE("a{sv}"));
+  g_variant_builder_add(&options, "{sv}", "interactive", g_variant_new_boolean(TRUE));
+  return g_variant_new("a{sv}", &options);
 }
 
 // -----------------------------------------------------------------------------
@@ -82,6 +95,7 @@ resolve_options(const std::string &transaction_path)
 
   GVariantBuilder options;
   g_variant_builder_init(&options, G_VARIANT_TYPE("a{sv}"));
+  g_variant_builder_add(&options, "{sv}", "interactive", g_variant_new_boolean(TRUE));
   if (allow_erasing) {
     g_variant_builder_add(&options, "{sv}", "allow_erasing", g_variant_new_boolean(TRUE));
   }
@@ -697,6 +711,7 @@ transaction_service_client_get_transaction_preview(GDBusConnection *connection,
 bool
 transaction_service_client_start_apply_request(GDBusConnection *connection,
                                                const std::string &transaction_path,
+                                               TransactionServiceProgressForwarder *progress_forwarder,
                                                std::string &error_out)
 {
   error_out.clear();
@@ -739,6 +754,14 @@ transaction_service_client_start_apply_request(GDBusConnection *connection,
 
   while (!state.done) {
     g_main_context_iteration(context, TRUE);
+  }
+
+  if (progress_forwarder && !progress_forwarder->key_confirm_error.empty()) {
+    error_out = progress_forwarder->key_confirm_error;
+    if (state.error) {
+      g_clear_error(&state.error);
+    }
+    return false;
   }
 
   if (state.error) {
@@ -788,6 +811,66 @@ transaction_service_client_release_transaction_request(GDBusConnection *connecti
   g_variant_unref(reply);
   forget_daemon_session(transaction_path);
   return success;
+}
+
+// -----------------------------------------------------------------------------
+// Confirm or reject a repository signing key requested by dnf5daemon.
+// -----------------------------------------------------------------------------
+bool
+transaction_service_client_confirm_key(GDBusConnection *connection,
+                                       const std::string &transaction_path,
+                                       const std::string &key_id,
+                                       bool confirmed,
+                                       std::string &error_out)
+{
+  error_out.clear();
+
+  if (!connection || transaction_path.empty() || key_id.empty()) {
+    error_out = _("dnf5daemon key import request is incomplete.");
+    return false;
+  }
+
+  DNFUI_TRACE("dnf5daemon confirm key start path=%s key=%s confirmed=%d",
+              transaction_path.c_str(),
+              key_id.c_str(),
+              confirmed ? 1 : 0);
+  GError *error = nullptr;
+  GVariant *reply = g_dbus_connection_call_sync(
+      connection,
+      kDnfDaemonName,
+      transaction_path.c_str(),
+      kDnfDaemonRpmRepoInterface,
+      "confirm_key_with_options",
+      g_variant_new("(sb@a{sv})", key_id.c_str(), confirmed ? TRUE : FALSE, interactive_options()),
+      nullptr,
+      G_DBUS_CALL_FLAGS_NONE,
+      G_MAXINT,
+      nullptr,
+      &error);
+
+  if (!reply) {
+    if (error) {
+      g_dbus_error_strip_remote_error(error);
+      std::string daemon_error = error->message ? error->message : "";
+      if (confirmed && daemon_error == "Not authorized") {
+        error_out = _("Repository signing key import was not authorized.");
+      } else {
+        error_out = daemon_error;
+      }
+    } else {
+      error_out = _("Could not answer the dnf5daemon key import request.");
+    }
+    DNFUI_TRACE("dnf5daemon confirm key failed path=%s key=%s error=%s",
+                transaction_path.c_str(),
+                key_id.c_str(),
+                error_out.c_str());
+    g_clear_error(&error);
+    return false;
+  }
+
+  g_variant_unref(reply);
+  DNFUI_TRACE("dnf5daemon confirm key done path=%s key=%s", transaction_path.c_str(), key_id.c_str());
+  return true;
 }
 
 #ifdef DNFUI_BUILD_TESTS

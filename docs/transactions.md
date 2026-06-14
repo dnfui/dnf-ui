@@ -51,7 +51,7 @@ When the user clicks Apply:
 2. The controller builds a `TransactionRequest`.
 3. The transaction client opens a dnf5daemon session.
 4. The client marks install, remove, or reinstall specs on that session.
-5. The client asks dnf5daemon to resolve the transaction.
+5. The client asks dnf5daemon to resolve the transaction with user interaction enabled.
 6. The GUI shows the resolved preview.
 7. If the user confirms, the client subscribes to daemon progress signals.
 8. The client calls `do_transaction` with interactive authorization enabled.
@@ -125,6 +125,15 @@ because the user may need time to answer a Polkit prompt. A short D-Bus timeout
 can make the GUI report failure while the authorization dialog is still open.
 
 The GUI does not perform authorization itself. dnf5daemon owns that boundary.
+
+## Repository Signing Keys
+
+When dnf5daemon needs a repository signing key during apply, DNF UI shows the
+key details in the transaction progress window and asks the user whether to trust
+it.
+
+The transaction client still owns the daemon protocol. The UI only answers yes
+or no, and the client sends that answer back to the same daemon session.
 
 ## Progress
 

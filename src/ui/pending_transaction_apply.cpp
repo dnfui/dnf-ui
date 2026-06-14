@@ -315,6 +315,9 @@ start_apply_transaction(SearchWidgets *widgets)
         bool ok = transaction_service_client_apply_started_request(
             td->transaction_path,
             [td](const std::string &message) { transaction_progress_append(td->progress_window, message); },
+            [td](const TransactionKeyImportRequest &request) {
+              return transaction_progress_confirm_key(td->progress_window, request);
+            },
             err);
         if (ok) {
           g_task_return_boolean(t, TRUE);

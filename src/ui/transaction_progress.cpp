@@ -6,9 +6,12 @@
 #include "transaction_progress.hpp"
 
 #include "i18n.hpp"
+#include "transaction_service_client.hpp"
 #include "widgets.hpp"
 
 #include <atomic>
+#include <condition_variable>
+#include <mutex>
 #include <sstream>
 
 // -----------------------------------------------------------------------------
@@ -34,14 +37,32 @@ struct TransactionProgressWindow {
   GtkTextBuffer *buffer = nullptr;
   GtkTextView *view = nullptr;
   GtkSpinner *spinner = nullptr;
+  GtkBox *key_prompt_box = nullptr;
+  GtkButton *reject_key_button = nullptr;
+  GtkButton *trust_key_button = nullptr;
   GtkButton *close_button = nullptr;
   bool finished = false;
+};
+
+struct KeyImportPromptState {
+  std::mutex mutex;
+  std::condition_variable condition;
+  bool done = false;
+  bool accepted = false;
+};
+
+struct KeyPromptData {
+  TransactionProgressWindow *progress = nullptr;
+  KeyImportPromptState *state = nullptr;
+  TransactionKeyImportRequest request;
 };
 
 struct ProgressAppendData {
   TransactionProgressWindow *progress = nullptr;
   char *message;
 };
+
+constexpr const char *kKeyImportPromptStateKey = "dnfui-key-import-prompt-state";
 
 // -----------------------------------------------------------------------------
 // Free data owned by one queued progress message.
@@ -56,6 +77,127 @@ progress_append_data_free(ProgressAppendData *data)
   transaction_progress_release(data->progress);
   g_free(data->message);
   delete data;
+}
+
+// -----------------------------------------------------------------------------
+// Free data owned by one queued key prompt.
+// -----------------------------------------------------------------------------
+static void
+key_prompt_data_free(KeyPromptData *data)
+{
+  if (!data) {
+    return;
+  }
+
+  transaction_progress_release(data->progress);
+  delete data;
+}
+
+// -----------------------------------------------------------------------------
+// Append one progress line from the GTK main thread.
+// -----------------------------------------------------------------------------
+static void
+append_progress_line_on_main(TransactionProgressWindow *progress, const char *message)
+{
+  if (!progress || !progress->stage_label || !progress->buffer || !progress->view || !message || !*message) {
+    return;
+  }
+
+  gtk_label_set_text(progress->stage_label, message);
+
+  GtkTextIter end;
+  gtk_text_buffer_get_end_iter(progress->buffer, &end);
+  gtk_text_buffer_insert(progress->buffer, &end, message, -1);
+  gtk_text_buffer_insert(progress->buffer, &end, "\n", 1);
+
+  gtk_text_buffer_get_end_iter(progress->buffer, &end);
+  GtkTextMark *mark = gtk_text_buffer_create_mark(progress->buffer, nullptr, &end, FALSE);
+  gtk_text_view_scroll_mark_onscreen(progress->view, mark);
+  gtk_text_buffer_delete_mark(progress->buffer, mark);
+}
+
+// -----------------------------------------------------------------------------
+// Return repository key identities as text for the progress prompt.
+// -----------------------------------------------------------------------------
+static std::string
+key_import_user_ids_text(const std::vector<std::string> &user_ids)
+{
+  std::ostringstream out;
+  for (const auto &user_id : user_ids) {
+    if (user_id.empty()) {
+      continue;
+    }
+    if (out.tellp() > 0) {
+      out << "\n";
+    }
+    out << user_id;
+  }
+
+  return out.str();
+}
+
+// -----------------------------------------------------------------------------
+// Return the text shown before the user accepts or rejects a repository key.
+// -----------------------------------------------------------------------------
+static std::string
+key_import_prompt_text(const TransactionKeyImportRequest &request)
+{
+  std::ostringstream out;
+  out << _("Repository signing key approval is required.") << "\n\n";
+  out << _("Trust this repository signing key?") << "\n";
+
+  if (!request.key_id.empty()) {
+    out << _("Key ID") << ": " << request.key_id << "\n";
+  }
+  if (!request.fingerprint.empty()) {
+    out << _("Fingerprint") << ": " << request.fingerprint << "\n";
+  }
+
+  std::string user_ids = key_import_user_ids_text(request.user_ids);
+  if (!user_ids.empty()) {
+    out << _("Repository") << ": " << user_ids << "\n";
+  }
+  if (!request.key_url.empty()) {
+    out << _("Key URL") << ": " << request.key_url << "\n";
+  }
+
+  return out.str();
+}
+
+// -----------------------------------------------------------------------------
+// Finish the key prompt and wake the apply worker.
+// -----------------------------------------------------------------------------
+static void
+finish_key_prompt(TransactionProgressWindow *progress, bool accepted)
+{
+  if (!progress || !progress->key_prompt_box) {
+    return;
+  }
+
+  auto *state = static_cast<KeyImportPromptState *>(
+      g_object_get_data(G_OBJECT(progress->key_prompt_box), kKeyImportPromptStateKey));
+  g_object_set_data(G_OBJECT(progress->key_prompt_box), kKeyImportPromptStateKey, nullptr);
+  gtk_widget_set_visible(GTK_WIDGET(progress->key_prompt_box), FALSE);
+  if (progress->reject_key_button) {
+    gtk_widget_set_sensitive(GTK_WIDGET(progress->reject_key_button), FALSE);
+  }
+  if (progress->trust_key_button) {
+    gtk_widget_set_sensitive(GTK_WIDGET(progress->trust_key_button), FALSE);
+  }
+
+  if (!state) {
+    return;
+  }
+
+  {
+    std::lock_guard<std::mutex> lock(state->mutex);
+    if (state->done) {
+      return;
+    }
+    state->accepted = accepted;
+    state->done = true;
+  }
+  state->condition.notify_one();
 }
 
 // -----------------------------------------------------------------------------
@@ -168,9 +310,36 @@ transaction_progress_create_window(SearchWidgets *widgets, size_t pending_count)
   gtk_widget_set_halign(button_box, GTK_ALIGN_END);
   gtk_box_append(GTK_BOX(outer), button_box);
 
+  progress->key_prompt_box = GTK_BOX(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8));
+  gtk_widget_set_visible(GTK_WIDGET(progress->key_prompt_box), FALSE);
+  gtk_box_append(GTK_BOX(button_box), GTK_WIDGET(progress->key_prompt_box));
+
+  progress->reject_key_button = GTK_BUTTON(gtk_button_new_with_label(_("Reject")));
+  gtk_widget_set_sensitive(GTK_WIDGET(progress->reject_key_button), FALSE);
+  gtk_box_append(progress->key_prompt_box, GTK_WIDGET(progress->reject_key_button));
+
+  progress->trust_key_button = GTK_BUTTON(gtk_button_new_with_label(_("Trust Key")));
+  gtk_widget_add_css_class(GTK_WIDGET(progress->trust_key_button), "suggested-action");
+  gtk_widget_set_sensitive(GTK_WIDGET(progress->trust_key_button), FALSE);
+  gtk_box_append(progress->key_prompt_box, GTK_WIDGET(progress->trust_key_button));
+
   progress->close_button = GTK_BUTTON(gtk_button_new_with_label(_("Close")));
   gtk_widget_set_sensitive(GTK_WIDGET(progress->close_button), FALSE);
   gtk_box_append(GTK_BOX(button_box), GTK_WIDGET(progress->close_button));
+
+  g_signal_connect(progress->reject_key_button,
+                   "clicked",
+                   G_CALLBACK(+[](GtkButton *, gpointer user_data) {
+                     finish_key_prompt(static_cast<TransactionProgressWindow *>(user_data), false);
+                   }),
+                   progress);
+
+  g_signal_connect(progress->trust_key_button,
+                   "clicked",
+                   G_CALLBACK(+[](GtkButton *, gpointer user_data) {
+                     finish_key_prompt(static_cast<TransactionProgressWindow *>(user_data), true);
+                   }),
+                   progress);
 
   g_signal_connect(progress->close_button,
                    "clicked",
@@ -196,12 +365,16 @@ transaction_progress_create_window(SearchWidgets *widgets, size_t pending_count)
                        return;
                      }
 
+                     finish_key_prompt(progress, false);
                      progress->window = nullptr;
                      progress->title_label = nullptr;
                      progress->stage_label = nullptr;
                      progress->buffer = nullptr;
                      progress->view = nullptr;
                      progress->spinner = nullptr;
+                     progress->key_prompt_box = nullptr;
+                     progress->reject_key_button = nullptr;
+                     progress->trust_key_button = nullptr;
                      progress->close_button = nullptr;
                      transaction_progress_release(progress);
                    }),
@@ -238,18 +411,7 @@ append_transaction_progress_line(TransactionProgressWindow *progress, const std:
           return G_SOURCE_REMOVE;
         }
 
-        gtk_label_set_text(progress->stage_label, data->message);
-
-        GtkTextIter end;
-        gtk_text_buffer_get_end_iter(progress->buffer, &end);
-        gtk_text_buffer_insert(progress->buffer, &end, data->message, -1);
-        gtk_text_buffer_insert(progress->buffer, &end, "\n", 1);
-
-        gtk_text_buffer_get_end_iter(progress->buffer, &end);
-        GtkTextMark *mark = gtk_text_buffer_create_mark(progress->buffer, nullptr, &end, FALSE);
-        gtk_text_view_scroll_mark_onscreen(progress->view, mark);
-        gtk_text_buffer_delete_mark(progress->buffer, mark);
-
+        append_progress_line_on_main(progress, data->message);
         progress_append_data_free(data);
         return G_SOURCE_REMOVE;
       },
@@ -274,6 +436,63 @@ transaction_progress_append(TransactionProgressWindow *progress, const std::stri
       append_transaction_progress_line(progress, line);
     }
   }
+}
+
+// -----------------------------------------------------------------------------
+// Ask for repository key approval inside the existing transaction window.
+// The apply worker waits here until the GTK thread records the user's answer.
+// -----------------------------------------------------------------------------
+bool
+transaction_progress_confirm_key(TransactionProgressWindow *progress, const TransactionKeyImportRequest &request)
+{
+  if (!progress) {
+    return false;
+  }
+
+  KeyImportPromptState state;
+  auto *data = new KeyPromptData();
+  data->progress = transaction_progress_retain(progress);
+  data->state = &state;
+  data->request = request;
+
+  g_main_context_invoke(
+      nullptr,
+      +[](gpointer user_data) -> gboolean {
+        auto *data = static_cast<KeyPromptData *>(user_data);
+        TransactionProgressWindow *progress = data ? data->progress : nullptr;
+        KeyImportPromptState *state = data ? data->state : nullptr;
+
+        if (!progress || !progress->stage_label || !progress->buffer || !progress->view || !progress->key_prompt_box ||
+            !progress->reject_key_button || !progress->trust_key_button) {
+          if (state) {
+            {
+              std::lock_guard<std::mutex> lock(state->mutex);
+              state->accepted = false;
+              state->done = true;
+            }
+            state->condition.notify_one();
+          }
+          key_prompt_data_free(data);
+          return G_SOURCE_REMOVE;
+        }
+
+        std::string prompt_text = key_import_prompt_text(data->request);
+        append_progress_line_on_main(progress, prompt_text.c_str());
+        gtk_label_set_text(progress->stage_label, _("Repository signing key approval is required."));
+
+        g_object_set_data(G_OBJECT(progress->key_prompt_box), kKeyImportPromptStateKey, state);
+        gtk_widget_set_sensitive(GTK_WIDGET(progress->reject_key_button), TRUE);
+        gtk_widget_set_sensitive(GTK_WIDGET(progress->trust_key_button), TRUE);
+        gtk_widget_set_visible(GTK_WIDGET(progress->key_prompt_box), TRUE);
+
+        key_prompt_data_free(data);
+        return G_SOURCE_REMOVE;
+      },
+      data);
+
+  std::unique_lock<std::mutex> lock(state.mutex);
+  state.condition.wait(lock, [&]() { return state.done; });
+  return state.accepted;
 }
 
 // -----------------------------------------------------------------------------

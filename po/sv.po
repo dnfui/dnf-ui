@@ -312,6 +312,42 @@ msgstr "Verkställer paketuppgraderingar. Se transaktionsfönstret för detaljer
 msgid "Wait for the current transaction to finish."
 msgstr "Vänta tills den aktuella transaktionen har verkställts."
 
+msgid "Repository signing key import was not authorized."
+msgstr "Import av förrådets signeringsnyckel godkändes inte."
+
+msgid "Repository signing key was rejected."
+msgstr "Förrådets signeringsnyckel avvisades."
+
+msgid "Repository signing key rejected."
+msgstr "Förrådets signeringsnyckel avvisades."
+
+msgid "Repository signing key accepted."
+msgstr "Förrådets signeringsnyckel accepterades."
+
+msgid "Repository signing key approval is required."
+msgstr "Förrådets signeringsnyckel behöver godkännas."
+
+msgid "Trust this repository signing key?"
+msgstr "Lita på den här signeringsnyckeln för förrådet?"
+
+msgid "Key ID"
+msgstr "Nyckel-ID"
+
+msgid "Fingerprint"
+msgstr "Fingeravtryck"
+
+msgid "Repository"
+msgstr "Förråd"
+
+msgid "Key URL"
+msgstr "Nyckel-URL"
+
+msgid "Reject"
+msgstr "Avvisa"
+
+msgid "Trust Key"
+msgstr "Lita på nyckel"
+
 #, c-format
 msgid "Found %zu package."
 msgid_plural "Found %zu packages."
