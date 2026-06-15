@@ -11,7 +11,6 @@
 
 struct SearchWidgets;
 struct TransactionProgressWindow;
-struct TransactionKeyImportRequest;
 
 // -----------------------------------------------------------------------------
 // Create a transaction progress window for the pending action count.
@@ -33,11 +32,6 @@ void transaction_progress_append(TransactionProgressWindow *progress, const std:
 // Mark the transaction progress window as finished.
 // -----------------------------------------------------------------------------
 void transaction_progress_finish(TransactionProgressWindow *progress, bool success, const std::string &summary);
-// -----------------------------------------------------------------------------
-// Ask the user whether dnf5daemon may import one repository signing key.
-// -----------------------------------------------------------------------------
-bool transaction_progress_confirm_key(TransactionProgressWindow *progress, const TransactionKeyImportRequest &request);
-
 // -----------------------------------------------------------------------------
 // EOF
 // -----------------------------------------------------------------------------

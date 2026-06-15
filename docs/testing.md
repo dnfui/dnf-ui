@@ -96,6 +96,57 @@ Without that package, run `make dnf5daemonapplytest` from the desktop session
 where a Polkit authentication agent can show the authorization dialog. Running
 the apply target over SSH may fail with `Not authorized`.
 
+### Native repository key prompt test
+
+Use a disposable Fedora VM or test machine. Do not use your main system for this
+test.
+
+Create the local signed test repo:
+
+```sh
+utils/setup_gpg_key_prompt_test_repo.sh setup
+```
+
+Run DNF UI from the branch:
+
+```sh
+make run
+```
+
+Search for:
+
+```sh
+dnfui-gpg-test-package
+```
+
+The key prompt can appear while preparing the preview or while applying the
+transaction. Both paths must ask before trusting the key.
+
+Reject test:
+
+- Click `Reject` in the DNF UI key prompt.
+- The transaction should fail.
+- The package should not be installed.
+- `utils/setup_gpg_key_prompt_test_repo.sh status` should not list an imported
+  test key.
+
+Run `utils/setup_gpg_key_prompt_test_repo.sh restore` before the accept test.
+
+Accept test:
+
+- Run `utils/setup_gpg_key_prompt_test_repo.sh setup`.
+- Start the same transaction in DNF UI again.
+- Click `Trust Key` in the DNF UI key prompt.
+- The transaction should continue.
+- `utils/setup_gpg_key_prompt_test_repo.sh status` should show the package and
+  imported test key.
+
+Restore the disposable test machine:
+
+```sh
+utils/setup_gpg_key_prompt_test_repo.sh restore
+```
+
 Run the Docker app target with networking disabled:
 
 ```sh

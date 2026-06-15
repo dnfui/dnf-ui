@@ -229,12 +229,13 @@ Assumptions:
 - Resolver result `0` means success, `1` means success with warnings, and `2`
   means resolve failure.
 - Resolve failures are read through `org.rpm.dnf.v0.Goal.get_transaction_problems_string() -> (as)`.
+- Resolve uses `interactive=true` because dnf5daemon may need to request
+  repository signing key approval while loading repositories.
 - Apply is started through `org.rpm.dnf.v0.Goal.do_transaction(a{sv}) -> ()`.
-- During apply, dnf5daemon may emit `repo_key_import_request`. The client must
-  answer with `org.rpm.dnf.v0.rpm.Repo.confirm_key_with_options(s, b, a{sv})`.
-- Resolve uses `interactive=true` because dnf5daemon may need to request repository signing key approval while loading repositories.
 - Apply is started with `interactive=true` because the daemon may need authorization while running the transaction.
-- During resolve or apply, dnf5daemon may request repository signing key approval.
+- During resolve or apply, dnf5daemon may emit `repo_key_import_request`. The
+  client must answer with
+  `org.rpm.dnf.v0.rpm.Repo.confirm_key_with_options(s, b, a{sv})`.
 - DNF UI must not approve a key without user consent.
 - Signal subscriptions invoke callbacks in the subscribing thread's
   thread-default main context.

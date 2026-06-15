@@ -148,7 +148,6 @@ handle_key_import_request(GDBusConnection *connection,
   request.user_ids = variant_child_string_array(parameters, 2);
   request.fingerprint = variant_child_text(parameters, 3);
   request.key_url = variant_child_text(parameters, 4);
-  request.timestamp = variant_child_uint64(parameters, 5);
 
   DNFUI_TRACE("dnf5daemon key import request path=%s key=%s",
               forwarder ? forwarder->transaction_path.c_str() : "",
@@ -310,10 +309,12 @@ on_transaction_progress_signal(GDBusConnection *connection,
 bool
 transaction_service_client_wait_for_started_transaction_preview(GDBusConnection *connection,
                                                                 const std::string &transaction_path,
+                                                                TransactionServiceProgressForwarder *progress_forwarder,
                                                                 TransactionPreview &preview_out,
                                                                 std::string &error_out)
 {
-  if (transaction_service_client_get_transaction_preview(connection, transaction_path, preview_out, error_out)) {
+  if (transaction_service_client_get_transaction_preview(
+          connection, transaction_path, progress_forwarder, preview_out, error_out)) {
     return true;
   }
 

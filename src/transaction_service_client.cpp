@@ -59,6 +59,36 @@ transaction_preview_contains_self_protected_package(const TransactionPreview &pr
       contains_self_protected_spec(preview.remove);
 }
 
+// -----------------------------------------------------------------------------
+// Resolve a daemon preview while the worker can answer daemon key prompts.
+// -----------------------------------------------------------------------------
+bool
+resolve_transaction_preview(GDBusConnection *connection,
+                            const std::string &transaction_path,
+                            const TransactionKeyImportCallback &key_import_callback,
+                            TransactionPreview &preview_out,
+                            std::string &error_out)
+{
+  GMainContext *signal_context = g_main_context_new();
+  g_main_context_push_thread_default(signal_context);
+
+  TransactionServiceProgressForwarder progress_forwarder;
+  progress_forwarder.key_import_callback = &key_import_callback;
+  guint progress_subscription_id =
+      transaction_service_client_subscribe_progress(connection, transaction_path, &progress_forwarder);
+
+  bool ok = transaction_service_client_wait_for_started_transaction_preview(
+      connection, transaction_path, &progress_forwarder, preview_out, error_out);
+
+  if (progress_subscription_id != 0) {
+    g_dbus_connection_signal_unsubscribe(connection, progress_subscription_id);
+  }
+  g_main_context_pop_thread_default(signal_context);
+  g_main_context_unref(signal_context);
+
+  return ok;
+}
+
 } // namespace
 
 // -----------------------------------------------------------------------------
@@ -68,7 +98,8 @@ bool
 transaction_service_client_preview_request(const TransactionRequest &request,
                                            TransactionPreview &preview_out,
                                            std::string &transaction_path_out,
-                                           std::string &error_out)
+                                           std::string &error_out,
+                                           const TransactionKeyImportCallback &key_import_callback)
 {
   preview_out = {};
   transaction_path_out.clear();
@@ -95,8 +126,7 @@ transaction_service_client_preview_request(const TransactionRequest &request,
     return false;
   }
 
-  if (!transaction_service_client_wait_for_started_transaction_preview(
-          connection, transaction_path_out, preview_out, error_out)) {
+  if (!resolve_transaction_preview(connection, transaction_path_out, key_import_callback, preview_out, error_out)) {
     std::string release_error;
     transaction_service_client_release_transaction_request(connection, transaction_path_out, release_error);
     transaction_path_out.clear();
@@ -115,7 +145,8 @@ transaction_service_client_preview_request(const TransactionRequest &request,
 bool
 transaction_service_client_preview_upgrade_all_request(TransactionPreview &preview_out,
                                                        std::string &transaction_path_out,
-                                                       std::string &error_out)
+                                                       std::string &error_out,
+                                                       const TransactionKeyImportCallback &key_import_callback)
 {
   preview_out = {};
   transaction_path_out.clear();
@@ -133,8 +164,7 @@ transaction_service_client_preview_upgrade_all_request(TransactionPreview &previ
     return false;
   }
 
-  if (!transaction_service_client_wait_for_started_transaction_preview(
-          connection, transaction_path_out, preview_out, error_out)) {
+  if (!resolve_transaction_preview(connection, transaction_path_out, key_import_callback, preview_out, error_out)) {
     std::string release_error;
     transaction_service_client_release_transaction_request(connection, transaction_path_out, release_error);
     transaction_path_out.clear();

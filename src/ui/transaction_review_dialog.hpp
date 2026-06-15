@@ -9,6 +9,7 @@
 #include <string>
 
 struct SearchWidgets;
+struct TransactionKeyImportRequest;
 struct TransactionPreview;
 
 using TransactionApplyCallback = void (*)(SearchWidgets *widgets);
@@ -27,6 +28,10 @@ void transaction_review_show_summary_dialog(SearchWidgets *widgets,
                                             const TransactionPreview &preview,
                                             TransactionApplyCallback on_apply,
                                             TransactionApplyCallback on_cancel);
+// -----------------------------------------------------------------------------
+// Ask the user whether dnf5daemon may import one repository signing key.
+// -----------------------------------------------------------------------------
+bool transaction_review_confirm_key_import(SearchWidgets *widgets, const TransactionKeyImportRequest &request);
 
 // -----------------------------------------------------------------------------
 // EOF

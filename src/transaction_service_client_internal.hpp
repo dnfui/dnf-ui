@@ -46,6 +46,7 @@ bool transaction_service_client_start_upgrade_all_transaction_request(GDBusConne
 
 bool transaction_service_client_get_transaction_preview(GDBusConnection *connection,
                                                         const std::string &transaction_path,
+                                                        TransactionServiceProgressForwarder *progress_forwarder,
                                                         TransactionPreview &preview_out,
                                                         std::string &error_out);
 
@@ -67,10 +68,12 @@ bool transaction_service_client_confirm_key(GDBusConnection *connection,
 // -----------------------------------------------------------------------------
 // Wait and progress signal handling.
 // -----------------------------------------------------------------------------
-bool transaction_service_client_wait_for_started_transaction_preview(GDBusConnection *connection,
-                                                                     const std::string &transaction_path,
-                                                                     TransactionPreview &preview_out,
-                                                                     std::string &error_out);
+bool
+transaction_service_client_wait_for_started_transaction_preview(GDBusConnection *connection,
+                                                                const std::string &transaction_path,
+                                                                TransactionServiceProgressForwarder *progress_forwarder,
+                                                                TransactionPreview &preview_out,
+                                                                std::string &error_out);
 
 guint transaction_service_client_subscribe_progress(GDBusConnection *connection,
                                                     const std::string &transaction_path,
