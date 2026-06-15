@@ -8,9 +8,19 @@
 
 #include <functional>
 #include <string>
+#include <vector>
 
 struct TransactionRequest;
 struct TransactionPreview;
+
+struct TransactionKeyImportRequest {
+  std::string key_id;
+  std::vector<std::string> user_ids;
+  std::string fingerprint;
+  std::string key_url;
+};
+
+using TransactionKeyImportCallback = std::function<bool(const TransactionKeyImportRequest &)>;
 
 // -----------------------------------------------------------------------------
 // Prepare one transaction through dnf5daemon and return its resolved preview.
@@ -18,19 +28,23 @@ struct TransactionPreview;
 bool transaction_service_client_preview_request(const TransactionRequest &request,
                                                 TransactionPreview &preview_out,
                                                 std::string &transaction_path_out,
-                                                std::string &error_out);
+                                                std::string &error_out,
+                                                const TransactionKeyImportCallback &key_import_callback = {});
 // -----------------------------------------------------------------------------
 // Prepare an upgrade-all transaction through dnf5daemon.
 // -----------------------------------------------------------------------------
-bool transaction_service_client_preview_upgrade_all_request(TransactionPreview &preview_out,
-                                                            std::string &transaction_path_out,
-                                                            std::string &error_out);
+bool
+transaction_service_client_preview_upgrade_all_request(TransactionPreview &preview_out,
+                                                       std::string &transaction_path_out,
+                                                       std::string &error_out,
+                                                       const TransactionKeyImportCallback &key_import_callback = {});
 
 // -----------------------------------------------------------------------------
 // Apply one previously prepared transaction request and forward its progress.
 // -----------------------------------------------------------------------------
 bool transaction_service_client_apply_started_request(const std::string &transaction_path,
                                                       const std::function<void(const std::string &)> &progress_callback,
+                                                      const TransactionKeyImportCallback &key_import_callback,
                                                       std::string &error_out);
 
 // -----------------------------------------------------------------------------

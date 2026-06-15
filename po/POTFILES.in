@@ -3,10 +3,9 @@ packaging/com.fedora.dnfui.metainfo.xml.in
 src/app.cpp
 src/i18n.cpp
 src/main.cpp
-src/service/transaction_service.cpp
-src/service/transaction_service_main.cpp
-src/service/transaction_service_preview_formatter.cpp
 src/transaction_service_client.cpp
+src/transaction_service_client_dbus.cpp
+src/transaction_service_client_wait.cpp
 src/ui/main_menu.cpp
 src/ui/main_window.cpp
 src/ui/package_info_controller.cpp

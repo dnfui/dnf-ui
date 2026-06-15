@@ -59,6 +59,29 @@ progress_append_data_free(ProgressAppendData *data)
 }
 
 // -----------------------------------------------------------------------------
+// Append one progress line from the GTK main thread.
+// -----------------------------------------------------------------------------
+static void
+append_progress_line_on_main(TransactionProgressWindow *progress, const char *message)
+{
+  if (!progress || !progress->stage_label || !progress->buffer || !progress->view || !message || !*message) {
+    return;
+  }
+
+  gtk_label_set_text(progress->stage_label, message);
+
+  GtkTextIter end;
+  gtk_text_buffer_get_end_iter(progress->buffer, &end);
+  gtk_text_buffer_insert(progress->buffer, &end, message, -1);
+  gtk_text_buffer_insert(progress->buffer, &end, "\n", 1);
+
+  gtk_text_buffer_get_end_iter(progress->buffer, &end);
+  GtkTextMark *mark = gtk_text_buffer_create_mark(progress->buffer, nullptr, &end, FALSE);
+  gtk_text_view_scroll_mark_onscreen(progress->view, mark);
+  gtk_text_buffer_delete_mark(progress->buffer, mark);
+}
+
+// -----------------------------------------------------------------------------
 // Retain one reference to the progress window state so queued main loop work
 // can safely keep using it after the caller returns.
 // -----------------------------------------------------------------------------
@@ -238,18 +261,7 @@ append_transaction_progress_line(TransactionProgressWindow *progress, const std:
           return G_SOURCE_REMOVE;
         }
 
-        gtk_label_set_text(progress->stage_label, data->message);
-
-        GtkTextIter end;
-        gtk_text_buffer_get_end_iter(progress->buffer, &end);
-        gtk_text_buffer_insert(progress->buffer, &end, data->message, -1);
-        gtk_text_buffer_insert(progress->buffer, &end, "\n", 1);
-
-        gtk_text_buffer_get_end_iter(progress->buffer, &end);
-        GtkTextMark *mark = gtk_text_buffer_create_mark(progress->buffer, nullptr, &end, FALSE);
-        gtk_text_view_scroll_mark_onscreen(progress->view, mark);
-        gtk_text_buffer_delete_mark(progress->buffer, mark);
-
+        append_progress_line_on_main(progress, data->message);
         progress_append_data_free(data);
         return G_SOURCE_REMOVE;
       },

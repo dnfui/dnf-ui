@@ -267,9 +267,6 @@ msgstr "Okänd väntande paketåtgärd."
 msgid "Queued transaction request."
 msgstr "Transaktionsbegäran köades."
 
-msgid "Connecting to transaction service..."
-msgstr "Ansluter till transaktionstjänsten..."
-
 msgid "dnf5daemon is not available. Make sure dnf5daemon-server is installed and running."
 msgstr "dnf5daemon är inte tillgänglig. Kontrollera att dnf5daemon-server är installerad och körs."
 
@@ -311,6 +308,51 @@ msgstr "Verkställer paketuppgraderingar. Se transaktionsfönstret för detaljer
 
 msgid "Wait for the current transaction to finish."
 msgstr "Vänta tills den aktuella transaktionen har verkställts."
+
+msgid "dnf5daemon transaction session is not available."
+msgstr "dnf5daemon-transaktionssessionen är inte tillgänglig."
+
+msgid "dnf5daemon key import request is incomplete."
+msgstr "dnf5daemon-begäran om nyckelimport är ofullständig."
+
+msgid "Could not answer the dnf5daemon key import request."
+msgstr "Kunde inte svara på dnf5daemon-begäran om nyckelimport."
+
+msgid "Repository signing key was rejected."
+msgstr "Förrådets signeringsnyckel avvisades."
+
+msgid "Repository signing key rejected."
+msgstr "Förrådets signeringsnyckel avvisades."
+
+msgid "Repository signing key accepted."
+msgstr "Förrådets signeringsnyckel accepterades."
+
+msgid "The repository cannot be used until its signing key is trusted."
+msgstr "Förrådet kan inte användas förrän dess signeringsnyckel är betrodd."
+
+msgid "Repository Signing Key"
+msgstr "Förrådets signeringsnyckel"
+
+msgid "Trust this repository signing key?"
+msgstr "Lita på den här signeringsnyckeln för förrådet?"
+
+msgid "Key ID"
+msgstr "Nyckel-ID"
+
+msgid "Fingerprint"
+msgstr "Fingeravtryck"
+
+msgid "Repository"
+msgstr "Förråd"
+
+msgid "Key URL"
+msgstr "Nyckel-URL"
+
+msgid "Reject"
+msgstr "Avvisa"
+
+msgid "Trust Key"
+msgstr "Lita på nyckel"
 
 #, c-format
 msgid "Found %zu package."

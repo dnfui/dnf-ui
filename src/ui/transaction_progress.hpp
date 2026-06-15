@@ -32,7 +32,6 @@ void transaction_progress_append(TransactionProgressWindow *progress, const std:
 // Mark the transaction progress window as finished.
 // -----------------------------------------------------------------------------
 void transaction_progress_finish(TransactionProgressWindow *progress, bool success, const std::string &summary);
-
 // -----------------------------------------------------------------------------
 // EOF
 // -----------------------------------------------------------------------------

@@ -26,12 +26,14 @@
 // The worker uses transaction_path to call the service, and progress_window receives text lines while the service
 // applies.
 struct ApplyTaskData {
+  SearchWidgets *widgets = nullptr;
   std::string transaction_path;
   TransactionProgressWindow *progress_window;
 };
 
 // Data passed to the transaction preview worker.
 struct PreviewTaskData {
+  SearchWidgets *widgets = nullptr;
   TransactionRequest request;
   TransactionPreview preview;
   std::string transaction_path;
@@ -242,6 +244,7 @@ start_apply_transaction(SearchWidgets *widgets)
   pending_transaction_set_preview_controls_sensitive(widgets, false);
 
   ApplyTaskData *td = new ApplyTaskData;
+  td->widgets = widgets;
   // Apply now owns this dnf5daemon session path.
   // Pending action changes must not release it while the daemon is applying the transaction.
   td->transaction_path = std::move(widgets->transaction.preview_transaction_path);
@@ -315,6 +318,9 @@ start_apply_transaction(SearchWidgets *widgets)
         bool ok = transaction_service_client_apply_started_request(
             td->transaction_path,
             [td](const std::string &message) { transaction_progress_append(td->progress_window, message); },
+            [td](const TransactionKeyImportRequest &request) {
+              return transaction_review_confirm_key_import(td->widgets, request);
+            },
             err);
         if (ok) {
           g_task_return_boolean(t, TRUE);
@@ -345,6 +351,7 @@ start_preview_request(SearchWidgets *widgets, TransactionRequest request)
   set_preview_request_busy_state(widgets, true);
 
   PreviewTaskData *td = new PreviewTaskData();
+  td->widgets = widgets;
   td->request = std::move(request);
 
   GCancellable *c = widgets_make_task_cancellable_for(GTK_WIDGET(widgets->query.entry));
@@ -414,13 +421,19 @@ start_preview_request(SearchWidgets *widgets, TransactionRequest request)
         bool ok = false;
         if (td && td->request.upgrade_all) {
           DNFUI_TRACE("Transaction preview worker start upgrade_all=1");
-          ok = transaction_service_client_preview_upgrade_all_request(td->preview, td->transaction_path, error);
+          ok = transaction_service_client_preview_upgrade_all_request(
+              td->preview, td->transaction_path, error, [td](const TransactionKeyImportRequest &request) {
+                return transaction_review_confirm_key_import(td->widgets, request);
+              });
         } else if (td) {
           DNFUI_TRACE("Transaction preview worker start upgrade_all=0 install=%zu remove=%zu reinstall=%zu",
                       td->request.install.size(),
                       td->request.remove.size(),
                       td->request.reinstall.size());
-          ok = transaction_service_client_preview_request(td->request, td->preview, td->transaction_path, error);
+          ok = transaction_service_client_preview_request(
+              td->request, td->preview, td->transaction_path, error, [td](const TransactionKeyImportRequest &request) {
+                return transaction_review_confirm_key_import(td->widgets, request);
+              });
         }
 
         if (!ok) {

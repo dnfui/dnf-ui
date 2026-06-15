@@ -156,7 +156,7 @@ TEST_CASE("dnf5daemon client releases preview sessions", "[dnf5daemon]")
 
   std::vector<std::string> progress_lines;
   bool applied_after_release = transaction_service_client_apply_started_request(
-      transaction_path, [&](const std::string &line) { progress_lines.push_back(line); }, error);
+      transaction_path, [&](const std::string &line) { progress_lines.push_back(line); }, {}, error);
 
   transaction_service_client_reset_for_tests();
 
@@ -188,7 +188,7 @@ TEST_CASE("dnf5daemon client applies install requests", "[dnf5daemon]")
 
   std::vector<std::string> progress_lines;
   bool applied = transaction_service_client_apply_started_request(
-      transaction_path, [&](const std::string &line) { progress_lines.push_back(line); }, error);
+      transaction_path, [&](const std::string &line) { progress_lines.push_back(line); }, {}, error);
 
   transaction_service_client_release_request(transaction_path);
   bool session_exists_after_release = transaction_service_client_session_exists_for_tests(transaction_path);
@@ -230,11 +230,11 @@ TEST_CASE("dnf5daemon client releases sessions after failed apply", "[dnf5daemon
 
   std::vector<std::string> progress_lines;
   REQUIRE(transaction_service_client_apply_started_request(
-      second_transaction_path, [&](const std::string &line) { progress_lines.push_back(line); }, error));
+      second_transaction_path, [&](const std::string &line) { progress_lines.push_back(line); }, {}, error));
   transaction_service_client_release_request(second_transaction_path);
 
   bool failed_apply = transaction_service_client_apply_started_request(
-      first_transaction_path, [&](const std::string &line) { progress_lines.push_back(line); }, error);
+      first_transaction_path, [&](const std::string &line) { progress_lines.push_back(line); }, {}, error);
   transaction_service_client_release_request(first_transaction_path);
   bool session_exists_after_release = transaction_service_client_session_exists_for_tests(first_transaction_path);
   transaction_service_client_reset_for_tests();

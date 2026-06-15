@@ -51,12 +51,13 @@ When the user clicks Apply:
 2. The controller builds a `TransactionRequest`.
 3. The transaction client opens a dnf5daemon session.
 4. The client marks install, remove, or reinstall specs on that session.
-5. The client asks dnf5daemon to resolve the transaction.
-6. The GUI shows the resolved preview.
-7. If the user confirms, the client subscribes to daemon progress signals.
-8. The client calls `do_transaction` with interactive authorization enabled.
-9. dnf5daemon handles privileged apply work and Polkit behavior.
-10. The GUI refreshes package state and closes the daemon session.
+5. The client asks dnf5daemon to resolve the transaction with user interaction enabled.
+6. If dnf5daemon requests a repository signing key during resolve, DNF UI asks before showing the summary.
+7. The GUI shows the resolved preview.
+8. If the user confirms, the client subscribes to daemon progress signals.
+9. The client calls `do_transaction` with interactive authorization enabled.
+10. dnf5daemon handles privileged apply work and Polkit behavior.
+11. The GUI refreshes package state and closes the daemon session.
 
 When the user clicks Upgrade All, the GUI skips the pending action list and asks
 the transaction client to prepare an upgrade session from current upgrade
@@ -125,6 +126,17 @@ because the user may need time to answer a Polkit prompt. A short D-Bus timeout
 can make the GUI report failure while the authorization dialog is still open.
 
 The GUI does not perform authorization itself. dnf5daemon owns that boundary.
+
+## Repository Signing Keys
+
+When dnf5daemon needs a repository signing key during preview or apply, DNF UI
+shows the key details and asks the user whether to trust it.
+
+The transaction client still owns the daemon protocol. The UI only answers yes
+or no, and the client sends that answer back to the same daemon session.
+
+The same trust dialog is used during preview and apply. During preview it is
+shown before the transaction summary can be prepared.
 
 ## Progress
 
