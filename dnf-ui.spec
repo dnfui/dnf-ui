@@ -1,5 +1,5 @@
 Name:           dnf-ui
-Version:        0.2.1
+Version:        0.2.2
 Release:        1%{?dist}
 Summary:        GTK frontend for DNF5
 
@@ -57,6 +57,13 @@ appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/com.fedora.dnfui
 %{_datadir}/metainfo/com.fedora.dnfui.metainfo.xml
 
 %changelog
+* Tue Jun 16 2026 ErikMN <erik@example.invalid> - 0.2.2-1
+- Add repository signing key approval during transactions
+- Show live repository refresh progress
+- Improve cancellation handling for search and selected-package reloads
+- Harden dnf5daemon preview parsing and resolve result handling
+- Keep exact package reloads off the GTK thread
+
 * Sat Jun 13 2026 ErikMN <erik@example.invalid> - 0.2.1-1
 - Force repository metadata refresh when using the Refresh repositories button
 - Allow repository refresh to be stopped from the UI while the current repo check finishes
