@@ -333,7 +333,7 @@ on_list_upgradeable_task_finished(GObject *, GAsyncResult *res, gpointer user_da
 static void
 on_search_task(GTask *task, gpointer, gpointer task_data, GCancellable *cancellable)
 {
-  QueryBackendBaseDropGuard base_drop_guard;
+  QueryBackendBaseDropGuard base_drop_guard(cancellable);
 
   const SearchTaskData *td = static_cast<const SearchTaskData *>(task_data);
   const char *pattern = td ? td->term : "";
