@@ -4,10 +4,12 @@
 #pragma once
 
 #include <atomic>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <shared_mutex>
 #include <stdexcept>
+#include <string>
 
 #include <libdnf5/base/base.hpp>
 
@@ -101,6 +103,9 @@ class BaseOperationCancelled : public std::runtime_error {
   }
 };
 
+// Text reported by libdnf while repository metadata is being downloaded.
+using BaseProgressCallback = std::function<void(const std::string &)>;
+
 // -----------------------------------------------------------------------------
 // Shared access point for the cached libdnf5 Base instance.
 // -----------------------------------------------------------------------------
@@ -158,7 +163,8 @@ class BaseManager {
   // Rebuild the cached Base from repository metadata with fallback.
   // -----------------------------------------------------------------------------
   BaseRepoState rebuild(BaseRefreshMode refresh_mode = BaseRefreshMode::NORMAL,
-                        std::shared_ptr<std::atomic<bool>> cancel_requested = nullptr);
+                        std::shared_ptr<std::atomic<bool>> cancel_requested = nullptr,
+                        BaseProgressCallback progress_callback = {});
   // -----------------------------------------------------------------------------
   // Rebuild the cached Base from the local rpmdb only.
   // -----------------------------------------------------------------------------

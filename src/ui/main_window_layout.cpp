@@ -290,6 +290,8 @@ main_window_build_layout(AppWidgets *ui)
 
   GtkWidget *query_duration_label = gtk_label_new("");
   gtk_label_set_xalign(GTK_LABEL(query_duration_label), 1.0);
+  gtk_label_set_ellipsize(GTK_LABEL(query_duration_label), PANGO_ELLIPSIZE_END);
+  gtk_label_set_max_width_chars(GTK_LABEL(query_duration_label), 60);
   gtk_widget_set_visible(query_duration_label, FALSE);
   gtk_box_append(GTK_BOX(bottom_bar), query_duration_label);
   ui->query_duration_label = query_duration_label;

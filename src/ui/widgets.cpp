@@ -27,6 +27,16 @@ GCancellable *repository_refresh_cancellable = nullptr;
 std::shared_ptr<std::atomic<bool>> repository_refresh_cancel_requested;
 bool repository_refresh_spinner_owned = false;
 
+struct RepositoryRefreshTaskData {
+  std::shared_ptr<std::atomic<bool>> cancel_requested;
+  GtkLabel *progress_label = nullptr;
+};
+
+struct RepositoryRefreshProgressLabelUpdate {
+  GtkLabel *label = nullptr;
+  std::string message;
+};
+
 }
 
 // -----------------------------------------------------------------------------
@@ -36,6 +46,60 @@ bool
 widgets_repository_refresh_is_running()
 {
   return repository_refresh_running.load(std::memory_order_relaxed);
+}
+
+// -----------------------------------------------------------------------------
+// Free data owned by one repository refresh task.
+// -----------------------------------------------------------------------------
+static void
+repository_refresh_task_data_free(gpointer p)
+{
+  RepositoryRefreshTaskData *data = static_cast<RepositoryRefreshTaskData *>(p);
+  if (!data) {
+    return;
+  }
+
+  if (data->progress_label) {
+    g_object_unref(data->progress_label);
+  }
+  delete data;
+}
+
+// -----------------------------------------------------------------------------
+// Show one repository download progress line in the bottom bar.
+// Worker thread progress must queue the GTK update on the main thread.
+// -----------------------------------------------------------------------------
+static gboolean
+repository_refresh_progress_label_update_on_main(gpointer user_data)
+{
+  RepositoryRefreshProgressLabelUpdate *update = static_cast<RepositoryRefreshProgressLabelUpdate *>(user_data);
+  if (update && update->label && !update->message.empty()) {
+    gtk_label_set_text(update->label, update->message.c_str());
+    gtk_widget_set_visible(GTK_WIDGET(update->label), TRUE);
+  }
+
+  if (update && update->label) {
+    g_object_unref(update->label);
+  }
+  delete update;
+  return G_SOURCE_REMOVE;
+}
+
+// -----------------------------------------------------------------------------
+// Queue one libdnf repository download line for the bottom bar.
+// Keep the label alive because the refresh task may finish before GTK shows the text.
+// -----------------------------------------------------------------------------
+static void
+queue_repository_refresh_progress_label(GtkLabel *label, const std::string &message)
+{
+  if (!label || message.empty()) {
+    return;
+  }
+
+  RepositoryRefreshProgressLabelUpdate *update = new RepositoryRefreshProgressLabelUpdate;
+  update->label = GTK_LABEL(g_object_ref(label));
+  update->message = message;
+  g_main_context_invoke(nullptr, repository_refresh_progress_label_update_on_main, update);
 }
 
 // -----------------------------------------------------------------------------
@@ -215,12 +279,16 @@ widgets_on_rebuild_task(GTask *task, gpointer, gpointer, GCancellable *)
 void
 widgets_on_force_rebuild_task(GTask *task, gpointer, gpointer task_data, GCancellable *)
 {
-  auto *cancel_requested = static_cast<std::shared_ptr<std::atomic<bool>> *>(task_data);
+  auto *refresh_data = static_cast<RepositoryRefreshTaskData *>(task_data);
 
   try {
     DNFUI_TRACE("Repository refresh worker start");
-    BaseRepoState refresh_state = BaseManager::instance().rebuild(BaseRefreshMode::FORCE_METADATA_CHECK,
-                                                                  cancel_requested ? *cancel_requested : nullptr);
+    BaseRepoState refresh_state = BaseManager::instance().rebuild(
+        BaseRefreshMode::FORCE_METADATA_CHECK,
+        refresh_data ? refresh_data->cancel_requested : nullptr,
+        [refresh_data](const std::string &message) {
+          queue_repository_refresh_progress_label(refresh_data ? refresh_data->progress_label : nullptr, message);
+        });
     DNFUI_TRACE("Repository refresh worker done state=%d", static_cast<int>(refresh_state));
     // GTask completion transfers this heap value back to the GTK thread.
     // The force refresh completion handler deletes it after reading the result.
@@ -346,6 +414,7 @@ widgets_on_force_rebuild_task_finished(GObject *, GAsyncResult *res, gpointer us
 
   if (error && g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
     DNFUI_TRACE("Repository refresh completion stopped");
+    package_query_clear_duration_label(widgets);
     ui_helpers_set_status(widgets->query.status_label, _("Repository refresh stopped."), "gray");
     g_error_free(error);
     return;
@@ -429,6 +498,7 @@ widgets_on_refresh_button_clicked(GtkButton *, gpointer user_data)
   // not reuse rows from repository state that is changing.
   package_query_clear_search_cache();
   DNFUI_TRACE("Repository refresh start requested from button");
+  package_query_clear_duration_label(widgets);
   ui_helpers_set_status(widgets->query.status_label, _("Refreshing repositories..."), "blue");
   widgets_spinner_acquire(widgets->query.spinner);
   repository_refresh_spinner_owned = true;
@@ -445,9 +515,12 @@ widgets_on_refresh_button_clicked(GtkButton *, gpointer user_data)
   GTask *task = widgets_task_new_for_search_widgets(widgets, c, widgets_on_force_rebuild_task_finished);
   repository_refresh_cancellable = G_CANCELLABLE(g_object_ref(c));
   repository_refresh_cancel_requested = std::make_shared<std::atomic<bool>>(false);
-  g_task_set_task_data(task,
-                       new std::shared_ptr<std::atomic<bool>>(repository_refresh_cancel_requested),
-                       [](gpointer p) { delete static_cast<std::shared_ptr<std::atomic<bool>> *>(p); });
+  auto *refresh_data = new RepositoryRefreshTaskData;
+  refresh_data->cancel_requested = repository_refresh_cancel_requested;
+  if (widgets->window_state.query_duration_label) {
+    refresh_data->progress_label = GTK_LABEL(g_object_ref(widgets->window_state.query_duration_label));
+  }
+  g_task_set_task_data(task, refresh_data, repository_refresh_task_data_free);
   auto *started_at_us = new gint64(g_get_monotonic_time());
   g_object_set_data_full(
       G_OBJECT(task), kTaskStartedAtUsKey, started_at_us, [](gpointer p) { delete static_cast<gint64 *>(p); });

@@ -354,6 +354,18 @@ msgstr "Avvisa"
 msgid "Trust Key"
 msgstr "Lita på nyckel"
 
+msgid "repository metadata"
+msgstr "förrådsmetadata"
+
+msgid "Downloading: "
+msgstr "Hämtar: "
+
+msgid "Download progress: "
+msgstr "Hämtningsförlopp: "
+
+msgid "Download ready: "
+msgstr "Hämtning klar: "
+
 #, c-format
 msgid "Found %zu package."
 msgid_plural "Found %zu packages."

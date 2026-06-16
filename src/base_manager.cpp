@@ -5,12 +5,14 @@
 // -----------------------------------------------------------------------------
 #include "base_manager.hpp"
 #include "debug_trace.hpp"
+#include "i18n.hpp"
 
 #include <libdnf5/conf/const.hpp>
 #include <libdnf5/repo/download_callbacks.hpp>
 #include <libdnf5/repo/repo.hpp>
 #include <libdnf5/repo/repo_cache.hpp>
 
+#include <algorithm>
 #include <cstdlib>
 #include <chrono>
 #include <filesystem>
@@ -40,6 +42,11 @@ struct BuiltBase {
   BaseRepoState repo_state = BaseRepoState::LIVE_METADATA;
 };
 
+struct DownloadProgressState {
+  std::string description;
+  int last_reported_bucket = -1;
+};
+
 // -----------------------------------------------------------------------------
 // Return true when the caller has requested that a Base operation stop.
 // -----------------------------------------------------------------------------
@@ -50,33 +57,66 @@ base_operation_cancel_requested(const std::shared_ptr<std::atomic<bool>> &cancel
 }
 
 // -----------------------------------------------------------------------------
-// Stop repository downloads when the caller cancels the rebuild.
+// Stop repository downloads when the caller cancels the rebuild and report real download progress when requested.
 // libdnf calls these methods while downloading repository metadata.
 // Returning ERROR tells libdnf to abort the current download work.
 // This is cooperative cancellation, so it only runs when libdnf reaches one of these callbacks.
 // -----------------------------------------------------------------------------
 class CancelableDownloadCallbacks : public libdnf5::repo::DownloadCallbacks {
   public:
-  explicit CancelableDownloadCallbacks(std::shared_ptr<std::atomic<bool>> cancel_requested)
+  CancelableDownloadCallbacks(std::shared_ptr<std::atomic<bool>> cancel_requested,
+                              BaseProgressCallback progress_callback)
       : cancel_requested(std::move(cancel_requested))
+      , progress_callback(std::move(progress_callback))
   {
   }
 
-  int progress(void *, double, double) override
+  void *add_new_download(void *, const char *description, double) override
+  {
+    auto *state = new DownloadProgressState;
+    state->description = description ? description : _("repository metadata");
+    emit_progress(std::string(_("Downloading: ")) + state->description);
+    return state;
+  }
+
+  int progress(void *user_cb_data, double total_to_download, double downloaded) override
   {
     trace_cancel_once("progress");
+    auto *state = static_cast<DownloadProgressState *>(user_cb_data);
+    if (state && total_to_download > 0.0) {
+      int percent = static_cast<int>((downloaded * 100.0) / total_to_download);
+      percent = std::clamp(percent, 0, 100);
+      int bucket = percent / 10;
+
+      // libdnf calls this often. Ten percent steps keep the UI live without sending every byte update.
+      if (bucket > state->last_reported_bucket) {
+        state->last_reported_bucket = bucket;
+        emit_progress(std::string(_("Download progress: ")) + state->description + " (" + std::to_string(percent) +
+                      "%)");
+      }
+    }
     return cancelled() ? libdnf5::repo::DownloadCallbacks::ERROR : libdnf5::repo::DownloadCallbacks::OK;
   }
 
-  int end(void *, TransferStatus, const char *) override
+  int end(void *user_cb_data, TransferStatus status, const char *msg) override
   {
     trace_cancel_once("end");
+    std::unique_ptr<DownloadProgressState> state(static_cast<DownloadProgressState *>(user_cb_data));
+    const std::string description = state ? state->description : _("repository metadata");
+    if (status == TransferStatus::SUCCESSFUL || status == TransferStatus::ALREADYEXISTS) {
+      emit_progress(std::string(_("Download ready: ")) + description);
+    } else if (msg && msg[0] != '\0') {
+      emit_progress(msg);
+    }
     return cancelled() ? libdnf5::repo::DownloadCallbacks::ERROR : libdnf5::repo::DownloadCallbacks::OK;
   }
 
-  int mirror_failure(void *, const char *, const char *, const char *) override
+  int mirror_failure(void *, const char *msg, const char *, const char *) override
   {
     trace_cancel_once("mirror failure");
+    if (msg && msg[0] != '\0') {
+      emit_progress(msg);
+    }
     return cancelled() ? libdnf5::repo::DownloadCallbacks::ERROR : libdnf5::repo::DownloadCallbacks::OK;
   }
 
@@ -103,9 +143,17 @@ class CancelableDownloadCallbacks : public libdnf5::repo::DownloadCallbacks {
     return base_operation_cancel_requested(cancel_requested);
   }
 
+  void emit_progress(const std::string &message)
+  {
+    if (progress_callback && !message.empty()) {
+      progress_callback(message);
+    }
+  }
+
   // Shared with the UI task that owns this refresh.
   // The button sets this flag, and the libdnf callback reads it from the worker thread.
   std::shared_ptr<std::atomic<bool>> cancel_requested;
+  BaseProgressCallback progress_callback;
   std::atomic<bool> cancel_trace_written { false };
 };
 
@@ -268,22 +316,25 @@ static BuiltBase
 build_base_for_mode(RepoLoadMode mode,
                     bool load_changelog_metadata,
                     BaseRefreshMode refresh_mode,
-                    const std::shared_ptr<std::atomic<bool>> &cancel_requested)
+                    const std::shared_ptr<std::atomic<bool>> &cancel_requested,
+                    BaseProgressCallback progress_callback)
 {
   BuiltBase result;
   DNFUI_TRACE(
       "BaseManager build base start mode=%d refresh=%d", static_cast<int>(mode), static_cast<int>(refresh_mode));
   throw_if_rebuild_cancelled(cancel_requested);
   result.base = create_configured_base(mode, load_changelog_metadata);
-  if (cancel_requested) {
-    result.base->set_download_callbacks(std::make_unique<CancelableDownloadCallbacks>(cancel_requested));
+  const bool has_download_callbacks = cancel_requested || static_cast<bool>(progress_callback);
+  if (has_download_callbacks) {
+    result.base->set_download_callbacks(
+        std::make_unique<CancelableDownloadCallbacks>(cancel_requested, std::move(progress_callback)));
   }
   if (mode == RepoLoadMode::FULL && refresh_mode == BaseRefreshMode::FORCE_METADATA_CHECK) {
     throw_if_rebuild_cancelled(cancel_requested);
     expire_repository_metadata_cache(*result.base);
   }
   load_repo_data(*result.base, mode, cancel_requested);
-  if (cancel_requested) {
+  if (has_download_callbacks) {
     result.base->set_download_callbacks(nullptr);
   }
   if (mode == RepoLoadMode::CACHE_ONLY_METADATA) {
@@ -303,10 +354,12 @@ build_base_for_mode(RepoLoadMode mode,
 static BuiltBase
 build_base_with_offline_fallback(bool load_changelog_metadata = false,
                                  BaseRefreshMode refresh_mode = BaseRefreshMode::NORMAL,
-                                 std::shared_ptr<std::atomic<bool>> cancel_requested = nullptr)
+                                 std::shared_ptr<std::atomic<bool>> cancel_requested = nullptr,
+                                 BaseProgressCallback progress_callback = {})
 {
   try {
-    return build_base_for_mode(RepoLoadMode::FULL, load_changelog_metadata, refresh_mode, cancel_requested);
+    return build_base_for_mode(
+        RepoLoadMode::FULL, load_changelog_metadata, refresh_mode, cancel_requested, progress_callback);
   } catch (const BaseOperationCancelled &) {
     // Stop is not a repo load failure. Do not continue into fallback modes.
     DNFUI_TRACE("BaseManager live repo load stopped before fallback");
@@ -320,7 +373,7 @@ build_base_with_offline_fallback(bool load_changelog_metadata = false,
 
     try {
       return build_base_for_mode(
-          RepoLoadMode::CACHE_ONLY_METADATA, load_changelog_metadata, BaseRefreshMode::NORMAL, cancel_requested);
+          RepoLoadMode::CACHE_ONLY_METADATA, load_changelog_metadata, BaseRefreshMode::NORMAL, cancel_requested, {});
     } catch (const BaseOperationCancelled &) {
       // Stop is not a cache load failure. Do not continue into fallback modes.
       DNFUI_TRACE("BaseManager cached repo load stopped before fallback");
@@ -332,7 +385,7 @@ build_base_with_offline_fallback(bool load_changelog_metadata = false,
 
       try {
         return build_base_for_mode(
-            RepoLoadMode::SYSTEM_ONLY, load_changelog_metadata, BaseRefreshMode::NORMAL, cancel_requested);
+            RepoLoadMode::SYSTEM_ONLY, load_changelog_metadata, BaseRefreshMode::NORMAL, cancel_requested, {});
       } catch (const BaseOperationCancelled &) {
         // Stop is not a system load failure.
         DNFUI_TRACE("BaseManager system-only load stopped");
@@ -499,7 +552,9 @@ BaseManager::acquire_write()
 // Rebuild the cached Base after repository refresh or transaction work.
 // -----------------------------------------------------------------------------
 BaseRepoState
-BaseManager::rebuild(BaseRefreshMode refresh_mode, std::shared_ptr<std::atomic<bool>> cancel_requested)
+BaseManager::rebuild(BaseRefreshMode refresh_mode,
+                     std::shared_ptr<std::atomic<bool>> cancel_requested,
+                     BaseProgressCallback progress_callback)
 {
   // Allow only one Base rebuild at a time.
   std::unique_lock lock(base_mutex);
@@ -507,7 +562,8 @@ BaseManager::rebuild(BaseRefreshMode refresh_mode, std::shared_ptr<std::atomic<b
   // Build the replacement first so a refresh failure does not discard the last
   // usable Base. Offline fallback keeps the UI query paths working from cached
   // metadata or, as a last resort, from the local rpmdb only.
-  BuiltBase rebuilt = build_base_with_offline_fallback(false, refresh_mode, std::move(cancel_requested));
+  BuiltBase rebuilt =
+      build_base_with_offline_fallback(false, refresh_mode, std::move(cancel_requested), std::move(progress_callback));
   if (!rebuilt.base) {
     throw std::runtime_error("Repository rebuild failed (Base is null).");
   }
@@ -582,7 +638,7 @@ BaseManager::ensure_system_only_initialized_if_needed()
 std::shared_ptr<libdnf5::Base>
 BaseManager::build_initialized_system_only_base()
 {
-  return build_base_for_mode(RepoLoadMode::SYSTEM_ONLY, false, BaseRefreshMode::NORMAL, nullptr).base;
+  return build_base_for_mode(RepoLoadMode::SYSTEM_ONLY, false, BaseRefreshMode::NORMAL, nullptr, {}).base;
 }
 
 // -----------------------------------------------------------------------------
