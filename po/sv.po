@@ -366,6 +366,9 @@ msgstr "Hämtningsförlopp: "
 msgid "Download ready: "
 msgstr "Hämtning klar: "
 
+msgid "dnf5daemon returned an unsupported transaction resolve result."
+msgstr "dnf5daemon returnerade ett transaktionsresultat som inte stöds."
+
 #, c-format
 msgid "Found %zu package."
 msgid_plural "Found %zu packages."

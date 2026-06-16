@@ -698,12 +698,28 @@ transaction_service_client_get_transaction_preview(GDBusConnection *connection,
               result,
               items ? static_cast<size_t>(g_variant_n_children(items)) : 0);
 
-  if (result == 2) {
+  switch (result) {
+  case 0:
+    break;
+  case 1: {
+    std::string warning = daemon_transaction_problems(connection, transaction_path);
+    if (!warning.empty()) {
+      DNFUI_TRACE("dnf5daemon resolve warning path=%s warning=%s", transaction_path.c_str(), warning.c_str());
+    }
+    break;
+  }
+  case 2:
     error_out = daemon_transaction_problems(connection, transaction_path);
     if (error_out.empty()) {
       error_out = _("dnf5daemon could not resolve the transaction.");
     }
     DNFUI_TRACE("dnf5daemon resolve failed path=%s error=%s", transaction_path.c_str(), error_out.c_str());
+    g_variant_unref(items);
+    g_variant_unref(state.reply);
+    return false;
+  default:
+    error_out = _("dnf5daemon returned an unsupported transaction resolve result.");
+    DNFUI_TRACE("dnf5daemon resolve returned unsupported result path=%s result=%u", transaction_path.c_str(), result);
     g_variant_unref(items);
     g_variant_unref(state.reply);
     return false;
