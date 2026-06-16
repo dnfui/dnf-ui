@@ -263,15 +263,23 @@ daemon_apply_error_message(GError *error)
 
 // -----------------------------------------------------------------------------
 // Build the package label used by the existing preview dialog.
+// A daemon package item must contain enough fields to identify one package.
 // -----------------------------------------------------------------------------
-std::string
-package_label_from_daemon_object(GVariant *object)
+bool
+package_label_from_daemon_object(GVariant *object, std::string &label_out, std::string &error_out)
 {
+  label_out.clear();
+
   const std::string name = map_lookup_string(object, "name");
   const std::string epoch = map_lookup_string(object, "epoch");
   const std::string version = map_lookup_string(object, "version");
   const std::string release = map_lookup_string(object, "release");
   const std::string arch = map_lookup_string(object, "arch");
+
+  if (name.empty() || version.empty() || release.empty() || arch.empty()) {
+    error_out = _("dnf5daemon returned an incomplete package item.");
+    return false;
+  }
 
   std::ostringstream label;
   label << name << "-";
@@ -279,7 +287,8 @@ package_label_from_daemon_object(GVariant *object)
     label << epoch << ":";
   }
   label << version << "-" << release << "." << arch;
-  return label.str();
+  label_out = label.str();
+  return true;
 }
 
 // -----------------------------------------------------------------------------
@@ -308,7 +317,11 @@ append_daemon_preview_item(TransactionPreview &preview,
     return false;
   }
 
-  const std::string label = package_label_from_daemon_object(object);
+  std::string label;
+  if (!package_label_from_daemon_object(object, label, error_out)) {
+    return false;
+  }
+
   const long long install_size = map_lookup_int64(object, "install_size");
 
   if (lower_action == "install") {
