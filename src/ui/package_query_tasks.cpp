@@ -62,6 +62,29 @@ struct PackageListTaskData {
   gint64 started_at_us;
 };
 
+// Data passed to one exact selected-package reload task.
+// The selected NEVRA and generation are checked again before the table is updated.
+struct ExactPackageReloadTaskData {
+  char *nevra;
+  uint64_t request_id;
+  uint64_t generation;
+  gint64 started_at_us;
+};
+
+// -----------------------------------------------------------------------------
+// Free data owned by one exact selected-package reload task.
+// -----------------------------------------------------------------------------
+static void
+exact_package_reload_task_data_free(gpointer p)
+{
+  ExactPackageReloadTaskData *d = static_cast<ExactPackageReloadTaskData *>(p);
+  if (!d) {
+    return;
+  }
+  g_free(d->nevra);
+  g_free(d);
+}
+
 struct QueryBackendBaseDropGuard {
   explicit QueryBackendBaseDropGuard(GCancellable *cancellable = nullptr)
       : cancellable(cancellable)
@@ -423,6 +446,98 @@ on_search_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
 }
 
 // -----------------------------------------------------------------------------
+// Reload one exact selected package on a worker thread.
+// This path is used for one-package views from the pending-actions sidebar.
+// -----------------------------------------------------------------------------
+static void
+on_exact_package_reload_task(GTask *task, gpointer, gpointer task_data, GCancellable *cancellable)
+{
+  QueryBackendBaseDropGuard base_drop_guard(cancellable);
+
+  const ExactPackageReloadTaskData *td = static_cast<const ExactPackageReloadTaskData *>(task_data);
+  const char *nevra = td && td->nevra ? td->nevra : "";
+
+  try {
+    dnf_backend_refresh_installed_nevras();
+
+    if (cancellable && g_cancellable_is_cancelled(cancellable)) {
+      g_task_return_error(task, g_error_new_literal(G_IO_ERROR, G_IO_ERROR_CANCELLED, "Reload cancelled."));
+      return;
+    }
+
+    auto *results = new std::vector<PackageRow>(dnf_backend_get_installed_package_rows_by_nevra(nevra));
+    if (results->empty()) {
+      *results = dnf_backend_get_available_package_rows_by_nevra(nevra);
+    }
+    g_task_return_pointer(task, results, [](gpointer p) { delete static_cast<std::vector<PackageRow> *>(p); });
+  } catch (const std::exception &e) {
+    g_task_return_error(task, g_error_new_literal(G_IO_ERROR, G_IO_ERROR_FAILED, e.what()));
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Finish exact selected-package reload on the GTK thread.
+// -----------------------------------------------------------------------------
+static void
+on_exact_package_reload_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
+{
+  GTask *task = G_TASK(res);
+  SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
+  const ExactPackageReloadTaskData *td = static_cast<const ExactPackageReloadTaskData *>(g_task_get_task_data(task));
+  const std::string task_nevra = td && td->nevra ? td->nevra : "";
+
+  if (widgets_task_should_skip_completion(task, widgets)) {
+    if (widgets && !widgets->window_state.destroyed) {
+      if (GCancellable *c = g_task_get_cancellable(task)) {
+        if (g_cancellable_is_cancelled(c) && td) {
+          package_query_end_package_list_request(widgets, td->request_id, PackageListRequestKind::EXACT_RELOAD);
+        }
+      }
+    }
+    return;
+  }
+
+  if (td && td->generation != BaseManager::instance().current_generation()) {
+    widgets_spinner_release(widgets->query.spinner);
+    package_query_end_package_list_request(widgets, td->request_id, PackageListRequestKind::EXACT_RELOAD);
+    return;
+  }
+
+  if (widgets->results.selected_nevra != task_nevra || widgets->query_state.reload_selected_nevra != task_nevra) {
+    widgets_spinner_release(widgets->query.spinner);
+    if (td) {
+      package_query_end_package_list_request(widgets, td->request_id, PackageListRequestKind::EXACT_RELOAD);
+    }
+    return;
+  }
+
+  GError *error = nullptr;
+  std::vector<PackageRow> *packages = static_cast<std::vector<PackageRow> *>(g_task_propagate_pointer(task, &error));
+
+  widgets_spinner_release(widgets->query.spinner);
+
+  if (td) {
+    package_query_end_package_list_request(widgets, td->request_id, PackageListRequestKind::EXACT_RELOAD);
+  }
+
+  if (packages) {
+    widgets->results.selected_nevra = packages->empty() ? "" : task_nevra;
+    package_table_fill_package_view(widgets, *packages);
+    package_query_show_duration_label(widgets, _("Refresh"), td ? td->started_at_us : 0);
+    package_query_finish_results_refresh(widgets);
+    delete packages;
+  } else {
+    widgets->query_state.preserve_selection_on_reload = false;
+    widgets->query_state.reload_selected_nevra.clear();
+    ui_helpers_set_status(widgets->query.status_label, error ? error->message : _("Error refreshing package."), "red");
+    package_query_show_duration_label(widgets, _("Refresh"), td ? td->started_at_us : 0);
+    if (error) {
+      g_error_free(error);
+    }
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Start one installed-package list worker.
 // -----------------------------------------------------------------------------
 void
@@ -519,6 +634,33 @@ package_query_start_search_task(SearchWidgets *widgets,
   GTask *task = widgets_task_new_for_search_widgets(widgets, c, on_search_task_finished);
   g_task_set_task_data(task, td, search_task_data_free);
   g_task_run_in_thread(task, on_search_task);
+  g_object_unref(task);
+  g_object_unref(c);
+}
+
+// -----------------------------------------------------------------------------
+// Start one exact selected-package reload worker.
+// -----------------------------------------------------------------------------
+void
+package_query_start_exact_package_reload_task(SearchWidgets *widgets, const std::string &nevra)
+{
+  if (!widgets || nevra.empty()) {
+    return;
+  }
+
+  widgets_spinner_acquire(widgets->query.spinner);
+
+  ExactPackageReloadTaskData *td = static_cast<ExactPackageReloadTaskData *>(g_malloc0(sizeof *td));
+  td->nevra = g_strdup(nevra.c_str());
+  td->request_id = widgets->query_state.next_package_list_request_id++;
+  td->generation = BaseManager::instance().current_generation();
+  td->started_at_us = g_get_monotonic_time();
+
+  GCancellable *c = widgets_make_task_cancellable_for(GTK_WIDGET(widgets->query.entry));
+  package_query_begin_package_list_request(widgets, c, td->request_id, PackageListRequestKind::EXACT_RELOAD);
+  GTask *task = widgets_task_new_for_search_widgets(widgets, c, on_exact_package_reload_task_finished);
+  g_task_set_task_data(task, td, exact_package_reload_task_data_free);
+  g_task_run_in_thread(task, on_exact_package_reload_task);
   g_object_unref(task);
   g_object_unref(c);
 }

@@ -177,7 +177,8 @@ package_query_on_search_button_clicked(GtkButton *, gpointer user_data)
 {
   SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
   if (package_query_has_active_package_list_request(widgets)) {
-    if (widgets->query_state.current_package_list_request_kind == PackageListRequestKind::SEARCH) {
+    if (widgets->query_state.current_package_list_request_kind == PackageListRequestKind::SEARCH ||
+        widgets->query_state.current_package_list_request_kind == PackageListRequestKind::EXACT_RELOAD) {
       package_query_cancel_active_package_list_request(widgets);
     }
     return;
@@ -235,13 +236,6 @@ package_query_on_clear_button_clicked(GtkButton *, gpointer user_data)
   ui_helpers_update_action_button_labels(widgets, "");
 }
 
-struct ReloadBackendBaseDropGuard {
-  ~ReloadBackendBaseDropGuard()
-  {
-    BaseManager::instance().drop_cached_base();
-  }
-};
-
 // -----------------------------------------------------------------------------
 // Rebuild the currently displayed package table after a transaction or repo
 // refresh. Query-backed views are replayed through their normal async entry
@@ -296,18 +290,7 @@ package_query_reload_current_view(SearchWidgets *widgets)
     return;
   }
 
-  ReloadBackendBaseDropGuard base_drop_guard;
-
-  dnf_backend_refresh_installed_nevras();
-
-  std::vector<PackageRow> rows = dnf_backend_get_installed_package_rows_by_nevra(widgets->results.selected_nevra);
-  if (rows.empty()) {
-    rows = dnf_backend_get_available_package_rows_by_nevra(widgets->results.selected_nevra);
-  }
-
-  widgets->results.selected_nevra = rows.empty() ? "" : widgets->query_state.reload_selected_nevra;
-  package_table_fill_package_view(widgets, rows);
-  package_query_finish_results_refresh(widgets);
+  package_query_start_exact_package_reload_task(widgets, widgets->results.selected_nevra);
 }
 
 // -----------------------------------------------------------------------------

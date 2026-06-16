@@ -158,6 +158,7 @@ package_list_stop_button(SearchWidgets *widgets, PackageListRequestKind kind)
   case PackageListRequestKind::LIST_UPGRADEABLE:
     return widgets->query.list_upgradeable_button;
   case PackageListRequestKind::SEARCH:
+  case PackageListRequestKind::EXACT_RELOAD:
   case PackageListRequestKind::NONE:
   default:
     return widgets->query.search_button;
@@ -179,6 +180,8 @@ package_list_cancelled_status(PackageListRequestKind kind)
     return _("Listing packages cancelled.");
   case PackageListRequestKind::LIST_UPGRADEABLE:
     return _("Listing upgradable packages cancelled.");
+  case PackageListRequestKind::EXACT_RELOAD:
+    return _("Selected package refresh cancelled.");
   case PackageListRequestKind::NONE:
   default:
     return _("Operation cancelled.");
@@ -201,6 +204,8 @@ package_list_stopping_status(PackageListRequestKind kind)
     return _("Stopping package listing...");
   case PackageListRequestKind::LIST_UPGRADEABLE:
     return _("Stopping upgradable package listing...");
+  case PackageListRequestKind::EXACT_RELOAD:
+    return _("Stopping selected package refresh...");
   case PackageListRequestKind::NONE:
   default:
     return _("Stopping operation...");

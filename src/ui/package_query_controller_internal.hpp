@@ -85,6 +85,10 @@ void package_query_start_search_task(SearchWidgets *widgets,
                                      uint64_t generation,
                                      uint64_t cache_epoch,
                                      const DnfBackendSearchOptions &search_options);
+// -----------------------------------------------------------------------------
+// Start one exact selected-package reload worker.
+// -----------------------------------------------------------------------------
+void package_query_start_exact_package_reload_task(SearchWidgets *widgets, const std::string &nevra);
 
 // -----------------------------------------------------------------------------
 // EOF

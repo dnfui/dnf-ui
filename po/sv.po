@@ -21,6 +21,9 @@ msgstr "Grafiskt gränssnitt för Fedors pakethanterare"
 msgid "Search"
 msgstr "Sök"
 
+msgid "Refresh"
+msgstr "Uppdatera"
+
 msgid "Search packages..."
 msgstr "Sök paket..."
 
@@ -204,6 +207,9 @@ msgstr "Stoppar paketlistning..."
 msgid "Stopping upgradable package listing..."
 msgstr "Stoppar listning av uppgraderbara paket..."
 
+msgid "Stopping selected package refresh..."
+msgstr "Stoppar uppdatering av valt paket..."
+
 msgid "Stopping operation..."
 msgstr "Stoppar åtgärd..."
 
@@ -218,6 +224,9 @@ msgstr "Paketlistning avbröts."
 
 msgid "Listing upgradable packages cancelled."
 msgstr "Listning av uppgraderbara paket avbröts."
+
+msgid "Selected package refresh cancelled."
+msgstr "Uppdatering av valt paket avbröts."
 
 msgid "Repositories refreshed."
 msgstr "Förråd uppdaterade."
@@ -242,6 +251,9 @@ msgstr "Förrådsuppdatering misslyckades."
 
 msgid "Package info loaded."
 msgstr "Paketinfo lästes in."
+
+msgid "Error refreshing package."
+msgstr "Fel vid uppdatering av paket."
 
 msgid "Package info load was cancelled."
 msgstr "Inläsning av paketinfo avbröts."

@@ -16,7 +16,7 @@
 // -----------------------------------------------------------------------------
 // Active background request using the package-list action buttons
 // -----------------------------------------------------------------------------
-enum class PackageListRequestKind { NONE, SEARCH, LIST_INSTALLED, LIST_AVAILABLE, LIST_UPGRADEABLE };
+enum class PackageListRequestKind { NONE, SEARCH, LIST_INSTALLED, LIST_AVAILABLE, LIST_UPGRADEABLE, EXACT_RELOAD };
 
 // -----------------------------------------------------------------------------
 // Last query-backed package view shown in the main table.
