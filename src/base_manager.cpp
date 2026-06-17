@@ -20,6 +20,7 @@
 #include <stdexcept>
 #include <system_error>
 #include <thread>
+#include <unordered_set>
 
 #ifdef __GLIBC__
 #include <malloc.h>
@@ -59,7 +60,7 @@ base_operation_cancel_requested(const std::shared_ptr<std::atomic<bool>> &cancel
 // -----------------------------------------------------------------------------
 // Stop repository downloads when the caller cancels the rebuild and report real download progress when requested.
 // libdnf calls these methods while downloading repository metadata.
-// Returning ERROR tells libdnf to abort the current download work.
+// Returning ABORT tells libdnf to stop the current transfer.
 // This is cooperative cancellation, so it only runs when libdnf reaches one of these callbacks.
 // -----------------------------------------------------------------------------
 class CancelableDownloadCallbacks : public libdnf5::repo::DownloadCallbacks {
@@ -71,10 +72,23 @@ class CancelableDownloadCallbacks : public libdnf5::repo::DownloadCallbacks {
   {
   }
 
+  ~CancelableDownloadCallbacks() override
+  {
+    std::lock_guard<std::mutex> guard(downloads_mutex);
+    for (auto *state : active_downloads) {
+      delete state;
+    }
+    active_downloads.clear();
+  }
+
   void *add_new_download(void *, const char *description, double) override
   {
     auto *state = new DownloadProgressState;
     state->description = description ? description : _("repository metadata");
+    {
+      std::lock_guard<std::mutex> guard(downloads_mutex);
+      active_downloads.insert(state);
+    }
     emit_progress(std::string(_("Downloading: ")) + state->description);
     return state;
   }
@@ -83,7 +97,14 @@ class CancelableDownloadCallbacks : public libdnf5::repo::DownloadCallbacks {
   {
     trace_cancel_once("progress");
     auto *state = static_cast<DownloadProgressState *>(user_cb_data);
+    std::string progress_message;
+
     if (state && total_to_download > 0.0) {
+      std::lock_guard<std::mutex> guard(downloads_mutex);
+      if (active_downloads.find(state) == active_downloads.end()) {
+        return cancelled() ? libdnf5::repo::DownloadCallbacks::ABORT : libdnf5::repo::DownloadCallbacks::OK;
+      }
+
       int percent = static_cast<int>((downloaded * 100.0) / total_to_download);
       percent = std::clamp(percent, 0, 100);
       int bucket = percent / 10;
@@ -91,24 +112,33 @@ class CancelableDownloadCallbacks : public libdnf5::repo::DownloadCallbacks {
       // libdnf calls this often. Ten percent steps keep the UI live without sending every byte update.
       if (bucket > state->last_reported_bucket) {
         state->last_reported_bucket = bucket;
-        emit_progress(std::string(_("Download progress: ")) + state->description + " (" + std::to_string(percent) +
-                      "%)");
+        progress_message =
+            std::string(_("Download progress: ")) + state->description + " (" + std::to_string(percent) + "%)";
       }
     }
-    return cancelled() ? libdnf5::repo::DownloadCallbacks::ERROR : libdnf5::repo::DownloadCallbacks::OK;
+    emit_progress(progress_message);
+    return cancelled() ? libdnf5::repo::DownloadCallbacks::ABORT : libdnf5::repo::DownloadCallbacks::OK;
   }
 
   int end(void *user_cb_data, TransferStatus status, const char *msg) override
   {
     trace_cancel_once("end");
-    std::unique_ptr<DownloadProgressState> state(static_cast<DownloadProgressState *>(user_cb_data));
-    const std::string description = state ? state->description : _("repository metadata");
+    auto *state = static_cast<DownloadProgressState *>(user_cb_data);
+    std::unique_ptr<DownloadProgressState> owned_state;
+    {
+      std::lock_guard<std::mutex> guard(downloads_mutex);
+      if (active_downloads.erase(state) != 0) {
+        owned_state.reset(state);
+      }
+    }
+
+    const std::string description = owned_state ? owned_state->description : _("repository metadata");
     if (status == TransferStatus::SUCCESSFUL || status == TransferStatus::ALREADYEXISTS) {
       emit_progress(std::string(_("Download ready: ")) + description);
     } else if (msg && msg[0] != '\0') {
       emit_progress(msg);
     }
-    return cancelled() ? libdnf5::repo::DownloadCallbacks::ERROR : libdnf5::repo::DownloadCallbacks::OK;
+    return libdnf5::repo::DownloadCallbacks::OK;
   }
 
   int mirror_failure(void *, const char *msg, const char *, const char *) override
@@ -117,7 +147,7 @@ class CancelableDownloadCallbacks : public libdnf5::repo::DownloadCallbacks {
     if (msg && msg[0] != '\0') {
       emit_progress(msg);
     }
-    return cancelled() ? libdnf5::repo::DownloadCallbacks::ERROR : libdnf5::repo::DownloadCallbacks::OK;
+    return cancelled() ? libdnf5::repo::DownloadCallbacks::ABORT : libdnf5::repo::DownloadCallbacks::OK;
   }
 
   private:
@@ -155,6 +185,31 @@ class CancelableDownloadCallbacks : public libdnf5::repo::DownloadCallbacks {
   std::shared_ptr<std::atomic<bool>> cancel_requested;
   BaseProgressCallback progress_callback;
   std::atomic<bool> cancel_trace_written { false };
+  // libdnf gives the same pointer back to progress and end.
+  // Track active states so cancellation cannot free the same state twice.
+  std::mutex downloads_mutex;
+  std::unordered_set<DownloadProgressState *> active_downloads;
+};
+
+// -----------------------------------------------------------------------------
+// Clear download callbacks before a temporary Base leaves scope.
+// Repository refresh cancellation raises exceptions from libdnf callbacks, so
+// callback cleanup must not depend on the normal return path.
+// -----------------------------------------------------------------------------
+class DownloadCallbacksReset {
+  public:
+  explicit DownloadCallbacksReset(libdnf5::Base &base)
+      : base(base)
+  {
+  }
+
+  ~DownloadCallbacksReset()
+  {
+    base.set_download_callbacks(std::unique_ptr<libdnf5::repo::DownloadCallbacks>());
+  }
+
+  private:
+  libdnf5::Base &base;
 };
 
 // -----------------------------------------------------------------------------
@@ -182,7 +237,7 @@ throw_if_rebuild_cancelled(const std::shared_ptr<std::atomic<bool>> &cancel_requ
 // Build one fully configured Base before any repo metadata is loaded.
 // -----------------------------------------------------------------------------
 static std::shared_ptr<libdnf5::Base>
-create_configured_base(RepoLoadMode mode, bool load_changelog_metadata)
+create_configured_base(RepoLoadMode mode)
 {
   DNFUI_TRACE("BaseManager initialize start");
 
@@ -198,11 +253,6 @@ create_configured_base(RepoLoadMode mode, bool load_changelog_metadata)
     base->get_config().get_cachedir_option().set(base->get_config().get_system_cachedir_option().get_value());
   }
 
-  if (load_changelog_metadata && mode != RepoLoadMode::SYSTEM_ONLY) {
-    // Available-package changelog lookups need repo "other" metadata.
-    base->get_config().get_optional_metadata_types_option().add_item(libdnf5::Option::Priority::RUNTIME,
-                                                                     libdnf5::METADATA_TYPE_OTHER);
-  }
   DNFUI_TRACE("BaseManager setup start");
   base->setup();
   DNFUI_TRACE("BaseManager setup done");
@@ -314,7 +364,6 @@ load_repo_data(libdnf5::Base &base, RepoLoadMode mode, const std::shared_ptr<std
 // -----------------------------------------------------------------------------
 static BuiltBase
 build_base_for_mode(RepoLoadMode mode,
-                    bool load_changelog_metadata,
                     BaseRefreshMode refresh_mode,
                     const std::shared_ptr<std::atomic<bool>> &cancel_requested,
                     BaseProgressCallback progress_callback)
@@ -323,20 +372,21 @@ build_base_for_mode(RepoLoadMode mode,
   DNFUI_TRACE(
       "BaseManager build base start mode=%d refresh=%d", static_cast<int>(mode), static_cast<int>(refresh_mode));
   throw_if_rebuild_cancelled(cancel_requested);
-  result.base = create_configured_base(mode, load_changelog_metadata);
+  result.base = create_configured_base(mode);
   const bool has_download_callbacks = cancel_requested || static_cast<bool>(progress_callback);
   if (has_download_callbacks) {
     result.base->set_download_callbacks(
         std::make_unique<CancelableDownloadCallbacks>(cancel_requested, std::move(progress_callback)));
+  }
+  std::unique_ptr<DownloadCallbacksReset> download_callbacks_reset;
+  if (has_download_callbacks) {
+    download_callbacks_reset = std::make_unique<DownloadCallbacksReset>(*result.base);
   }
   if (mode == RepoLoadMode::FULL && refresh_mode == BaseRefreshMode::FORCE_METADATA_CHECK) {
     throw_if_rebuild_cancelled(cancel_requested);
     expire_repository_metadata_cache(*result.base);
   }
   load_repo_data(*result.base, mode, cancel_requested);
-  if (has_download_callbacks) {
-    result.base->set_download_callbacks(nullptr);
-  }
   if (mode == RepoLoadMode::CACHE_ONLY_METADATA) {
     result.repo_state = BaseRepoState::CACHED_METADATA;
   } else if (mode == RepoLoadMode::SYSTEM_ONLY) {
@@ -352,14 +402,12 @@ build_base_for_mode(RepoLoadMode mode,
 // installed-package-only mode so the app stays usable when the network is down.
 // -----------------------------------------------------------------------------
 static BuiltBase
-build_base_with_offline_fallback(bool load_changelog_metadata = false,
-                                 BaseRefreshMode refresh_mode = BaseRefreshMode::NORMAL,
+build_base_with_offline_fallback(BaseRefreshMode refresh_mode = BaseRefreshMode::NORMAL,
                                  std::shared_ptr<std::atomic<bool>> cancel_requested = nullptr,
                                  BaseProgressCallback progress_callback = {})
 {
   try {
-    return build_base_for_mode(
-        RepoLoadMode::FULL, load_changelog_metadata, refresh_mode, cancel_requested, progress_callback);
+    return build_base_for_mode(RepoLoadMode::FULL, refresh_mode, cancel_requested, progress_callback);
   } catch (const BaseOperationCancelled &) {
     // Stop is not a repo load failure. Do not continue into fallback modes.
     DNFUI_TRACE("BaseManager live repo load stopped before fallback");
@@ -372,8 +420,7 @@ build_base_with_offline_fallback(bool load_changelog_metadata = false,
     DNFUI_TRACE("BaseManager live repo load failed, trying cached metadata fallback: %s", repo_error.what());
 
     try {
-      return build_base_for_mode(
-          RepoLoadMode::CACHE_ONLY_METADATA, load_changelog_metadata, BaseRefreshMode::NORMAL, cancel_requested, {});
+      return build_base_for_mode(RepoLoadMode::CACHE_ONLY_METADATA, BaseRefreshMode::NORMAL, cancel_requested, {});
     } catch (const BaseOperationCancelled &) {
       // Stop is not a cache load failure. Do not continue into fallback modes.
       DNFUI_TRACE("BaseManager cached repo load stopped before fallback");
@@ -384,8 +431,7 @@ build_base_with_offline_fallback(bool load_changelog_metadata = false,
       DNFUI_TRACE("BaseManager cached repo load failed, trying system-only fallback: %s", cache_error.what());
 
       try {
-        return build_base_for_mode(
-            RepoLoadMode::SYSTEM_ONLY, load_changelog_metadata, BaseRefreshMode::NORMAL, cancel_requested, {});
+        return build_base_for_mode(RepoLoadMode::SYSTEM_ONLY, BaseRefreshMode::NORMAL, cancel_requested, {});
       } catch (const BaseOperationCancelled &) {
         // Stop is not a system load failure.
         DNFUI_TRACE("BaseManager system-only load stopped");
@@ -501,21 +547,6 @@ BaseManager::acquire_read(std::shared_ptr<std::atomic<bool>> cancel_requested)
 }
 
 // -----------------------------------------------------------------------------
-// Return serialized access to a temporary Base that loads changelog metadata.
-// -----------------------------------------------------------------------------
-TemporaryBaseRead
-BaseManager::acquire_changelog_read()
-{
-  std::unique_lock<std::shared_mutex> lock(base_mutex);
-  BuiltBase built = build_base_with_offline_fallback(true);
-  if (!built.base) {
-    throw std::runtime_error("Changelog backend initialization failed (Base is null).");
-  }
-
-  return TemporaryBaseRead(std::move(built.base), BaseGuard(std::move(lock)));
-}
-
-// -----------------------------------------------------------------------------
 // Return serialized access to a temporary Base that reads only the local rpmdb.
 // -----------------------------------------------------------------------------
 TemporaryBaseRead
@@ -563,7 +594,7 @@ BaseManager::rebuild(BaseRefreshMode refresh_mode,
   // usable Base. Offline fallback keeps the UI query paths working from cached
   // metadata or, as a last resort, from the local rpmdb only.
   BuiltBase rebuilt =
-      build_base_with_offline_fallback(false, refresh_mode, std::move(cancel_requested), std::move(progress_callback));
+      build_base_with_offline_fallback(refresh_mode, std::move(cancel_requested), std::move(progress_callback));
   if (!rebuilt.base) {
     throw std::runtime_error("Repository rebuild failed (Base is null).");
   }
@@ -638,7 +669,7 @@ BaseManager::ensure_system_only_initialized_if_needed()
 std::shared_ptr<libdnf5::Base>
 BaseManager::build_initialized_system_only_base()
 {
-  return build_base_for_mode(RepoLoadMode::SYSTEM_ONLY, false, BaseRefreshMode::NORMAL, nullptr, {}).base;
+  return build_base_for_mode(RepoLoadMode::SYSTEM_ONLY, BaseRefreshMode::NORMAL, nullptr, {}).base;
 }
 
 // -----------------------------------------------------------------------------
@@ -648,7 +679,7 @@ void
 BaseManager::ensure_base_initialized(std::shared_ptr<std::atomic<bool>> cancel_requested)
 {
   if (!base_ptr) {
-    BuiltBase built = build_base_with_offline_fallback(false, BaseRefreshMode::NORMAL, std::move(cancel_requested));
+    BuiltBase built = build_base_with_offline_fallback(BaseRefreshMode::NORMAL, std::move(cancel_requested));
     base_ptr = built.base;
     repo_state = built.repo_state;
     base_epoch.fetch_add(1, std::memory_order_relaxed);

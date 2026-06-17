@@ -120,6 +120,21 @@ package_info_clear_selected_package_state(SearchWidgets *widgets)
 }
 
 // -----------------------------------------------------------------------------
+// Stop the active package details load, if one is still running.
+// -----------------------------------------------------------------------------
+void
+package_info_cancel_active_load(SearchWidgets *widgets)
+{
+  if (!widgets || !widgets->results.package_info_cancellable) {
+    return;
+  }
+
+  g_cancellable_cancel(widgets->results.package_info_cancellable);
+  g_object_unref(widgets->results.package_info_cancellable);
+  widgets->results.package_info_cancellable = nullptr;
+}
+
+// -----------------------------------------------------------------------------
 // Enable only the transaction actions that make sense for the selected row.
 // -----------------------------------------------------------------------------
 static void
@@ -254,6 +269,12 @@ on_package_info_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
     return;
   }
 
+  GCancellable *c = g_task_get_cancellable(task);
+  if (c && widgets->results.package_info_cancellable == c) {
+    g_object_unref(widgets->results.package_info_cancellable);
+    widgets->results.package_info_cancellable = nullptr;
+  }
+
   if (td->generation != BaseManager::instance().current_generation() || widgets->results.selected_nevra != td->nevra) {
     if (result) {
       info_task_result_free(result);
@@ -301,12 +322,15 @@ package_info_load_selected_package_info(SearchWidgets *widgets, const PackageRow
     return;
   }
 
+  package_info_cancel_active_load(widgets);
+
   widgets->results.selected_nevra = selected.nevra;
   ui_helpers_set_status(widgets->query.status_label, _("Fetching package info..."), "blue");
   update_selected_package_actions(widgets, selected);
 
   GCancellable *c = widgets_make_task_cancellable_for(GTK_WIDGET(widgets->query.entry));
   GTask *task = widgets_task_new_for_search_widgets(widgets, c, on_package_info_task_finished);
+  widgets->results.package_info_cancellable = G_CANCELLABLE(g_object_ref(c));
 
   // Pass package NEVRA to background task
   InfoTaskData *td = static_cast<InfoTaskData *>(g_malloc0(sizeof *td));

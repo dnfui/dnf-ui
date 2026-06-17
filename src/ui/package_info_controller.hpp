@@ -15,6 +15,10 @@ struct SearchWidgets;
 // -----------------------------------------------------------------------------
 void package_info_clear_selected_package_state(SearchWidgets *widgets);
 // -----------------------------------------------------------------------------
+// Stop the active package details load, if one is still running.
+// -----------------------------------------------------------------------------
+void package_info_cancel_active_load(SearchWidgets *widgets);
+// -----------------------------------------------------------------------------
 // Start loading details for the selected package.
 // -----------------------------------------------------------------------------
 void package_info_load_selected_package_info(SearchWidgets *widgets, const PackageRow &selected);

@@ -9,6 +9,7 @@
 #include "debug_trace.hpp"
 #include "dnf_backend/dnf_backend.hpp"
 #include "i18n.hpp"
+#include "package_info_controller.hpp"
 #include "package_query_controller.hpp"
 #include "pending_transaction_controller.hpp"
 #include "pending_transaction_request.hpp"
@@ -91,6 +92,18 @@ pending_transaction_invalidate_service_preview(SearchWidgets *widgets)
 
   widgets->transaction.preview_transaction_path.clear();
   widgets->transaction.preview_upgrade_all = false;
+}
+
+// -----------------------------------------------------------------------------
+// Close a prepared preview from the summary dialog without applying it.
+// -----------------------------------------------------------------------------
+static void
+pending_transaction_cancel_service_preview(SearchWidgets *widgets)
+{
+  pending_transaction_invalidate_service_preview(widgets);
+  if (widgets) {
+    ui_helpers_set_status(widgets->query.status_label, _("Ready."), "gray");
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -240,6 +253,8 @@ start_apply_transaction(SearchWidgets *widgets)
     return;
   }
 
+  package_info_cancel_active_load(widgets);
+
   widgets->transaction.apply_in_progress = true;
   pending_transaction_set_preview_controls_sensitive(widgets, false);
 
@@ -339,6 +354,7 @@ start_apply_transaction(SearchWidgets *widgets)
 static void
 start_preview_request(SearchWidgets *widgets, TransactionRequest request)
 {
+  package_info_cancel_active_load(widgets);
   pending_transaction_invalidate_service_preview(widgets);
   widgets->transaction.preview_upgrade_all = request.upgrade_all;
   DNFUI_TRACE("Transaction preview request start upgrade_all=%d install=%zu remove=%zu reinstall=%zu",
@@ -409,8 +425,9 @@ start_preview_request(SearchWidgets *widgets, TransactionRequest request)
         DNFUI_TRACE("Transaction preview request ready upgrade_all=%d path=%s",
                     td->request.upgrade_all ? 1 : 0,
                     widgets->transaction.preview_transaction_path.c_str());
+        ui_helpers_set_status(widgets->query.status_label, _("Ready."), "gray");
         transaction_review_show_summary_dialog(
-            widgets, td->preview, start_apply_transaction, pending_transaction_invalidate_service_preview);
+            widgets, td->preview, start_apply_transaction, pending_transaction_cancel_service_preview);
       });
 
   g_task_set_task_data(task, td, preview_task_data_free);
@@ -430,10 +447,18 @@ start_preview_request(SearchWidgets *widgets, TransactionRequest request)
                       td->request.install.size(),
                       td->request.remove.size(),
                       td->request.reinstall.size());
-          ok = transaction_service_client_preview_request(
-              td->request, td->preview, td->transaction_path, error, [td](const TransactionKeyImportRequest &request) {
-                return transaction_review_confirm_key_import(td->widgets, request);
-              });
+          if (!pending_transaction_validate_request(td->request, error)) {
+            ok = false;
+          } else {
+            ok = transaction_service_client_preview_request(td->request,
+                                                            td->preview,
+                                                            td->transaction_path,
+                                                            error,
+                                                            [td](const TransactionKeyImportRequest &request) {
+                                                              return transaction_review_confirm_key_import(td->widgets,
+                                                                                                           request);
+                                                            });
+          }
         }
 
         if (!ok) {
@@ -515,12 +540,6 @@ pending_transaction_on_apply_button_clicked(GtkButton *, gpointer user_data)
   TransactionRequest request;
   std::string error;
   if (!pending_transaction_build_request(widgets->transaction.actions, request, error)) {
-    ui_helpers_set_status(widgets->query.status_label, error.c_str(), "red");
-    return;
-  }
-
-  // Refuse self-protected transactions before asking the service to preview them.
-  if (!pending_transaction_validate_request(request, error)) {
     ui_helpers_set_status(widgets->query.status_label, error.c_str(), "red");
     return;
   }
