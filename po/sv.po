@@ -384,6 +384,9 @@ msgstr "dnf5daemon returnerade ett transaktionsresultat som inte stöds."
 msgid "dnf5daemon returned an incomplete package item."
 msgstr "dnf5daemon returnerade ett ofullständigt paketobjekt."
 
+msgid "No transaction changes were returned."
+msgstr "Inga transaktionsändringar returnerades."
+
 #, c-format
 msgid "Found %zu package."
 msgid_plural "Found %zu packages."

@@ -13,6 +13,7 @@ src/ui/package_query_controller.cpp
 src/ui/package_table_context_menu.cpp
 src/ui/package_table_status.cpp
 src/ui/package_table_view.cpp
+src/ui/pending_transaction_apply.cpp
 src/ui/pending_transaction_controller.cpp
 src/ui/pending_transaction_request.cpp
 src/ui/transaction_progress.cpp

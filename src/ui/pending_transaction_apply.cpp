@@ -116,6 +116,19 @@ pending_transaction_preview_busy_message()
 }
 
 // -----------------------------------------------------------------------------
+// Return the status text shown when the daemon resolved no transaction changes.
+// -----------------------------------------------------------------------------
+static const char *
+empty_preview_status_message(const TransactionRequest &request)
+{
+  if (request.upgrade_all) {
+    return _("All packages are already up to date.");
+  }
+
+  return _("No transaction changes were returned.");
+}
+
+// -----------------------------------------------------------------------------
 // Return true when a preview request is running.
 // -----------------------------------------------------------------------------
 bool
@@ -415,7 +428,7 @@ start_preview_request(SearchWidgets *widgets, TransactionRequest request)
           }
           widgets->transaction.preview_transaction_path.clear();
           widgets->transaction.preview_upgrade_all = false;
-          ui_helpers_set_status(widgets->query.status_label, _("All packages are already up to date."), "green");
+          ui_helpers_set_status(widgets->query.status_label, empty_preview_status_message(td->request), "green");
           return;
         }
 
