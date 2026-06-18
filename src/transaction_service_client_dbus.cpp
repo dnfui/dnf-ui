@@ -804,13 +804,13 @@ transaction_service_client_get_transaction_preview(GDBusConnection *connection,
   preview_out = std::move(built_preview);
   DNFUI_TRACE(
       "dnf5daemon preview built path=%s install=%zu upgrade=%zu downgrade=%zu reinstall=%zu remove=%zu replaced=%zu",
-              transaction_path.c_str(),
-              preview_out.install.size(),
-              preview_out.upgrade.size(),
-              preview_out.downgrade.size(),
-              preview_out.reinstall.size(),
-              preview_out.remove.size(),
-              preview_out.replaced.size());
+      transaction_path.c_str(),
+      preview_out.install.size(),
+      preview_out.upgrade.size(),
+      preview_out.downgrade.size(),
+      preview_out.reinstall.size(),
+      preview_out.remove.size(),
+      preview_out.replaced.size());
   g_variant_unref(items);
   g_variant_unref(state.reply);
   return true;
