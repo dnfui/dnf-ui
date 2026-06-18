@@ -31,7 +31,7 @@ dnf5daemon.
 %autosetup -p1
 
 %build
-%meson -Dbuild_tests=true
+%meson -Dbuild_tests=true -Dwarning_level=3 -Dfinal_build=true
 %meson_build
 
 %install
