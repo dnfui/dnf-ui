@@ -177,6 +177,9 @@ msgstr "Kommer att uppgraderas"
 msgid "To be removed"
 msgstr "Kommer att tas bort"
 
+msgid "To be replaced"
+msgstr "Kommer att ersättas"
+
 msgid "Disk space usage will be unchanged."
 msgstr "Diskanvändningen ändras inte."
 
@@ -440,3 +443,9 @@ msgid "%zu package will be removed."
 msgid_plural "%zu packages will be removed."
 msgstr[0] "%zu paket kommer att tas bort."
 msgstr[1] "%zu paket kommer att tas bort."
+
+#, c-format
+msgid "%zu package will be replaced."
+msgid_plural "%zu packages will be replaced."
+msgstr[0] "%zu paket kommer att ersättas."
+msgstr[1] "%zu paket kommer att ersättas."

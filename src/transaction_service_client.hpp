@@ -67,6 +67,14 @@ void transaction_service_client_reset_for_tests();
 // Return true when the cached daemon connection can still see a session path.
 // -----------------------------------------------------------------------------
 bool transaction_service_client_session_exists_for_tests(const std::string &transaction_path);
+
+// -----------------------------------------------------------------------------
+// Feed one daemon transaction item through the preview parser for tests.
+// -----------------------------------------------------------------------------
+bool transaction_service_client_testonly_build_preview_from_item(const std::string &object_type,
+                                                                 const std::string &action,
+                                                                 TransactionPreview &preview,
+                                                                 std::string &error_out);
 #endif
 
 // -----------------------------------------------------------------------------

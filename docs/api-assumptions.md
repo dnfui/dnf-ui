@@ -62,7 +62,7 @@ Why this matters:
   `filter_upgrades()` so the app follows libdnf5's upgrade-candidate semantics
   instead of maintaining its own version comparison rules.
 - The upgradable package list is a read-only candidate view. The transaction preview is the final check
-  for what would actually be installed, upgraded, downgraded, reinstalled, or removed.
+  for what would actually be installed, upgraded, downgraded, reinstalled, removed, or replaced.
 - Upgradable rows are available package candidates. UI actions that remove or reinstall such a row
   must resolve the matching installed row by package name and architecture before building the pending action.
 - Installed rows can also be classified as upgradable after repo annotation.

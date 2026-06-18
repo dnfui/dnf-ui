@@ -270,6 +270,7 @@ append_preview_action(TransactionPreview &preview,
     preview.disk_space_delta -= install_size;
     return true;
   case Action::REPLACED:
+    preview.replaced.push_back(label);
     preview.disk_space_delta -= install_size;
     return true;
   default:
@@ -341,7 +342,8 @@ transaction_previews_match(const TransactionPreview &left, const TransactionPrev
 
   return sorted(left.install) == sorted(right.install) && sorted(left.upgrade) == sorted(right.upgrade) &&
       sorted(left.downgrade) == sorted(right.downgrade) && sorted(left.reinstall) == sorted(right.reinstall) &&
-      sorted(left.remove) == sorted(right.remove) && left.disk_space_delta == right.disk_space_delta;
+      sorted(left.remove) == sorted(right.remove) && sorted(left.replaced) == sorted(right.replaced) &&
+      left.disk_space_delta == right.disk_space_delta;
 }
 
 #ifdef DNFUI_BUILD_TESTS

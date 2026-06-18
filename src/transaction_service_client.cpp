@@ -56,7 +56,7 @@ transaction_preview_contains_self_protected_package(const TransactionPreview &pr
 
   return contains_self_protected_spec(preview.install) || contains_self_protected_spec(preview.upgrade) ||
       contains_self_protected_spec(preview.downgrade) || contains_self_protected_spec(preview.reinstall) ||
-      contains_self_protected_spec(preview.remove);
+      contains_self_protected_spec(preview.remove) || contains_self_protected_spec(preview.replaced);
 }
 
 // -----------------------------------------------------------------------------

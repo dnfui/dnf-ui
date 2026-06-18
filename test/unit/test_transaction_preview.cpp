@@ -58,6 +58,7 @@ TEST_CASE("Transaction preview rejects an empty request")
   REQUIRE(preview.downgrade.empty());
   REQUIRE(preview.reinstall.empty());
   REQUIRE(preview.remove.empty());
+  REQUIRE(preview.replaced.empty());
   REQUIRE(preview.disk_space_delta == 0);
 }
 
@@ -176,12 +177,14 @@ TEST_CASE("Transaction preview comparison accepts matching package actions in di
   approved_preview.install = { "b-package-1-1.x86_64", "a-package-1-1.x86_64" };
   approved_preview.upgrade = { "z-package-2-1.x86_64", "c-package-2-1.x86_64" };
   approved_preview.remove = { "old-package-1-1.x86_64" };
+  approved_preview.replaced = { "older-package-1-1.x86_64" };
   approved_preview.disk_space_delta = 4096;
 
   TransactionPreview resolved_preview;
   resolved_preview.install = { "a-package-1-1.x86_64", "b-package-1-1.x86_64" };
   resolved_preview.upgrade = { "c-package-2-1.x86_64", "z-package-2-1.x86_64" };
   resolved_preview.remove = { "old-package-1-1.x86_64" };
+  resolved_preview.replaced = { "older-package-1-1.x86_64" };
   resolved_preview.disk_space_delta = 4096;
 
   REQUIRE(dnf_backend_testonly_transaction_previews_match(approved_preview, resolved_preview));
@@ -234,6 +237,25 @@ TEST_CASE("Transaction preview rejects unsupported transaction actions")
   REQUIRE(error == "Unsupported transaction action in preview: Reason change.");
   REQUIRE(preview.empty());
   REQUIRE(preview.disk_space_delta == 0);
+}
+
+// -----------------------------------------------------------------------------
+// Verify that replaced packages are visible in the preview instead of being
+// counted only as disk space changes.
+// -----------------------------------------------------------------------------
+TEST_CASE("Transaction preview represents replaced package actions")
+{
+  TransactionPreview preview;
+  std::string error;
+
+  bool ok = dnf_backend_testonly_build_preview_from_actions(
+      { static_cast<int>(libdnf5::base::TransactionPackage::Action::REPLACED) }, preview, error);
+
+  REQUIRE(ok);
+  REQUIRE(error.empty());
+  REQUIRE(preview.replaced == std::vector<std::string> { "test-item-1" });
+  REQUIRE(preview.disk_space_delta == -4096);
+  REQUIRE_FALSE(preview.empty());
 }
 
 // -----------------------------------------------------------------------------
@@ -292,6 +314,7 @@ TEST_CASE("Transaction preview builder failure leaves output unchanged")
   REQUIRE(preview.downgrade.empty());
   REQUIRE(preview.reinstall.empty());
   REQUIRE(preview.remove.empty());
+  REQUIRE(preview.replaced.empty());
   REQUIRE(preview.disk_space_delta == 1234);
 }
 

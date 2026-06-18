@@ -138,6 +138,7 @@ struct TransactionPreview {
   std::vector<std::string> downgrade;
   std::vector<std::string> reinstall;
   std::vector<std::string> remove;
+  std::vector<std::string> replaced;
   long long disk_space_delta = 0;
 
   // -----------------------------------------------------------------------------
@@ -145,7 +146,8 @@ struct TransactionPreview {
   // -----------------------------------------------------------------------------
   bool empty() const
   {
-    return install.empty() && upgrade.empty() && downgrade.empty() && reinstall.empty() && remove.empty();
+    return install.empty() && upgrade.empty() && downgrade.empty() && reinstall.empty() && remove.empty() &&
+        replaced.empty();
   }
 };
 

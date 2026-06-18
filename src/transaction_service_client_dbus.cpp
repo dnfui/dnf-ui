@@ -349,6 +349,7 @@ append_daemon_preview_item(TransactionPreview &preview,
     return true;
   }
   if (lower_action == "replaced") {
+    preview.replaced.push_back(label);
     preview.disk_space_delta -= install_size;
     return true;
   }
@@ -492,6 +493,40 @@ open_daemon_session(GDBusConnection *connection, std::string &transaction_path_o
 }
 
 } // namespace
+
+#ifdef DNFUI_BUILD_TESTS
+// -----------------------------------------------------------------------------
+// Test-only hook for daemon preview parser coverage.
+// -----------------------------------------------------------------------------
+bool
+transaction_service_client_testonly_build_preview_from_item(const std::string &object_type,
+                                                            const std::string &action,
+                                                            TransactionPreview &preview,
+                                                            std::string &error_out)
+{
+  TransactionPreview built_preview;
+
+  GVariantBuilder object_builder;
+  g_variant_builder_init(&object_builder, G_VARIANT_TYPE("a{sv}"));
+  g_variant_builder_add(&object_builder, "{sv}", "name", g_variant_new_string("test-package"));
+  g_variant_builder_add(&object_builder, "{sv}", "epoch", g_variant_new_string("0"));
+  g_variant_builder_add(&object_builder, "{sv}", "version", g_variant_new_string("2.0"));
+  g_variant_builder_add(&object_builder, "{sv}", "release", g_variant_new_string("3"));
+  g_variant_builder_add(&object_builder, "{sv}", "arch", g_variant_new_string("x86_64"));
+  g_variant_builder_add(&object_builder, "{sv}", "install_size", g_variant_new_int64(4096));
+
+  GVariant *object = g_variant_ref_sink(g_variant_builder_end(&object_builder));
+  bool ok = append_daemon_preview_item(built_preview, object_type, action, object, error_out);
+  g_variant_unref(object);
+
+  if (!ok) {
+    return false;
+  }
+
+  preview = std::move(built_preview);
+  return true;
+}
+#endif
 
 // -----------------------------------------------------------------------------
 // Connect to the system D-Bus used by dnf5daemon.
@@ -767,13 +802,15 @@ transaction_service_client_get_transaction_preview(GDBusConnection *connection,
   }
 
   preview_out = std::move(built_preview);
-  DNFUI_TRACE("dnf5daemon preview built path=%s install=%zu upgrade=%zu downgrade=%zu reinstall=%zu remove=%zu",
+  DNFUI_TRACE(
+      "dnf5daemon preview built path=%s install=%zu upgrade=%zu downgrade=%zu reinstall=%zu remove=%zu replaced=%zu",
               transaction_path.c_str(),
               preview_out.install.size(),
               preview_out.upgrade.size(),
               preview_out.downgrade.size(),
               preview_out.reinstall.size(),
-              preview_out.remove.size());
+              preview_out.remove.size(),
+              preview_out.replaced.size());
   g_variant_unref(items);
   g_variant_unref(state.reply);
   return true;

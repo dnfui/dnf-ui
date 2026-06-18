@@ -84,6 +84,24 @@ require_dnf5daemon_test_enabled()
 } // namespace
 
 // -----------------------------------------------------------------------------
+// Verify that the daemon preview parser represents replaced packages instead of
+// counting them only as disk space changes.
+// -----------------------------------------------------------------------------
+TEST_CASE("dnf5daemon preview parser represents replaced package actions")
+{
+  TransactionPreview preview;
+  std::string error;
+
+  bool ok = transaction_service_client_testonly_build_preview_from_item("package", "replaced", preview, error);
+
+  REQUIRE(ok);
+  REQUIRE(error.empty());
+  REQUIRE(preview.replaced == std::vector<std::string> { "test-package-2.0-3.x86_64" });
+  REQUIRE(preview.disk_space_delta == -4096);
+  REQUIRE_FALSE(preview.empty());
+}
+
+// -----------------------------------------------------------------------------
 // Verify that the client can ask dnf5daemon for an install preview.
 // -----------------------------------------------------------------------------
 TEST_CASE("dnf5daemon client previews install requests", "[dnf5daemon]")

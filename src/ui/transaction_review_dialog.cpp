@@ -360,6 +360,7 @@ transaction_review_show_summary_dialog(SearchWidgets *widgets,
   append_transaction_summary_section(GTK_BOX(contents), _("To be downgraded"), preview.downgrade);
   append_transaction_summary_section(GTK_BOX(contents), _("To be reinstalled"), preview.reinstall);
   append_transaction_summary_section(GTK_BOX(contents), _("To be removed"), preview.remove);
+  append_transaction_summary_section(GTK_BOX(contents), _("To be replaced"), preview.replaced);
 
   GtkWidget *summary_heading = gtk_label_new(nullptr);
   gchar *summary_markup = g_markup_printf_escaped("<b>%s</b>", _("Summary"));
@@ -391,6 +392,7 @@ transaction_review_show_summary_dialog(SearchWidgets *widgets,
   append_count_line(preview.downgrade.size(), "%zu package will be downgraded.", "%zu packages will be downgraded.");
   append_count_line(preview.reinstall.size(), "%zu package will be reinstalled.", "%zu packages will be reinstalled.");
   append_count_line(preview.remove.size(), "%zu package will be removed.", "%zu packages will be removed.");
+  append_count_line(preview.replaced.size(), "%zu package will be replaced.", "%zu packages will be replaced.");
   append_summary_line(format_transaction_space_change(preview.disk_space_delta));
 
   GtkWidget *button_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
