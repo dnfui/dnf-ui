@@ -130,13 +130,12 @@ Assumptions:
 - `BaseManager::acquire_read()` is serialized with an exclusive guard. Do not
   change it back to shared locking unless libdnf5 `Base` and `PackageQuery`
   concurrent access has been verified against the local libdnf5 version.
-- Transaction preview and apply take `BaseManager::acquire_write()` because transaction resolution and apply
-  operate on shared libdnf5 state.
+- The remaining local backend transaction helpers take `BaseManager::acquire_write()` because transaction
+  resolution and apply operate on shared libdnf5 state. The normal GUI transaction path uses dnf5daemon.
 - Changelog lookups read installed packages from the shared Base first because rpmdb changelog metadata
   does not need repo `other` metadata.
-- Changelog lookups use `BaseManager::acquire_changelog_read()` only when no
-  installed package matches, so repo `other` metadata is loaded only for the
-  short-lived available-package changelog query.
+- Available update rows use the installed package with the same name and
+  architecture instead of loading repository changelog metadata.
 - The backend installed snapshot mutex must not be held at the same time as a `BaseManager` read or write guard.
 
 Current local source:
@@ -176,7 +175,7 @@ Assumptions:
   widgets after they validate that the result still applies.
 - `g_task_run_in_thread()` runs synchronous backend work on a worker thread.
 - `GCancellable` is cooperative. Worker code must check it at safe points.
-- libdnf repository download callbacks can abort download work by returning an error status.
+- libdnf repository download callbacks can stop the current transfer by returning `ABORT`.
 
 Why this matters:
 

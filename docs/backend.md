@@ -33,8 +33,9 @@ The Base can be in one of three repository states:
 
 Most UI queries use serialized read access through `BaseManager::acquire_read`.
 The access is serialized because read-only `PackageQuery` work can still touch
-shared libdnf5 `Base` internals. Transaction preview and apply use write access
-through `BaseManager::acquire_write`.
+shared libdnf5 `Base` internals. The remaining local backend transaction
+helpers use write access through `BaseManager::acquire_write`. The normal GUI
+preview and apply path goes through dnf5daemon.
 
 Installed-package snapshot refresh uses `BaseManager::acquire_system_only_read`.
 That creates a short-lived Base for the local rpm database and does not replace
@@ -66,8 +67,8 @@ DNF UI has two places where Stop needs help from the backend:
 Repository refresh passes an atomic cancel flag into `BaseManager::rebuild`.
 `BaseManager` installs temporary libdnf download callbacks while loading
 repository metadata. When the user presses Stop, the UI sets the flag. The next
-download callback that sees the flag returns libdnf's error status, which tells
-libdnf to abort the download work.
+download callback that sees the flag returns libdnf's abort status, which tells
+libdnf to stop the current transfer.
 
 This is cooperative cancellation. It can stop repository downloads when libdnf
 reaches a callback, but it cannot kill an arbitrary libdnf call immediately.
@@ -171,9 +172,9 @@ snapshot.
 
 Normal package details use the shared Base. Changelog lookups first read
 installed packages from the shared Base because the rpmdb provides that metadata.
-If the selected package is not installed, the lookup uses a short-lived temporary
-Base that requests repo `other` metadata, so normal list and search queries do
-not keep changelog metadata resident.
+Available update rows use the installed package with the same name and
+architecture. The details path does not request repository changelog metadata
+because that can force a heavy repository metadata load from the details panel.
 
 ## Transactions
 

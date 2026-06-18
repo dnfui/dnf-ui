@@ -133,15 +133,15 @@ The backend implementation is split by responsibility:
 
 Most query and details calls take serialized read access to the shared Base.
 That access is exclusive inside `BaseManager` because read-only `PackageQuery`
-work can still touch shared libdnf5 `Base` internals. Transaction preview and
-apply take write access because libdnf5 transaction work changes Base state
-while it is being resolved or run.
+work can still touch shared libdnf5 `Base` internals. The remaining local
+backend transaction helpers take write access because libdnf5 transaction work
+changes Base state while it is being resolved or run. The normal GUI preview
+and apply path goes through dnf5daemon instead.
 
 The shared Base does not request changelog `other` metadata. Changelog details
-read installed packages from the shared Base first because rpmdb changelog
-metadata is local. Available-package changelogs use a short-lived temporary Base
-so that normal list, search, and transaction paths do not keep that optional
-metadata resident.
+read installed packages from the shared Base because rpmdb changelog metadata
+is local. Available update rows use the currently installed package with the
+same name and architecture instead of loading repository changelog metadata.
 
 ## Package list model
 
