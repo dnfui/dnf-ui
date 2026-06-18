@@ -360,7 +360,7 @@ connect_signals(const AppWidgets *ui, SearchWidgets *widgets)
 
   g_signal_connect(ui->refresh_button, "clicked", G_CALLBACK(widgets_on_refresh_button_clicked), widgets);
 
-  // Intercept window close so unapplied marked changes can be confirmed first.
+  // Intercept window close when pending or running transaction work needs attention.
   g_signal_connect(ui->window, "close-request", G_CALLBACK(on_main_window_close_request), widgets);
 
   // Live-update: save pane position whenever the user moves the divider
@@ -467,16 +467,26 @@ show_pending_quit_dialog(SearchWidgets *widgets)
 }
 
 // -----------------------------------------------------------------------------
-// Confirm before closing the app when there are unapplied pending changes.
+// Handle close requests that need confirmation or must wait for apply to finish.
 // -----------------------------------------------------------------------------
 static gboolean
 on_main_window_close_request(GtkWindow *window, gpointer user_data)
 {
   SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
 
-  if (!widgets || widgets->window_state.allow_close_with_pending) {
+  if (!widgets) {
     config_save_window_geometry(window);
-    if (widgets && widgets->results.inner_paned) {
+    return FALSE;
+  }
+
+  if (widgets->transaction.apply_in_progress) {
+    ui_helpers_set_status(widgets->query.status_label, _("A transaction is still applying."), "blue");
+    return TRUE;
+  }
+
+  if (widgets->window_state.allow_close_with_pending) {
+    config_save_window_geometry(window);
+    if (widgets->results.inner_paned) {
       config_save_paned_position(widgets->results.inner_paned);
     }
     return FALSE;

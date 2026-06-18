@@ -187,6 +187,9 @@ The progress window can receive progress messages after the apply request has
 started. The code keeps the progress state alive while queued GTK callbacks are
 still pending.
 
+The main window stays open while apply is running so the completion callback can
+finish the progress window cleanly.
+
 ## Background work pattern
 
 UI code follows this pattern for slow work:

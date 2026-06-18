@@ -162,6 +162,9 @@ msgstr "Stäng"
 msgid "Apply"
 msgstr "Verkställ"
 
+msgid "A transaction is still applying."
+msgstr "En transaktion verkställs fortfarande."
+
 msgid "Apply the following changes?"
 msgstr "Verkställ följande ändringar?"
 
