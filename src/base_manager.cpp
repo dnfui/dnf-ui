@@ -237,7 +237,7 @@ throw_if_rebuild_cancelled(const std::shared_ptr<std::atomic<bool>> &cancel_requ
 // Build one fully configured Base before any repo metadata is loaded.
 // -----------------------------------------------------------------------------
 static std::shared_ptr<libdnf5::Base>
-create_configured_base(RepoLoadMode mode)
+create_configured_base(RepoLoadMode mode, bool load_changelog_metadata = false)
 {
   DNFUI_TRACE("BaseManager initialize start");
 
@@ -251,6 +251,11 @@ create_configured_base(RepoLoadMode mode)
     // from cached metadata instead of dropping immediately to installed-only mode.
     base->get_config().get_cacheonly_option().set("metadata");
     base->get_config().get_cachedir_option().set(base->get_config().get_system_cachedir_option().get_value());
+  }
+
+  if (load_changelog_metadata && mode != RepoLoadMode::SYSTEM_ONLY) {
+    base->get_config().get_optional_metadata_types_option().add_item(libdnf5::Option::Priority::RUNTIME,
+                                                                     libdnf5::METADATA_TYPE_OTHER);
   }
 
   DNFUI_TRACE("BaseManager setup start");
@@ -366,13 +371,14 @@ static BuiltBase
 build_base_for_mode(RepoLoadMode mode,
                     BaseRefreshMode refresh_mode,
                     const std::shared_ptr<std::atomic<bool>> &cancel_requested,
-                    BaseProgressCallback progress_callback)
+                    BaseProgressCallback progress_callback,
+                    bool load_changelog_metadata = false)
 {
   BuiltBase result;
   DNFUI_TRACE(
       "BaseManager build base start mode=%d refresh=%d", static_cast<int>(mode), static_cast<int>(refresh_mode));
   throw_if_rebuild_cancelled(cancel_requested);
-  result.base = create_configured_base(mode);
+  result.base = create_configured_base(mode, load_changelog_metadata);
   const bool has_download_callbacks = cancel_requested || static_cast<bool>(progress_callback);
   if (has_download_callbacks) {
     result.base->set_download_callbacks(
@@ -404,10 +410,12 @@ build_base_for_mode(RepoLoadMode mode,
 static BuiltBase
 build_base_with_offline_fallback(BaseRefreshMode refresh_mode = BaseRefreshMode::NORMAL,
                                  std::shared_ptr<std::atomic<bool>> cancel_requested = nullptr,
-                                 BaseProgressCallback progress_callback = {})
+                                 BaseProgressCallback progress_callback = {},
+                                 bool load_changelog_metadata = false)
 {
   try {
-    return build_base_for_mode(RepoLoadMode::FULL, refresh_mode, cancel_requested, progress_callback);
+    return build_base_for_mode(
+        RepoLoadMode::FULL, refresh_mode, cancel_requested, progress_callback, load_changelog_metadata);
   } catch (const BaseOperationCancelled &) {
     // Stop is not a repo load failure. Do not continue into fallback modes.
     DNFUI_TRACE("BaseManager live repo load stopped before fallback");
@@ -420,7 +428,8 @@ build_base_with_offline_fallback(BaseRefreshMode refresh_mode = BaseRefreshMode:
     DNFUI_TRACE("BaseManager live repo load failed, trying cached metadata fallback: %s", repo_error.what());
 
     try {
-      return build_base_for_mode(RepoLoadMode::CACHE_ONLY_METADATA, BaseRefreshMode::NORMAL, cancel_requested, {});
+      return build_base_for_mode(
+          RepoLoadMode::CACHE_ONLY_METADATA, BaseRefreshMode::NORMAL, cancel_requested, {}, load_changelog_metadata);
     } catch (const BaseOperationCancelled &) {
       // Stop is not a cache load failure. Do not continue into fallback modes.
       DNFUI_TRACE("BaseManager cached repo load stopped before fallback");
@@ -431,7 +440,8 @@ build_base_with_offline_fallback(BaseRefreshMode refresh_mode = BaseRefreshMode:
       DNFUI_TRACE("BaseManager cached repo load failed, trying system-only fallback: %s", cache_error.what());
 
       try {
-        return build_base_for_mode(RepoLoadMode::SYSTEM_ONLY, BaseRefreshMode::NORMAL, cancel_requested, {});
+        return build_base_for_mode(
+            RepoLoadMode::SYSTEM_ONLY, BaseRefreshMode::NORMAL, cancel_requested, {}, load_changelog_metadata);
       } catch (const BaseOperationCancelled &) {
         // Stop is not a system load failure.
         DNFUI_TRACE("BaseManager system-only load stopped");
@@ -577,6 +587,20 @@ BaseManager::acquire_write()
   }
 
   return { *base_ptr, BaseWriteGuard(std::move(write_lock)) };
+}
+
+// -----------------------------------------------------------------------------
+// Build a temporary Base that includes repository changelog metadata.
+// -----------------------------------------------------------------------------
+std::shared_ptr<libdnf5::Base>
+BaseManager::build_changelog_base()
+{
+  BuiltBase built = build_base_with_offline_fallback(BaseRefreshMode::NORMAL, nullptr, {}, true);
+  if (!built.base) {
+    throw std::runtime_error("Changelog backend initialization failed (Base is null).");
+  }
+
+  return built.base;
 }
 
 // -----------------------------------------------------------------------------

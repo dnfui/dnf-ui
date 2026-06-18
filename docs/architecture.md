@@ -140,8 +140,8 @@ and apply path goes through dnf5daemon instead.
 
 The shared Base does not request changelog `other` metadata. Changelog details
 read installed packages from the shared Base because rpmdb changelog metadata
-is local. Available update rows use the currently installed package with the
-same name and architecture instead of loading repository changelog metadata.
+is local. Available package changelogs use a temporary Base with repository
+changelog metadata, after releasing the shared Base read lock.
 
 ## Package list model
 

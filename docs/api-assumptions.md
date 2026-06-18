@@ -134,8 +134,8 @@ Assumptions:
   resolution and apply operate on shared libdnf5 state. The normal GUI transaction path uses dnf5daemon.
 - Changelog lookups read installed packages from the shared Base first because rpmdb changelog metadata
   does not need repo `other` metadata.
-- Available update rows use the installed package with the same name and
-  architecture instead of loading repository changelog metadata.
+- Available package changelogs use a temporary Base with repo `other` metadata.
+  The shared Base read lock must be released before that temporary Base is loaded.
 - The backend installed snapshot mutex must not be held at the same time as a `BaseManager` read or write guard.
 
 Current local source:

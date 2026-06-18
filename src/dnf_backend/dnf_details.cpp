@@ -437,67 +437,43 @@ format_changelog_entries(libdnf5::rpm::Package pkg)
 
 // -----------------------------------------------------------------------------
 // Retrieve and format changelog entries for one exact NEVRA.
-// Installed package metadata is used because loading repository changelog metadata can force a full repo metadata load.
-// Available update rows use the currently installed package with the same name and architecture.
+// Installed package metadata is used first because rpmdb changelog metadata is local.
+// Available packages use a temporary Base with repository changelog metadata.
 // -----------------------------------------------------------------------------
 std::string
 dnf_backend_get_package_changelog(const std::string &pkg_nevra)
 {
-  auto read = BaseManager::instance().acquire_read();
-  libdnf5::rpm::PackageQuery query(read.base);
+  {
+    auto read = BaseManager::instance().acquire_read();
+    libdnf5::rpm::PackageQuery query(read.base);
 
-  query.filter_nevra(pkg_nevra);
-  if (query.empty()) {
-    return "No changelog available.";
-  }
-
-  // If the selected NEVRA is already installed, use it directly.
-  libdnf5::rpm::PackageQuery exact_installed(query);
-  exact_installed.filter_installed();
-
-  if (!exact_installed.empty()) {
-    exact_installed.filter_latest_evr();
-    auto pkg = *exact_installed.begin();
-    return format_changelog_entries(pkg);
-  }
-
-  libdnf5::rpm::PackageQuery selected_query(query);
-  selected_query.filter_latest_evr();
-  auto selected_pkg = *selected_query.begin();
-
-  libdnf5::rpm::PackageQuery installed_by_name(read.base);
-  installed_by_name.filter_name(selected_pkg.get_name(), libdnf5::sack::QueryCmp::EQ);
-  installed_by_name.filter_installed();
-
-  PackageRow installed_row;
-  bool have_installed_row = false;
-
-  for (auto installed_pkg : installed_by_name) {
-    if (installed_pkg.get_arch() != selected_pkg.get_arch()) {
-      continue;
+    query.filter_nevra(pkg_nevra);
+    if (query.empty()) {
+      return "No changelog available.";
     }
 
-    PackageRow row = make_package_row(installed_pkg);
-    if (!have_installed_row || libdnf5::rpm::evrcmp(row, installed_row) > 0) {
-      installed_row = row;
-      have_installed_row = true;
+    // If the selected NEVRA is already installed, use it directly.
+    libdnf5::rpm::PackageQuery exact_installed(query);
+    exact_installed.filter_installed();
+
+    if (!exact_installed.empty()) {
+      exact_installed.filter_latest_evr();
+      auto pkg = *exact_installed.begin();
+      return format_changelog_entries(pkg);
     }
   }
 
-  if (!have_installed_row) {
+  auto changelog_base = BaseManager::instance().build_changelog_base();
+  libdnf5::rpm::PackageQuery available_changelog(*changelog_base);
+
+  available_changelog.filter_nevra(pkg_nevra);
+
+  if (available_changelog.empty()) {
     return "No changelog available.";
   }
 
-  libdnf5::rpm::PackageQuery installed_changelog(read.base);
-  installed_changelog.filter_nevra(installed_row.nevra);
-  installed_changelog.filter_installed();
-
-  if (installed_changelog.empty()) {
-    return "No changelog available.";
-  }
-
-  installed_changelog.filter_latest_evr();
-  auto pkg = *installed_changelog.begin();
+  available_changelog.filter_latest_evr();
+  auto pkg = *available_changelog.begin();
   return format_changelog_entries(pkg);
 }
 

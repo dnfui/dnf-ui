@@ -128,6 +128,11 @@ class BaseManager {
   // Return write access to the cached Base with its lock guard.
   // -----------------------------------------------------------------------------
   std::pair<libdnf5::Base &, BaseWriteGuard> acquire_write();
+  // -----------------------------------------------------------------------------
+  // Build a temporary Base that includes repository changelog metadata.
+  // -----------------------------------------------------------------------------
+  std::shared_ptr<libdnf5::Base> build_changelog_base();
+  // -----------------------------------------------------------------------------
   // Return serialized access to a temporary Base that reads only the local rpmdb.
   // -----------------------------------------------------------------------------
   TemporaryBaseRead acquire_system_only_read();

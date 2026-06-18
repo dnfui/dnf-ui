@@ -172,9 +172,10 @@ snapshot.
 
 Normal package details use the shared Base. Changelog lookups first read
 installed packages from the shared Base because the rpmdb provides that metadata.
-Available update rows use the installed package with the same name and
-architecture. The details path does not request repository changelog metadata
-because that can force a heavy repository metadata load from the details panel.
+Available package changelogs use a temporary Base that requests repository
+changelog metadata. The shared Base read lock is released before that temporary
+Base is loaded, so transaction preview and apply do not wait behind optional
+changelog metadata loading.
 
 ## Transactions
 
