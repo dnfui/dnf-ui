@@ -8,6 +8,23 @@
 // -----------------------------------------------------------------------------
 #include "package_action_rows.hpp"
 
+namespace {
+
+// -----------------------------------------------------------------------------
+// Return the package spec used when asking dnf5daemon to upgrade one installed package.
+// -----------------------------------------------------------------------------
+std::string
+upgrade_transaction_spec(const PackageRow &row)
+{
+  if (row.arch.empty()) {
+    return row.name;
+  }
+
+  return row.name + "." + row.arch;
+}
+
+} // namespace
+
 // -----------------------------------------------------------------------------
 // Resolve package IDs for action buttons without running libdnf queries.
 // -----------------------------------------------------------------------------
@@ -35,6 +52,7 @@ package_action_rows_for_selection(const PackageRow &selected)
       rows.has_install_row = true;
       rows.has_installed_row = dnf_backend_get_installed_package_row_by_name_arch(selected, rows.installed_row);
     }
+    rows.upgrade_spec = upgrade_transaction_spec(rows.has_installed_row ? rows.installed_row : selected);
     rows.can_try_reinstall = rows.has_installed_row;
     return rows;
   }

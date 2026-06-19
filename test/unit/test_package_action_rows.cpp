@@ -60,6 +60,7 @@ TEST_CASE("Package action rows resolve upgrade from installed package row")
   REQUIRE(rows.install_is_upgrade);
   REQUIRE(rows.has_install_row);
   REQUIRE(rows.install_row.nevra == installed.repo_candidate_nevra);
+  REQUIRE(rows.upgrade_spec == "demo.x86_64");
   REQUIRE(rows.has_installed_row);
   REQUIRE(rows.installed_row.nevra == installed.nevra);
   REQUIRE(rows.can_try_reinstall);
@@ -83,6 +84,7 @@ TEST_CASE("Package action rows resolve upgrade from available update row")
   REQUIRE(rows.install_is_upgrade);
   REQUIRE(rows.has_install_row);
   REQUIRE(rows.install_row.nevra == update.nevra);
+  REQUIRE(rows.upgrade_spec == "demo.x86_64");
   REQUIRE(rows.has_installed_row);
   REQUIRE(rows.installed_row.nevra == installed.nevra);
   REQUIRE(rows.can_try_reinstall);

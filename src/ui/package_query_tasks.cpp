@@ -12,11 +12,15 @@
 #include "i18n.hpp"
 #include "package_query_cache.hpp"
 #include "package_table_view.hpp"
+#include "transaction_service_client.hpp"
 #include "ui_helpers.hpp"
 #include "widgets.hpp"
 #include "widgets_internal.hpp"
 
+#include <set>
+#include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 // -----------------------------------------------------------------------------
@@ -104,6 +108,61 @@ struct QueryBackendBaseDropGuard {
   private:
   GCancellable *cancellable = nullptr;
 };
+
+// -----------------------------------------------------------------------------
+// Return the package label format used by dnf5daemon transaction previews.
+// -----------------------------------------------------------------------------
+static std::string
+package_row_transaction_label(const PackageRow &row)
+{
+  std::string label = row.name + "-";
+  if (!row.epoch.empty() && row.epoch != "0") {
+    label += row.epoch + ":";
+  }
+  label += row.version + "-" + row.release + "." + row.arch;
+  return label;
+}
+
+// -----------------------------------------------------------------------------
+// Keep only rows that dnf5daemon resolves as real upgrade transaction items.
+// -----------------------------------------------------------------------------
+static std::vector<PackageRow>
+filter_upgradeable_rows_by_daemon_preview(std::vector<PackageRow> rows, GCancellable *cancellable)
+{
+  if (rows.empty() || (cancellable && g_cancellable_is_cancelled(cancellable))) {
+    return rows;
+  }
+
+  TransactionPreview preview;
+  std::string transaction_path;
+  std::string error;
+  if (!transaction_service_client_preview_upgrade_all_request(preview, transaction_path, error)) {
+    if (!transaction_path.empty()) {
+      transaction_service_client_release_request(transaction_path);
+    }
+    throw std::runtime_error(error.empty() ? _("Unable to verify upgradable packages.") : error);
+  }
+
+  if (!transaction_path.empty()) {
+    transaction_service_client_release_request(transaction_path);
+  }
+
+  std::set<std::string> daemon_upgrades(preview.upgrade.begin(), preview.upgrade.end());
+
+  std::vector<PackageRow> filtered_rows;
+  filtered_rows.reserve(rows.size());
+  for (const auto &row : rows) {
+    if (cancellable && g_cancellable_is_cancelled(cancellable)) {
+      return {};
+    }
+
+    if (daemon_upgrades.count(package_row_transaction_label(row)) > 0) {
+      filtered_rows.push_back(row);
+    }
+  }
+
+  return filtered_rows;
+}
 
 // -----------------------------------------------------------------------------
 // Query installed packages on a worker thread.
@@ -280,7 +339,9 @@ on_list_upgradeable_task(GTask *task, gpointer, gpointer, GCancellable *cancella
   QueryBackendBaseDropGuard base_drop_guard(cancellable);
 
   try {
-    auto *results = new std::vector<PackageRow>(dnf_backend_get_upgradeable_package_rows_interruptible(cancellable));
+    auto rows = dnf_backend_get_upgradeable_package_rows_interruptible(cancellable);
+    rows = filter_upgradeable_rows_by_daemon_preview(std::move(rows), cancellable);
+    auto *results = new std::vector<PackageRow>(std::move(rows));
     g_task_return_pointer(task, results, [](gpointer p) { delete static_cast<std::vector<PackageRow> *>(p); });
   } catch (const std::exception &e) {
     g_task_return_error(task, g_error_new_literal(G_IO_ERROR, G_IO_ERROR_FAILED, e.what()));

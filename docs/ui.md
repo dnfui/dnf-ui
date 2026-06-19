@@ -166,11 +166,12 @@ Conversion from pending actions to a shared `TransactionRequest` lives in
 
 Upgradable rows are visible as repository candidates, but they represent an
 installed package with a newer version available. The UI treats the main action
-as `Upgrade`, using the visible update NEVRA. The table keeps the installed
-version in the Version column and shows the candidate version in the Update
-column. The Repo column shows the repository that provides the update. Remove
-and reinstall act on the currently installed NEVRA for the same package name
-and architecture.
+as `Upgrade`. The pending row keeps the visible update NEVRA so the user can
+jump back to the selected package, but the transaction request uses a package
+name and architecture spec for dnf5daemon. The table keeps the installed version
+in the Version column and shows the candidate version in the Update column. The
+Repo column shows the repository that provides the update. Remove and reinstall
+act on the currently installed NEVRA for the same package name and architecture.
 
 [src/ui/package_action_rows.cpp](../src/ui/package_action_rows.cpp) keeps those
 row-selection rules in one place. This is needed because an update can be shown

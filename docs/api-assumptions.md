@@ -102,8 +102,9 @@ Why this matters:
 - Upgrade All calls dnf5daemon's native upgrade-all path by sending an empty
   package list to the daemon's `upgrade` method.
 - Selected package upgrades must be sent to the daemon as upgrade specs, not
-  install specs. Sending an exact upgrade candidate as install can fail with no
-  match even though the package is correctly shown as upgradable.
+  install specs. DNF UI sends the package name and architecture for selected
+  upgrades because exact candidate NEVRAs can fail with no match even though the
+  package is correctly shown as upgradable.
 - If the resolved preview would remove or replace DNF UI itself, the preview is
   rejected before the user can apply it. Normal upgrades are allowed.
 - Do not document this as bit-for-bit equivalence with every possible `dnf`

@@ -16,7 +16,10 @@
 // -----------------------------------------------------------------------------
 struct PendingAction {
   enum Type { INSTALL, UPGRADE, REMOVE, REINSTALL } type;
+  // Package row shown in the pending list.
   std::string nevra;
+  // Package spec sent to the transaction client. Empty means use nevra.
+  std::string transaction_spec;
 };
 
 // -----------------------------------------------------------------------------

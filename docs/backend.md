@@ -97,6 +97,11 @@ The browse and search views merge repository candidates with installed-only
 packages. The visible result keeps one row for each package name and
 architecture pair.
 
+The upgradable backend query returns repository candidates from libdnf5. The UI
+filters those candidates through dnf5daemon's Upgrade All preview before showing
+the List Upgradable result. That keeps the visible upgrade list aligned with the
+transaction service that will actually apply upgrades.
+
 ## Installed snapshot
 
 [src/dnf_backend/dnf_state.cpp](../src/dnf_backend/dnf_state.cpp) keeps cached
@@ -113,8 +118,9 @@ The installed snapshot lets the UI classify package rows without doing a fresh
 libdnf5 query for every table update.
 
 The same snapshot also lets the UI resolve the installed package behind an
-upgradable repository candidate. Upgrade actions use the visible update NEVRA,
-while remove and reinstall use the currently installed NEVRA for the same
+upgradable repository candidate. Upgrade actions keep the visible update NEVRA
+for UI navigation, but send a package name and architecture spec to
+dnf5daemon. Remove and reinstall use the currently installed NEVRA for the same
 package name and architecture.
 
 If the visible row is the installed package and its status is update available,

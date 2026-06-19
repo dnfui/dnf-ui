@@ -7,7 +7,7 @@
 //   - the available package that would be installed by an upgrade
 //
 // The UI needs both package IDs.
-// Upgrade uses the available package ID.
+// Upgrade shows the available package ID but sends a package spec for the installed package.
 // Remove and reinstall use the installed package ID.
 // -----------------------------------------------------------------------------
 #pragma once
@@ -21,6 +21,7 @@ struct PackageActionRows {
   bool has_installed_row = false;
   // Fast UI check only. This does not prove that reinstall is available from repositories.
   bool can_try_reinstall = false;
+  std::string upgrade_spec;
   PackageRow install_row;
   PackageRow installed_row;
 };

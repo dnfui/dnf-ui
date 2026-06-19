@@ -411,6 +411,9 @@ msgstr "dnf5daemon returnerade ett ofullständigt paketobjekt."
 msgid "No transaction changes were returned."
 msgstr "Inga transaktionsändringar returnerades."
 
+msgid "Unable to verify upgradable packages."
+msgstr "Kunde inte verifiera uppgraderbara paket."
+
 #, c-format
 msgid "Found %zu package."
 msgid_plural "Found %zu packages."
