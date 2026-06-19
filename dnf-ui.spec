@@ -1,5 +1,5 @@
 Name:           dnf-ui
-Version:        0.2.2
+Version:        0.2.3
 Release:        1%{?dist}
 Summary:        GTK frontend for DNF5
 
@@ -57,6 +57,13 @@ appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/com.fedora.dnfui
 %{_datadir}/metainfo/com.fedora.dnfui.metainfo.xml
 
 %changelog
+* Fri Jun 19 2026 ErikMN <erik@example.invalid> - 0.2.3-1
+- Show installed and update versions separately for upgradable packages
+- Show the repository that provides each upgradable package
+- Allow DNF UI and dnf5daemon upgrades while still blocking unsafe removal
+- Keep package query Stop feedback visible until backend work finishes
+- Improve transaction preview safety and replaced-package reporting
+
 * Tue Jun 16 2026 ErikMN <erik@example.invalid> - 0.2.2-1
 - Add repository signing key approval during transactions
 - Show live repository refresh progress
