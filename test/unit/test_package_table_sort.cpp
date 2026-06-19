@@ -37,9 +37,9 @@ TEST_CASE("Package table Version column shows only package version")
 }
 
 // -----------------------------------------------------------------------------
-// Verify that an available update row shows the version that would be installed.
+// Verify that an available update row still shows the installed package version.
 // -----------------------------------------------------------------------------
-TEST_CASE("Package table Version column uses candidate version for update rows")
+TEST_CASE("Package table Version column uses installed version for update rows")
 {
   reset_backend_globals();
 
@@ -51,7 +51,38 @@ TEST_CASE("Package table Version column uses candidate version for update rows")
   PackageItem item {};
   item.row = update;
 
-  REQUIRE(package_table_column_text(item, PackageColumnKind::VERSION) == "1.2.4");
+  REQUIRE(package_table_column_text(item, PackageColumnKind::VERSION) == "1.2.3");
+}
+
+// -----------------------------------------------------------------------------
+// Verify that an available update row shows the version that would be installed.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package table Update column uses candidate version for update rows")
+{
+  reset_backend_globals();
+
+  PackageRow installed = make_table_test_row("demo-1.2.3-4.fc44.x86_64", "demo", "1.2.3", "4.fc44", "x86_64");
+  PackageRow update = make_table_test_row("demo-1.2.4-1.fc44.x86_64", "demo", "1.2.4", "1.fc44", "x86_64");
+
+  dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
+
+  PackageItem item {};
+  item.row = update;
+
+  REQUIRE(package_table_column_text(item, PackageColumnKind::UPDATE_VERSION) == "1.2.4");
+}
+
+// -----------------------------------------------------------------------------
+// Verify that a non upgradable row leaves the Update column empty.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package table Update column is empty for normal rows")
+{
+  reset_backend_globals();
+
+  PackageItem item {};
+  item.row = make_table_test_row("demo-1.2.3-4.fc44.x86_64", "demo", "1.2.3", "4.fc44", "x86_64");
+
+  REQUIRE(package_table_column_text(item, PackageColumnKind::UPDATE_VERSION).empty());
 }
 
 // -----------------------------------------------------------------------------

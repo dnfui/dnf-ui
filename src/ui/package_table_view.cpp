@@ -194,40 +194,41 @@ create_text_column(SearchWidgets *widgets, const char *title, PackageColumnKind 
   g_object_set_data(G_OBJECT(factory), "package-column-kind", GINT_TO_POINTER(static_cast<int>(kind)));
   g_object_set_data(G_OBJECT(factory), "package-table-widgets", widgets);
 
-  g_signal_connect(
-      factory,
-      "setup",
-      G_CALLBACK(+[](GtkSignalListItemFactory *factory, GtkListItem *item, gpointer) {
-        PackageColumnKind kind = static_cast<PackageColumnKind>(
-            GPOINTER_TO_INT(g_object_get_data(G_OBJECT(factory), "package-column-kind")));
+  g_signal_connect(factory,
+                   "setup",
+                   G_CALLBACK(+[](GtkSignalListItemFactory *factory, GtkListItem *item, gpointer) {
+                     PackageColumnKind kind = static_cast<PackageColumnKind>(
+                         GPOINTER_TO_INT(g_object_get_data(G_OBJECT(factory), "package-column-kind")));
 
-        GtkWidget *cell = nullptr;
-        GtkWidget *label = nullptr;
-        if (kind == PackageColumnKind::STATUS) {
-          cell = create_status_cell();
-          label = table_cell_label(cell);
-        } else {
-          label = gtk_label_new(nullptr);
-          gtk_widget_set_margin_start(label, 6);
-          gtk_widget_set_margin_end(label, 6);
-          gtk_widget_set_margin_top(label, 4);
-          gtk_widget_set_margin_bottom(label, 4);
-          cell = label;
-        }
-        gtk_list_item_set_activatable(item, TRUE);
-        gtk_label_set_ellipsize(GTK_LABEL(label), PANGO_ELLIPSIZE_END);
-        gtk_label_set_xalign(GTK_LABEL(label), 0.0f);
-        if (kind == PackageColumnKind::VERSION || kind == PackageColumnKind::ARCH || kind == PackageColumnKind::REPO) {
-          gtk_widget_add_css_class(label, "package-meta");
-        }
-        if (kind == PackageColumnKind::SUMMARY) {
-          gtk_widget_add_css_class(label, "package-summary");
-        }
+                     GtkWidget *cell = nullptr;
+                     GtkWidget *label = nullptr;
+                     if (kind == PackageColumnKind::STATUS) {
+                       cell = create_status_cell();
+                       label = table_cell_label(cell);
+                     } else {
+                       label = gtk_label_new(nullptr);
+                       gtk_widget_set_margin_start(label, 6);
+                       gtk_widget_set_margin_end(label, 6);
+                       gtk_widget_set_margin_top(label, 4);
+                       gtk_widget_set_margin_bottom(label, 4);
+                       cell = label;
+                     }
+                     gtk_list_item_set_activatable(item, TRUE);
+                     gtk_label_set_ellipsize(GTK_LABEL(label), PANGO_ELLIPSIZE_END);
+                     gtk_label_set_xalign(GTK_LABEL(label), 0.0f);
+                     if (kind == PackageColumnKind::VERSION || kind == PackageColumnKind::UPDATE_VERSION ||
+                         kind == PackageColumnKind::ARCH || kind == PackageColumnKind::REPO) {
+                       gtk_widget_add_css_class(label, "package-meta");
+                     }
+                     if (kind == PackageColumnKind::SUMMARY) {
+                       gtk_widget_add_css_class(label, "package-summary");
+                     }
 
-        // Right-click opens the same package actions as the main buttons.
-        GtkGesture *context_click = gtk_gesture_click_new();
-        gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(context_click), GDK_BUTTON_SECONDARY);
-        g_signal_connect(context_click,
+                     // Right-click opens the same package actions as the main buttons.
+                     GtkGesture *context_click = gtk_gesture_click_new();
+                     gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(context_click), GDK_BUTTON_SECONDARY);
+                     g_signal_connect(
+                         context_click,
                          "pressed",
                          G_CALLBACK(+[](GtkGestureClick *gesture, int, double x, double y, gpointer user_data) {
                            SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
@@ -248,11 +249,11 @@ create_text_column(SearchWidgets *widgets, const char *title, PackageColumnKind 
                            });
                          }),
                          g_object_get_data(G_OBJECT(factory), "package-table-widgets"));
-        gtk_widget_add_controller(cell, GTK_EVENT_CONTROLLER(context_click));
+                     gtk_widget_add_controller(cell, GTK_EVENT_CONTROLLER(context_click));
 
-        gtk_list_item_set_child(item, cell);
-      }),
-      nullptr);
+                     gtk_list_item_set_child(item, cell);
+                   }),
+                   nullptr);
 
   g_signal_connect(factory,
                    "bind",
@@ -476,6 +477,7 @@ package_table_fill_package_view(SearchWidgets *widgets, const std::vector<Packag
   append_package_column(view, create_text_column(widgets, _("Status"), PackageColumnKind::STATUS, 160, FALSE));
   append_package_column(view, create_text_column(widgets, _("Package"), PackageColumnKind::PACKAGE, 180, FALSE));
   append_package_column(view, create_text_column(widgets, _("Version"), PackageColumnKind::VERSION, 150, FALSE));
+  append_package_column(view, create_text_column(widgets, _("Update"), PackageColumnKind::UPDATE_VERSION, 150, FALSE));
   append_package_column(view, create_text_column(widgets, _("Arch"), PackageColumnKind::ARCH, 95, FALSE));
   append_package_column(view, create_text_column(widgets, _("Repo"), PackageColumnKind::REPO, 130, FALSE));
   append_package_column(view, create_text_column(widgets, _("Summary"), PackageColumnKind::SUMMARY, 0, TRUE));

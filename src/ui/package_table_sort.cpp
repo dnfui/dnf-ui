@@ -18,8 +18,7 @@ package_table_column_text(const PackageItem &item, PackageColumnKind kind)
     return item.row.name;
   case PackageColumnKind::VERSION: {
     PackageRow installed_row;
-    if (dnf_backend_get_package_install_state(item.row) != PackageInstallState::UPGRADEABLE &&
-        dnf_backend_get_installed_package_row_by_name_arch(item.row, installed_row) &&
+    if (dnf_backend_get_installed_package_row_by_name_arch(item.row, installed_row) &&
         installed_row.nevra != item.row.nevra) {
       // The table column is named Version, so keep it aligned with the Info tab Version field.
       // Release remains available in the details pane.
@@ -27,6 +26,11 @@ package_table_column_text(const PackageItem &item, PackageColumnKind kind)
     }
     return item.row.version;
   }
+  case PackageColumnKind::UPDATE_VERSION:
+    if (dnf_backend_get_package_install_state(item.row) == PackageInstallState::UPGRADEABLE) {
+      return item.row.version;
+    }
+    return {};
   case PackageColumnKind::ARCH:
     return item.row.arch;
   case PackageColumnKind::REPO: {
@@ -93,6 +97,10 @@ compare_package_items(const PackageItem &lhs, const PackageItem &rhs, PackageCol
   case PackageColumnKind::VERSION:
     result = compare_text(package_table_column_text(lhs, PackageColumnKind::VERSION),
                           package_table_column_text(rhs, PackageColumnKind::VERSION));
+    break;
+  case PackageColumnKind::UPDATE_VERSION:
+    result = compare_text(package_table_column_text(lhs, PackageColumnKind::UPDATE_VERSION),
+                          package_table_column_text(rhs, PackageColumnKind::UPDATE_VERSION));
     break;
   case PackageColumnKind::ARCH:
     result = compare_text(lhs.row.arch, rhs.row.arch);

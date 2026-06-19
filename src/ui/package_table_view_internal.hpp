@@ -20,6 +20,7 @@ enum class PackageColumnKind {
   STATUS,
   PACKAGE,
   VERSION,
+  UPDATE_VERSION,
   ARCH,
   REPO,
   SUMMARY,
