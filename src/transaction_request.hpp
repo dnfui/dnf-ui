@@ -22,6 +22,8 @@ struct TransactionRequest {
   bool upgrade_all = false;
   // Package specs explicitly marked for install.
   std::vector<std::string> install;
+  // Package specs explicitly marked for upgrade.
+  std::vector<std::string> upgrade;
   // Package specs explicitly marked for removal.
   std::vector<std::string> remove;
   // Package specs explicitly marked for reinstall.
@@ -32,7 +34,7 @@ struct TransactionRequest {
   // -----------------------------------------------------------------------------
   bool empty() const
   {
-    return !upgrade_all && install.empty() && remove.empty() && reinstall.empty();
+    return !upgrade_all && install.empty() && upgrade.empty() && remove.empty() && reinstall.empty();
   }
 
   // -----------------------------------------------------------------------------
@@ -40,7 +42,7 @@ struct TransactionRequest {
   // -----------------------------------------------------------------------------
   size_t item_count() const
   {
-    return (upgrade_all ? 1 : 0) + install.size() + remove.size() + reinstall.size();
+    return (upgrade_all ? 1 : 0) + install.size() + upgrade.size() + remove.size() + reinstall.size();
   }
 
   // -----------------------------------------------------------------------------
@@ -56,7 +58,7 @@ struct TransactionRequest {
     }
 
     // Upgrade all is a separate request type and must not include selected packages.
-    if (upgrade_all && (!install.empty() || !remove.empty() || !reinstall.empty())) {
+    if (upgrade_all && (!install.empty() || !upgrade.empty() || !remove.empty() || !reinstall.empty())) {
       error_out = "Upgrade all cannot be combined with other package actions.";
       return false;
     }
@@ -88,8 +90,8 @@ struct TransactionRequest {
     };
 
     // Check each action list before comparing the lists with each other.
-    if (!validate_specs(install, "install") || !validate_specs(remove, "remove") ||
-        !validate_specs(reinstall, "reinstall")) {
+    if (!validate_specs(install, "install") || !validate_specs(upgrade, "upgrade") ||
+        !validate_specs(remove, "remove") || !validate_specs(reinstall, "reinstall")) {
       return false;
     }
 
@@ -105,7 +107,8 @@ struct TransactionRequest {
     };
 
     // Reject requests that ask for two different actions for the same package spec.
-    if (has_conflict(install, remove) || has_conflict(install, reinstall) || has_conflict(remove, reinstall)) {
+    if (has_conflict(install, upgrade) || has_conflict(install, remove) || has_conflict(install, reinstall) ||
+        has_conflict(upgrade, remove) || has_conflict(upgrade, reinstall) || has_conflict(remove, reinstall)) {
       error_out = "Transaction request contains conflicting package actions.";
       return false;
     }

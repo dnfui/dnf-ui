@@ -32,6 +32,7 @@ the GUI:
 
 - upgrade all
 - install
+- upgrade
 - remove
 - reinstall
 
@@ -39,9 +40,8 @@ Dependency changes are not stored in the request. dnf5daemon resolves those
 changes when the preview is built.
 
 Upgrade-all requests are separate from explicit package action lists. DNF UI
-builds the upgrade candidate list from the local backend, skips packages that
-are protected while the app is running, and sends the remaining specs to
-dnf5daemon.
+asks dnf5daemon to prepare its native Upgrade All transaction. Selected package
+upgrades are sent as explicit upgrade specs.
 
 ## GUI flow
 
@@ -50,7 +50,7 @@ When the user clicks Apply:
 1. The pending controller validates the pending actions.
 2. The controller builds a `TransactionRequest`.
 3. The transaction client opens a dnf5daemon session.
-4. The client marks install, remove, or reinstall specs on that session.
+4. The client marks install, upgrade, remove, or reinstall specs on that session.
 5. The client asks dnf5daemon to resolve the transaction with user interaction enabled.
 6. If dnf5daemon requests a repository signing key during resolve, DNF UI asks before showing the summary.
 7. The GUI shows the resolved preview.
@@ -60,16 +60,16 @@ When the user clicks Apply:
 11. The GUI refreshes package state and closes the daemon session.
 
 When the user clicks Upgrade All, the GUI skips the pending action list and asks
-the transaction client to prepare an upgrade session from current upgrade
-candidates. If the resolved preview is empty, the session is closed and the GUI
-reports that all packages are already up to date.
+the transaction client to prepare a daemon-side Upgrade All session. If the
+resolved preview is empty, the session is closed and the GUI reports that all
+packages are already up to date.
 
 ```mermaid
 flowchart TD
     Marked[Marked actions] --> Request[TransactionRequest]
-    UpgradeAll[Upgrade All] --> UpgradeSpecs[Build upgrade specs]
+    UpgradeAll[Upgrade All] --> DaemonUpgradeAll[Daemon Upgrade All]
     Request --> Client[Transaction client]
-    UpgradeSpecs --> Client
+    DaemonUpgradeAll --> Client
     Client --> Open[Open dnf5daemon session]
     Open --> Mark[Mark package actions]
     Mark --> Resolve[Resolve with dnf5daemon]

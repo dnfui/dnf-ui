@@ -24,11 +24,12 @@ TEST_CASE("Transaction request empty state and item count reflect queued actions
   REQUIRE(request.item_count() == 0);
 
   request.install.push_back("example-install-spec");
+  request.upgrade.push_back("example-upgrade-spec");
   request.remove.push_back("example-remove-spec");
   request.reinstall.push_back("example-reinstall-spec");
 
   REQUIRE_FALSE(request.empty());
-  REQUIRE(request.item_count() == 3);
+  REQUIRE(request.item_count() == 4);
 
   TransactionRequest upgrade_all_request;
   upgrade_all_request.upgrade_all = true;
@@ -65,6 +66,20 @@ TEST_CASE("Transaction request validation rejects an empty install package spec"
 
   REQUIRE_FALSE(request.validate(error));
   REQUIRE(error == "Transaction request contains an empty install package spec.");
+}
+
+// -----------------------------------------------------------------------------
+// Verify that validation rejects empty upgrade specs before service work starts.
+// -----------------------------------------------------------------------------
+TEST_CASE("Transaction request validation rejects an empty upgrade package spec")
+{
+  TransactionRequest request;
+  std::string error;
+
+  request.upgrade.push_back("");
+
+  REQUIRE_FALSE(request.validate(error));
+  REQUIRE(error == "Transaction request contains an empty upgrade package spec.");
 }
 
 // -----------------------------------------------------------------------------
@@ -118,7 +133,7 @@ TEST_CASE("Transaction request validation rejects mixed upgrade-all requests")
   std::string error;
 
   request.upgrade_all = true;
-  request.install.push_back("example-install-spec");
+  request.upgrade.push_back("example-upgrade-spec");
 
   REQUIRE_FALSE(request.validate(error));
   REQUIRE(error == "Upgrade all cannot be combined with other package actions.");
@@ -160,11 +175,11 @@ TEST_CASE("Transaction request validation rejects duplicate package specs")
   TransactionRequest request;
   std::string error;
 
-  request.install.push_back("example-install-spec");
-  request.install.push_back("example-install-spec");
+  request.upgrade.push_back("example-upgrade-spec");
+  request.upgrade.push_back("example-upgrade-spec");
 
   REQUIRE_FALSE(request.validate(error));
-  REQUIRE(error == "Transaction request contains a duplicate install package spec.");
+  REQUIRE(error == "Transaction request contains a duplicate upgrade package spec.");
 }
 
 // -----------------------------------------------------------------------------
@@ -176,7 +191,7 @@ TEST_CASE("Transaction request validation rejects conflicting package actions")
   std::string error;
 
   request.install.push_back("example-package-spec");
-  request.remove.push_back("example-package-spec");
+  request.upgrade.push_back("example-package-spec");
 
   REQUIRE_FALSE(request.validate(error));
   REQUIRE(error == "Transaction request contains conflicting package actions.");
@@ -191,6 +206,7 @@ TEST_CASE("Transaction request validation accepts mixed non empty package specs"
   std::string error = "stale";
 
   request.install.push_back("example-install-spec");
+  request.upgrade.push_back("example-upgrade-spec");
   request.remove.push_back("example-remove-spec");
   request.reinstall.push_back("example-reinstall-spec");
 

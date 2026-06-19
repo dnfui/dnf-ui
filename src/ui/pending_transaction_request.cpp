@@ -24,29 +24,34 @@ struct PendingRequestBaseDropGuard {
 }
 
 // -----------------------------------------------------------------------------
-// Split the pending queue into install, remove, and reinstall transaction specs.
+// Split the pending queue into transaction specs by requested action.
 // -----------------------------------------------------------------------------
 static bool
 build_pending_transaction_specs(const std::vector<PendingAction> &actions,
                                 std::vector<std::string> &install,
+                                std::vector<std::string> &upgrade,
                                 std::vector<std::string> &remove,
                                 std::vector<std::string> &reinstall,
                                 std::string &error_out)
 {
   install.clear();
+  upgrade.clear();
   remove.clear();
   reinstall.clear();
   error_out.clear();
 
   install.reserve(actions.size());
+  upgrade.reserve(actions.size());
   remove.reserve(actions.size());
   reinstall.reserve(actions.size());
 
   for (const auto &action : actions) {
     switch (action.type) {
     case PendingAction::INSTALL:
-    case PendingAction::UPGRADE:
       install.push_back(action.nevra);
+      break;
+    case PendingAction::UPGRADE:
+      upgrade.push_back(action.nevra);
       break;
     case PendingAction::REMOVE:
       remove.push_back(action.nevra);
@@ -56,6 +61,7 @@ build_pending_transaction_specs(const std::vector<PendingAction> &actions,
       break;
     default:
       install.clear();
+      upgrade.clear();
       remove.clear();
       reinstall.clear();
       error_out = _("Unknown pending package action.");
@@ -75,13 +81,14 @@ pending_transaction_build_request(const std::vector<PendingAction> &actions,
                                   std::string &error_out)
 {
   request.upgrade_all = false;
-  return build_pending_transaction_specs(actions, request.install, request.remove, request.reinstall, error_out);
+  return build_pending_transaction_specs(
+      actions, request.install, request.upgrade, request.remove, request.reinstall, error_out);
 }
 
 // -----------------------------------------------------------------------------
 // Reject direct remove or reinstall requests for the package owning the running GUI.
-// Selected upgrades are carried as install specs, so they are allowed here and
-// checked again after dnf5daemon resolves the preview.
+// Selected upgrades are allowed here and checked again after dnf5daemon resolves
+// the preview.
 // -----------------------------------------------------------------------------
 bool
 pending_transaction_validate_request(const TransactionRequest &request, std::string &error_out)

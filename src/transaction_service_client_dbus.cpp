@@ -578,8 +578,9 @@ transaction_service_client_start_transaction_request(GDBusConnection *connection
 {
   transaction_path_out.clear();
   error_out.clear();
-  DNFUI_TRACE("dnf5daemon selected transaction start install=%zu remove=%zu reinstall=%zu",
+  DNFUI_TRACE("dnf5daemon selected transaction start install=%zu upgrade=%zu remove=%zu reinstall=%zu",
               request.install.size(),
+              request.upgrade.size(),
               request.remove.size(),
               request.reinstall.size());
 
@@ -594,6 +595,7 @@ transaction_service_client_start_transaction_request(GDBusConnection *connection
   }
 
   if (!mark_package_specs(connection, transaction_path_out, "install", request.install, error_out) ||
+      !mark_package_specs(connection, transaction_path_out, "upgrade", request.upgrade, error_out) ||
       !mark_package_specs(connection, transaction_path_out, "remove", request.remove, error_out) ||
       !mark_package_specs(connection, transaction_path_out, "reinstall", request.reinstall, error_out)) {
     DNFUI_TRACE("dnf5daemon selected transaction mark failed path=%s error=%s",

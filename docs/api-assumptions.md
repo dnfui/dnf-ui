@@ -79,17 +79,19 @@ Maintenance check:
 - If the upgradable list changes, verify `package_query.hpp` in the build image
   and rerun the backend tests.
 
-## libdnf5 upgrade all
+## dnf5daemon upgrade requests
 
 Code:
 
 - [src/transaction_service_client_dbus.cpp](../src/transaction_service_client_dbus.cpp)
-- [src/dnf_backend/dnf_query.cpp](../src/dnf_backend/dnf_query.cpp)
+- [src/ui/pending_transaction_request.cpp](../src/ui/pending_transaction_request.cpp)
 
 Assumption:
 
 - dnf5daemon `upgrade` with explicit package specs marks those packages for
   upgrade in the daemon session.
+- dnf5daemon `upgrade` with an empty package list prepares its native Upgrade
+  All transaction.
 
 Source:
 
@@ -99,6 +101,9 @@ Why this matters:
 
 - Upgrade All calls dnf5daemon's native upgrade-all path by sending an empty
   package list to the daemon's `upgrade` method.
+- Selected package upgrades must be sent to the daemon as upgrade specs, not
+  install specs. Sending an exact upgrade candidate as install can fail with no
+  match even though the package is correctly shown as upgradable.
 - If the resolved preview would remove or replace DNF UI itself, the preview is
   rejected before the user can apply it. Normal upgrades are allowed.
 - Do not document this as bit-for-bit equivalence with every possible `dnf`
@@ -109,6 +114,7 @@ Why this matters:
 Tests:
 
 - transaction request validation tests
+- pending transaction request builder tests
 - transaction preview tests
 - empty upgrade-all preview test path
 

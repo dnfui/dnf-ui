@@ -34,8 +34,11 @@ TEST_CASE("Pending transaction request builder splits actions by operation type"
   REQUIRE(request.install ==
           std::vector<std::string> {
               "demo-install-1-1.x86_64",
-              "demo-upgrade-2-1.x86_64",
               "demo-install-libs-1-1.x86_64",
+          });
+  REQUIRE(request.upgrade ==
+          std::vector<std::string> {
+              "demo-upgrade-2-1.x86_64",
           });
   REQUIRE(request.remove ==
           std::vector<std::string> {
@@ -55,6 +58,7 @@ TEST_CASE("Pending transaction request builder clears stale request data")
   TransactionRequest request;
   request.upgrade_all = true;
   request.install.push_back("old-install");
+  request.upgrade.push_back("old-upgrade");
   request.remove.push_back("old-remove");
   request.reinstall.push_back("old-reinstall");
   std::string error;
@@ -68,6 +72,7 @@ TEST_CASE("Pending transaction request builder clears stale request data")
 
   REQUIRE_FALSE(request.upgrade_all);
   REQUIRE(request.install.empty());
+  REQUIRE(request.upgrade.empty());
   REQUIRE(request.remove ==
           std::vector<std::string> {
               "demo-remove-1-1.x86_64",
@@ -91,6 +96,7 @@ TEST_CASE("Pending transaction request builder rejects unknown action types")
   REQUIRE_FALSE(pending_transaction_build_request(actions, request, error));
   REQUIRE_FALSE(error.empty());
   REQUIRE(request.install.empty());
+  REQUIRE(request.upgrade.empty());
   REQUIRE(request.remove.empty());
   REQUIRE(request.reinstall.empty());
 }
@@ -102,6 +108,7 @@ TEST_CASE("Pending transaction request validation accepts non protected requests
 {
   TransactionRequest request;
   request.install.push_back("demo-install-1-1.x86_64");
+  request.upgrade.push_back("demo-upgrade-1-1.x86_64");
   request.remove.push_back("demo-remove-1-1.x86_64");
   request.reinstall.push_back("demo-reinstall-1-1.x86_64");
   std::string error;
@@ -111,15 +118,16 @@ TEST_CASE("Pending transaction request validation accepts non protected requests
 }
 
 // -----------------------------------------------------------------------------
-// Verify that selected upgrades are not blocked before dnf5daemon resolves them.
+// Verify that selected installs and upgrades are not blocked before dnf5daemon resolves them.
 // -----------------------------------------------------------------------------
-TEST_CASE("Pending transaction request validation allows protected install specs")
+TEST_CASE("Pending transaction request validation allows protected install and upgrade specs")
 {
   reset_backend_globals();
   ScopedEnvVar protected_name("DNFUI_TEST_SELF_PROTECTED_PACKAGE_NAME", "dnf-ui");
 
   TransactionRequest request;
   request.install.push_back("dnf-ui");
+  request.upgrade.push_back("dnf-ui-0.2.3-1.fc44.x86_64");
   std::string error;
 
   REQUIRE(pending_transaction_validate_request(request, error));

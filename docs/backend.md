@@ -198,8 +198,9 @@ The preview builder fails closed when libdnf resolves an action that the
 preview model cannot represent. That keeps the GUI review step from showing a
 partial transaction summary.
 
-Upgrade-all requests in the GUI build explicit upgrade specs and send them to
-dnf5daemon.
+Selected package upgrades are sent to dnf5daemon as explicit upgrade specs.
+Upgrade All uses dnf5daemon's native upgrade-all behavior instead of building a
+local list of upgrade specs.
 
 The GUI should not call local transaction apply directly. Apply should go
 through dnf5daemon so the privileged package operation stays outside the GTK
