@@ -54,6 +54,34 @@ TEST_CASE("Search exact mode does not match partial substring")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that normal search accepts shell-style wildcard terms.
+// -----------------------------------------------------------------------------
+TEST_CASE("Search wildcard mode returns matching package names")
+{
+  reset_backend_globals();
+
+  set_backend_search_options(false, false);
+
+  auto results = dnf_backend_search_package_rows_interruptible("ba*", nullptr);
+
+  REQUIRE(contains_package_name(results, "bash"));
+}
+
+// -----------------------------------------------------------------------------
+// Verify that exact search treats wildcard characters as literal text.
+// -----------------------------------------------------------------------------
+TEST_CASE("Search exact mode treats wildcard characters literally")
+{
+  reset_backend_globals();
+
+  set_backend_search_options(false, true);
+
+  auto results = dnf_backend_search_package_rows_interruptible("ba*", nullptr);
+
+  REQUIRE(results.empty());
+}
+
+// -----------------------------------------------------------------------------
 // Verify that enabling description search does not drop name-only matches.
 // -----------------------------------------------------------------------------
 TEST_CASE("Search description mode expands or equals name-only results")

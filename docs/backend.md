@@ -97,6 +97,8 @@ The browse and search views merge repository candidates with installed-only
 packages. The visible result keeps one row for each package name and
 architecture pair.
 
+Normal search is substring based. If the search term contains `*` or `?`, normal search treats it as a wildcard pattern. Exact search remains literal.
+
 The upgradable backend query returns repository candidates from libdnf5. Before the UI shows the List Upgradable result, it filters those candidates through dnf5daemon's Upgrade All preview. That keeps the visible upgrade list aligned with the transaction service that will actually apply upgrades.
 
 ## Installed snapshot

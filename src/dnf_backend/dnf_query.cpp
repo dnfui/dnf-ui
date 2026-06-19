@@ -20,6 +20,7 @@
 #include <utility>
 #include <vector>
 
+#include <fnmatch.h>
 #include <gio/gio.h>
 
 #include <libdnf5/base/base.hpp>
@@ -126,6 +127,30 @@ utf8_casefold_copy(const std::string &text)
 }
 
 // -----------------------------------------------------------------------------
+// Return true when the user search term asks for shell-style name matching.
+// Exact search stays literal, so wildcard characters only matter in normal search.
+// -----------------------------------------------------------------------------
+static bool
+search_pattern_uses_wildcards(const std::string &pattern)
+{
+  return pattern.find('*') != std::string::npos || pattern.find('?') != std::string::npos;
+}
+
+// -----------------------------------------------------------------------------
+// Match folded package text against the folded search term.
+// Normal search is substring based unless the term contains wildcard characters.
+// -----------------------------------------------------------------------------
+static bool
+search_text_matches_pattern(const std::string &text_lower, const std::string &pattern_lower, bool use_wildcards)
+{
+  if (use_wildcards) {
+    return fnmatch(pattern_lower.c_str(), text_lower.c_str(), 0) == 0;
+  }
+
+  return text_lower.find(pattern_lower) != std::string::npos;
+}
+
+// -----------------------------------------------------------------------------
 // Return true when one package matches the active search term using the same
 // name and description flag semantics as the main UI search controls.
 // Summary text is included with description search because it is shown as package
@@ -141,7 +166,8 @@ package_matches_search(const libdnf5::rpm::Package &pkg,
     return name == pattern_lower;
   }
 
-  if (name.find(pattern_lower) != std::string::npos) {
+  const bool use_wildcards = search_pattern_uses_wildcards(pattern_lower);
+  if (search_text_matches_pattern(name, pattern_lower, use_wildcards)) {
     return true;
   }
 
@@ -150,12 +176,12 @@ package_matches_search(const libdnf5::rpm::Package &pkg,
   }
 
   std::string summary = utf8_casefold_copy(pkg.get_summary());
-  if (summary.find(pattern_lower) != std::string::npos) {
+  if (search_text_matches_pattern(summary, pattern_lower, use_wildcards)) {
     return true;
   }
 
   std::string description = utf8_casefold_copy(pkg.get_description());
-  return description.find(pattern_lower) != std::string::npos;
+  return search_text_matches_pattern(description, pattern_lower, use_wildcards);
 }
 
 // -----------------------------------------------------------------------------
@@ -178,6 +204,8 @@ collect_available_rows_by_name_arch(libdnf5::Base &base,
   if (pattern && !search_options.search_in_description) {
     if (search_options.exact_match) {
       query.filter_name(*pattern, libdnf5::sack::QueryCmp::EQ);
+    } else if (search_pattern_uses_wildcards(*pattern)) {
+      query.filter_name(*pattern, libdnf5::sack::QueryCmp::IGLOB);
     } else {
       query.filter_name(*pattern, libdnf5::sack::QueryCmp::CONTAINS);
     }
