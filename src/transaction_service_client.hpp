@@ -43,6 +43,13 @@ transaction_service_client_preview_upgrade_all_request(TransactionPreview &previ
                                                        GCancellable *cancellable = nullptr);
 
 // -----------------------------------------------------------------------------
+// Ask dnf5daemon for available upgrade package labels without resolving a transaction.
+// -----------------------------------------------------------------------------
+bool transaction_service_client_list_upgrade_labels(std::vector<std::string> &labels_out,
+                                                    std::string &error_out,
+                                                    GCancellable *cancellable = nullptr);
+
+// -----------------------------------------------------------------------------
 // Apply one previously prepared transaction request and forward its progress.
 // -----------------------------------------------------------------------------
 bool transaction_service_client_apply_started_request(const std::string &transaction_path,

@@ -132,15 +132,13 @@ package_row_transaction_label(const PackageRow &row)
 }
 
 // -----------------------------------------------------------------------------
-// Keep only rows that dnf5daemon resolves as real upgrade transaction items.
+// Keep only rows that dnf5daemon lists as real upgrade candidates.
 // The first query uses local libdnf metadata so the table can show package details.
-// This second check asks the daemon that will later apply the transaction.
-// If the daemon cannot resolve a row as an upgrade, the UI must not present it as
-// actionable. This helper is only a passive filter. It must not answer trust
-// prompts or make any package changes.
+// This second check asks the daemon so the UI does not show upgrade rows the
+// transaction service would not accept. It must not resolve a full transaction.
 // -----------------------------------------------------------------------------
 static std::vector<PackageRow>
-filter_upgradeable_rows_by_daemon_preview(std::vector<PackageRow> rows, GCancellable *cancellable)
+filter_upgradeable_rows_by_daemon_list(std::vector<PackageRow> rows, GCancellable *cancellable)
 {
   if (rows.empty() || (cancellable && g_cancellable_is_cancelled(cancellable))) {
     return rows;
@@ -148,29 +146,21 @@ filter_upgradeable_rows_by_daemon_preview(std::vector<PackageRow> rows, GCancell
 
 #ifdef DNFUI_DEBUG_TRACE
   const gint64 started_at_us = g_get_monotonic_time();
-  DNFUI_TRACE("Upgradable daemon verification start rows=%zu", rows.size());
+  DNFUI_TRACE("Upgradable daemon list verification start rows=%zu", rows.size());
 #endif
 
-  TransactionPreview preview;
-  std::string transaction_path;
+  std::vector<std::string> upgrade_labels;
   std::string error;
-  if (!transaction_service_client_preview_upgrade_all_request(preview, transaction_path, error, {}, cancellable)) {
-    if (!transaction_path.empty()) {
-      transaction_service_client_release_request(transaction_path);
-    }
+  if (!transaction_service_client_list_upgrade_labels(upgrade_labels, error, cancellable)) {
     throw std::runtime_error(error.empty() ? _("Unable to verify upgradable packages.") : error);
   }
 #ifdef DNFUI_DEBUG_TRACE
-  DNFUI_TRACE("Upgradable daemon verification resolved upgrade_items=%zu elapsed_ms=%lld",
-              preview.upgrade.size(),
+  DNFUI_TRACE("Upgradable daemon list verification labels=%zu elapsed_ms=%lld",
+              upgrade_labels.size(),
               elapsed_ms_since(started_at_us));
 #endif
 
-  if (!transaction_path.empty()) {
-    transaction_service_client_release_request(transaction_path);
-  }
-
-  std::set<std::string> daemon_upgrades(preview.upgrade.begin(), preview.upgrade.end());
+  std::set<std::string> daemon_upgrades(upgrade_labels.begin(), upgrade_labels.end());
 
   std::vector<PackageRow> filtered_rows;
   filtered_rows.reserve(rows.size());
@@ -185,7 +175,7 @@ filter_upgradeable_rows_by_daemon_preview(std::vector<PackageRow> rows, GCancell
   }
 
 #ifdef DNFUI_DEBUG_TRACE
-  DNFUI_TRACE("Upgradable daemon verification done rows=%zu filtered=%zu total_ms=%lld",
+  DNFUI_TRACE("Upgradable daemon list verification done rows=%zu filtered=%zu total_ms=%lld",
               rows.size(),
               filtered_rows.size(),
               elapsed_ms_since(started_at_us));
@@ -378,7 +368,7 @@ on_list_upgradeable_task(GTask *task, gpointer, gpointer, GCancellable *cancella
     DNFUI_TRACE("Upgradable list task backend rows=%zu elapsed_ms=%lld", rows.size(), elapsed_ms_since(started_at_us));
 #endif
 
-    rows = filter_upgradeable_rows_by_daemon_preview(std::move(rows), cancellable);
+    rows = filter_upgradeable_rows_by_daemon_list(std::move(rows), cancellable);
 #ifdef DNFUI_DEBUG_TRACE
     DNFUI_TRACE("Upgradable list task verified rows=%zu total_ms=%lld", rows.size(), elapsed_ms_since(started_at_us));
 #endif
