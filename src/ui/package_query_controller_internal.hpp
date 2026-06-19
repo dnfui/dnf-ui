@@ -61,7 +61,8 @@ void package_query_begin_package_list_request(SearchWidgets *widgets,
 // -----------------------------------------------------------------------------
 void package_query_end_package_list_request(SearchWidgets *widgets, uint64_t request_id, PackageListRequestKind kind);
 // -----------------------------------------------------------------------------
-// Cancel the active package query and restore the controls.
+// Ask the active package query to stop.
+// The worker restores controls when it actually ends.
 // -----------------------------------------------------------------------------
 void package_query_cancel_active_package_list_request(SearchWidgets *widgets);
 // -----------------------------------------------------------------------------

@@ -137,6 +137,7 @@ on_list_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
     if (widgets && !widgets->window_state.destroyed) {
       if (GCancellable *c = g_task_get_cancellable(task)) {
         if (g_cancellable_is_cancelled(c) && td) {
+          widgets_spinner_release(widgets->query.spinner);
           package_query_end_package_list_request(widgets, td->request_id, PackageListRequestKind::LIST_INSTALLED);
         }
       }
@@ -221,6 +222,7 @@ on_list_available_task_finished(GObject *, GAsyncResult *res, gpointer user_data
     if (widgets && !widgets->window_state.destroyed) {
       if (GCancellable *c = g_task_get_cancellable(task)) {
         if (g_cancellable_is_cancelled(c) && td) {
+          widgets_spinner_release(widgets->query.spinner);
           package_query_end_package_list_request(widgets, td->request_id, PackageListRequestKind::LIST_AVAILABLE);
         }
       }
@@ -300,6 +302,7 @@ on_list_upgradeable_task_finished(GObject *, GAsyncResult *res, gpointer user_da
     if (widgets && !widgets->window_state.destroyed) {
       if (GCancellable *c = g_task_get_cancellable(task)) {
         if (g_cancellable_is_cancelled(c) && td) {
+          widgets_spinner_release(widgets->query.spinner);
           package_query_end_package_list_request(widgets, td->request_id, PackageListRequestKind::LIST_UPGRADEABLE);
         }
       }
@@ -389,6 +392,7 @@ on_search_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
 
   if (widgets_task_should_skip_completion(task, widgets)) {
     if (widgets && !widgets->window_state.destroyed && c && g_cancellable_is_cancelled(c) && td) {
+      widgets_spinner_release(widgets->query.spinner);
       package_query_end_package_list_request(widgets, td->request_id, PackageListRequestKind::SEARCH);
     }
     return;
@@ -490,6 +494,7 @@ on_exact_package_reload_task_finished(GObject *, GAsyncResult *res, gpointer use
     if (widgets && !widgets->window_state.destroyed) {
       if (GCancellable *c = g_task_get_cancellable(task)) {
         if (g_cancellable_is_cancelled(c) && td) {
+          widgets_spinner_release(widgets->query.spinner);
           package_query_end_package_list_request(widgets, td->request_id, PackageListRequestKind::EXACT_RELOAD);
         }
       }

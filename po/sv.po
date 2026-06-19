@@ -300,6 +300,9 @@ msgstr "Den här transaktionen skulle ta bort eller ersätta DNF UI."
 msgid "Could not verify whether this transaction would remove or replace DNF UI."
 msgstr "Kunde inte kontrollera om den här transaktionen skulle ta bort eller ersätta DNF UI."
 
+msgid "Could not verify whether the transaction modifies DNF UI itself."
+msgstr "Kunde inte kontrollera om transaktionen ändrar DNF UI."
+
 msgid "Upgrade All would remove or replace DNF UI itself."
 msgstr "Uppgradera alla skulle ta bort eller ersätta DNF UI."
 

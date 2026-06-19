@@ -120,6 +120,38 @@ collect_self_protected_package_names(libdnf5::Base &base)
 }
 
 // -----------------------------------------------------------------------------
+// Return protected package names, refreshing from rpmdb if installed state has
+// not been published yet.
+// -----------------------------------------------------------------------------
+std::set<std::string>
+self_protected_package_name_snapshot()
+{
+  std::set<std::string> protected_names;
+  {
+    std::lock_guard<std::mutex> lock(g_installed_mutex);
+    protected_names = g_self_protected_package_names;
+  }
+
+  if (!protected_names.empty()) {
+    return protected_names;
+  }
+
+  auto read = BaseManager::instance().acquire_system_only_read();
+  protected_names = collect_self_protected_package_names(*read.base);
+
+  if (!protected_names.empty()) {
+    std::lock_guard<std::mutex> lock(g_installed_mutex);
+    if (g_self_protected_package_names.empty()) {
+      g_self_protected_package_names = protected_names;
+    } else {
+      protected_names = g_self_protected_package_names;
+    }
+  }
+
+  return protected_names;
+}
+
+// -----------------------------------------------------------------------------
 // Publish installed-package state only after callers have finished all libdnf
 // Base reads. Do not hold the Base lock while taking g_installed_mutex.
 // -----------------------------------------------------------------------------
@@ -320,11 +352,7 @@ dnf_backend_is_package_self_protected(const PackageRow &row)
 bool
 dnf_backend_is_self_protected_transaction_spec(const std::string &spec)
 {
-  std::set<std::string> protected_names;
-  {
-    std::lock_guard<std::mutex> lock(g_installed_mutex);
-    protected_names = g_self_protected_package_names;
-  }
+  std::set<std::string> protected_names = self_protected_package_name_snapshot();
 
   if (protected_names.empty()) {
     return false;

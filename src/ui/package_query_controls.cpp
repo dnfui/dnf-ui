@@ -290,7 +290,8 @@ package_query_end_package_list_request(SearchWidgets *widgets, uint64_t request_
 }
 
 // -----------------------------------------------------------------------------
-// Cancel the active package list request and immediately unlock the shared controls.
+// Ask the active package list request to stop.
+// Controls stay busy until the worker reaches a cancellation point.
 // -----------------------------------------------------------------------------
 void
 package_query_cancel_active_package_list_request(SearchWidgets *widgets)
@@ -307,10 +308,6 @@ package_query_cancel_active_package_list_request(SearchWidgets *widgets)
   }
 
   g_cancellable_cancel(c);
-
-  // Release only the spinner slot owned by this request so other running tasks
-  // can keep their progress indication visible.
-  widgets_spinner_release(widgets->query.spinner);
 
   ui_helpers_set_status(widgets->query.status_label, package_list_stopping_status(kind), "gray");
 }

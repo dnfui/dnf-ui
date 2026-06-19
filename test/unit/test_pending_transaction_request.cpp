@@ -4,6 +4,8 @@
 // -----------------------------------------------------------------------------
 #include <catch2/catch_test_macros.hpp>
 
+#include "dnf_backend/dnf_backend.hpp"
+#include "test_utils.hpp"
 #include "transaction_request.hpp"
 #include "ui/pending_transaction_request.hpp"
 
@@ -106,4 +108,47 @@ TEST_CASE("Pending transaction request validation accepts non protected requests
 
   REQUIRE(pending_transaction_validate_request(request, error));
   REQUIRE(error.empty());
+}
+
+// -----------------------------------------------------------------------------
+// Verify that selected upgrades are not blocked before dnf5daemon resolves them.
+// -----------------------------------------------------------------------------
+TEST_CASE("Pending transaction request validation allows protected install specs")
+{
+  reset_backend_globals();
+  ScopedEnvVar protected_name("DNFUI_TEST_SELF_PROTECTED_PACKAGE_NAME", "dnf-ui");
+
+  TransactionRequest request;
+  request.install.push_back("dnf-ui");
+  std::string error;
+
+  REQUIRE(pending_transaction_validate_request(request, error));
+  REQUIRE(error.empty());
+
+  reset_backend_globals();
+}
+
+// -----------------------------------------------------------------------------
+// Verify that direct destructive requests for the running app are still rejected.
+// -----------------------------------------------------------------------------
+TEST_CASE("Pending transaction request validation rejects protected remove and reinstall specs")
+{
+  reset_backend_globals();
+  ScopedEnvVar protected_name("DNFUI_TEST_SELF_PROTECTED_PACKAGE_NAME", "dnf-ui");
+
+  TransactionRequest remove_request;
+  remove_request.remove.push_back("dnf-ui");
+  std::string remove_error;
+
+  REQUIRE_FALSE(pending_transaction_validate_request(remove_request, remove_error));
+  REQUIRE_FALSE(remove_error.empty());
+
+  TransactionRequest reinstall_request;
+  reinstall_request.reinstall.push_back("dnf-ui");
+  std::string reinstall_error;
+
+  REQUIRE_FALSE(pending_transaction_validate_request(reinstall_request, reinstall_error));
+  REQUIRE_FALSE(reinstall_error.empty());
+
+  reset_backend_globals();
 }
