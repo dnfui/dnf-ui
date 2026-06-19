@@ -99,8 +99,8 @@ Why this matters:
 
 - Upgrade All calls dnf5daemon's native upgrade-all path by sending an empty
   package list to the daemon's `upgrade` method.
-- If the resolved preview would upgrade DNF UI itself, the preview is rejected
-  before the user can apply it.
+- If the resolved preview would remove or replace DNF UI itself, the preview is
+  rejected before the user can apply it. Normal upgrades are allowed.
 - Do not document this as bit-for-bit equivalence with every possible `dnf`
   command-line configuration, plugin, or option. The maintained guarantee is
   that DNF UI sends the upgrade request through the app's configured backend and
@@ -239,8 +239,10 @@ Assumptions:
 - Signal subscriptions invoke callbacks in the subscribing thread's
   thread-default main context.
 - A dnf5daemon session is tied to the D-Bus connection that created it.
-- DNF UI rejects previews that would remove `dnf5daemon-server`, because later
-  package changes depend on that daemon.
+- DNF UI rejects previews that would remove or replace the running app package.
+  Normal package upgrades are allowed.
+- DNF UI rejects previews that would remove or replace `dnf5daemon-server`,
+  because later package changes depend on that daemon.
 - The app keeps one shared system bus connection so the session used for preview
   is still valid when the user later applies.
 - A resolved preview is not a system-wide DNF lock. If another package tool

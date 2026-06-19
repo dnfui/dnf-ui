@@ -73,8 +73,14 @@ bool transaction_service_client_session_exists_for_tests(const std::string &tran
 // -----------------------------------------------------------------------------
 bool transaction_service_client_testonly_build_preview_from_item(const std::string &object_type,
                                                                  const std::string &action,
+                                                                 const std::string &name,
                                                                  TransactionPreview &preview,
                                                                  std::string &error_out);
+// -----------------------------------------------------------------------------
+// Check the resolved-preview self-protection rule used by daemon previews.
+// -----------------------------------------------------------------------------
+bool transaction_service_client_testonly_verify_preview_keeps_running_app_package(const TransactionPreview &preview,
+                                                                                  std::string &error_out);
 #endif
 
 // -----------------------------------------------------------------------------

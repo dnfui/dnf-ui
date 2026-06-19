@@ -312,8 +312,9 @@ append_daemon_preview_item(TransactionPreview &preview,
   const std::string lower_action = ascii_lower(action);
 
   // NOTE: Without dnf5daemon-server, DNF UI cannot apply future package changes.
-  if (lower_action == "remove" && name == kRequiredDaemonServerPackage) {
-    error_out = _("This transaction would remove dnf5daemon-server, which DNF UI needs to apply package changes.");
+  if ((lower_action == "remove" || lower_action == "replaced") && name == kRequiredDaemonServerPackage) {
+    error_out = _("This transaction would remove or replace dnf5daemon-server, "
+                  "which DNF UI needs to apply package changes.");
     return false;
   }
 
@@ -501,6 +502,7 @@ open_daemon_session(GDBusConnection *connection, std::string &transaction_path_o
 bool
 transaction_service_client_testonly_build_preview_from_item(const std::string &object_type,
                                                             const std::string &action,
+                                                            const std::string &name,
                                                             TransactionPreview &preview,
                                                             std::string &error_out)
 {
@@ -508,7 +510,7 @@ transaction_service_client_testonly_build_preview_from_item(const std::string &o
 
   GVariantBuilder object_builder;
   g_variant_builder_init(&object_builder, G_VARIANT_TYPE("a{sv}"));
-  g_variant_builder_add(&object_builder, "{sv}", "name", g_variant_new_string("test-package"));
+  g_variant_builder_add(&object_builder, "{sv}", "name", g_variant_new_string(name.c_str()));
   g_variant_builder_add(&object_builder, "{sv}", "epoch", g_variant_new_string("0"));
   g_variant_builder_add(&object_builder, "{sv}", "version", g_variant_new_string("2.0"));
   g_variant_builder_add(&object_builder, "{sv}", "release", g_variant_new_string("3"));

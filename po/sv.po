@@ -291,8 +291,20 @@ msgstr "dnf5daemon är inte tillgänglig. Kontrollera att dnf5daemon-server är 
 msgid "dnf5daemon is installed, but DNF UI is not allowed to talk to it. Reinstall dnf5daemon-server or check the D-Bus policy."
 msgstr "dnf5daemon är installerad, men DNF UI får inte prata med den. Installera om dnf5daemon-server eller kontrollera D-Bus-policyn."
 
-msgid "This transaction would remove dnf5daemon-server, which DNF UI needs to apply package changes."
-msgstr "Den här transaktionen skulle ta bort dnf5daemon-server, som DNF UI behöver för att verkställa paketändringar."
+msgid "This transaction would remove or replace dnf5daemon-server, which DNF UI needs to apply package changes."
+msgstr "Den här transaktionen skulle ta bort eller ersätta dnf5daemon-server, som DNF UI behöver för att verkställa paketändringar."
+
+msgid "This transaction would remove or replace DNF UI itself."
+msgstr "Den här transaktionen skulle ta bort eller ersätta DNF UI."
+
+msgid "Could not verify whether this transaction would remove or replace DNF UI."
+msgstr "Kunde inte kontrollera om den här transaktionen skulle ta bort eller ersätta DNF UI."
+
+msgid "Upgrade All would remove or replace DNF UI itself."
+msgstr "Uppgradera alla skulle ta bort eller ersätta DNF UI."
+
+msgid "Could not verify whether Upgrade All would remove or replace DNF UI."
+msgstr "Kunde inte kontrollera om Uppgradera alla skulle ta bort eller ersätta DNF UI."
 
 msgid "The approved transaction was not applied. Prepare the preview again before retrying."
 msgstr "Den godkända transaktionen verkställdes inte. Förbered förhandsgranskningen igen innan du försöker igen."

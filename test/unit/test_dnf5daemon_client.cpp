@@ -92,13 +92,61 @@ TEST_CASE("dnf5daemon preview parser represents replaced package actions")
   TransactionPreview preview;
   std::string error;
 
-  bool ok = transaction_service_client_testonly_build_preview_from_item("package", "replaced", preview, error);
+  bool ok = transaction_service_client_testonly_build_preview_from_item(
+      "package", "replaced", "test-package", preview, error);
 
   REQUIRE(ok);
   REQUIRE(error.empty());
   REQUIRE(preview.replaced == std::vector<std::string> { "test-package-2.0-3.x86_64" });
   REQUIRE(preview.disk_space_delta == -4096);
   REQUIRE_FALSE(preview.empty());
+}
+
+// -----------------------------------------------------------------------------
+// Verify that the daemon preview parser rejects replacing the daemon server that
+// applies transactions for DNF UI.
+// -----------------------------------------------------------------------------
+TEST_CASE("dnf5daemon preview parser rejects replacing dnf5daemon-server")
+{
+  TransactionPreview preview;
+  std::string error;
+
+  bool ok = transaction_service_client_testonly_build_preview_from_item(
+      "package", "replaced", "dnf5daemon-server", preview, error);
+
+  REQUIRE_FALSE(ok);
+  REQUIRE(error.find("dnf5daemon-server") != std::string::npos);
+  REQUIRE(preview.empty());
+}
+
+// -----------------------------------------------------------------------------
+// Verify that self-protection blocks destructive preview actions, not normal upgrades.
+// -----------------------------------------------------------------------------
+TEST_CASE("dnf5daemon preview self-protection allows normal upgrades")
+{
+  ScopedEnvVar protected_name("DNFUI_TEST_SELF_PROTECTED_PACKAGE_NAME", "dnf-ui");
+
+  TransactionPreview preview;
+  preview.upgrade.push_back("dnf-ui-1.2.3-1.x86_64");
+  std::string error;
+
+  REQUIRE(transaction_service_client_testonly_verify_preview_keeps_running_app_package(preview, error));
+  REQUIRE(error.empty());
+}
+
+// -----------------------------------------------------------------------------
+// Verify that self-protection rejects a resolved replacement of the running app package.
+// -----------------------------------------------------------------------------
+TEST_CASE("dnf5daemon preview self-protection rejects replacements")
+{
+  ScopedEnvVar protected_name("DNFUI_TEST_SELF_PROTECTED_PACKAGE_NAME", "dnf-ui");
+
+  TransactionPreview preview;
+  preview.replaced.push_back("dnf-ui-1.2.3-1.x86_64");
+  std::string error;
+
+  REQUIRE_FALSE(transaction_service_client_testonly_verify_preview_keeps_running_app_package(preview, error));
+  REQUIRE(error.find("DNF UI") != std::string::npos);
 }
 
 // -----------------------------------------------------------------------------
@@ -321,7 +369,7 @@ TEST_CASE("dnf5daemon client previews reinstall requests", "[dnf5daemon]")
 
 // -----------------------------------------------------------------------------
 // Verify that DNF UI refuses a transaction that would remove its transaction backend.
-// Upgrading dnf5daemon-server is allowed, but removing it would leave the app unable to apply later package changes.
+// Removing dnf5daemon-server would leave the app unable to apply later package changes.
 // -----------------------------------------------------------------------------
 TEST_CASE("dnf5daemon client rejects removing dnf5daemon-server", "[dnf5daemon]")
 {

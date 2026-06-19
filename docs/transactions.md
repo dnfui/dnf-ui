@@ -118,6 +118,10 @@ The preview dialog only shows actions the app understands:
 If dnf5daemon returns an unsupported transaction item or action, preview fails
 instead of hiding part of the transaction from the user.
 
+After preview, DNF UI rejects transactions that would remove or replace the
+running app package or the daemon needed for package changes. Normal upgrades
+are allowed.
+
 If Upgrade All resolves to an empty preview, the GUI reports that all packages
 are already up to date. If a selected package action resolves to an empty
 preview, the GUI reports that no transaction changes were returned.
