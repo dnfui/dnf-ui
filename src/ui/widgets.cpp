@@ -475,6 +475,13 @@ widgets_on_refresh_button_clicked(GtkButton *, gpointer user_data)
     return;
   }
 
+  // Apply can change installed package state through dnf5daemon.
+  // Do not rebuild repository metadata while that transaction is active.
+  if (pending_transaction_apply_is_busy(widgets)) {
+    ui_helpers_set_status(widgets->query.status_label, pending_transaction_apply_busy_message(), "blue");
+    return;
+  }
+
   bool expected = false;
   // Only the first click may start a refresh task.
   // While it is running, the button asks libdnf to stop repository downloads.

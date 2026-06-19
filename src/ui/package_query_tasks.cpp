@@ -141,7 +141,7 @@ filter_upgradeable_rows_by_daemon_preview(std::vector<PackageRow> rows, GCancell
   TransactionPreview preview;
   std::string transaction_path;
   std::string error;
-  if (!transaction_service_client_preview_upgrade_all_request(preview, transaction_path, error)) {
+  if (!transaction_service_client_preview_upgrade_all_request(preview, transaction_path, error, {}, cancellable)) {
     if (!transaction_path.empty()) {
       transaction_service_client_release_request(transaction_path);
     }

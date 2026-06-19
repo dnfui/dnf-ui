@@ -549,6 +549,8 @@ transaction_service_client_connect(std::string &error_out)
     DNFUI_TRACE("dnf5daemon connection was closed, reconnecting");
     g_object_unref(cache.connection);
     cache.connection = nullptr;
+    // Remembered daemon session options belong to the connection that created them.
+    cache.allow_erasing_sessions.clear();
   }
 
   DNFUI_TRACE("dnf5daemon connection open start");
@@ -671,6 +673,7 @@ bool
 transaction_service_client_get_transaction_preview(GDBusConnection *connection,
                                                    const std::string &transaction_path,
                                                    TransactionServiceProgressForwarder *progress_forwarder,
+                                                   GCancellable *cancellable,
                                                    TransactionPreview &preview_out,
                                                    std::string &error_out)
 {
@@ -695,6 +698,22 @@ transaction_service_client_get_transaction_preview(GDBusConnection *connection,
 
   DNFUI_TRACE("dnf5daemon resolve start path=%s", transaction_path.c_str());
   GCancellable *call_cancellable = g_cancellable_new();
+  if (cancellable && g_cancellable_is_cancelled(cancellable)) {
+    error_out = _("Transaction preview was cancelled.");
+    g_object_unref(call_cancellable);
+    return false;
+  }
+
+  gulong cancel_handler_id = 0;
+  if (cancellable) {
+    // Stop for List Upgradable should cancel the daemon resolve call too.
+    cancel_handler_id = g_cancellable_connect(
+        cancellable,
+        G_CALLBACK(+[](GCancellable *, gpointer user_data) { g_cancellable_cancel(G_CANCELLABLE(user_data)); }),
+        g_object_ref(call_cancellable),
+        [](gpointer data) { g_object_unref(data); });
+  }
+
   g_dbus_connection_call(
       connection,
       kDnfDaemonName,
@@ -722,7 +741,21 @@ transaction_service_client_get_transaction_preview(GDBusConnection *connection,
       cancel_requested = true;
     }
   }
+  if (cancellable && cancel_handler_id != 0) {
+    g_cancellable_disconnect(cancellable, cancel_handler_id);
+  }
   g_object_unref(call_cancellable);
+
+  if (cancellable && g_cancellable_is_cancelled(cancellable)) {
+    error_out = _("Transaction preview was cancelled.");
+    if (state.error) {
+      g_clear_error(&state.error);
+    }
+    if (state.reply) {
+      g_variant_unref(state.reply);
+    }
+    return false;
+  }
 
   if (progress_forwarder && !progress_forwarder->key_confirm_error.empty()) {
     error_out = progress_forwarder->key_confirm_error;

@@ -47,6 +47,7 @@ bool transaction_service_client_start_upgrade_all_transaction_request(GDBusConne
 bool transaction_service_client_get_transaction_preview(GDBusConnection *connection,
                                                         const std::string &transaction_path,
                                                         TransactionServiceProgressForwarder *progress_forwarder,
+                                                        GCancellable *cancellable,
                                                         TransactionPreview &preview_out,
                                                         std::string &error_out);
 
@@ -72,6 +73,7 @@ bool
 transaction_service_client_wait_for_started_transaction_preview(GDBusConnection *connection,
                                                                 const std::string &transaction_path,
                                                                 TransactionServiceProgressForwarder *progress_forwarder,
+                                                                GCancellable *cancellable,
                                                                 TransactionPreview &preview_out,
                                                                 std::string &error_out);
 

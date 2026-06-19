@@ -348,6 +348,9 @@ msgstr "Verkställer paketuppgraderingar. Se transaktionsfönstret för detaljer
 msgid "Wait for the current transaction to finish."
 msgstr "Vänta tills den aktuella transaktionen har verkställts."
 
+msgid "Transaction preview was cancelled."
+msgstr "Transaktionsgranskningen avbröts."
+
 msgid "dnf5daemon transaction session is not available."
 msgstr "dnf5daemon-transaktionssessionen är inte tillgänglig."
 
