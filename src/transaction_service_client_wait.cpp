@@ -156,6 +156,12 @@ handle_key_import_request(GDBusConnection *connection,
   bool confirmed = false;
   if (forwarder && forwarder->key_import_callback && *forwarder->key_import_callback) {
     confirmed = (*forwarder->key_import_callback)(request);
+  } else {
+    if (forwarder) {
+      forwarder->key_confirm_error = _("The repository cannot be used until its signing key is trusted.");
+    }
+    forward_progress_line(forwarder, _("The repository cannot be used until its signing key is trusted."));
+    return;
   }
 
   std::string confirm_error;
