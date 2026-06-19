@@ -23,6 +23,14 @@
 #include <utility>
 #include <vector>
 
+#ifdef DNFUI_DEBUG_TRACE
+static long long
+elapsed_ms_since(gint64 started_at_us)
+{
+  return static_cast<long long>((g_get_monotonic_time() - started_at_us) / 1000);
+}
+#endif
+
 // -----------------------------------------------------------------------------
 // Data passed to one background search task.
 // -----------------------------------------------------------------------------
@@ -138,6 +146,11 @@ filter_upgradeable_rows_by_daemon_preview(std::vector<PackageRow> rows, GCancell
     return rows;
   }
 
+#ifdef DNFUI_DEBUG_TRACE
+  const gint64 started_at_us = g_get_monotonic_time();
+  DNFUI_TRACE("Upgradable daemon verification start rows=%zu", rows.size());
+#endif
+
   TransactionPreview preview;
   std::string transaction_path;
   std::string error;
@@ -147,6 +160,11 @@ filter_upgradeable_rows_by_daemon_preview(std::vector<PackageRow> rows, GCancell
     }
     throw std::runtime_error(error.empty() ? _("Unable to verify upgradable packages.") : error);
   }
+#ifdef DNFUI_DEBUG_TRACE
+  DNFUI_TRACE("Upgradable daemon verification resolved upgrade_items=%zu elapsed_ms=%lld",
+              preview.upgrade.size(),
+              elapsed_ms_since(started_at_us));
+#endif
 
   if (!transaction_path.empty()) {
     transaction_service_client_release_request(transaction_path);
@@ -166,6 +184,12 @@ filter_upgradeable_rows_by_daemon_preview(std::vector<PackageRow> rows, GCancell
     }
   }
 
+#ifdef DNFUI_DEBUG_TRACE
+  DNFUI_TRACE("Upgradable daemon verification done rows=%zu filtered=%zu total_ms=%lld",
+              rows.size(),
+              filtered_rows.size(),
+              elapsed_ms_since(started_at_us));
+#endif
   return filtered_rows;
 }
 
@@ -344,8 +368,21 @@ on_list_upgradeable_task(GTask *task, gpointer, gpointer, GCancellable *cancella
   QueryBackendBaseDropGuard base_drop_guard(cancellable);
 
   try {
+#ifdef DNFUI_DEBUG_TRACE
+    const gint64 started_at_us = g_get_monotonic_time();
+    DNFUI_TRACE("Upgradable list task start");
+#endif
+
     auto rows = dnf_backend_get_upgradeable_package_rows_interruptible(cancellable);
+#ifdef DNFUI_DEBUG_TRACE
+    DNFUI_TRACE("Upgradable list task backend rows=%zu elapsed_ms=%lld", rows.size(), elapsed_ms_since(started_at_us));
+#endif
+
     rows = filter_upgradeable_rows_by_daemon_preview(std::move(rows), cancellable);
+#ifdef DNFUI_DEBUG_TRACE
+    DNFUI_TRACE("Upgradable list task verified rows=%zu total_ms=%lld", rows.size(), elapsed_ms_since(started_at_us));
+#endif
+
     auto *results = new std::vector<PackageRow>(std::move(rows));
     g_task_return_pointer(task, results, [](gpointer p) { delete static_cast<std::vector<PackageRow> *>(p); });
   } catch (const std::exception &e) {

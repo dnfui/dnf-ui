@@ -28,6 +28,14 @@
 
 namespace dnf_backend_internal {
 
+#ifdef DNFUI_DEBUG_TRACE
+static long long
+elapsed_ms_since(gint64 started_at_us)
+{
+  return static_cast<long long>((g_get_monotonic_time() - started_at_us) / 1000);
+}
+#endif
+
 // -----------------------------------------------------------------------------
 // Bridge a GCancellable into the atomic token used by BaseManager.
 // GLib cancellation is signalled through GCancellable.
@@ -565,13 +573,29 @@ dnf_backend_get_browse_package_rows_interruptible(GCancellable *cancellable)
 std::vector<PackageRow>
 dnf_backend_get_upgradeable_package_rows_interruptible(GCancellable *cancellable)
 {
+#ifdef DNFUI_DEBUG_TRACE
+  const gint64 started_at_us = g_get_monotonic_time();
+  DNFUI_TRACE("Upgradable query start");
+#endif
+
   std::vector<PackageRow> rows;
   InstalledQueryResult installed;
   std::set<std::string> protected_names;
   {
     try {
+#ifdef DNFUI_DEBUG_TRACE
+      const gint64 base_started_at_us = g_get_monotonic_time();
+#endif
       auto [base, guard, generation] = acquire_interruptible_base_read(cancellable);
+#ifdef DNFUI_DEBUG_TRACE
+      DNFUI_TRACE("Upgradable query base ready elapsed_ms=%lld total_ms=%lld",
+                  elapsed_ms_since(base_started_at_us),
+                  elapsed_ms_since(started_at_us));
+#endif
 
+#ifdef DNFUI_DEBUG_TRACE
+      const gint64 upgrade_query_started_at_us = g_get_monotonic_time();
+#endif
       libdnf5::rpm::PackageQuery query(base);
       query.filter_available();
       query.filter_upgrades();
@@ -589,16 +613,40 @@ dnf_backend_get_upgradeable_package_rows_interruptible(GCancellable *cancellable
         PackageRow row = make_package_row(pkg, PackageRepoCandidateRelation::UNKNOWN);
         remember_newest_row(rows_by_name_arch, row);
       }
+#ifdef DNFUI_DEBUG_TRACE
+      DNFUI_TRACE("Upgradable query libdnf candidates=%zu elapsed_ms=%lld total_ms=%lld",
+                  rows_by_name_arch.size(),
+                  elapsed_ms_since(upgrade_query_started_at_us),
+                  elapsed_ms_since(started_at_us));
+#endif
 
       // Even though the visible rows are available update candidates, the UI still
       // needs the installed snapshot to resolve remove and reinstall actions back
       // to the currently installed package.
+#ifdef DNFUI_DEBUG_TRACE
+      const gint64 installed_started_at_us = g_get_monotonic_time();
+#endif
       installed = collect_installed_rows(base, cancellable, DnfBackendSearchOptions {});
       if (package_query_cancelled(cancellable)) {
         return {};
       }
+#ifdef DNFUI_DEBUG_TRACE
+      DNFUI_TRACE("Upgradable query installed snapshot rows=%zu elapsed_ms=%lld total_ms=%lld",
+                  installed.rows.size(),
+                  elapsed_ms_since(installed_started_at_us),
+                  elapsed_ms_since(started_at_us));
+#endif
 
+#ifdef DNFUI_DEBUG_TRACE
+      const gint64 protected_started_at_us = g_get_monotonic_time();
+#endif
       protected_names = collect_self_protected_package_names(base);
+#ifdef DNFUI_DEBUG_TRACE
+      DNFUI_TRACE("Upgradable query self protection names=%zu elapsed_ms=%lld total_ms=%lld",
+                  protected_names.size(),
+                  elapsed_ms_since(protected_started_at_us),
+                  elapsed_ms_since(started_at_us));
+#endif
 
       rows.reserve(rows_by_name_arch.size());
       for (auto &[key, row] : rows_by_name_arch) {
@@ -609,7 +657,16 @@ dnf_backend_get_upgradeable_package_rows_interruptible(GCancellable *cancellable
     }
   }
 
+#ifdef DNFUI_DEBUG_TRACE
+  const gint64 publish_started_at_us = g_get_monotonic_time();
+#endif
   publish_installed_snapshot(std::move(installed), std::move(protected_names));
+#ifdef DNFUI_DEBUG_TRACE
+  DNFUI_TRACE("Upgradable query done rows=%zu publish_ms=%lld total_ms=%lld",
+              rows.size(),
+              elapsed_ms_since(publish_started_at_us),
+              elapsed_ms_since(started_at_us));
+#endif
   return rows;
 }
 
