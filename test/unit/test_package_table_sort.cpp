@@ -37,10 +37,9 @@ TEST_CASE("Package table Version column shows only package version")
 }
 
 // -----------------------------------------------------------------------------
-// Verify that an available update row still shows the installed package version.
-// The release is kept out of the table because the column is not named Release.
+// Verify that an available update row shows the version that would be installed.
 // -----------------------------------------------------------------------------
-TEST_CASE("Package table Version column uses installed version for update rows")
+TEST_CASE("Package table Version column uses candidate version for update rows")
 {
   reset_backend_globals();
 
@@ -52,5 +51,26 @@ TEST_CASE("Package table Version column uses installed version for update rows")
   PackageItem item {};
   item.row = update;
 
-  REQUIRE(package_table_column_text(item, PackageColumnKind::VERSION) == "1.2.3");
+  REQUIRE(package_table_column_text(item, PackageColumnKind::VERSION) == "1.2.4");
+}
+
+// -----------------------------------------------------------------------------
+// Verify that an available update row shows the repository that provides the update.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package table Repo column uses candidate repo for update rows")
+{
+  reset_backend_globals();
+
+  PackageRow installed = make_table_test_row("demo-1.2.3-4.fc44.x86_64", "demo", "1.2.3", "4.fc44", "x86_64");
+  installed.repo = "@System";
+
+  PackageRow update = make_table_test_row("demo-1.2.4-1.fc44.x86_64", "demo", "1.2.4", "1.fc44", "x86_64");
+  update.repo = "updates";
+
+  dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
+
+  PackageItem item {};
+  item.row = update;
+
+  REQUIRE(package_table_column_text(item, PackageColumnKind::REPO) == "updates");
 }
