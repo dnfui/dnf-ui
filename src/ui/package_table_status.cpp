@@ -26,7 +26,7 @@ package_table_status_text(PackageInstallState state)
   case PackageInstallState::INSTALLED_NEWER_THAN_REPO:
     return _("Installed (newer than repo)");
   case PackageInstallState::UPGRADEABLE:
-    return _("Update available");
+    return _("Newer in repository");
   case PackageInstallState::AVAILABLE:
   default:
     return _("Available");

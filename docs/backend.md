@@ -97,10 +97,7 @@ The browse and search views merge repository candidates with installed-only
 packages. The visible result keeps one row for each package name and
 architecture pair.
 
-The upgradable backend query returns repository candidates from libdnf5. The UI
-filters those candidates through dnf5daemon's Upgrade All preview before showing
-the List Upgradable result. That keeps the visible upgrade list aligned with the
-transaction service that will actually apply upgrades.
+The upgradable backend query returns repository candidates from libdnf5. Before the UI shows the List Upgradable result, it filters those candidates through dnf5daemon's Upgrade All preview. That keeps the visible upgrade list aligned with the transaction service that will actually apply upgrades.
 
 ## Installed snapshot
 
@@ -123,10 +120,7 @@ for UI navigation, but send a package name and architecture spec to
 dnf5daemon. Remove and reinstall use the currently installed NEVRA for the same
 package name and architecture.
 
-If the visible row is the installed package and its status is update available,
-the query row carries the matching available upgrade NEVRA. The UI uses that
-stored package ID for the upgrade action without doing another package query
-from the GTK thread.
+If the visible row is the installed package and a newer repository candidate was found, the query row carries the matching available candidate NEVRA. The UI uses that stored package ID for the upgrade action without doing another package query from the GTK thread.
 
 The snapshot is updated only after a complete installed-package scan. Cancelled
 queries do not publish partial installed state.
@@ -141,9 +135,9 @@ queries do not publish partial installed state.
 - local only
 - installed newer than repository
 
-Exact installed rows prefer the repository-candidate relation recorded on the
-row. Available rows fall back to the installed snapshot so upgrade badges can be
-shown without duplicating rows.
+Exact installed rows prefer the repository-candidate relation recorded on the row. Available rows fall back to the installed snapshot so the table can show when repository metadata contains a newer candidate without duplicating rows.
+
+The generic Status column is local package metadata. It can say that a newer package exists in enabled repository metadata, but it is not a transaction promise. The List Upgradable view is stricter: it shows only candidates that dnf5daemon also resolved as upgrade items. Transaction preview and apply always go through dnf5daemon.
 
 ## Self protection
 

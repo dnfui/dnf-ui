@@ -125,6 +125,11 @@ package_row_transaction_label(const PackageRow &row)
 
 // -----------------------------------------------------------------------------
 // Keep only rows that dnf5daemon resolves as real upgrade transaction items.
+// The first query uses local libdnf metadata so the table can show package details.
+// This second check asks the daemon that will later apply the transaction.
+// If the daemon cannot resolve a row as an upgrade, the UI must not present it as
+// actionable. This helper is only a passive filter. It must not answer trust
+// prompts or make any package changes.
 // -----------------------------------------------------------------------------
 static std::vector<PackageRow>
 filter_upgradeable_rows_by_daemon_preview(std::vector<PackageRow> rows, GCancellable *cancellable)

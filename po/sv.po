@@ -99,6 +99,9 @@ msgstr "Installerat (endast lokalt)"
 msgid "Installed (newer than repo)"
 msgstr "Installerat (nyare än förrådet)"
 
+msgid "Newer in repository"
+msgstr "Nyare i förråd"
+
 msgid "Available"
 msgstr "Tillgängligt"
 
