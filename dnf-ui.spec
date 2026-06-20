@@ -1,5 +1,5 @@
 Name:           dnf-ui
-Version:        0.2.4
+Version:        0.2.5
 Release:        1%{?dist}
 Summary:        GTK frontend for DNF5
 
@@ -57,6 +57,13 @@ appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/com.fedora.dnfui
 %{_datadir}/metainfo/com.fedora.dnfui.metainfo.xml
 
 %changelog
+* Sat Jun 20 2026 ErikMN <erik@example.invalid> - 0.2.5-1
+- Speed up List Upgradable and Upgrade All preview preparation
+- Add repository signing key approval prompts for dnf5daemon transactions
+- Improve preview cancellation and selected package reload responsiveness
+- Keep transaction summary dialog callbacks safe during window shutdown
+- Add Ctrl+L shortcut for clearing the package list
+
 * Fri Jun 19 2026 ErikMN <erik@example.invalid> - 0.2.4-1
 - Align List Upgradable with dnf5daemon transaction previews
 - Add wildcard package search using * and ?
