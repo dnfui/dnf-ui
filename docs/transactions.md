@@ -136,6 +136,11 @@ can make the GUI report failure while the authorization dialog is still open.
 
 The GUI does not perform authorization itself. dnf5daemon owns that boundary.
 
+dnf5daemon loads the normal DNF configuration and then its own
+`/etc/dnf/dnf5daemon-server.conf` file. Package downloads during Apply are done
+by dnf5daemon, so they may use the daemon cache instead of the cache used by an
+interactive `dnf` command.
+
 ## Repository Signing Keys
 
 When dnf5daemon needs a repository signing key during preview or apply, DNF UI

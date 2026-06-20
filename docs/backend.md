@@ -139,7 +139,7 @@ queries do not publish partial installed state.
 
 Exact installed rows prefer the repository-candidate relation recorded on the row. Available rows fall back to the installed snapshot so the table can show when repository metadata contains a newer candidate without duplicating rows.
 
-The generic Status column is local package metadata. It can say that a newer package exists in enabled repository metadata, but it is not a transaction promise. The List Upgradable view is stricter: it shows only candidates that dnf5daemon also resolved as upgrade items. Transaction preview and apply always go through dnf5daemon.
+The generic Status column is local package metadata. It can say that a newer package exists in enabled repository metadata, but it is not a transaction promise. The List Upgradable view is stricter: it shows only candidates that dnf5daemon also lists in its upgrades scope. Transaction preview and apply always go through dnf5daemon.
 
 ## Self protection
 
@@ -156,6 +156,7 @@ that would remove or replace the running app package.
 The relevant functions are:
 
 - `dnf_backend_is_package_self_protected`
+- `dnf_backend_any_self_protected_package_label`
 - `dnf_backend_is_self_protected_transaction_spec`
 - `pending_transaction_validate_request`
 
@@ -194,7 +195,8 @@ contains shared transaction text formatting.
 
 It can resolve previews and apply transactions locally, but the normal GUI apply
 path goes through dnf5daemon. The local apply path remains for tests and shared
-preview formatting while dnf5daemon coverage is completed.
+preview formatting. Keep this area under review so unused apply-only code can be
+removed when it is no longer needed.
 
 The preview builder fails closed when libdnf resolves an action that the
 preview model cannot represent. That keeps the GUI review step from showing a
