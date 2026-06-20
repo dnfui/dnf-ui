@@ -39,6 +39,14 @@ constexpr const char *kDnfDaemonGoalInterface = "org.rpm.dnf.v0.Goal";
 // -----------------------------------------------------------------------------
 constexpr const char *kRequiredDaemonServerPackage = "dnf5daemon-server";
 
+#ifdef DNFUI_DEBUG_TRACE
+static long long
+elapsed_ms_since(gint64 started_at_us)
+{
+  return static_cast<long long>((g_get_monotonic_time() - started_at_us) / 1000);
+}
+#endif
+
 struct TransactionServiceConnectionCache {
   std::mutex mutex;
   GDBusConnection *connection = nullptr;
@@ -473,6 +481,9 @@ open_daemon_session(GDBusConnection *connection, std::string &transaction_path_o
   transaction_path_out.clear();
   error_out.clear();
 
+#ifdef DNFUI_DEBUG_TRACE
+  const gint64 started_at_us = g_get_monotonic_time();
+#endif
   DNFUI_TRACE("dnf5daemon session open start");
   GError *error = nullptr;
   GVariant *reply = g_dbus_connection_call_sync(connection,
@@ -511,7 +522,9 @@ open_daemon_session(GDBusConnection *connection, std::string &transaction_path_o
     return false;
   }
 
-  DNFUI_TRACE("dnf5daemon session opened path=%s", transaction_path_out.c_str());
+  DNFUI_TRACE("dnf5daemon session opened path=%s elapsed_ms=%lld",
+              transaction_path_out.c_str(),
+              elapsed_ms_since(started_at_us));
   return true;
 }
 
@@ -646,6 +659,9 @@ transaction_service_client_start_upgrade_all_transaction_request(GDBusConnection
 {
   transaction_path_out.clear();
   error_out.clear();
+#ifdef DNFUI_DEBUG_TRACE
+  const gint64 started_at_us = g_get_monotonic_time();
+#endif
   DNFUI_TRACE("dnf5daemon upgrade-all transaction start");
 
   if (!connection) {
@@ -684,7 +700,9 @@ transaction_service_client_start_upgrade_all_transaction_request(GDBusConnection
   }
 
   g_variant_unref(reply);
-  DNFUI_TRACE("dnf5daemon upgrade-all transaction ready path=%s", transaction_path_out.c_str());
+  DNFUI_TRACE("dnf5daemon upgrade-all transaction ready path=%s elapsed_ms=%lld",
+              transaction_path_out.c_str(),
+              elapsed_ms_since(started_at_us));
   return true;
 }
 
@@ -792,6 +810,9 @@ transaction_service_client_get_transaction_preview(GDBusConnection *connection,
     context = g_main_context_default();
   }
 
+#ifdef DNFUI_DEBUG_TRACE
+  const gint64 started_at_us = g_get_monotonic_time();
+#endif
   DNFUI_TRACE("dnf5daemon resolve start path=%s", transaction_path.c_str());
   GCancellable *call_cancellable = g_cancellable_new();
   if (cancellable && g_cancellable_is_cancelled(cancellable)) {
@@ -874,10 +895,11 @@ transaction_service_client_get_transaction_preview(GDBusConnection *connection,
   GVariant *items = nullptr;
   guint32 result = 0;
   g_variant_get(state.reply, "(@a(sssa{sv}a{sv})u)", &items, &result);
-  DNFUI_TRACE("dnf5daemon resolve returned path=%s result=%u items=%zu",
+  DNFUI_TRACE("dnf5daemon resolve returned path=%s result=%u items=%zu elapsed_ms=%lld",
               transaction_path.c_str(),
               result,
-              items ? static_cast<size_t>(g_variant_n_children(items)) : 0);
+              items ? static_cast<size_t>(g_variant_n_children(items)) : 0,
+              elapsed_ms_since(started_at_us));
 
   switch (result) {
   case 0:
@@ -935,15 +957,16 @@ transaction_service_client_get_transaction_preview(GDBusConnection *connection,
   }
 
   preview_out = std::move(built_preview);
-  DNFUI_TRACE(
-      "dnf5daemon preview built path=%s install=%zu upgrade=%zu downgrade=%zu reinstall=%zu remove=%zu replaced=%zu",
-      transaction_path.c_str(),
-      preview_out.install.size(),
-      preview_out.upgrade.size(),
-      preview_out.downgrade.size(),
-      preview_out.reinstall.size(),
-      preview_out.remove.size(),
-      preview_out.replaced.size());
+  DNFUI_TRACE("dnf5daemon preview built path=%s install=%zu upgrade=%zu downgrade=%zu reinstall=%zu remove=%zu "
+              "replaced=%zu total_ms=%lld",
+              transaction_path.c_str(),
+              preview_out.install.size(),
+              preview_out.upgrade.size(),
+              preview_out.downgrade.size(),
+              preview_out.reinstall.size(),
+              preview_out.remove.size(),
+              preview_out.replaced.size(),
+              elapsed_ms_since(started_at_us));
   g_variant_unref(items);
   g_variant_unref(state.reply);
   return true;
