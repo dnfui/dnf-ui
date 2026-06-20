@@ -21,6 +21,7 @@ jobs:
       COPR_PROJECT: erikmn/dnf-ui
       COPR_URL: https://copr.fedorainfracloud.org
       COPR_RAWHIDE_CHROOT: fedora-rawhide-x86_64
+      COPR_RAWHIDE_AARCH64_CHROOT: fedora-rawhide-aarch64
 
     steps:
       - name: Validate release tag
@@ -52,6 +53,7 @@ jobs:
             -e COPR_PROJECT \
             -e COPR_URL \
             -e COPR_RAWHIDE_CHROOT \
+            -e COPR_RAWHIDE_AARCH64_CHROOT \
             -v "$PWD:/workspace" \
             -w /workspace \
             fedora:latest \
@@ -93,4 +95,5 @@ jobs:
 
               copr-cli build "${COPR_PROJECT}" dnf-ui-latest.src.rpm
               copr-cli build --chroot "${COPR_RAWHIDE_CHROOT}" "${COPR_PROJECT}" dnf-ui-latest.src.rpm
+              copr-cli build --chroot "${COPR_RAWHIDE_AARCH64_CHROOT}" "${COPR_PROJECT}" dnf-ui-latest.src.rpm
             '
