@@ -346,6 +346,32 @@ dnf_backend_is_package_self_protected(const PackageRow &row)
 }
 
 // -----------------------------------------------------------------------------
+// Check resolved daemon preview package labels against the current installed snapshot.
+// The caller refreshes that snapshot before this check when fresh rpmdb state matters.
+// -----------------------------------------------------------------------------
+bool
+dnf_backend_any_self_protected_package_label(const std::vector<std::string> &labels)
+{
+  std::set<std::string> protected_names;
+  {
+    std::lock_guard<std::mutex> lock(g_installed_mutex);
+    protected_names = g_self_protected_package_names;
+  }
+
+  if (protected_names.empty()) {
+    return false;
+  }
+
+  for (const auto &label : labels) {
+    if (package_spec_matches_protected_name(label, protected_names)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// -----------------------------------------------------------------------------
 // Resolve one queued transaction spec back to the installed rpmdb so request
 // validation can reject self-modification even if the UI state is outdated or bypassed.
 // -----------------------------------------------------------------------------

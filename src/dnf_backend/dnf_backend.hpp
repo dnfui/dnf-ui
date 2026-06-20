@@ -222,6 +222,12 @@ bool dnf_backend_get_installed_package_row_by_name_arch(const PackageRow &row, P
 bool dnf_backend_is_package_self_protected(const PackageRow &row);
 
 // -----------------------------------------------------------------------------
+// Return true when resolved daemon package labels name the running GUI package.
+// Uses the current installed snapshot. Callers refresh that snapshot when needed.
+// -----------------------------------------------------------------------------
+bool dnf_backend_any_self_protected_package_label(const std::vector<std::string> &labels);
+
+// -----------------------------------------------------------------------------
 // Return true when one transaction spec targets the running GUI package
 // and must be rejected before the transaction is previewed or applied.
 // -----------------------------------------------------------------------------

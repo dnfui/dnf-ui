@@ -45,16 +45,12 @@ release_request_task(GTask *task, gpointer, gpointer task_data, GCancellable *)
 bool
 transaction_preview_removes_or_replaces_self_protected_package(const TransactionPreview &preview)
 {
-  auto contains_self_protected_spec = [](const std::vector<std::string> &specs) {
-    for (const auto &spec : specs) {
-      if (dnf_backend_is_self_protected_transaction_spec(spec)) {
-        return true;
-      }
-    }
-    return false;
-  };
+  std::vector<std::string> labels;
+  labels.reserve(preview.remove.size() + preview.replaced.size());
+  labels.insert(labels.end(), preview.remove.begin(), preview.remove.end());
+  labels.insert(labels.end(), preview.replaced.begin(), preview.replaced.end());
 
-  return contains_self_protected_spec(preview.remove) || contains_self_protected_spec(preview.replaced);
+  return dnf_backend_any_self_protected_package_label(labels);
 }
 
 // -----------------------------------------------------------------------------
