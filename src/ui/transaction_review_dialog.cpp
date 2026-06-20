@@ -17,7 +17,7 @@
 #include <sstream>
 
 struct SummaryDialogApplyData {
-  SearchWidgets *widgets;
+  std::shared_ptr<SearchWidgets> widgets;
   TransactionApplyCallback on_apply;
   TransactionApplyCallback on_cancel;
   bool apply_requested;
@@ -406,7 +406,7 @@ transaction_review_show_summary_dialog(SearchWidgets *widgets,
   gtk_widget_add_css_class(apply_button, "suggested-action");
   gtk_box_append(GTK_BOX(button_box), apply_button);
 
-  auto *apply_data = new SummaryDialogApplyData { widgets, on_apply, on_cancel, false };
+  auto *apply_data = new SummaryDialogApplyData { widgets->shared_from_this(), on_apply, on_cancel, false };
 
   g_object_set_data_full(G_OBJECT(dialog), "summary-dialog-apply-data", apply_data, summary_dialog_apply_data_free);
 
@@ -425,11 +425,12 @@ transaction_review_show_summary_dialog(SearchWidgets *widgets,
                    G_CALLBACK(+[](GtkWidget *widget, gpointer) {
                      SummaryDialogApplyData *data = static_cast<SummaryDialogApplyData *>(
                          g_object_get_data(G_OBJECT(widget), "summary-dialog-apply-data"));
-                     if (!data || data->apply_requested || !data->widgets || !data->on_cancel) {
+                     if (!data || data->apply_requested || !data->widgets || data->widgets->window_state.destroyed ||
+                         !data->on_cancel) {
                        return;
                      }
 
-                     data->on_cancel(data->widgets);
+                     data->on_cancel(data->widgets.get());
                    }),
                    nullptr);
 
@@ -437,7 +438,7 @@ transaction_review_show_summary_dialog(SearchWidgets *widgets,
                    "clicked",
                    G_CALLBACK(+[](GtkButton *button, gpointer user_data) {
                      SummaryDialogApplyData *data = static_cast<SummaryDialogApplyData *>(user_data);
-                     SearchWidgets *widgets = data ? data->widgets : nullptr;
+                     SearchWidgets *widgets = data && data->widgets ? data->widgets.get() : nullptr;
                      TransactionApplyCallback on_apply = data ? data->on_apply : nullptr;
                      GtkRoot *root = gtk_widget_get_root(GTK_WIDGET(button));
                      if (data) {
@@ -446,7 +447,7 @@ transaction_review_show_summary_dialog(SearchWidgets *widgets,
                      if (root && GTK_IS_WINDOW(root)) {
                        gtk_window_destroy(GTK_WINDOW(root));
                      }
-                     if (widgets && on_apply) {
+                     if (widgets && !widgets->window_state.destroyed && on_apply) {
                        on_apply(widgets);
                      }
                    }),
