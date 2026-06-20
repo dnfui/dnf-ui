@@ -448,16 +448,20 @@ start_preview_request(SearchWidgets *widgets, TransactionRequest request)
 
   g_task_set_task_data(task, td, preview_task_data_free);
   g_task_run_in_thread(
-      task, +[](GTask *task, gpointer, gpointer task_data, GCancellable *) {
+      task, +[](GTask *task, gpointer, gpointer task_data, GCancellable *cancellable) {
         PreviewTaskData *td = static_cast<PreviewTaskData *>(task_data);
         std::string error;
         bool ok = false;
         if (td && td->request.upgrade_all) {
           DNFUI_TRACE("Transaction preview worker start upgrade_all=1");
           ok = transaction_service_client_preview_upgrade_all_request(
-              td->preview, td->transaction_path, error, [td](const TransactionKeyImportRequest &request) {
+              td->preview,
+              td->transaction_path,
+              error,
+              [td](const TransactionKeyImportRequest &request) {
                 return transaction_review_confirm_key_import(td->widgets, request);
-              });
+              },
+              cancellable);
         } else if (td) {
           DNFUI_TRACE("Transaction preview worker start upgrade_all=0 install=%zu upgrade=%zu remove=%zu reinstall=%zu",
                       td->request.install.size(),
@@ -467,14 +471,15 @@ start_preview_request(SearchWidgets *widgets, TransactionRequest request)
           if (!pending_transaction_validate_request(td->request, error)) {
             ok = false;
           } else {
-            ok = transaction_service_client_preview_request(td->request,
-                                                            td->preview,
-                                                            td->transaction_path,
-                                                            error,
-                                                            [td](const TransactionKeyImportRequest &request) {
-                                                              return transaction_review_confirm_key_import(td->widgets,
-                                                                                                           request);
-                                                            });
+            ok = transaction_service_client_preview_request(
+                td->request,
+                td->preview,
+                td->transaction_path,
+                error,
+                [td](const TransactionKeyImportRequest &request) {
+                  return transaction_review_confirm_key_import(td->widgets, request);
+                },
+                cancellable);
           }
         }
 

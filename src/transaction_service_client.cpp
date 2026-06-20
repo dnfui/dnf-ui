@@ -138,7 +138,8 @@ transaction_service_client_preview_request(const TransactionRequest &request,
                                            TransactionPreview &preview_out,
                                            std::string &transaction_path_out,
                                            std::string &error_out,
-                                           const TransactionKeyImportCallback &key_import_callback)
+                                           const TransactionKeyImportCallback &key_import_callback,
+                                           GCancellable *cancellable)
 {
   preview_out = {};
   transaction_path_out.clear();
@@ -166,7 +167,7 @@ transaction_service_client_preview_request(const TransactionRequest &request,
   }
 
   if (!resolve_transaction_preview(
-          connection, transaction_path_out, key_import_callback, nullptr, preview_out, error_out)) {
+          connection, transaction_path_out, key_import_callback, cancellable, preview_out, error_out)) {
     std::string release_error;
     transaction_service_client_release_transaction_request(connection, transaction_path_out, release_error);
     transaction_path_out.clear();

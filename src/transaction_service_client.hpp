@@ -31,7 +31,8 @@ bool transaction_service_client_preview_request(const TransactionRequest &reques
                                                 TransactionPreview &preview_out,
                                                 std::string &transaction_path_out,
                                                 std::string &error_out,
-                                                const TransactionKeyImportCallback &key_import_callback = {});
+                                                const TransactionKeyImportCallback &key_import_callback = {},
+                                                GCancellable *cancellable = nullptr);
 // -----------------------------------------------------------------------------
 // Prepare an upgrade-all transaction through dnf5daemon.
 // -----------------------------------------------------------------------------
