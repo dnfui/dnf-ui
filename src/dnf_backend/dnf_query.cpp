@@ -121,8 +121,8 @@ installed_package_names(const std::vector<PackageRow> &installed_rows)
 }
 
 // -----------------------------------------------------------------------------
-// Fold UTF-8 package search text before comparing it against libdnf5 metadata
-// fields. This keeps manual name and description matching aligned with GTK's
+// Fold UTF-8 package search text before comparing it against libdnf5 metadata fields.
+// This keeps manual name and description matching aligned with GTK's
 // case-insensitive text handling for non-ASCII package summaries.
 // -----------------------------------------------------------------------------
 static std::string
@@ -385,8 +385,9 @@ annotate_installed_rows_with_repo_candidates_best_effort(std::vector<PackageRow>
 
 // -----------------------------------------------------------------------------
 // Build the merged package view used by search and browse.
-// Start with the visible repo-backed candidates, then add installed-only rows for name and architecture tuples
-// that are missing from enabled repositories. If an installed package is newer than the repo candidate,
+// Start with the visible repo-backed candidates, then add installed-only rows for
+// name and architecture tuples that are missing from enabled repositories.
+// If an installed package is newer than the repo candidate,
 // keep the installed row so the UI can show that state directly.
 //
 // Note on repo_candidate_relation in the returned rows:
@@ -451,8 +452,8 @@ dnf_backend_search_package_rows_interruptible(const std::string &pattern, GCance
         return {};
       }
 
-      // This scan is only for installed rows that match the search term. Those
-      // rows can still appear in the visible search result when no repo candidate
+      // This scan is only for installed rows that match the search term.
+      // Those rows can still appear in the visible search result when no repo candidate
       // is shown for the same package name and architecture.
       InstalledQueryResult filtered_installed = collect_installed_rows(base, cancellable, search_options, &pattern);
       if (package_query_cancelled(cancellable)) {
@@ -460,8 +461,8 @@ dnf_backend_search_package_rows_interruptible(const std::string &pattern, GCance
       }
 
       // The shared installed snapshot must contain every installed package, not
-      // only the rows that matched this search. The UI uses it later for package
-      // status, action buttons, and pending action handling.
+      // only the rows that matched this search.
+      // The UI uses it later for package status, action buttons, and pending action handling.
       const DnfBackendSearchOptions snapshot_search_options {};
       installed_snapshot = collect_installed_rows(base, cancellable, snapshot_search_options);
       if (package_query_cancelled(cancellable)) {
@@ -485,8 +486,8 @@ dnf_backend_search_package_rows_interruptible(const std::string &pattern, GCance
 // A cancelled worker cannot publish a partial installed snapshot.
 //
 // Thread-safety:
-//   The Base read lock and g_installed_mutex must never be held at the same
-//   time. Rows are collected while the Base lock is held, then the lock is
+//   The Base read lock and g_installed_mutex must never be held at the same time.
+//   Rows are collected while the Base lock is held, then the lock is
 //   released before publish_installed_snapshot acquires g_installed_mutex.
 // -----------------------------------------------------------------------------
 std::vector<PackageRow>
@@ -726,9 +727,8 @@ dnf_backend_testonly_annotation_fallback_leaves_rows_unknown(std::vector<Package
 #endif
 
 // -----------------------------------------------------------------------------
-// Return available package rows that exactly match one NEVRA. This helper stays
-// repo-only and is used for install-side pending-action navigation and details
-// loading.
+// Return available package rows that exactly match one NEVRA.
+// This helper stays repo-only and is used for install-side pending-action navigation and details loading.
 // -----------------------------------------------------------------------------
 std::vector<PackageRow>
 dnf_backend_get_available_package_rows_by_nevra(const std::string &pkg_nevra)

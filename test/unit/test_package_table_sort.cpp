@@ -105,3 +105,7 @@ TEST_CASE("Package table Repo column uses candidate repo for update rows")
 
   REQUIRE(package_table_column_text(item, PackageColumnKind::REPO) == "updates");
 }
+
+// -----------------------------------------------------------------------------
+// EOF
+// -----------------------------------------------------------------------------

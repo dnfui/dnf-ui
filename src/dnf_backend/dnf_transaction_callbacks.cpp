@@ -262,3 +262,7 @@ DownloadCallbacksReset::~DownloadCallbacksReset()
 }
 
 } // namespace dnf_backend_transaction_internal
+
+// -----------------------------------------------------------------------------
+// EOF
+// -----------------------------------------------------------------------------

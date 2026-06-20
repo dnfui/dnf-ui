@@ -120,3 +120,7 @@ transaction_package_label(const libdnf5::base::TransactionPackage &item)
 }
 
 } // namespace dnf_backend_transaction_internal
+
+// -----------------------------------------------------------------------------
+// EOF
+// -----------------------------------------------------------------------------

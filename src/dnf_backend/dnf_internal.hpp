@@ -46,8 +46,8 @@ make_package_row(const libdnf5::rpm::Package &pkg,
 bool package_query_cancelled(GCancellable *cancellable);
 
 // -----------------------------------------------------------------------------
-// Collect query rows keyed by package name and architecture. The caller supplies
-// the Base so related libdnf5 queries stay under the same Base lock.
+// Collect query rows keyed by package name and architecture.
+// The caller supplies the Base so related libdnf5 queries stay under the same Base lock.
 // -----------------------------------------------------------------------------
 std::map<std::string, PackageRow> collect_available_rows_by_name_arch(libdnf5::Base &base,
                                                                       GCancellable *cancellable,

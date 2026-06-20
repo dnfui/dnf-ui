@@ -129,8 +129,8 @@ enum class PackageInstallState {
 };
 
 // Resolved transaction preview used by the confirmation dialog before apply.
-// The model must fully describe every resolved transaction action. Callers must
-// never receive a partial preview when the backend cannot represent the whole
+// The model must fully describe every resolved transaction action.
+// Callers must never receive a partial preview when the backend cannot represent the whole
 // resolved transaction.
 struct TransactionPreview {
   std::vector<std::string> install;
@@ -209,8 +209,8 @@ std::string dnf_backend_install_reason_to_string(PackageInstallReason reason);
 bool dnf_backend_is_package_installed_exact(const PackageRow &row);
 
 // -----------------------------------------------------------------------------
-// Return the installed row with the same package name and architecture as one
-// visible row. This lets the UI act on the installed package when the selected
+// Return the installed row with the same package name and architecture as one visible row.
+// This lets the UI act on the installed package when the selected
 // row is an available upgrade candidate.
 // -----------------------------------------------------------------------------
 bool dnf_backend_get_installed_package_row_by_name_arch(const PackageRow &row, PackageRow &installed_out);

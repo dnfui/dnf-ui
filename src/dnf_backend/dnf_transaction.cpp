@@ -445,8 +445,8 @@ dnf_backend_preview_transaction(const std::vector<std::string> &install_nevras,
 
 // -----------------------------------------------------------------------------
 // Apply a resolved package transaction through libdnf.
-// This helper does not perform authorization. The dnf5daemon client path handles
-// privileged apply outside this backend.
+// This helper does not perform authorization.
+// The dnf5daemon client path handles privileged apply outside this backend.
 // -----------------------------------------------------------------------------
 bool
 dnf_backend_apply_transaction(const std::vector<std::string> &install_nevras,

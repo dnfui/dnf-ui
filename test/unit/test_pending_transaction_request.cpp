@@ -160,3 +160,7 @@ TEST_CASE("Pending transaction request validation rejects protected remove and r
 
   reset_backend_globals();
 }
+
+// -----------------------------------------------------------------------------
+// EOF
+// -----------------------------------------------------------------------------

@@ -43,8 +43,7 @@ struct SearchTaskData {
   // Used to drop outdated results if the backend Base is rebuilt before the task ends.
   uint64_t generation;
   // Search-cache epoch recorded when the task starts.
-  // Used to avoid storing rows back into a cache state the UI invalidated
-  // while the worker was still running.
+  // Used to avoid storing rows back into a cache state the UI invalidated while the worker was still running.
   uint64_t cache_epoch;
   bool search_in_description;
   bool exact_match;

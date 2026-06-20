@@ -435,8 +435,7 @@ TEST_CASE("Dependency info contains expected section headers")
 }
 
 // -----------------------------------------------------------------------------
-// Verify that dependency details for an update row describe the currently
-// installed package.
+// Verify that dependency details for an update row describe the currently installed package.
 // -----------------------------------------------------------------------------
 TEST_CASE("Dependency info uses installed package for update rows")
 {

@@ -110,3 +110,7 @@ TEST_CASE("Package action rows reject reinstall for local only installed package
   REQUIRE(rows.installed_row.nevra == installed.nevra);
   REQUIRE_FALSE(rows.can_try_reinstall);
 }
+
+// -----------------------------------------------------------------------------
+// EOF
+// -----------------------------------------------------------------------------

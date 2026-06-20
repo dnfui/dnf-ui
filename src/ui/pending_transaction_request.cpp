@@ -1,8 +1,7 @@
 // -----------------------------------------------------------------------------
 // pending_transaction_request.cpp
 // Pending transaction request helpers
-// Keeps transaction request construction and validation separate from GTK
-// pending action callbacks.
+// Keeps transaction request construction and validation separate from GTK pending action callbacks.
 // -----------------------------------------------------------------------------
 #include "pending_transaction_request.hpp"
 
@@ -93,8 +92,7 @@ pending_transaction_build_request(const std::vector<PendingAction> &actions,
 
 // -----------------------------------------------------------------------------
 // Reject direct remove or reinstall requests for the package owning the running GUI.
-// Selected upgrades are allowed here and checked again after dnf5daemon resolves
-// the preview.
+// Selected upgrades are allowed here and checked again after dnf5daemon resolves the preview.
 // -----------------------------------------------------------------------------
 bool
 pending_transaction_validate_request(const TransactionRequest &request, std::string &error_out)

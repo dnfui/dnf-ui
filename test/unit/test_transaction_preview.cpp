@@ -355,3 +355,7 @@ TEST_CASE("Transaction preview resolves a reinstall request for an installed pac
     return label.find(installed_row.name + "-") != std::string::npos;
   }));
 }
+
+// -----------------------------------------------------------------------------
+// EOF
+// -----------------------------------------------------------------------------

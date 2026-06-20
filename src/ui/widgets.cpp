@@ -1,8 +1,7 @@
 // -----------------------------------------------------------------------------
 // src/ui/widgets.cpp
 // Repository refresh and shared widget helpers
-// Handles refresh callbacks and helper code shared by the split widget
-// controller modules.
+// Handles refresh callbacks and helper code shared by the split widget controller modules.
 // -----------------------------------------------------------------------------
 #include "widgets.hpp"
 #include "base_manager.hpp"

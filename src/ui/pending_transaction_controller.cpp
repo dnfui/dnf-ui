@@ -2,8 +2,8 @@
 // src/ui/pending_transaction_controller.cpp
 // Pending package action button controller
 //
-// Handles the install, remove, reinstall, and clear buttons. Preview and apply
-// handling lives in pending_transaction_apply.cpp.
+// Handles the install, remove, reinstall, and clear buttons.
+// Preview and apply handling lives in pending_transaction_apply.cpp
 // -----------------------------------------------------------------------------
 #include "widgets.hpp"
 

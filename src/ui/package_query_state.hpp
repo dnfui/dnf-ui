@@ -20,10 +20,9 @@ enum class PackageListRequestKind { NONE, SEARCH, LIST_INSTALLED, LIST_AVAILABLE
 
 // -----------------------------------------------------------------------------
 // Last query-backed package view shown in the main table.
-// This intentionally tracks only views that can be reproduced through the main
-// query controls. Exact one-package views from the pending-actions sidebar are
-// refreshed via the currently selected NEVRA instead of adding more global UI
-// state.
+// This intentionally tracks only views that can be reproduced through the main query controls.
+// Exact one-package views from the pending-actions sidebar are
+// refreshed via the currently selected NEVRA instead of adding more global UI state.
 // -----------------------------------------------------------------------------
 enum class DisplayedPackageQueryKind { NONE, SEARCH, LIST_INSTALLED, LIST_AVAILABLE, LIST_UPGRADEABLE };
 
@@ -49,8 +48,8 @@ struct PackageQueryState {
   // Remembers the last query-backed result view.
   // Rebuilds can repopulate the visible table instead of leaving outdated rows on screen after a transaction.
   DisplayedPackageQueryState displayed_query;
-  // Temporary selection snapshot used only while a rebuild-triggered query is
-  // reloading. This lets the refreshed view keep the previously selected row
+  // Temporary selection snapshot used only while a rebuild-triggered query is reloading.
+  // This lets the refreshed view keep the previously selected row
   // and details panel when the package is still present.
   bool preserve_selection_on_reload = false;
   std::string reload_selected_nevra;

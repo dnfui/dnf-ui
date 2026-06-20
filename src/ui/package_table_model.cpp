@@ -68,6 +68,7 @@ make_package_object(SearchWidgets *widgets, const PackageRow &row)
   auto *item = new PackageItem { row, {}, 0 };
   package_table_fill_item_status(widgets, *item);
   g_object_set_qdata_full(obj, package_row_quark(), item, +[](gpointer p) { delete static_cast<PackageItem *>(p); });
+
   return obj;
 }
 

@@ -70,6 +70,7 @@ static GtkWidget *
 status_cell_label(GtkWidget *cell)
 {
   GtkWidget *label = static_cast<GtkWidget *>(g_object_get_data(G_OBJECT(cell), "package-status-label"));
+
   return label ? label : cell;
 }
 
@@ -101,6 +102,7 @@ pending_css_class(SearchWidgets *widgets, const std::string &nevra, const std::s
       }
     }
   }
+
   return nullptr;
 }
 

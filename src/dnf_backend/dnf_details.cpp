@@ -104,8 +104,8 @@ dnf_backend_get_package_info(const std::string &pkg_nevra)
   selected_summary = pkg.get_summary();
   selected_description = pkg.get_description();
 
-  // Find the installed package with the same name and architecture. This gives
-  // the details pane one answer for both an installed row and its update row.
+  // Find the installed package with the same name and architecture.
+  // This gives the details pane one answer for both an installed row and its update row.
   libdnf5::rpm::PackageQuery installed_by_name(base);
   installed_by_name.filter_name(pkg.get_name(), libdnf5::sack::QueryCmp::EQ);
   installed_by_name.filter_installed();
@@ -229,8 +229,8 @@ dnf_backend_get_installed_package_files(const std::string &pkg_nevra, size_t max
     installed_by_name.filter_name(selected_pkg.get_name(), libdnf5::sack::QueryCmp::EQ);
     installed_by_name.filter_installed();
 
-    // Match the selected package architecture and keep the newest installed package if more than one installed row
-    // exists.
+    // Match the selected package architecture and keep the newest installed package
+    // if more than one installed row exists.
     PackageRow installed_row;
     bool have_installed_row = false;
 

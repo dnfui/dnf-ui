@@ -1,8 +1,8 @@
 // -----------------------------------------------------------------------------
 // src/transaction_request.hpp
 // Shared transaction request model
-// Carries the package specs the user explicitly marked in the GUI. Dependency
-// driven upgrades and downgrades are resolved later when the preview is built.
+// Carries the package specs the user explicitly marked in the GUI.
+// Dependency driven upgrades and downgrades are resolved later when the preview is built.
 // -----------------------------------------------------------------------------
 #pragma once
 

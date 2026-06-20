@@ -213,3 +213,7 @@ TEST_CASE("Transaction request validation accepts mixed non empty package specs"
   REQUIRE(request.validate(error));
   REQUIRE(error.empty());
 }
+
+// -----------------------------------------------------------------------------
+// EOF
+// -----------------------------------------------------------------------------

@@ -217,3 +217,7 @@ TEST_CASE("Package query cache evicts oldest entries")
   REQUIRE(package_query_cache_lookup("name:contains:three", 7, cache_epoch, loaded));
   REQUIRE(package_query_cache_lookup("name:contains:four", 7, cache_epoch, loaded));
 }
+
+// -----------------------------------------------------------------------------
+// EOF
+// -----------------------------------------------------------------------------

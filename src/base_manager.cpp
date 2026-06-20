@@ -511,8 +511,8 @@ BaseManager::current_repo_state() const
 BaseRead
 BaseManager::acquire_read()
 {
-  // Keep the lock exclusive for the whole libdnf Base operation. PackageQuery
-  // work can touch shared Base internals even when the caller only reads data.
+  // Keep the lock exclusive for the whole libdnf Base operation.
+  // PackageQuery work can touch shared Base internals even when the caller only reads data.
   std::unique_lock<std::shared_mutex> lock(base_mutex);
   if (!base_ptr) {
     ensure_base_initialized();
@@ -614,8 +614,8 @@ BaseManager::rebuild(BaseRefreshMode refresh_mode,
   // Allow only one Base rebuild at a time.
   std::unique_lock lock(base_mutex);
 
-  // Build the replacement first so a refresh failure does not discard the last
-  // usable Base. Offline fallback keeps the UI query paths working from cached
+  // Build the replacement first so a refresh failure does not discard the last usable Base.
+  // Offline fallback keeps the UI query paths working from cached
   // metadata or, as a last resort, from the local rpmdb only.
   BuiltBase rebuilt =
       build_base_with_offline_fallback(refresh_mode, std::move(cancel_requested), std::move(progress_callback));
