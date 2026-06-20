@@ -117,6 +117,15 @@ setup_shortcuts(GtkWidget *window, GtkWidget *entry)
 
   gtk_shortcut_controller_add_shortcut(GTK_SHORTCUT_CONTROLLER(shortcuts), focus_search);
 
+  GtkShortcut *clear_list = gtk_shortcut_new(gtk_keyval_trigger_new(GDK_KEY_l, GDK_CONTROL_MASK),
+                                             gtk_callback_action_new(
+                                                 +[](GtkWidget *widget, GVariant *, gpointer) -> gboolean {
+                                                   return gtk_widget_activate_action(widget, "win.clear-list", NULL);
+                                                 },
+                                                 NULL,
+                                                 NULL));
+  gtk_shortcut_controller_add_shortcut(GTK_SHORTCUT_CONTROLLER(shortcuts), clear_list);
+
   // Toggle Package Info Panel with Ctrl+I.
   GtkShortcut *toggle_info = gtk_shortcut_new(gtk_keyval_trigger_new(GDK_KEY_i, GDK_CONTROL_MASK),
                                               gtk_callback_action_new(

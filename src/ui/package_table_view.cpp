@@ -96,6 +96,7 @@ create_empty_package_view()
 
   GtkWidget *shortcuts = gtk_label_new(_("Shortcuts\n"
                                          "Ctrl+F: Focus search\n"
+                                         "Ctrl+L: Clear package list\n"
                                          "Ctrl+H: Toggle history panel\n"
                                          "Ctrl+I: Toggle package info panel\n"
                                          "Ctrl+Q or Ctrl+W: Quit"));
