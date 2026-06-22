@@ -7,8 +7,11 @@
 
 #include "i18n.hpp"
 #include "package_query_controller.hpp"
+#include "package_table_view.hpp"
 #include "ui_helpers.hpp"
 #include "widgets.hpp"
+
+#include <string>
 
 #ifndef DNFUI_VERSION
 #define DNFUI_VERSION "unknown"
@@ -20,6 +23,38 @@ struct MainMenuActionData {
   GtkWidget *history_panel = nullptr;
   GtkWidget *info_panel = nullptr;
 };
+
+// -----------------------------------------------------------------------------
+// Return the menu action name for one package table column.
+// -----------------------------------------------------------------------------
+static std::string
+column_action_name_for_id(const char *column_id)
+{
+  std::string action_name = "column-";
+  if (column_id) {
+    action_name += column_id;
+  }
+  return action_name;
+}
+
+// -----------------------------------------------------------------------------
+// Return the package table column id handled by one menu action.
+// -----------------------------------------------------------------------------
+static std::string
+column_id_for_action_name(const char *action_name)
+{
+  constexpr const char *prefix = "column-";
+  if (!action_name) {
+    return {};
+  }
+
+  std::string name = action_name;
+  if (name.rfind(prefix, 0) != 0) {
+    return {};
+  }
+
+  return name.substr(std::string(prefix).size());
+}
 
 // -----------------------------------------------------------------------------
 // Menu action callbacks
@@ -133,6 +168,31 @@ on_menu_show_info_changed(GSimpleAction *action, GVariant *value, gpointer user_
 }
 
 // -----------------------------------------------------------------------------
+// Show or hide one package table column from the View menu.
+// -----------------------------------------------------------------------------
+static void
+on_menu_column_visibility_changed(GSimpleAction *action, GVariant *value, gpointer user_data)
+{
+  MainMenuActionData *data = static_cast<MainMenuActionData *>(user_data);
+  if (!data || !data->widgets || !action || !value) {
+    return;
+  }
+
+  std::string column_id = column_id_for_action_name(g_action_get_name(G_ACTION(action)));
+  if (column_id.empty()) {
+    return;
+  }
+
+  gboolean visible = g_variant_get_boolean(value);
+  if (package_table_set_column_visible(data->widgets, column_id.c_str(), visible)) {
+    g_simple_action_set_state(action, value);
+  } else {
+    ui_helpers_set_status(
+        data->widgets->query.status_label, _("At least one package table column must remain visible."), "blue");
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Build the top menu bar shown above the package workflow controls
 // -----------------------------------------------------------------------------
 GtkWidget *
@@ -148,6 +208,14 @@ main_menu_create()
   GMenu *view_menu = g_menu_new();
   g_menu_append(view_menu, _("History Panel"), "win.show-history");
   g_menu_append(view_menu, _("Package Info Panel"), "win.show-info");
+  GMenu *columns_menu = g_menu_new();
+  for (const auto &column : package_table_column_infos()) {
+    std::string detailed_action = "win.";
+    detailed_action += column_action_name_for_id(column.id);
+    g_menu_append(columns_menu, _(column.title), detailed_action.c_str());
+  }
+  g_menu_append_submenu(view_menu, _("Columns"), G_MENU_MODEL(columns_menu));
+  g_object_unref(columns_menu);
   g_menu_append_submenu(menu_bar, _("View"), G_MENU_MODEL(view_menu));
   g_object_unref(view_menu);
 
@@ -202,6 +270,14 @@ main_menu_connect_actions(const MainMenuWidgets &menu_widgets, SearchWidgets *wi
 
   GSimpleActionGroup *actions = g_simple_action_group_new();
   g_action_map_add_action_entries(G_ACTION_MAP(actions), entries, G_N_ELEMENTS(entries), data);
+  for (const auto &column : package_table_column_infos()) {
+    std::string action_name = column_action_name_for_id(column.id);
+    GSimpleAction *action = g_simple_action_new_stateful(
+        action_name.c_str(), nullptr, g_variant_new_boolean(package_table_column_is_visible(column.id)));
+    g_signal_connect(action, "change-state", G_CALLBACK(on_menu_column_visibility_changed), data);
+    g_action_map_add_action(G_ACTION_MAP(actions), G_ACTION(action));
+    g_object_unref(action);
+  }
   gtk_widget_insert_action_group(menu_widgets.window, "win", G_ACTION_GROUP(actions));
   g_object_set_data_full(G_OBJECT(menu_widgets.window), "dnfui-menu-action-group", actions, g_object_unref);
 }

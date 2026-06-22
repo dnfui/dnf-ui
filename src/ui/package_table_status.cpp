@@ -84,7 +84,7 @@ status_cell_icon(GtkWidget *cell)
 }
 
 // -----------------------------------------------------------------------------
-// Return the CSS class for a pending action, if the row is currently marked.
+// Return the CSS class for a pending action NEVRA.
 // -----------------------------------------------------------------------------
 static const char *
 pending_css_class(SearchWidgets *widgets, const std::string &nevra, const std::string &alternate_nevra)
@@ -104,6 +104,28 @@ pending_css_class(SearchWidgets *widgets, const std::string &nevra, const std::s
   }
 
   return nullptr;
+}
+
+// -----------------------------------------------------------------------------
+// Return the pending action CSS class for one package row.
+// -----------------------------------------------------------------------------
+const char *
+package_table_pending_action_css_class(SearchWidgets *widgets, const PackageRow &row)
+{
+  PackageInstallState install_state = dnf_backend_get_package_install_state(row);
+  PackageActionRows action_rows;
+  if (install_state == PackageInstallState::UPGRADEABLE) {
+    action_rows = package_action_rows_for_selection(row);
+  }
+
+  std::string alternate_nevra;
+  if (action_rows.has_install_row && action_rows.install_row.nevra != row.nevra) {
+    alternate_nevra = action_rows.install_row.nevra;
+  } else if (action_rows.has_installed_row && action_rows.installed_row.nevra != row.nevra) {
+    alternate_nevra = action_rows.installed_row.nevra;
+  }
+
+  return pending_css_class(widgets, row.nevra, alternate_nevra);
 }
 
 // -----------------------------------------------------------------------------
@@ -155,13 +177,22 @@ package_table_clear_status_css(GtkWidget *cell)
   gtk_widget_remove_css_class(cell, "package-status-local-only");
   gtk_widget_remove_css_class(cell, "package-status-upgradeable");
   gtk_widget_remove_css_class(cell, "package-status-installed-newer");
-  gtk_widget_remove_css_class(cell, "package-status-pending-install");
-  gtk_widget_remove_css_class(cell, "package-status-pending-reinstall");
-  gtk_widget_remove_css_class(cell, "package-status-pending-remove");
+  package_table_clear_pending_action_css(cell);
 
   if (GtkWidget *icon = status_cell_icon(cell)) {
     gtk_widget_set_visible(icon, FALSE);
   }
+}
+
+// -----------------------------------------------------------------------------
+// Remove pending action CSS classes from one table cell.
+// -----------------------------------------------------------------------------
+void
+package_table_clear_pending_action_css(GtkWidget *cell)
+{
+  gtk_widget_remove_css_class(cell, "package-status-pending-install");
+  gtk_widget_remove_css_class(cell, "package-status-pending-reinstall");
+  gtk_widget_remove_css_class(cell, "package-status-pending-remove");
 }
 
 // -----------------------------------------------------------------------------
@@ -210,16 +241,7 @@ package_table_update_status_label(GtkWidget *cell, SearchWidgets *widgets, const
     gtk_widget_set_visible(icon, icon_name != nullptr);
   }
 
-  std::string alternate_nevra;
-
-  // Upgradable rows can show one package ID while the pending action uses a matching installed or available package ID.
-  if (action_rows.has_install_row && action_rows.install_row.nevra != row.nevra) {
-    alternate_nevra = action_rows.install_row.nevra;
-  } else if (action_rows.has_installed_row && action_rows.installed_row.nevra != row.nevra) {
-    alternate_nevra = action_rows.installed_row.nevra;
-  }
-
-  if (const char *pending_class = pending_css_class(widgets, row.nevra, alternate_nevra)) {
+  if (const char *pending_class = package_table_pending_action_css_class(widgets, row)) {
     gtk_widget_add_css_class(cell, pending_class);
   } else {
     if (install_state == PackageInstallState::LOCAL_ONLY) {

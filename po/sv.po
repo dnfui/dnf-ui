@@ -42,6 +42,12 @@ msgstr "Historikpanel"
 msgid "Package Info Panel"
 msgstr "Paketinfopanel"
 
+msgid "Columns"
+msgstr "Kolumner"
+
+msgid "At least one package table column must remain visible."
+msgstr "Minst en paketkolumn måste vara synlig."
+
 msgid "Package"
 msgstr "Paket"
 
@@ -71,6 +77,12 @@ msgstr "Version"
 
 msgid "Update"
 msgstr "Uppdatering"
+
+msgid "Release"
+msgstr "Utgåva"
+
+msgid "Update Release"
+msgstr "Uppdateringsutgåva"
 
 msgid "Repo"
 msgstr "Förråd"

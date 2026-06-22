@@ -21,14 +21,32 @@ package_table_column_text(const PackageItem &item, PackageColumnKind kind)
     if (dnf_backend_get_installed_package_row_by_name_arch(item.row, installed_row) &&
         installed_row.nevra != item.row.nevra) {
       // The table column is named Version, so keep it aligned with the Info tab Version field.
-      // Release remains available in the details pane.
       return installed_row.version;
     }
     return item.row.version;
   }
   case PackageColumnKind::UPDATE_VERSION:
     if (dnf_backend_get_package_install_state(item.row) == PackageInstallState::UPGRADEABLE) {
+      if (!item.row.repo_candidate_version.empty()) {
+        return item.row.repo_candidate_version;
+      }
       return item.row.version;
+    }
+    return {};
+  case PackageColumnKind::RELEASE: {
+    PackageRow installed_row;
+    if (dnf_backend_get_installed_package_row_by_name_arch(item.row, installed_row) &&
+        installed_row.nevra != item.row.nevra) {
+      return installed_row.release;
+    }
+    return item.row.release;
+  }
+  case PackageColumnKind::UPDATE_RELEASE:
+    if (dnf_backend_get_package_install_state(item.row) == PackageInstallState::UPGRADEABLE) {
+      if (!item.row.repo_candidate_release.empty()) {
+        return item.row.repo_candidate_release;
+      }
+      return item.row.release;
     }
     return {};
   case PackageColumnKind::ARCH:
@@ -38,8 +56,13 @@ package_table_column_text(const PackageItem &item, PackageColumnKind kind)
     // A repository name such as "fedora" means the row is available from that repo.
     // "@System" means the row comes from the local installed rpmdb.
     // For upgradable rows, show the repo that provides the update candidate.
-    if (dnf_backend_get_package_install_state(item.row) != PackageInstallState::UPGRADEABLE &&
-        dnf_backend_get_installed_package_row_by_name_arch(item.row, installed_row)) {
+    if (dnf_backend_get_package_install_state(item.row) == PackageInstallState::UPGRADEABLE) {
+      if (!item.row.repo_candidate_repo.empty()) {
+        return item.row.repo_candidate_repo;
+      }
+      return item.row.repo;
+    }
+    if (dnf_backend_get_installed_package_row_by_name_arch(item.row, installed_row)) {
       return installed_row.repo;
     }
     return item.row.repo;
@@ -101,6 +124,14 @@ compare_package_items(const PackageItem &lhs, const PackageItem &rhs, PackageCol
   case PackageColumnKind::UPDATE_VERSION:
     result = compare_text(package_table_column_text(lhs, PackageColumnKind::UPDATE_VERSION),
                           package_table_column_text(rhs, PackageColumnKind::UPDATE_VERSION));
+    break;
+  case PackageColumnKind::RELEASE:
+    result = compare_text(package_table_column_text(lhs, PackageColumnKind::RELEASE),
+                          package_table_column_text(rhs, PackageColumnKind::RELEASE));
+    break;
+  case PackageColumnKind::UPDATE_RELEASE:
+    result = compare_text(package_table_column_text(lhs, PackageColumnKind::UPDATE_RELEASE),
+                          package_table_column_text(rhs, PackageColumnKind::UPDATE_RELEASE));
     break;
   case PackageColumnKind::ARCH:
     result = compare_text(lhs.row.arch, rhs.row.arch);
