@@ -122,6 +122,10 @@ stored in `dnfui.conf` as `package_table_hidden_columns`, using stable column id
 default-visible columns can be added without hiding them for existing users. Older
 `package_table_columns` settings are migrated when they are read.
 
+[src/ui/package_table_columns.cpp](../src/ui/package_table_columns.cpp) owns the
+package table column definitions, stable column ids, saved visibility settings,
+and config migration.
+
 [src/ui/package_table_model.cpp](../src/ui/package_table_model.cpp) contains the
 GTK object wrapper used to store package rows in the table model.
 

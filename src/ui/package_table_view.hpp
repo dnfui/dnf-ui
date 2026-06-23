@@ -13,11 +13,6 @@
 
 struct SearchWidgets;
 
-struct PackageTableColumnInfo {
-  const char *id;
-  const char *title;
-};
-
 // -----------------------------------------------------------------------------
 // Return the currently selected package row.
 // -----------------------------------------------------------------------------
@@ -30,14 +25,6 @@ void package_table_fill_package_view(SearchWidgets *widgets, const std::vector<P
 // Refresh status values for all visible package rows.
 // -----------------------------------------------------------------------------
 void package_table_refresh_statuses(SearchWidgets *widgets);
-// -----------------------------------------------------------------------------
-// Return the package table columns exposed to the View menu.
-// -----------------------------------------------------------------------------
-std::vector<PackageTableColumnInfo> package_table_column_infos();
-// -----------------------------------------------------------------------------
-// Return whether one package table column is enabled in user settings.
-// -----------------------------------------------------------------------------
-bool package_table_column_is_visible(const char *column_id);
 // -----------------------------------------------------------------------------
 // Change one package table column setting and update the current table if shown.
 // -----------------------------------------------------------------------------

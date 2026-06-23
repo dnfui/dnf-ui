@@ -7,6 +7,7 @@
 
 #include "i18n.hpp"
 #include "package_query_controller.hpp"
+#include "package_table_columns.hpp"
 #include "package_table_view.hpp"
 #include "ui_helpers.hpp"
 #include "widgets.hpp"
