@@ -58,6 +58,26 @@ column_id_for_action_name(const char *action_name)
 }
 
 // -----------------------------------------------------------------------------
+// Update View menu column checkmarks from the saved column settings.
+// -----------------------------------------------------------------------------
+static void
+sync_column_action_states(GSimpleActionGroup *actions)
+{
+  if (!actions) {
+    return;
+  }
+
+  for (const auto &column : package_table_column_infos()) {
+    std::string action_name = column_action_name_for_id(column.id);
+    GAction *action = g_action_map_lookup_action(G_ACTION_MAP(actions), action_name.c_str());
+    if (action && G_IS_SIMPLE_ACTION(action)) {
+      g_simple_action_set_state(G_SIMPLE_ACTION(action),
+                                g_variant_new_boolean(package_table_column_is_visible(column.id)));
+    }
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Menu action callbacks
 // -----------------------------------------------------------------------------
 static void
@@ -194,6 +214,24 @@ on_menu_column_visibility_changed(GSimpleAction *action, GVariant *value, gpoint
 }
 
 // -----------------------------------------------------------------------------
+// Restore package table columns to their default visibility.
+// -----------------------------------------------------------------------------
+static void
+on_menu_restore_default_columns(GSimpleAction *, GVariant *, gpointer user_data)
+{
+  MainMenuActionData *data = static_cast<MainMenuActionData *>(user_data);
+  if (!data || !data->widgets || !data->window) {
+    return;
+  }
+
+  package_table_reset_columns_to_default(data->widgets);
+  GSimpleActionGroup *actions =
+      static_cast<GSimpleActionGroup *>(g_object_get_data(G_OBJECT(data->window), "dnfui-menu-action-group"));
+  sync_column_action_states(actions);
+  ui_helpers_set_status(data->widgets->query.status_label, _("Package table columns restored to defaults."), "green");
+}
+
+// -----------------------------------------------------------------------------
 // Build the top menu bar shown above the package workflow controls
 // -----------------------------------------------------------------------------
 GtkWidget *
@@ -215,6 +253,7 @@ main_menu_create()
     detailed_action += column_action_name_for_id(column.id);
     g_menu_append(columns_menu, _(column.title), detailed_action.c_str());
   }
+  g_menu_append(columns_menu, _("Restore Default Columns"), "win.restore-default-columns");
   g_menu_append_submenu(view_menu, _("Columns"), G_MENU_MODEL(columns_menu));
   g_object_unref(columns_menu);
   g_menu_append_submenu(menu_bar, _("View"), G_MENU_MODEL(view_menu));
@@ -253,7 +292,7 @@ main_menu_connect_actions(const MainMenuWidgets &menu_widgets, SearchWidgets *wi
         delete static_cast<MainMenuActionData *>(p);
       });
 
-  GActionEntry entries[6] = {};
+  GActionEntry entries[7] = {};
   entries[0].name = "quit";
   entries[0].activate = on_menu_quit;
   entries[1].name = "clear-list";
@@ -268,6 +307,8 @@ main_menu_connect_actions(const MainMenuWidgets &menu_widgets, SearchWidgets *wi
   entries[4].change_state = on_menu_show_info_changed;
   entries[5].name = "about";
   entries[5].activate = on_menu_about;
+  entries[6].name = "restore-default-columns";
+  entries[6].activate = on_menu_restore_default_columns;
 
   GSimpleActionGroup *actions = g_simple_action_group_new();
   g_action_map_add_action_entries(G_ACTION_MAP(actions), entries, G_N_ELEMENTS(entries), data);

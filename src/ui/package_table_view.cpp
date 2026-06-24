@@ -699,6 +699,22 @@ package_table_set_column_visible(SearchWidgets *widgets, const char *column_id, 
 }
 
 // -----------------------------------------------------------------------------
+// Reset package table columns to their default visibility and update the table.
+// -----------------------------------------------------------------------------
+void
+package_table_reset_columns_to_default(SearchWidgets *widgets)
+{
+  package_table_reset_visible_column_ids();
+
+  if (widgets && widgets->results.list_scroller) {
+    GtkWidget *child = gtk_scrolled_window_get_child(widgets->results.list_scroller);
+    if (child && GTK_IS_COLUMN_VIEW(child)) {
+      package_table_apply_column_visibility(GTK_COLUMN_VIEW(child));
+    }
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Package table population
 // Builds a virtualized GTK4 ColumnView with structured package metadata.
 // Preserves the selected NEVRA across list refreshes when possible.

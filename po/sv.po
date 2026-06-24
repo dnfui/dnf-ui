@@ -45,8 +45,14 @@ msgstr "Paketinfopanel"
 msgid "Columns"
 msgstr "Kolumner"
 
+msgid "Restore Default Columns"
+msgstr "Återställ standardkolumner"
+
 msgid "At least one package table column must remain visible."
 msgstr "Minst en paketkolumn måste vara synlig."
+
+msgid "Package table columns restored to defaults."
+msgstr "Paketkolumner återställda till standard."
 
 msgid "Package"
 msgstr "Paket"

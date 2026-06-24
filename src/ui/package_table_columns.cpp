@@ -197,6 +197,15 @@ package_table_save_visible_column_ids(const std::set<std::string> &visible)
 }
 
 // -----------------------------------------------------------------------------
+// Reset visible package table columns to the default set.
+// -----------------------------------------------------------------------------
+void
+package_table_reset_visible_column_ids()
+{
+  package_table_save_visible_column_ids(package_table_default_visible_column_ids());
+}
+
+// -----------------------------------------------------------------------------
 // Return the package table columns exposed to the View menu.
 // -----------------------------------------------------------------------------
 std::vector<PackageTableColumnInfo>
