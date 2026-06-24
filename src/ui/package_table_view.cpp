@@ -677,13 +677,8 @@ package_table_set_column_visible(SearchWidgets *widgets, const char *column_id, 
   }
 
   std::set<std::string> visible_columns = package_table_load_visible_column_ids();
-  if (visible) {
-    visible_columns.insert(column_id);
-  } else {
-    if (visible_columns.size() <= 1 && visible_columns.count(column_id) > 0) {
-      return false;
-    }
-    visible_columns.erase(column_id);
+  if (!package_table_update_visible_column_ids(visible_columns, column_id, visible)) {
+    return false;
   }
 
   package_table_save_visible_column_ids(visible_columns);

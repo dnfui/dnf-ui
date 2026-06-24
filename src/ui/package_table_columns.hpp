@@ -55,6 +55,11 @@ std::set<std::string> package_table_load_visible_column_ids();
 // -----------------------------------------------------------------------------
 void package_table_save_visible_column_ids(const std::set<std::string> &visible);
 // -----------------------------------------------------------------------------
+// Change one visible column set without allowing the last column to be hidden.
+// -----------------------------------------------------------------------------
+bool
+package_table_update_visible_column_ids(std::set<std::string> &visible_columns, const char *column_id, bool visible);
+// -----------------------------------------------------------------------------
 // Reset visible package table columns to the default set.
 // -----------------------------------------------------------------------------
 void package_table_reset_visible_column_ids();

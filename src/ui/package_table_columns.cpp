@@ -197,6 +197,29 @@ package_table_save_visible_column_ids(const std::set<std::string> &visible)
 }
 
 // -----------------------------------------------------------------------------
+// Change one visible column set without allowing the last column to be hidden.
+// -----------------------------------------------------------------------------
+bool
+package_table_update_visible_column_ids(std::set<std::string> &visible_columns, const char *column_id, bool visible)
+{
+  if (!package_table_column_definition_by_id(column_id)) {
+    return false;
+  }
+
+  if (visible) {
+    visible_columns.insert(column_id);
+    return true;
+  }
+
+  if (visible_columns.size() <= 1 && visible_columns.count(column_id) > 0) {
+    return false;
+  }
+
+  visible_columns.erase(column_id);
+  return true;
+}
+
+// -----------------------------------------------------------------------------
 // Reset visible package table columns to the default set.
 // -----------------------------------------------------------------------------
 void

@@ -209,6 +209,32 @@ TEST_CASE("Package table columns save visible ids as hidden settings")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that the final visible package table column cannot be hidden.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package table columns keep one column visible")
+{
+  std::set<std::string> visible = { "package" };
+
+  REQUIRE_FALSE(package_table_update_visible_column_ids(visible, "package", false));
+  REQUIRE(visible == std::set<std::string>({ "package" }));
+
+  REQUIRE(package_table_update_visible_column_ids(visible, "version", true));
+  REQUIRE(package_table_update_visible_column_ids(visible, "package", false));
+  REQUIRE(visible == std::set<std::string>({ "version" }));
+}
+
+// -----------------------------------------------------------------------------
+// Verify that unknown package table column ids cannot change visibility.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package table columns reject unknown visibility changes")
+{
+  std::set<std::string> visible = { "package" };
+
+  REQUIRE_FALSE(package_table_update_visible_column_ids(visible, "unknown-column", true));
+  REQUIRE(visible == std::set<std::string>({ "package" }));
+}
+
+// -----------------------------------------------------------------------------
 // Verify that the old visible-column key is migrated to the hidden-column key.
 // -----------------------------------------------------------------------------
 TEST_CASE("Package table columns migrate old visible settings")
