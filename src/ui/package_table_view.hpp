@@ -25,6 +25,14 @@ void package_table_fill_package_view(SearchWidgets *widgets, const std::vector<P
 // Refresh status values for all visible package rows.
 // -----------------------------------------------------------------------------
 void package_table_refresh_statuses(SearchWidgets *widgets);
+// -----------------------------------------------------------------------------
+// Change one package table column setting and update the current table if shown.
+// -----------------------------------------------------------------------------
+bool package_table_set_column_visible(SearchWidgets *widgets, const char *column_id, bool visible);
+// -----------------------------------------------------------------------------
+// Reset package table columns to their default visibility and update the table.
+// -----------------------------------------------------------------------------
+void package_table_reset_columns_to_default(SearchWidgets *widgets);
 
 // -----------------------------------------------------------------------------
 // EOF

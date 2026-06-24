@@ -5,7 +5,7 @@
 // The configuration is stored as key=value pairs in:
 //   dnfui.conf in the user config directory
 //
-// The current key value file covers the saved window settings.
+// The current key value file covers persistent UI settings.
 // If settings become more structured later, GKeyFile is the likely next format.
 // -----------------------------------------------------------------------------
 #include "config.hpp"

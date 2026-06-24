@@ -117,6 +117,16 @@ the backend generation changes, the old result is ignored.
 [src/ui/package_table_view.cpp](../src/ui/package_table_view.cpp) builds the
 package table, including column setup, selection, and status refresh.
 
+The table columns can be shown or hidden from `View -> Columns`, and the same
+menu can restore the default column set. The setting is stored in `dnfui.conf`
+as `package_table_hidden_columns`, using stable column ids so new default-visible
+columns can be added without hiding them for existing users. Older
+`package_table_columns` settings are migrated when they are read.
+
+[src/ui/package_table_columns.cpp](../src/ui/package_table_columns.cpp) owns the
+package table column definitions, stable column ids, saved visibility settings,
+and config migration.
+
 [src/ui/package_table_model.cpp](../src/ui/package_table_model.cpp) contains the
 GTK object wrapper used to store package rows in the table model.
 

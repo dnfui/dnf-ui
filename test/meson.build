@@ -24,6 +24,7 @@ dnfui_tests = executable(
     '../src/transaction_service_client.cpp',
     '../src/transaction_service_client_wait.cpp',
     '../src/ui/package_action_rows.cpp',
+    '../src/ui/package_table_columns.cpp',
     '../src/ui/package_table_model.cpp',
     '../src/ui/package_table_sort.cpp',
     '../src/ui/package_table_status.cpp',

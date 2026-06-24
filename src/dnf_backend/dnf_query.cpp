@@ -342,10 +342,16 @@ annotate_installed_row_with_repo_candidate(PackageRow &installed_row,
   if (it == available_rows.end()) {
     installed_row.repo_candidate_relation = PackageRepoCandidateRelation::NONE;
     installed_row.repo_candidate_nevra.clear();
+    installed_row.repo_candidate_version.clear();
+    installed_row.repo_candidate_release.clear();
+    installed_row.repo_candidate_repo.clear();
     return;
   }
 
   installed_row.repo_candidate_nevra = it->second.nevra;
+  installed_row.repo_candidate_version = it->second.version;
+  installed_row.repo_candidate_release = it->second.release;
+  installed_row.repo_candidate_repo = it->second.repo;
   int cmp = libdnf5::rpm::evrcmp(it->second, installed_row);
   if (cmp > 0) {
     installed_row.repo_candidate_relation = PackageRepoCandidateRelation::NEWER;

@@ -6,25 +6,13 @@
 #pragma once
 
 #include "dnf_backend/dnf_backend.hpp"
+#include "package_table_columns.hpp"
 
 #include <gtk/gtk.h>
 
 #include <string>
 
 struct SearchWidgets;
-
-// -----------------------------------------------------------------------------
-// Column model helpers
-// -----------------------------------------------------------------------------
-enum class PackageColumnKind {
-  STATUS,
-  PACKAGE,
-  VERSION,
-  UPDATE_VERSION,
-  ARCH,
-  REPO,
-  SUMMARY,
-};
 
 // Package row wrapper used by the sortable GTK model.
 struct PackageItem {
