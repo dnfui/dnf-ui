@@ -513,7 +513,7 @@ widgets_on_refresh_button_clicked(GtkButton *, gpointer user_data)
 
   bool expected = false;
   // Only the first click may start a refresh task.
-  // While it is running, the button asks libdnf to stop repository downloads.
+  // While it is running, the button asks the daemon and Base rebuild to stop.
   if (!repository_refresh_running.compare_exchange_strong(expected, true)) {
     if (repository_refresh_cancel_requested && !repository_refresh_cancel_requested->load(std::memory_order_relaxed)) {
       DNFUI_TRACE("Repository refresh stop requested from button");
