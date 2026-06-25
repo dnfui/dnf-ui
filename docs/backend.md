@@ -82,7 +82,8 @@ DNF UI has two places where Stop needs help from the backend:
 Repository refresh uses two cancellation paths. It passes a `GCancellable` to
 the dnf5daemon D-Bus calls, and it passes an atomic cancel flag into
 `BaseManager::rebuild`. When the user presses Stop, the UI asks both the daemon
-call and the later UI Base rebuild to stop.
+call and the later UI Base rebuild to stop. The same cancellation path is used
+when the main window is closed during repository refresh.
 
 This is cooperative cancellation. It cannot kill arbitrary libdnf or D-Bus work
 immediately, but stopped refresh work must not publish a partial replacement

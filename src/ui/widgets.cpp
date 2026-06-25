@@ -50,6 +50,21 @@ widgets_repository_refresh_is_running()
 }
 
 // -----------------------------------------------------------------------------
+// Ask an active repository refresh to stop.
+// Used by Stop and by main window cleanup.
+// -----------------------------------------------------------------------------
+void
+widgets_repository_refresh_cancel_active()
+{
+  if (repository_refresh_cancel_requested) {
+    repository_refresh_cancel_requested->store(true, std::memory_order_relaxed);
+  }
+  if (repository_refresh_operation_cancellable) {
+    g_cancellable_cancel(repository_refresh_operation_cancellable);
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Free data owned by one repository refresh task.
 // -----------------------------------------------------------------------------
 static void
@@ -502,10 +517,7 @@ widgets_on_refresh_button_clicked(GtkButton *, gpointer user_data)
   if (!repository_refresh_running.compare_exchange_strong(expected, true)) {
     if (repository_refresh_cancel_requested && !repository_refresh_cancel_requested->load(std::memory_order_relaxed)) {
       DNFUI_TRACE("Repository refresh stop requested from button");
-      repository_refresh_cancel_requested->store(true, std::memory_order_relaxed);
-      if (repository_refresh_operation_cancellable) {
-        g_cancellable_cancel(repository_refresh_operation_cancellable);
-      }
+      widgets_repository_refresh_cancel_active();
       repository_refresh_set_button_idle(widgets);
       gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.refresh_button), FALSE);
       ui_helpers_set_status(widgets->query.status_label, _("Stopping repository refresh..."), "gray");
