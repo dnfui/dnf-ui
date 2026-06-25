@@ -71,6 +71,8 @@ base_repo_state_trace_name(BaseRepoState state)
   switch (state) {
   case BaseRepoState::LIVE_METADATA:
     return "live-metadata";
+  case BaseRepoState::DAEMON_SYNCED_METADATA:
+    return "daemon-synced-metadata";
   case BaseRepoState::CACHED_METADATA:
     return "cached-metadata";
   case BaseRepoState::INSTALLED_ONLY:

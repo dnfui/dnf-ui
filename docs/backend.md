@@ -25,9 +25,10 @@ Controller code should use this public API instead of calling libdnf5 directly.
 
 [src/base_manager.cpp](../src/base_manager.cpp) manages the shared libdnf5 `Base`.
 
-The Base can be in one of three repository states:
+The Base can be in one of four repository states:
 
 - `LIVE_METADATA`: normal repository metadata loaded
+- `DAEMON_SYNCED_METADATA`: dnf5daemon refreshed metadata first, then the UI read that cache
 - `CACHED_METADATA`: live repository refresh failed, cached metadata loaded
 - `INSTALLED_ONLY`: only the local installed package database is available
 
@@ -60,9 +61,9 @@ Base id.
 ## Repository refresh
 
 The manual Refresh Repositories button refreshes dnf5daemon first. It asks the
-daemon to clean metadata, clean dbcache, reset the daemon session, and read all
+daemon to expire its metadata cache, reset the daemon session, and read all
 repositories. After that succeeds, the UI rebuilds its libdnf5 Base from the
-system metadata cache.
+daemon-refreshed system metadata cache.
 
 If the daemon cache directory does not exist yet, the clean step is treated as
 already clean. The refresh still resets the daemon session and loads repositories.
@@ -78,10 +79,10 @@ DNF UI has two places where Stop needs help from the backend:
 - repository refresh
 - package query workers waiting for the shared Base
 
-Repository refresh passes an atomic cancel flag into `BaseManager::rebuild`.
-The manual refresh path also passes a `GCancellable` to the dnf5daemon D-Bus
-calls. When the user presses Stop, the UI asks both the daemon call and the
-later UI Base rebuild to stop.
+Repository refresh uses two cancellation paths. It passes a `GCancellable` to
+the dnf5daemon D-Bus calls, and it passes an atomic cancel flag into
+`BaseManager::rebuild`. When the user presses Stop, the UI asks both the daemon
+call and the later UI Base rebuild to stop.
 
 This is cooperative cancellation. It cannot kill arbitrary libdnf or D-Bus work
 immediately, but stopped refresh work must not publish a partial replacement

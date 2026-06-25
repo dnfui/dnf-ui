@@ -23,12 +23,19 @@ constexpr const char *kTaskStartedAtUsKey = "dnfui-task-started-at-us";
 
 // Prevent starting more than one repository refresh task at the same time.
 std::atomic<bool> repository_refresh_running { false };
-GCancellable *repository_refresh_cancellable = nullptr;
+GCancellable *repository_refresh_operation_cancellable = nullptr;
 std::shared_ptr<std::atomic<bool>> repository_refresh_cancel_requested;
 bool repository_refresh_spinner_owned = false;
 
 struct RepositoryRefreshTaskData {
   std::shared_ptr<std::atomic<bool>> cancel_requested;
+  GCancellable *operation_cancellable = nullptr;
+  GtkLabel *progress_label = nullptr;
+};
+
+struct RepositoryRefreshPhaseLabelUpdate {
+  GtkLabel *label = nullptr;
+  std::string message;
 };
 
 }
@@ -53,7 +60,50 @@ repository_refresh_task_data_free(gpointer p)
     return;
   }
 
+  if (data->operation_cancellable) {
+    g_object_unref(data->operation_cancellable);
+  }
+  if (data->progress_label) {
+    g_object_unref(data->progress_label);
+  }
   delete data;
+}
+
+// -----------------------------------------------------------------------------
+// Show one refresh phase in the lower-right status area.
+// Worker threads must queue GTK updates on the main thread.
+// -----------------------------------------------------------------------------
+static gboolean
+repository_refresh_phase_label_update_on_main(gpointer user_data)
+{
+  RepositoryRefreshPhaseLabelUpdate *update = static_cast<RepositoryRefreshPhaseLabelUpdate *>(user_data);
+  if (update && update->label && !update->message.empty()) {
+    gtk_label_set_text(update->label, update->message.c_str());
+    gtk_widget_set_visible(GTK_WIDGET(update->label), TRUE);
+  }
+
+  if (update && update->label) {
+    g_object_unref(update->label);
+  }
+  delete update;
+  return G_SOURCE_REMOVE;
+}
+
+// -----------------------------------------------------------------------------
+// Queue one refresh phase for the lower-right status area.
+// Keep the label alive because the worker may finish before GTK shows the text.
+// -----------------------------------------------------------------------------
+static void
+queue_repository_refresh_phase_label(GtkLabel *label, const std::string &message)
+{
+  if (!label || message.empty()) {
+    return;
+  }
+
+  RepositoryRefreshPhaseLabelUpdate *update = new RepositoryRefreshPhaseLabelUpdate;
+  update->label = GTK_LABEL(g_object_ref(label));
+  update->message = message;
+  g_main_context_invoke(nullptr, repository_refresh_phase_label_update_on_main, update);
 }
 
 // -----------------------------------------------------------------------------
@@ -234,18 +284,26 @@ void
 widgets_on_force_rebuild_task(GTask *task, gpointer, gpointer task_data, GCancellable *cancellable)
 {
   auto *refresh_data = static_cast<RepositoryRefreshTaskData *>(task_data);
+  GCancellable *operation_cancellable = refresh_data ? refresh_data->operation_cancellable : nullptr;
 
   try {
     DNFUI_TRACE("Repository refresh worker start");
+    queue_repository_refresh_phase_label(refresh_data ? refresh_data->progress_label : nullptr,
+                                         _("Refreshing dnf5daemon metadata..."));
     std::string daemon_error;
-    if (!transaction_service_client_refresh_repositories(daemon_error, cancellable)) {
-      if (cancellable && g_cancellable_is_cancelled(cancellable)) {
+    if (!transaction_service_client_refresh_repositories(daemon_error, operation_cancellable)) {
+      if (operation_cancellable && g_cancellable_is_cancelled(operation_cancellable)) {
         throw BaseOperationCancelled(daemon_error.empty() ? _("Repository refresh was cancelled.") : daemon_error);
+      }
+      if (cancellable && g_cancellable_is_cancelled(cancellable)) {
+        throw BaseOperationCancelled(_("Repository refresh was cancelled."));
       }
       throw std::runtime_error(daemon_error);
     }
 
     DNFUI_TRACE("Repository refresh daemon metadata done");
+    queue_repository_refresh_phase_label(refresh_data ? refresh_data->progress_label : nullptr,
+                                         _("Loading refreshed metadata..."));
     BaseRepoState refresh_state = BaseManager::instance().rebuild(
         BaseRefreshMode::SYSTEM_CACHE_ONLY, refresh_data ? refresh_data->cancel_requested : nullptr, {});
     DNFUI_TRACE("Repository refresh worker done state=%d", static_cast<int>(refresh_state));
@@ -323,9 +381,9 @@ widgets_on_force_rebuild_task_finished(GObject *, GAsyncResult *res, gpointer us
     DNFUI_TRACE("Repository refresh completion skipped");
     repository_refresh_running = false;
     repository_refresh_release_spinner(nullptr);
-    if (repository_refresh_cancellable) {
-      g_object_unref(repository_refresh_cancellable);
-      repository_refresh_cancellable = nullptr;
+    if (repository_refresh_operation_cancellable) {
+      g_object_unref(repository_refresh_operation_cancellable);
+      repository_refresh_operation_cancellable = nullptr;
     }
     repository_refresh_cancel_requested.reset();
     return;
@@ -336,9 +394,9 @@ widgets_on_force_rebuild_task_finished(GObject *, GAsyncResult *res, gpointer us
 
   if (!widgets || widgets->window_state.destroyed) {
     repository_refresh_release_spinner(nullptr);
-    if (repository_refresh_cancellable) {
-      g_object_unref(repository_refresh_cancellable);
-      repository_refresh_cancellable = nullptr;
+    if (repository_refresh_operation_cancellable) {
+      g_object_unref(repository_refresh_operation_cancellable);
+      repository_refresh_operation_cancellable = nullptr;
     }
     repository_refresh_cancel_requested.reset();
     repository_refresh_running = false;
@@ -362,9 +420,9 @@ widgets_on_force_rebuild_task_finished(GObject *, GAsyncResult *res, gpointer us
   repository_refresh_release_spinner(widgets);
   repository_refresh_running = false;
 
-  if (repository_refresh_cancellable) {
-    g_object_unref(repository_refresh_cancellable);
-    repository_refresh_cancellable = nullptr;
+  if (repository_refresh_operation_cancellable) {
+    g_object_unref(repository_refresh_operation_cancellable);
+    repository_refresh_operation_cancellable = nullptr;
   }
   repository_refresh_cancel_requested.reset();
 
@@ -381,7 +439,7 @@ widgets_on_force_rebuild_task_finished(GObject *, GAsyncResult *res, gpointer us
     // Search caches are bound to the old Base generation and must be dropped
     // before the user can query against freshly refreshed repositories.
     package_query_clear_search_cache();
-    if (*refresh_state == BaseRepoState::LIVE_METADATA) {
+    if (*refresh_state == BaseRepoState::LIVE_METADATA || *refresh_state == BaseRepoState::DAEMON_SYNCED_METADATA) {
       ui_helpers_set_status(widgets->query.status_label, _("Repositories refreshed."), "green");
     } else if (*refresh_state == BaseRepoState::CACHED_METADATA) {
       ui_helpers_set_status(
@@ -445,6 +503,9 @@ widgets_on_refresh_button_clicked(GtkButton *, gpointer user_data)
     if (repository_refresh_cancel_requested && !repository_refresh_cancel_requested->load(std::memory_order_relaxed)) {
       DNFUI_TRACE("Repository refresh stop requested from button");
       repository_refresh_cancel_requested->store(true, std::memory_order_relaxed);
+      if (repository_refresh_operation_cancellable) {
+        g_cancellable_cancel(repository_refresh_operation_cancellable);
+      }
       repository_refresh_set_button_idle(widgets);
       gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.refresh_button), FALSE);
       ui_helpers_set_status(widgets->query.status_label, _("Stopping repository refresh..."), "gray");
@@ -476,10 +537,14 @@ widgets_on_refresh_button_clicked(GtkButton *, gpointer user_data)
 
   GCancellable *c = widgets_make_task_cancellable_for(GTK_WIDGET(widgets->query.entry));
   GTask *task = widgets_task_new_for_search_widgets(widgets, c, widgets_on_force_rebuild_task_finished);
-  repository_refresh_cancellable = G_CANCELLABLE(g_object_ref(c));
+  repository_refresh_operation_cancellable = g_cancellable_new();
   repository_refresh_cancel_requested = std::make_shared<std::atomic<bool>>(false);
   auto *refresh_data = new RepositoryRefreshTaskData;
   refresh_data->cancel_requested = repository_refresh_cancel_requested;
+  refresh_data->operation_cancellable = G_CANCELLABLE(g_object_ref(repository_refresh_operation_cancellable));
+  if (widgets->window_state.query_duration_label) {
+    refresh_data->progress_label = GTK_LABEL(g_object_ref(widgets->window_state.query_duration_label));
+  }
   g_task_set_task_data(task, refresh_data, repository_refresh_task_data_free);
   auto *started_at_us = new gint64(g_get_monotonic_time());
   g_object_set_data_full(

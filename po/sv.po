@@ -264,6 +264,12 @@ msgstr "Förråd uppdaterade."
 msgid "Refreshing repositories..."
 msgstr "Uppdaterar förråd..."
 
+msgid "Refreshing dnf5daemon metadata..."
+msgstr "Uppdaterar dnf5daemon-metadata..."
+
+msgid "Loading refreshed metadata..."
+msgstr "Läser in uppdaterad metadata..."
+
 msgid "Repository refresh cancelled."
 msgstr "Förrådsuppdatering avbröts."
 

@@ -76,10 +76,12 @@ struct TemporaryBaseRead {
 
 // Result of one repository rebuild attempt.
 // LIVE_METADATA means a normal online refresh succeeded.
+// DAEMON_SYNCED_METADATA means dnf5daemon refreshed metadata first, then the UI read that cache.
 // CACHED_METADATA means live refresh failed but cached repo metadata loaded.
 // INSTALLED_ONLY means both repo-backed paths failed and only the local rpmdb remains.
 enum class BaseRepoState {
   LIVE_METADATA,
+  DAEMON_SYNCED_METADATA,
   CACHED_METADATA,
   INSTALLED_ONLY,
 };

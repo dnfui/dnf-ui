@@ -943,15 +943,8 @@ transaction_service_client_refresh_repositories(std::string &error_out, GCancell
     ok = false;
   }
   if (ok) {
-    DNFUI_TRACE("dnf5daemon repository refresh clean metadata start path=%s", transaction_path.c_str());
-    ok = call_daemon_base_clean_method(connection, transaction_path, "metadata", cancellable, error_out);
-  }
-  if (ok && refresh_cancelled(cancellable, error_out)) {
-    ok = false;
-  }
-  if (ok) {
-    DNFUI_TRACE("dnf5daemon repository refresh clean dbcache start path=%s", transaction_path.c_str());
-    ok = call_daemon_base_clean_method(connection, transaction_path, "dbcache", cancellable, error_out);
+    DNFUI_TRACE("dnf5daemon repository refresh expire cache start path=%s", transaction_path.c_str());
+    ok = call_daemon_base_clean_method(connection, transaction_path, "expire-cache", cancellable, error_out);
   }
   if (ok && refresh_cancelled(cancellable, error_out)) {
     ok = false;
