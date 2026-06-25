@@ -51,6 +51,11 @@ bool transaction_service_client_list_upgrade_labels(std::vector<std::string> &la
                                                     GCancellable *cancellable = nullptr);
 
 // -----------------------------------------------------------------------------
+// Refresh dnf5daemon repository metadata for the manual Refresh Repositories action.
+// -----------------------------------------------------------------------------
+bool transaction_service_client_refresh_repositories(std::string &error_out, GCancellable *cancellable = nullptr);
+
+// -----------------------------------------------------------------------------
 // Apply one previously prepared transaction request and forward its progress.
 // -----------------------------------------------------------------------------
 bool transaction_service_client_apply_started_request(const std::string &transaction_path,

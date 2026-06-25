@@ -10,6 +10,7 @@
 #include "package_query_controller.hpp"
 #include "package_query_controller_internal.hpp"
 #include "pending_transaction_apply.hpp"
+#include "transaction_service_client.hpp"
 #include "ui_helpers.hpp"
 #include "widgets_internal.hpp"
 
@@ -28,12 +29,6 @@ bool repository_refresh_spinner_owned = false;
 
 struct RepositoryRefreshTaskData {
   std::shared_ptr<std::atomic<bool>> cancel_requested;
-  GtkLabel *progress_label = nullptr;
-};
-
-struct RepositoryRefreshProgressLabelUpdate {
-  GtkLabel *label = nullptr;
-  std::string message;
 };
 
 }
@@ -58,47 +53,7 @@ repository_refresh_task_data_free(gpointer p)
     return;
   }
 
-  if (data->progress_label) {
-    g_object_unref(data->progress_label);
-  }
   delete data;
-}
-
-// -----------------------------------------------------------------------------
-// Show one repository download progress line in the bottom bar.
-// Worker thread progress must queue the GTK update on the main thread.
-// -----------------------------------------------------------------------------
-static gboolean
-repository_refresh_progress_label_update_on_main(gpointer user_data)
-{
-  RepositoryRefreshProgressLabelUpdate *update = static_cast<RepositoryRefreshProgressLabelUpdate *>(user_data);
-  if (update && update->label && !update->message.empty()) {
-    gtk_label_set_text(update->label, update->message.c_str());
-    gtk_widget_set_visible(GTK_WIDGET(update->label), TRUE);
-  }
-
-  if (update && update->label) {
-    g_object_unref(update->label);
-  }
-  delete update;
-  return G_SOURCE_REMOVE;
-}
-
-// -----------------------------------------------------------------------------
-// Queue one libdnf repository download line for the bottom bar.
-// Keep the label alive because the refresh task may finish before GTK shows the text.
-// -----------------------------------------------------------------------------
-static void
-queue_repository_refresh_progress_label(GtkLabel *label, const std::string &message)
-{
-  if (!label || message.empty()) {
-    return;
-  }
-
-  RepositoryRefreshProgressLabelUpdate *update = new RepositoryRefreshProgressLabelUpdate;
-  update->label = GTK_LABEL(g_object_ref(label));
-  update->message = message;
-  g_main_context_invoke(nullptr, repository_refresh_progress_label_update_on_main, update);
 }
 
 // -----------------------------------------------------------------------------
@@ -276,18 +231,23 @@ widgets_on_rebuild_task(GTask *task, gpointer, gpointer, GCancellable *)
 // Used only when the user clicks Refresh Repositories.
 // -----------------------------------------------------------------------------
 void
-widgets_on_force_rebuild_task(GTask *task, gpointer, gpointer task_data, GCancellable *)
+widgets_on_force_rebuild_task(GTask *task, gpointer, gpointer task_data, GCancellable *cancellable)
 {
   auto *refresh_data = static_cast<RepositoryRefreshTaskData *>(task_data);
 
   try {
     DNFUI_TRACE("Repository refresh worker start");
+    std::string daemon_error;
+    if (!transaction_service_client_refresh_repositories(daemon_error, cancellable)) {
+      if (cancellable && g_cancellable_is_cancelled(cancellable)) {
+        throw BaseOperationCancelled(daemon_error.empty() ? _("Repository refresh was cancelled.") : daemon_error);
+      }
+      throw std::runtime_error(daemon_error);
+    }
+
+    DNFUI_TRACE("Repository refresh daemon metadata done");
     BaseRepoState refresh_state = BaseManager::instance().rebuild(
-        BaseRefreshMode::FORCE_METADATA_CHECK,
-        refresh_data ? refresh_data->cancel_requested : nullptr,
-        [refresh_data](const std::string &message) {
-          queue_repository_refresh_progress_label(refresh_data ? refresh_data->progress_label : nullptr, message);
-        });
+        BaseRefreshMode::SYSTEM_CACHE_ONLY, refresh_data ? refresh_data->cancel_requested : nullptr, {});
     DNFUI_TRACE("Repository refresh worker done state=%d", static_cast<int>(refresh_state));
     // GTask completion transfers this heap value back to the GTK thread.
     // The force refresh completion handler deletes it after reading the result.
@@ -334,14 +294,11 @@ widgets_on_rebuild_task_finished(GObject *, GAsyncResult *res, gpointer user_dat
     // Search caches are bound to the old Base generation and must be dropped
     // before the user can query against freshly refreshed repositories.
     package_query_clear_search_cache();
-    if (*refresh_state == BaseRepoState::LIVE_METADATA) {
-      ui_helpers_set_status(widgets->query.status_label, _("Repositories refreshed."), "green");
-    } else if (*refresh_state == BaseRepoState::CACHED_METADATA) {
+    if (*refresh_state == BaseRepoState::INSTALLED_ONLY) {
       ui_helpers_set_status(
-          widgets->query.status_label, _("Live repo refresh failed. Using cached repository metadata."), "blue");
+          widgets->query.status_label, _("Repository refresh failed. Showing installed packages only."), "blue");
     } else {
-      ui_helpers_set_status(
-          widgets->query.status_label, _("Live repo refresh failed. Showing installed packages only."), "blue");
+      ui_helpers_set_status(widgets->query.status_label, _("Repositories refreshed."), "green");
     }
     package_query_reload_current_view(widgets);
     delete refresh_state;
@@ -523,9 +480,6 @@ widgets_on_refresh_button_clicked(GtkButton *, gpointer user_data)
   repository_refresh_cancel_requested = std::make_shared<std::atomic<bool>>(false);
   auto *refresh_data = new RepositoryRefreshTaskData;
   refresh_data->cancel_requested = repository_refresh_cancel_requested;
-  if (widgets->window_state.query_duration_label) {
-    refresh_data->progress_label = GTK_LABEL(g_object_ref(widgets->window_state.query_duration_label));
-  }
   g_task_set_task_data(task, refresh_data, repository_refresh_task_data_free);
   auto *started_at_us = new gint64(g_get_monotonic_time());
   g_object_set_data_full(

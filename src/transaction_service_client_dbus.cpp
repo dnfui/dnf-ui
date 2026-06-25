@@ -30,6 +30,7 @@ namespace {
 constexpr const char *kDnfDaemonName = "org.rpm.dnf.v0";
 constexpr const char *kDnfDaemonManagerPath = "/org/rpm/dnf/v0";
 constexpr const char *kDnfDaemonSessionManagerInterface = "org.rpm.dnf.v0.SessionManager";
+constexpr const char *kDnfDaemonBaseInterface = "org.rpm.dnf.v0.Base";
 constexpr const char *kDnfDaemonRpmInterface = "org.rpm.dnf.v0.rpm.Rpm";
 constexpr const char *kDnfDaemonRpmRepoInterface = "org.rpm.dnf.v0.rpm.Repo";
 constexpr const char *kDnfDaemonGoalInterface = "org.rpm.dnf.v0.Goal";
@@ -432,6 +433,142 @@ daemon_transaction_problems(GDBusConnection *connection, const std::string &tran
 }
 
 // -----------------------------------------------------------------------------
+// Return false when the caller cancelled the repository refresh.
+// -----------------------------------------------------------------------------
+bool
+refresh_cancelled(GCancellable *cancellable, std::string &error_out)
+{
+  if (cancellable && g_cancellable_is_cancelled(cancellable)) {
+    error_out = _("Repository refresh was cancelled.");
+    return true;
+  }
+  return false;
+}
+
+// -----------------------------------------------------------------------------
+// dnf5daemon reports a missing cache directory as a clean failure.
+// For Refresh Repositories, a missing cache is already clean.
+// -----------------------------------------------------------------------------
+bool
+daemon_clean_missing_cache_error(const std::string &error)
+{
+  return error.find("Cannot iterate the cache directory") != std::string::npos;
+}
+
+// -----------------------------------------------------------------------------
+// Call one dnf5daemon Base method that returns success and an error string.
+// -----------------------------------------------------------------------------
+bool
+call_daemon_base_status_method(GDBusConnection *connection,
+                               const std::string &transaction_path,
+                               const char *method,
+                               GVariant *parameters,
+                               GCancellable *cancellable,
+                               std::string &error_out)
+{
+  GError *error = nullptr;
+  GVariant *reply = g_dbus_connection_call_sync(connection,
+                                                kDnfDaemonName,
+                                                transaction_path.c_str(),
+                                                kDnfDaemonBaseInterface,
+                                                method,
+                                                parameters,
+                                                G_VARIANT_TYPE("(bs)"),
+                                                G_DBUS_CALL_FLAGS_NONE,
+                                                G_MAXINT,
+                                                cancellable,
+                                                &error);
+  if (!reply) {
+    error_out = error ? error->message : _("dnf5daemon repository refresh failed.");
+    g_clear_error(&error);
+    return false;
+  }
+
+  gboolean success = FALSE;
+  const gchar *message = nullptr;
+  g_variant_get(reply, "(b&s)", &success, &message);
+  if (!success) {
+    error_out = message && *message ? message : _("dnf5daemon repository refresh failed.");
+    g_variant_unref(reply);
+    return false;
+  }
+
+  g_variant_unref(reply);
+  return true;
+}
+
+// -----------------------------------------------------------------------------
+// Clean one daemon cache type, accepting a missing cache directory as empty cache.
+// -----------------------------------------------------------------------------
+bool
+call_daemon_base_clean_method(GDBusConnection *connection,
+                              const std::string &transaction_path,
+                              const char *cache_type,
+                              GCancellable *cancellable,
+                              std::string &error_out)
+{
+  std::string clean_error;
+  bool ok = call_daemon_base_status_method(connection,
+                                           transaction_path,
+                                           "clean_with_options",
+                                           g_variant_new("(s@a{sv})", cache_type, interactive_options()),
+                                           cancellable,
+                                           clean_error);
+  if (ok) {
+    return true;
+  }
+
+  if (daemon_clean_missing_cache_error(clean_error)) {
+    DNFUI_TRACE("dnf5daemon cache clean skipped missing cache directory type=%s", cache_type);
+    error_out.clear();
+    return true;
+  }
+
+  error_out = clean_error;
+  return false;
+}
+
+// -----------------------------------------------------------------------------
+// Call one dnf5daemon Base method that returns only success.
+// -----------------------------------------------------------------------------
+bool
+call_daemon_base_success_method(GDBusConnection *connection,
+                                const std::string &transaction_path,
+                                const char *method,
+                                GCancellable *cancellable,
+                                std::string &error_out)
+{
+  GError *error = nullptr;
+  GVariant *reply = g_dbus_connection_call_sync(connection,
+                                                kDnfDaemonName,
+                                                transaction_path.c_str(),
+                                                kDnfDaemonBaseInterface,
+                                                method,
+                                                nullptr,
+                                                G_VARIANT_TYPE("(b)"),
+                                                G_DBUS_CALL_FLAGS_NONE,
+                                                G_MAXINT,
+                                                cancellable,
+                                                &error);
+  if (!reply) {
+    error_out = error ? error->message : _("dnf5daemon repository refresh failed.");
+    g_clear_error(&error);
+    return false;
+  }
+
+  gboolean success = FALSE;
+  g_variant_get(reply, "(b)", &success);
+  if (!success) {
+    error_out = _("dnf5daemon repository refresh failed.");
+    g_variant_unref(reply);
+    return false;
+  }
+
+  g_variant_unref(reply);
+  return true;
+}
+
+// -----------------------------------------------------------------------------
 // Call one dnf5daemon method that marks package specs for the session.
 // -----------------------------------------------------------------------------
 bool
@@ -777,6 +914,70 @@ transaction_service_client_list_upgrade_labels(std::vector<std::string> &labels_
   DNFUI_TRACE("dnf5daemon upgrade list done labels=%zu", labels_out.size());
   g_variant_unref(packages);
   g_variant_unref(reply);
+  return true;
+}
+
+// -----------------------------------------------------------------------------
+// Refresh dnf5daemon repository metadata for the manual Refresh Repositories action.
+// -----------------------------------------------------------------------------
+bool
+transaction_service_client_refresh_repositories(std::string &error_out, GCancellable *cancellable)
+{
+  error_out.clear();
+
+  std::string connect_error;
+  GDBusConnection *connection = transaction_service_client_connect(connect_error);
+  if (!connection) {
+    error_out = connect_error;
+    return false;
+  }
+
+  std::string transaction_path;
+  if (!open_daemon_session(connection, transaction_path, error_out)) {
+    g_object_unref(connection);
+    return false;
+  }
+
+  bool ok = true;
+  if (refresh_cancelled(cancellable, error_out)) {
+    ok = false;
+  }
+  if (ok) {
+    DNFUI_TRACE("dnf5daemon repository refresh clean metadata start path=%s", transaction_path.c_str());
+    ok = call_daemon_base_clean_method(connection, transaction_path, "metadata", cancellable, error_out);
+  }
+  if (ok && refresh_cancelled(cancellable, error_out)) {
+    ok = false;
+  }
+  if (ok) {
+    DNFUI_TRACE("dnf5daemon repository refresh clean dbcache start path=%s", transaction_path.c_str());
+    ok = call_daemon_base_clean_method(connection, transaction_path, "dbcache", cancellable, error_out);
+  }
+  if (ok && refresh_cancelled(cancellable, error_out)) {
+    ok = false;
+  }
+  if (ok) {
+    DNFUI_TRACE("dnf5daemon repository refresh reset start path=%s", transaction_path.c_str());
+    ok = call_daemon_base_status_method(connection, transaction_path, "reset", nullptr, cancellable, error_out);
+  }
+  if (ok && refresh_cancelled(cancellable, error_out)) {
+    ok = false;
+  }
+  if (ok) {
+    DNFUI_TRACE("dnf5daemon repository refresh read repos start path=%s", transaction_path.c_str());
+    ok = call_daemon_base_success_method(connection, transaction_path, "read_all_repos", cancellable, error_out);
+  }
+
+  std::string release_error;
+  transaction_service_client_release_transaction_request(connection, transaction_path, release_error);
+  g_object_unref(connection);
+
+  if (!ok) {
+    DNFUI_TRACE("dnf5daemon repository refresh failed error=%s", error_out.c_str());
+    return false;
+  }
+
+  DNFUI_TRACE("dnf5daemon repository refresh done path=%s", transaction_path.c_str());
   return true;
 }
 

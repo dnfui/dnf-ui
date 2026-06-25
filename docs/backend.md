@@ -57,6 +57,20 @@ old rows back into a cache state the UI already invalidated. Search cache
 validity depends on the Base generation and this cache epoch, not on the cached
 Base id.
 
+## Repository refresh
+
+The manual Refresh Repositories button refreshes dnf5daemon first. It asks the
+daemon to clean metadata, clean dbcache, reset the daemon session, and read all
+repositories. After that succeeds, the UI rebuilds its libdnf5 Base from the
+system metadata cache.
+
+If the daemon cache directory does not exist yet, the clean step is treated as
+already clean. The refresh still resets the daemon session and loads repositories.
+
+This order matters because package previews and applies use dnf5daemon. If the
+UI refreshed only its own libdnf5 Base, the table could show package metadata
+that dnf5daemon does not resolve yet.
+
 ## Base cancellation
 
 DNF UI has two places where Stop needs help from the backend:
@@ -65,13 +79,13 @@ DNF UI has two places where Stop needs help from the backend:
 - package query workers waiting for the shared Base
 
 Repository refresh passes an atomic cancel flag into `BaseManager::rebuild`.
-`BaseManager` installs temporary libdnf download callbacks while loading
-repository metadata. When the user presses Stop, the UI sets the flag. The next
-download callback that sees the flag returns libdnf's abort status, which tells
-libdnf to stop the current transfer.
+The manual refresh path also passes a `GCancellable` to the dnf5daemon D-Bus
+calls. When the user presses Stop, the UI asks both the daemon call and the
+later UI Base rebuild to stop.
 
-This is cooperative cancellation. It can stop repository downloads when libdnf
-reaches a callback, but it cannot kill an arbitrary libdnf call immediately.
+This is cooperative cancellation. It cannot kill arbitrary libdnf or D-Bus work
+immediately, but stopped refresh work must not publish a partial replacement
+Base.
 
 Package query workers use `GCancellable`, because that is the normal GLib task
 cancellation type. `dnf_query.cpp` converts that into the same atomic flag before

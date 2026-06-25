@@ -199,6 +199,25 @@ TEST_CASE("dnf5daemon client previews upgrade-all requests", "[dnf5daemon]")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that the client can ask dnf5daemon to refresh repository metadata.
+// This is the same daemon path used by the Refresh Repositories button.
+// -----------------------------------------------------------------------------
+TEST_CASE("dnf5daemon client refreshes repositories", "[dnf5daemon]")
+{
+  require_dnf5daemon_test_enabled();
+  transaction_service_client_reset_for_tests();
+
+  std::string error;
+
+  bool refreshed = transaction_service_client_refresh_repositories(error);
+
+  transaction_service_client_reset_for_tests();
+
+  INFO(error);
+  REQUIRE(refreshed);
+}
+
+// -----------------------------------------------------------------------------
 // Verify that releasing a preview session really closes it in dnf5daemon.
 // This is the same path used when the user closes the preview dialog.
 // -----------------------------------------------------------------------------

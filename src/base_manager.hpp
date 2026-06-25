@@ -87,9 +87,11 @@ enum class BaseRepoState {
 // Requested metadata freshness for Base rebuilds.
 // NORMAL follows libdnf metadata expiration rules.
 // FORCE_METADATA_CHECK expires existing repository metadata before loading repos.
+// SYSTEM_CACHE_ONLY reads repository metadata from the system cache.
 enum class BaseRefreshMode {
   NORMAL,
   FORCE_METADATA_CHECK,
+  SYSTEM_CACHE_ONLY,
 };
 
 // -----------------------------------------------------------------------------
