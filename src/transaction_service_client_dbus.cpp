@@ -89,6 +89,21 @@ empty_options()
 }
 
 // -----------------------------------------------------------------------------
+// Return session options for manual repository refresh.
+// The refresh code expires metadata itself before loading repos again.
+// Do not let open_session load old repository data first.
+// -----------------------------------------------------------------------------
+GVariant *
+refresh_session_options()
+{
+  GVariantBuilder options;
+  g_variant_builder_init(&options, G_VARIANT_TYPE("a{sv}"));
+  g_variant_builder_add(&options, "{sv}", "load_available_repos", g_variant_new_boolean(FALSE));
+  g_variant_builder_add(&options, "{sv}", "load_system_repo", g_variant_new_boolean(FALSE));
+  return g_variant_new("a{sv}", &options);
+}
+
+// -----------------------------------------------------------------------------
 // Return options for dnf5daemon package listing.
 // The upgradable list needs daemon package identities, not full transaction solving.
 // -----------------------------------------------------------------------------
@@ -632,10 +647,13 @@ mark_package_specs(GDBusConnection *connection,
 }
 
 // -----------------------------------------------------------------------------
-// Open one dnf5daemon session and return its object path.
+// Open one dnf5daemon session with explicit options and return its object path.
 // -----------------------------------------------------------------------------
 bool
-open_daemon_session(GDBusConnection *connection, std::string &transaction_path_out, std::string &error_out)
+open_daemon_session_with_options(GDBusConnection *connection,
+                                 GVariant *options,
+                                 std::string &transaction_path_out,
+                                 std::string &error_out)
 {
   transaction_path_out.clear();
   error_out.clear();
@@ -650,7 +668,7 @@ open_daemon_session(GDBusConnection *connection, std::string &transaction_path_o
                                                 kDnfDaemonManagerPath,
                                                 kDnfDaemonSessionManagerInterface,
                                                 "open_session",
-                                                g_variant_new("(@a{sv})", empty_options()),
+                                                g_variant_new("(@a{sv})", options),
                                                 G_VARIANT_TYPE("(o)"),
                                                 G_DBUS_CALL_FLAGS_NONE,
                                                 -1,
@@ -685,6 +703,15 @@ open_daemon_session(GDBusConnection *connection, std::string &transaction_path_o
               transaction_path_out.c_str(),
               elapsed_ms_since(started_at_us));
   return true;
+}
+
+// -----------------------------------------------------------------------------
+// Open one normal dnf5daemon session and return its object path.
+// -----------------------------------------------------------------------------
+bool
+open_daemon_session(GDBusConnection *connection, std::string &transaction_path_out, std::string &error_out)
+{
+  return open_daemon_session_with_options(connection, empty_options(), transaction_path_out, error_out);
 }
 
 } // namespace
@@ -955,7 +982,7 @@ transaction_service_client_refresh_repositories(std::string &error_out, GCancell
   }
 
   std::string transaction_path;
-  if (!open_daemon_session(connection, transaction_path, error_out)) {
+  if (!open_daemon_session_with_options(connection, refresh_session_options(), transaction_path, error_out)) {
     g_object_unref(connection);
     return false;
   }

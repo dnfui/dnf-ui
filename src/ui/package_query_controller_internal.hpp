@@ -23,6 +23,10 @@ struct SearchWidgets;
 // -----------------------------------------------------------------------------
 void package_query_set_displayed_query_kind(SearchWidgets *widgets, DisplayedPackageQueryKind kind);
 // -----------------------------------------------------------------------------
+// Return true when the currently displayed table came from List Upgradable.
+// -----------------------------------------------------------------------------
+bool package_query_displayed_view_is_upgradeable(const SearchWidgets *widgets);
+// -----------------------------------------------------------------------------
 // Remember the search query that produced the current table.
 // -----------------------------------------------------------------------------
 void package_query_set_displayed_search_query(SearchWidgets *widgets,

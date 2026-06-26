@@ -62,8 +62,16 @@ Base id.
 
 The manual Refresh Repositories button refreshes dnf5daemon first. It asks the
 daemon to expire its metadata cache, reset the daemon session, and read all
-repositories. After that succeeds, the UI rebuilds its libdnf5 Base from the
-daemon-refreshed system metadata cache.
+repositories. After that succeeds, the UI also force-refreshes its own libdnf5
+Base so both package views are updated from repository metadata.
+
+The refresh session is opened without preloading installed packages or available
+repositories. The refresh code must expire metadata before asking dnf5daemon to
+load repositories again.
+
+After refresh, normal package views are reloaded from the new Base. The
+List Upgradable view is not replayed automatically, because that view also asks
+dnf5daemon for a transaction-side upgrade list and should be started explicitly.
 
 If the daemon cache directory does not exist yet, the clean step is treated as
 already clean. The refresh still resets the daemon session and loads repositories.

@@ -320,7 +320,7 @@ widgets_on_force_rebuild_task(GTask *task, gpointer, gpointer task_data, GCancel
     queue_repository_refresh_phase_label(refresh_data ? refresh_data->progress_label : nullptr,
                                          _("Loading refreshed metadata..."));
     BaseRepoState refresh_state = BaseManager::instance().rebuild(
-        BaseRefreshMode::SYSTEM_CACHE_ONLY, refresh_data ? refresh_data->cancel_requested : nullptr, {});
+        BaseRefreshMode::FORCE_METADATA_CHECK, refresh_data ? refresh_data->cancel_requested : nullptr, {});
     DNFUI_TRACE("Repository refresh worker done state=%d", static_cast<int>(refresh_state));
     // GTask completion transfers this heap value back to the GTK thread.
     // The force refresh completion handler deletes it after reading the result.
@@ -373,7 +373,9 @@ widgets_on_rebuild_task_finished(GObject *, GAsyncResult *res, gpointer user_dat
     } else {
       ui_helpers_set_status(widgets->query.status_label, _("Repositories refreshed."), "green");
     }
-    package_query_reload_current_view(widgets);
+    if (!package_query_displayed_view_is_upgradeable(widgets)) {
+      package_query_reload_current_view(widgets);
+    }
     delete refresh_state;
   } else {
     ui_helpers_set_status(widgets->query.status_label, error ? error->message : _("Repo refresh failed."), "red");
@@ -463,7 +465,9 @@ widgets_on_force_rebuild_task_finished(GObject *, GAsyncResult *res, gpointer us
       ui_helpers_set_status(
           widgets->query.status_label, _("Live repo refresh failed. Showing installed packages only."), "blue");
     }
-    package_query_reload_current_view(widgets);
+    if (!package_query_displayed_view_is_upgradeable(widgets)) {
+      package_query_reload_current_view(widgets);
+    }
     delete refresh_state;
   } else {
     DNFUI_TRACE("Repository refresh completion failed: %s", error ? error->message : "unknown error");

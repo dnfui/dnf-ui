@@ -29,6 +29,15 @@ package_query_set_displayed_query_kind(SearchWidgets *widgets, DisplayedPackageQ
 }
 
 // -----------------------------------------------------------------------------
+// Return true when the currently displayed table came from List Upgradable.
+// -----------------------------------------------------------------------------
+bool
+package_query_displayed_view_is_upgradeable(const SearchWidgets *widgets)
+{
+  return widgets && widgets->query_state.displayed_query.kind == DisplayedPackageQueryKind::LIST_UPGRADEABLE;
+}
+
+// -----------------------------------------------------------------------------
 // Preserve the active search term and flags so a post-transaction refresh can
 // rebuild the visible search results even if the user changes the checkboxes
 // while the background work is still running.
