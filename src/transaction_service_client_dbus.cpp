@@ -323,6 +323,28 @@ package_label_from_daemon_object(GVariant *object, std::string &label_out, std::
 }
 
 // -----------------------------------------------------------------------------
+// Build the package key used when comparing dnf5daemon upgrade candidates with
+// UI table rows. The exact NEVRA can differ between daemon list output and UI
+// candidate rows, but name and architecture identify the package row.
+// -----------------------------------------------------------------------------
+bool
+package_upgrade_key_from_daemon_object(GVariant *object, std::string &key_out, std::string &error_out)
+{
+  key_out.clear();
+
+  const std::string name = map_lookup_string(object, "name");
+  const std::string arch = map_lookup_string(object, "arch");
+
+  if (name.empty() || arch.empty()) {
+    error_out = _("dnf5daemon returned an incomplete package item.");
+    return false;
+  }
+
+  key_out = name + "." + arch;
+  return true;
+}
+
+// -----------------------------------------------------------------------------
 // Add one daemon transaction item to the preview model.
 // Unknown actions fail the whole preview so the dialog never hides work.
 // -----------------------------------------------------------------------------
@@ -844,15 +866,15 @@ transaction_service_client_start_upgrade_all_transaction_request(GDBusConnection
 }
 
 // -----------------------------------------------------------------------------
-// List upgrade package labels using dnf5daemon's package query API.
+// List upgrade package keys using dnf5daemon's package query API.
 // This is cheaper than resolving a full Upgrade All transaction for the package table.
 // -----------------------------------------------------------------------------
 bool
-transaction_service_client_list_upgrade_labels(std::vector<std::string> &labels_out,
-                                               std::string &error_out,
-                                               GCancellable *cancellable)
+transaction_service_client_list_upgrade_keys(std::vector<std::string> &keys_out,
+                                             std::string &error_out,
+                                             GCancellable *cancellable)
 {
-  labels_out.clear();
+  keys_out.clear();
   error_out.clear();
 
   std::string connect_error;
@@ -900,18 +922,18 @@ transaction_service_client_list_upgrade_labels(std::vector<std::string> &labels_
 
   GVariant *package = nullptr;
   while ((package = g_variant_iter_next_value(&iter)) != nullptr) {
-    std::string label;
-    if (!package_label_from_daemon_object(package, label, error_out)) {
+    std::string key;
+    if (!package_upgrade_key_from_daemon_object(package, key, error_out)) {
       g_variant_unref(package);
       g_variant_unref(packages);
       g_variant_unref(reply);
       return false;
     }
-    labels_out.push_back(label);
+    keys_out.push_back(key);
     g_variant_unref(package);
   }
 
-  DNFUI_TRACE("dnf5daemon upgrade list done labels=%zu", labels_out.size());
+  DNFUI_TRACE("dnf5daemon upgrade list done keys=%zu", keys_out.size());
   g_variant_unref(packages);
   g_variant_unref(reply);
   return true;

@@ -447,6 +447,13 @@ msgstr "Kunde inte verifiera uppgraderbara paket."
 msgid "Unable to list upgradable packages with dnf5daemon."
 msgstr "Kunde inte lista uppgraderbara paket med dnf5daemon."
 
+msgid ""
+"dnf5daemon reports upgrades that DNF UI could not load from repository metadata. "
+"Refresh repositories and try again."
+msgstr ""
+"dnf5daemon rapporterar uppgraderingar som DNF UI inte kunde läsa från förrådsmetadata. "
+"Uppdatera förråden och försök igen."
+
 #, c-format
 msgid "Found %zu package."
 msgid_plural "Found %zu packages."

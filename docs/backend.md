@@ -115,7 +115,7 @@ architecture pair.
 
 Normal search is substring based. If the search term contains `*` or `?`, normal search treats it as a wildcard pattern. Exact search remains literal.
 
-The upgradable backend query returns repository candidates from libdnf5. Before the UI shows the List Upgradable result, it filters those candidates through dnf5daemon's package list using the daemon's upgrades scope. That keeps the visible upgrade list aligned with the transaction service without resolving a full transaction just to fill the table.
+The upgradable backend query returns repository candidates from libdnf5. Before the UI shows the List Upgradable result, it checks those candidates against dnf5daemon's package list using the daemon's upgrades scope. That check uses package name and architecture, because the exact NEVRA shown by the daemon list can differ from the candidate row shown by libdnf5. The transaction preview is still the exact check for what will be applied. If libdnf5 reports no upgrade rows but dnf5daemon reports upgrades, the app reports that mismatch instead of showing a false empty list.
 
 ## Installed snapshot
 
@@ -155,7 +155,7 @@ queries do not publish partial installed state.
 
 Exact installed rows prefer the repository-candidate relation recorded on the row. Available rows fall back to the installed snapshot so the table can show when repository metadata contains a newer candidate without duplicating rows.
 
-The generic Status column is local package metadata. It can say that a newer package exists in enabled repository metadata, but it is not a transaction promise. The List Upgradable view is stricter: it shows only candidates that dnf5daemon also lists in its upgrades scope. Transaction preview and apply always go through dnf5daemon.
+The generic Status column is local package metadata. It can say that a newer package exists in enabled repository metadata, but it is not a transaction promise. The List Upgradable view is stricter: it shows only package name and architecture pairs that dnf5daemon also lists in its upgrades scope. Transaction preview and apply always go through dnf5daemon.
 
 ## Self protection
 

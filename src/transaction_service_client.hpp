@@ -44,11 +44,11 @@ transaction_service_client_preview_upgrade_all_request(TransactionPreview &previ
                                                        GCancellable *cancellable = nullptr);
 
 // -----------------------------------------------------------------------------
-// Ask dnf5daemon for available upgrade package labels without resolving a transaction.
+// Ask dnf5daemon for available upgrade package keys without resolving a transaction.
 // -----------------------------------------------------------------------------
-bool transaction_service_client_list_upgrade_labels(std::vector<std::string> &labels_out,
-                                                    std::string &error_out,
-                                                    GCancellable *cancellable = nullptr);
+bool transaction_service_client_list_upgrade_keys(std::vector<std::string> &keys_out,
+                                                  std::string &error_out,
+                                                  GCancellable *cancellable = nullptr);
 
 // -----------------------------------------------------------------------------
 // Refresh dnf5daemon repository metadata for the manual Refresh Repositories action.

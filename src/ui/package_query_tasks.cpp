@@ -117,29 +117,26 @@ struct QueryBackendBaseDropGuard {
 };
 
 // -----------------------------------------------------------------------------
-// Return the package label format used by dnf5daemon transaction previews.
+// Return the package key used to compare UI rows with dnf5daemon upgrade items.
 // -----------------------------------------------------------------------------
 static std::string
-package_row_transaction_label(const PackageRow &row)
+package_row_upgrade_key(const PackageRow &row)
 {
-  std::string label = row.name + "-";
-  if (!row.epoch.empty() && row.epoch != "0") {
-    label += row.epoch + ":";
-  }
-  label += row.version + "-" + row.release + "." + row.arch;
-  return label;
+  return row.name + "." + row.arch;
 }
 
 // -----------------------------------------------------------------------------
 // Keep only rows that dnf5daemon lists as real upgrade candidates.
 // The first query uses local libdnf metadata so the table can show package details.
 // This second check asks the daemon so the UI does not show upgrade rows the
-// transaction service would not accept. It must not resolve a full transaction.
+// transaction service would not accept. If libdnf sees no upgrades but the
+// daemon does, fail clearly instead of showing a false empty list.
+// It must not resolve a full transaction.
 // -----------------------------------------------------------------------------
 static std::vector<PackageRow>
 filter_upgradeable_rows_by_daemon_list(std::vector<PackageRow> rows, GCancellable *cancellable)
 {
-  if (rows.empty() || (cancellable && g_cancellable_is_cancelled(cancellable))) {
+  if (cancellable && g_cancellable_is_cancelled(cancellable)) {
     return rows;
   }
 
@@ -148,18 +145,25 @@ filter_upgradeable_rows_by_daemon_list(std::vector<PackageRow> rows, GCancellabl
   DNFUI_TRACE("Upgradable daemon list verification start rows=%zu", rows.size());
 #endif
 
-  std::vector<std::string> upgrade_labels;
+  std::vector<std::string> upgrade_keys;
   std::string error;
-  if (!transaction_service_client_list_upgrade_labels(upgrade_labels, error, cancellable)) {
+  if (!transaction_service_client_list_upgrade_keys(upgrade_keys, error, cancellable)) {
     throw std::runtime_error(error.empty() ? _("Unable to verify upgradable packages.") : error);
   }
 #ifdef DNFUI_DEBUG_TRACE
-  DNFUI_TRACE("Upgradable daemon list verification labels=%zu elapsed_ms=%lld",
-              upgrade_labels.size(),
+  DNFUI_TRACE("Upgradable daemon list verification keys=%zu elapsed_ms=%lld",
+              upgrade_keys.size(),
               elapsed_ms_since(started_at_us));
 #endif
 
-  std::set<std::string> daemon_upgrades(upgrade_labels.begin(), upgrade_labels.end());
+  std::set<std::string> daemon_upgrades(upgrade_keys.begin(), upgrade_keys.end());
+  if (daemon_upgrades.empty()) {
+    return {};
+  }
+  if (rows.empty()) {
+    throw std::runtime_error(_("dnf5daemon reports upgrades that DNF UI could not load from repository metadata. "
+                               "Refresh repositories and try again."));
+  }
 
   std::vector<PackageRow> filtered_rows;
   filtered_rows.reserve(rows.size());
@@ -168,7 +172,8 @@ filter_upgradeable_rows_by_daemon_list(std::vector<PackageRow> rows, GCancellabl
       return {};
     }
 
-    if (daemon_upgrades.count(package_row_transaction_label(row)) > 0) {
+    std::string row_key = package_row_upgrade_key(row);
+    if (daemon_upgrades.count(row_key) > 0) {
       filtered_rows.push_back(row);
     }
   }
