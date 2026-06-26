@@ -71,7 +71,7 @@ load repositories again.
 
 After refresh, normal package views are reloaded from the new Base. The
 List Upgradable view is not replayed automatically, because that view also asks
-dnf5daemon for a transaction-side upgrade list and should be started explicitly.
+dnf5daemon to resolve Upgrade All and should be started explicitly.
 
 If the daemon cache directory does not exist yet, the clean step is treated as
 already clean. The refresh still resets the daemon session and loads repositories.
@@ -123,7 +123,7 @@ architecture pair.
 
 Normal search is substring based. If the search term contains `*` or `?`, normal search treats it as a wildcard pattern. Exact search remains literal.
 
-The upgradable backend query returns repository candidates from libdnf5. Before the UI shows the List Upgradable result, it checks those candidates against dnf5daemon's package list using the daemon's upgrades scope. That check uses package name and architecture, because the exact NEVRA shown by the daemon list can differ from the candidate row shown by libdnf5. The transaction preview is still the exact check for what will be applied. If libdnf5 reports no upgrade rows but dnf5daemon reports upgrades, the app reports that mismatch instead of showing a false empty list.
+The upgradable backend query returns repository candidates from libdnf5. Before the UI shows the List Upgradable result, it checks those candidates against the resolved dnf5daemon Upgrade All preview. That check uses package name and architecture, because the exact NEVRA shown by the daemon preview can differ from the candidate row shown by libdnf5. If libdnf5 reports no upgrade rows but dnf5daemon resolves upgrades, the app reports that mismatch instead of showing a false empty list.
 
 ## Installed snapshot
 
@@ -163,7 +163,7 @@ queries do not publish partial installed state.
 
 Exact installed rows prefer the repository-candidate relation recorded on the row. Available rows fall back to the installed snapshot so the table can show when repository metadata contains a newer candidate without duplicating rows.
 
-The generic Status column is local package metadata. It can say that a newer package exists in enabled repository metadata, but it is not a transaction promise. The List Upgradable view is stricter: it shows only package name and architecture pairs that dnf5daemon also lists in its upgrades scope. Transaction preview and apply always go through dnf5daemon.
+The generic Status column is local package metadata. It can say that a newer package exists in enabled repository metadata, but it is not a transaction promise. The List Upgradable view is stricter: it shows only package name and architecture pairs that are present in the resolved dnf5daemon Upgrade All preview. Transaction preview and apply always go through dnf5daemon.
 
 ## Self protection
 

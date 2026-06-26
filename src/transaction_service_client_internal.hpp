@@ -13,6 +13,7 @@
 #include <functional>
 #include <map>
 #include <string>
+#include <vector>
 
 struct TransactionPreview;
 struct TransactionRequest;
@@ -49,7 +50,8 @@ bool transaction_service_client_get_transaction_preview(GDBusConnection *connect
                                                         TransactionServiceProgressForwarder *progress_forwarder,
                                                         GCancellable *cancellable,
                                                         TransactionPreview &preview_out,
-                                                        std::string &error_out);
+                                                        std::string &error_out,
+                                                        std::vector<std::string> *upgrade_keys_out = nullptr);
 
 bool transaction_service_client_start_apply_request(GDBusConnection *connection,
                                                     const std::string &transaction_path,
@@ -75,7 +77,8 @@ transaction_service_client_wait_for_started_transaction_preview(GDBusConnection 
                                                                 TransactionServiceProgressForwarder *progress_forwarder,
                                                                 GCancellable *cancellable,
                                                                 TransactionPreview &preview_out,
-                                                                std::string &error_out);
+                                                                std::string &error_out,
+                                                                std::vector<std::string> *upgrade_keys_out = nullptr);
 
 guint transaction_service_client_subscribe_progress(GDBusConnection *connection,
                                                     const std::string &transaction_path,

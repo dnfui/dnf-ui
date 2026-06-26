@@ -104,28 +104,6 @@ refresh_session_options()
 }
 
 // -----------------------------------------------------------------------------
-// Return options for dnf5daemon package listing.
-// The upgradable list needs daemon package identities, not full transaction solving.
-// -----------------------------------------------------------------------------
-GVariant *
-upgrade_list_options()
-{
-  GVariantBuilder attrs;
-  g_variant_builder_init(&attrs, G_VARIANT_TYPE("as"));
-  g_variant_builder_add(&attrs, "s", "name");
-  g_variant_builder_add(&attrs, "s", "epoch");
-  g_variant_builder_add(&attrs, "s", "version");
-  g_variant_builder_add(&attrs, "s", "release");
-  g_variant_builder_add(&attrs, "s", "arch");
-
-  GVariantBuilder options;
-  g_variant_builder_init(&options, G_VARIANT_TYPE("a{sv}"));
-  g_variant_builder_add(&options, "{sv}", "scope", g_variant_new_string("upgrades"));
-  g_variant_builder_add(&options, "{sv}", "package_attrs", g_variant_builder_end(&attrs));
-  return g_variant_new("a{sv}", &options);
-}
-
-// -----------------------------------------------------------------------------
 // Return resolve options for one daemon session.
 // Remove requests need allow_erasing so dependency removals match normal DNF behavior.
 // -----------------------------------------------------------------------------
@@ -893,80 +871,6 @@ transaction_service_client_start_upgrade_all_transaction_request(GDBusConnection
 }
 
 // -----------------------------------------------------------------------------
-// List upgrade package keys using dnf5daemon's package query API.
-// This is cheaper than resolving a full Upgrade All transaction for the package table.
-// -----------------------------------------------------------------------------
-bool
-transaction_service_client_list_upgrade_keys(std::vector<std::string> &keys_out,
-                                             std::string &error_out,
-                                             GCancellable *cancellable)
-{
-  keys_out.clear();
-  error_out.clear();
-
-  std::string connect_error;
-  GDBusConnection *connection = transaction_service_client_connect(connect_error);
-  if (!connection) {
-    error_out = connect_error;
-    return false;
-  }
-
-  std::string transaction_path;
-  if (!open_daemon_session(connection, transaction_path, error_out)) {
-    g_object_unref(connection);
-    return false;
-  }
-
-  GError *error = nullptr;
-  GVariant *reply = g_dbus_connection_call_sync(connection,
-                                                kDnfDaemonName,
-                                                transaction_path.c_str(),
-                                                kDnfDaemonRpmInterface,
-                                                "list",
-                                                g_variant_new("(@a{sv})", upgrade_list_options()),
-                                                G_VARIANT_TYPE("(aa{sv})"),
-                                                G_DBUS_CALL_FLAGS_NONE,
-                                                G_MAXINT,
-                                                cancellable,
-                                                &error);
-
-  std::string release_error;
-  transaction_service_client_release_transaction_request(connection, transaction_path, release_error);
-  g_object_unref(connection);
-
-  if (!reply) {
-    error_out = error ? error->message : _("Unable to list upgradable packages with dnf5daemon.");
-    DNFUI_TRACE("dnf5daemon upgrade list failed error=%s", error_out.c_str());
-    g_clear_error(&error);
-    return false;
-  }
-
-  GVariant *packages = nullptr;
-  g_variant_get(reply, "(@aa{sv})", &packages);
-
-  GVariantIter iter;
-  g_variant_iter_init(&iter, packages);
-
-  GVariant *package = nullptr;
-  while ((package = g_variant_iter_next_value(&iter)) != nullptr) {
-    std::string key;
-    if (!package_upgrade_key_from_daemon_object(package, key, error_out)) {
-      g_variant_unref(package);
-      g_variant_unref(packages);
-      g_variant_unref(reply);
-      return false;
-    }
-    keys_out.push_back(key);
-    g_variant_unref(package);
-  }
-
-  DNFUI_TRACE("dnf5daemon upgrade list done keys=%zu", keys_out.size());
-  g_variant_unref(packages);
-  g_variant_unref(reply);
-  return true;
-}
-
-// -----------------------------------------------------------------------------
 // Refresh dnf5daemon repository metadata for the manual Refresh Repositories action.
 // -----------------------------------------------------------------------------
 bool
@@ -1032,10 +936,14 @@ transaction_service_client_get_transaction_preview(GDBusConnection *connection,
                                                    TransactionServiceProgressForwarder *progress_forwarder,
                                                    GCancellable *cancellable,
                                                    TransactionPreview &preview_out,
-                                                   std::string &error_out)
+                                                   std::string &error_out,
+                                                   std::vector<std::string> *upgrade_keys_out)
 {
   preview_out = {};
   error_out.clear();
+  if (upgrade_keys_out) {
+    upgrade_keys_out->clear();
+  }
 
   if (!connection || transaction_path.empty()) {
     error_out = _("dnf5daemon transaction session is not available.");
@@ -1186,6 +1094,14 @@ transaction_service_client_get_transaction_preview(GDBusConnection *connection,
     g_variant_get(item, "(&s&s&s@a{sv}@a{sv})", &object_type, &action, &reason, &attributes, &object);
     bool ok = append_daemon_preview_item(
         built_preview, object_type ? object_type : "", action ? action : "", object, error_out);
+    if (ok && upgrade_keys_out && ascii_lower(object_type ? object_type : "") == "package" &&
+        ascii_lower(action ? action : "") == "upgrade") {
+      std::string key;
+      ok = package_upgrade_key_from_daemon_object(object, key, error_out);
+      if (ok) {
+        upgrade_keys_out->push_back(std::move(key));
+      }
+    }
 
     g_variant_unref(attributes);
     g_variant_unref(object);

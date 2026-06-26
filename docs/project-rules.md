@@ -32,7 +32,7 @@ This file states the rules that should stay true as DNF UI changes.
 - An upgradable package row represents an installed package with a newer
   repository candidate.
 - The generic Status column may show that repository metadata contains a newer candidate. It must not be treated as proof that dnf5daemon can apply that upgrade.
-- The List Upgradable view must be checked against dnf5daemon by package name and architecture before showing rows, because dnf5daemon is the service that applies package transactions. If libdnf5 reports no upgrade rows but dnf5daemon reports upgrades, show a clear error instead of a false empty list.
+- The List Upgradable view must be checked against the resolved dnf5daemon Upgrade All preview by package name and architecture before showing rows, because dnf5daemon is the service that applies package transactions. If libdnf5 reports no upgrade rows but dnf5daemon resolves upgrades, show a clear error instead of a false empty list.
 - When showing an upgradable package, details tabs should describe the currently
   installed package unless the text clearly says it is showing update information.
 - Installed package checks must not load repository metadata when local rpmdb
