@@ -61,7 +61,7 @@ Why this matters:
 - `dnf_backend_get_upgradeable_package_rows_interruptible` depends on
   `filter_upgrades()` so the app follows libdnf5's upgrade-candidate semantics
   instead of maintaining its own version comparison rules.
-- The local upgradable package query is a read-only candidate query. The UI checks the List Upgradable view against the resolved dnf5daemon Upgrade All preview by package name and architecture before showing it. If libdnf5 reports no upgrade rows but dnf5daemon resolves upgrades, the app must show a clear error instead of a false empty list.
+- The local upgradable package query is a read-only candidate query. The UI checks the List Upgradable view against the resolved dnf5daemon Upgrade All preview by package name and architecture before showing it. This filters out local rows the daemon would not upgrade, but it is not a strict equality check between the libdnf5 row set and the daemon key set. If libdnf5 reports no upgrade rows but dnf5daemon resolves upgrades, the app must show a clear error instead of a false empty list.
 - Upgradable rows are available package candidates. UI actions that remove or reinstall such a row
   must resolve the matching installed row by package name and architecture before building the pending action.
 - Installed rows can also be classified as upgradable after repo annotation.

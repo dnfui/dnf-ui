@@ -56,6 +56,29 @@ flowchart TD
     Client --> Daemon[DNF5 dnf5daemon]
 ```
 
+## Package data and transaction data
+
+DNF UI deliberately uses two package-management paths.
+
+libdnf5 is used for package views. It is fast, runs in the unprivileged GUI
+process, and gives the app the package details needed for the table, search,
+installed packages, files, dependencies, and changelog text.
+
+dnf5daemon is used for transaction decisions and package changes. It is the
+service that resolves previews, applies transactions, handles Polkit
+authorization, and deals with repository signing keys. Anything that can change
+the system must go through dnf5daemon.
+
+The List Upgradable view sits between those two paths. The visible rows are
+built from libdnf5 so the table can show normal package information. Before
+those rows are shown, DNF UI asks dnf5daemon to resolve its native Upgrade All
+preview and keeps only rows whose package name and architecture are present in
+that resolved preview. This keeps the view useful while avoiding rows that the
+transaction service would not accept.
+
+This split is intentional, but it is also a boundary that may change in a later
+version if dnf5daemon gains a better read API for the full package table.
+
 ## Startup
 
 Startup follows a short path:

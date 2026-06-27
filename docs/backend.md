@@ -28,7 +28,7 @@ Controller code should use this public API instead of calling libdnf5 directly.
 The Base can be in one of four repository states:
 
 - `LIVE_METADATA`: normal repository metadata loaded
-- `DAEMON_SYNCED_METADATA`: dnf5daemon refreshed metadata first, then the UI read that cache
+- `DAEMON_SYNCED_METADATA`: dnf5daemon refreshed metadata first, then the UI loaded matching refreshed metadata
 - `CACHED_METADATA`: live repository refresh failed, cached metadata loaded
 - `INSTALLED_ONLY`: only the local installed package database is available
 
@@ -60,25 +60,32 @@ Base id.
 
 ## Repository refresh
 
-The manual Refresh Repositories button refreshes dnf5daemon first. It asks the
-daemon to expire its metadata cache, reset the daemon session, and read all
-repositories. After that succeeds, the UI also force-refreshes its own libdnf5
-Base so both package views are updated from repository metadata.
+The manual Refresh Repositories button refreshes both package-management paths
+used by the app.
+
+DNF UI refreshes dnf5daemon first because transaction previews and apply work go
+through the daemon. It asks the daemon to expire its metadata cache, reset the
+daemon session, and read all repositories. After that succeeds, the UI
+force-refreshes its own libdnf5 Base because package views and package details
+are still built from libdnf5.
 
 The refresh session is opened without preloading installed packages or available
 repositories. The refresh code must expire metadata before asking dnf5daemon to
 load repositories again.
 
-After refresh, normal package views are reloaded from the new Base. The
-List Upgradable view is not replayed automatically, because that view also asks
-dnf5daemon to resolve Upgrade All and should be started explicitly.
+After refresh, normal package views are reloaded from the new Base. If
+List Upgradable is visible, the table is cleared instead of left on screen,
+because those rows came from the previous metadata generation. The app asks the
+user to press List Upgradable again so the daemon-checked upgrade list is loaded
+explicitly.
 
 If the daemon cache directory does not exist yet, the clean step is treated as
 already clean. The refresh still resets the daemon session and loads repositories.
 
 This order matters because package previews and applies use dnf5daemon. If the
 UI refreshed only its own libdnf5 Base, the table could show package metadata
-that dnf5daemon does not resolve yet.
+that dnf5daemon does not resolve yet. If only dnf5daemon was refreshed, package
+views could still show stale libdnf5 rows.
 
 ## Base cancellation
 
@@ -123,7 +130,9 @@ architecture pair.
 
 Normal search is substring based. If the search term contains `*` or `?`, normal search treats it as a wildcard pattern. Exact search remains literal.
 
-The upgradable backend query returns repository candidates from libdnf5. Before the UI shows the List Upgradable result, it checks those candidates against the resolved dnf5daemon Upgrade All preview. That check uses package name and architecture, because the exact NEVRA shown by the daemon preview can differ from the candidate row shown by libdnf5. If libdnf5 reports no upgrade rows but dnf5daemon resolves upgrades, the app reports that mismatch instead of showing a false empty list.
+The upgradable backend query returns repository candidates from libdnf5. Before the UI shows the List Upgradable result, it checks those candidates against the resolved dnf5daemon Upgrade All preview. That check uses package name and architecture, because the exact NEVRA shown by the daemon preview can differ from the candidate row shown by libdnf5.
+
+The check is deliberately not a strict equality check. libdnf5 owns the table rows because it provides the package details the UI needs. dnf5daemon owns the transaction decision because it is the service that will apply the upgrade. DNF UI filters out libdnf5 rows that dnf5daemon does not resolve, but it does not fail just because dnf5daemon reports an extra upgrade key that the current libdnf5 row query did not return. If libdnf5 reports no upgrade rows while dnf5daemon resolves upgrades, the app reports that mismatch instead of showing a false empty list.
 
 ## Installed snapshot
 
