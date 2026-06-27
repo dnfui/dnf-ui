@@ -221,8 +221,8 @@ state.
 Stop is cooperative. A Stop button cancels the task state immediately, but the
 worker still has to reach a safe cancellation point before it can return. Search
 and package list workers can now stop while waiting for the shared Base.
-Repository refresh can stop repository downloads through libdnf callbacks, but
-not every libdnf step has a callback.
+Repository refresh cancels both the dnf5daemon refresh call and the later
+libdnf5 Base reload. Not every D-Bus or libdnf5 step can stop immediately.
 
 ## Refresh rules
 
@@ -232,7 +232,8 @@ When that happens, the UI should:
 
 - clear cached package search results
 - refresh or republish the installed-package snapshot
-- reload the current package view
+- reload the current package view, or clear List Upgradable so stale upgrade
+  rows are not left visible
 - keep pending action state consistent with the visible rows
 
 The shared refresh helpers live in [src/ui/widgets.cpp](../src/ui/widgets.cpp).

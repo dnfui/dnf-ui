@@ -61,7 +61,7 @@ Why this matters:
 - `dnf_backend_get_upgradeable_package_rows_interruptible` depends on
   `filter_upgrades()` so the app follows libdnf5's upgrade-candidate semantics
   instead of maintaining its own version comparison rules.
-- The local upgradable package query is a read-only candidate query. The UI filters the List Upgradable view through dnf5daemon's package list before showing it, and the transaction preview remains the final check for what would actually be installed, upgraded, downgraded, reinstalled, removed, or replaced.
+- The local upgradable package query is a read-only candidate query. The UI checks the List Upgradable view against the resolved dnf5daemon Upgrade All preview by package name and architecture before showing it. This filters out local rows the daemon would not upgrade, but it is not a strict equality check between the libdnf5 row set and the daemon key set. If libdnf5 reports no upgrade rows but dnf5daemon resolves upgrades, the app must show a clear error instead of a false empty list.
 - Upgradable rows are available package candidates. UI actions that remove or reinstall such a row
   must resolve the matching installed row by package name and architecture before building the pending action.
 - Installed rows can also be classified as upgradable after repo annotation.
@@ -227,6 +227,8 @@ Assumptions:
 - dnf5daemon is available on the system bus as `org.rpm.dnf.v0`.
 - The session manager object path is `/org/rpm/dnf/v0`.
 - Sessions are opened through `org.rpm.dnf.v0.SessionManager.open_session(a{sv}) -> (o)`.
+- Manual repository refresh opens a session with `load_available_repos=false`
+  and `load_system_repo=false`, then explicitly expires and reloads repositories.
 - Session cleanup uses `org.rpm.dnf.v0.SessionManager.close_session(o) -> (b)`.
 - Package specs are marked on the session through these rpm interface methods:
   `install(as, a{sv})`, `remove(as, a{sv})`, `reinstall(as, a{sv})`, and `upgrade(as, a{sv})`.

@@ -261,8 +261,17 @@ msgstr "Uppdatering av valt paket avbröts."
 msgid "Repositories refreshed."
 msgstr "Förråd uppdaterade."
 
+msgid "Repositories refreshed. Press List Upgradable to load updated upgrades."
+msgstr "Förråd uppdaterade. Tryck på Lista uppgraderbara för att läsa in uppdaterade uppgraderingar."
+
 msgid "Refreshing repositories..."
 msgstr "Uppdaterar förråd..."
+
+msgid "Refreshing dnf5daemon metadata..."
+msgstr "Uppdaterar dnf5daemon-metadata..."
+
+msgid "Loading refreshed metadata..."
+msgstr "Läser in uppdaterad metadata..."
 
 msgid "Repository refresh cancelled."
 msgstr "Förrådsuppdatering avbröts."
@@ -440,6 +449,13 @@ msgstr "Kunde inte verifiera uppgraderbara paket."
 
 msgid "Unable to list upgradable packages with dnf5daemon."
 msgstr "Kunde inte lista uppgraderbara paket med dnf5daemon."
+
+msgid ""
+"dnf5daemon reports upgrades that DNF UI could not load from repository metadata. "
+"Refresh repositories and try again."
+msgstr ""
+"dnf5daemon rapporterar uppgraderingar som DNF UI inte kunde läsa från förrådsmetadata. "
+"Uppdatera förråden och försök igen."
 
 #, c-format
 msgid "Found %zu package."

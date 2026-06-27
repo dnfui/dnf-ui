@@ -413,6 +413,13 @@ build_base_with_offline_fallback(BaseRefreshMode refresh_mode = BaseRefreshMode:
                                  BaseProgressCallback progress_callback = {},
                                  bool load_changelog_metadata = false)
 {
+  if (refresh_mode == BaseRefreshMode::SYSTEM_CACHE_ONLY) {
+    BuiltBase built = build_base_for_mode(
+        RepoLoadMode::CACHE_ONLY_METADATA, BaseRefreshMode::NORMAL, cancel_requested, {}, load_changelog_metadata);
+    built.repo_state = BaseRepoState::DAEMON_SYNCED_METADATA;
+    return built;
+  }
+
   try {
     return build_base_for_mode(
         RepoLoadMode::FULL, refresh_mode, cancel_requested, progress_callback, load_changelog_metadata);

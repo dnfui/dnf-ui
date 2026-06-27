@@ -30,6 +30,7 @@ namespace {
 constexpr const char *kDnfDaemonName = "org.rpm.dnf.v0";
 constexpr const char *kDnfDaemonManagerPath = "/org/rpm/dnf/v0";
 constexpr const char *kDnfDaemonSessionManagerInterface = "org.rpm.dnf.v0.SessionManager";
+constexpr const char *kDnfDaemonBaseInterface = "org.rpm.dnf.v0.Base";
 constexpr const char *kDnfDaemonRpmInterface = "org.rpm.dnf.v0.rpm.Rpm";
 constexpr const char *kDnfDaemonRpmRepoInterface = "org.rpm.dnf.v0.rpm.Repo";
 constexpr const char *kDnfDaemonGoalInterface = "org.rpm.dnf.v0.Goal";
@@ -88,24 +89,17 @@ empty_options()
 }
 
 // -----------------------------------------------------------------------------
-// Return options for dnf5daemon package listing.
-// The upgradable list needs daemon package identities, not full transaction solving.
+// Return session options for manual repository refresh.
+// The refresh code expires metadata itself before loading repos again.
+// Do not let open_session load old repository data first.
 // -----------------------------------------------------------------------------
 GVariant *
-upgrade_list_options()
+refresh_session_options()
 {
-  GVariantBuilder attrs;
-  g_variant_builder_init(&attrs, G_VARIANT_TYPE("as"));
-  g_variant_builder_add(&attrs, "s", "name");
-  g_variant_builder_add(&attrs, "s", "epoch");
-  g_variant_builder_add(&attrs, "s", "version");
-  g_variant_builder_add(&attrs, "s", "release");
-  g_variant_builder_add(&attrs, "s", "arch");
-
   GVariantBuilder options;
   g_variant_builder_init(&options, G_VARIANT_TYPE("a{sv}"));
-  g_variant_builder_add(&options, "{sv}", "scope", g_variant_new_string("upgrades"));
-  g_variant_builder_add(&options, "{sv}", "package_attrs", g_variant_builder_end(&attrs));
+  g_variant_builder_add(&options, "{sv}", "load_available_repos", g_variant_new_boolean(FALSE));
+  g_variant_builder_add(&options, "{sv}", "load_system_repo", g_variant_new_boolean(FALSE));
   return g_variant_new("a{sv}", &options);
 }
 
@@ -322,6 +316,28 @@ package_label_from_daemon_object(GVariant *object, std::string &label_out, std::
 }
 
 // -----------------------------------------------------------------------------
+// Build the package key used when comparing dnf5daemon upgrade candidates with
+// UI table rows. The exact NEVRA can differ between daemon list output and UI
+// candidate rows, but name and architecture identify the package row.
+// -----------------------------------------------------------------------------
+bool
+package_upgrade_key_from_daemon_object(GVariant *object, std::string &key_out, std::string &error_out)
+{
+  key_out.clear();
+
+  const std::string name = map_lookup_string(object, "name");
+  const std::string arch = map_lookup_string(object, "arch");
+
+  if (name.empty() || arch.empty()) {
+    error_out = _("dnf5daemon returned an incomplete package item.");
+    return false;
+  }
+
+  key_out = name + "." + arch;
+  return true;
+}
+
+// -----------------------------------------------------------------------------
 // Add one daemon transaction item to the preview model.
 // Unknown actions fail the whole preview so the dialog never hides work.
 // -----------------------------------------------------------------------------
@@ -432,6 +448,142 @@ daemon_transaction_problems(GDBusConnection *connection, const std::string &tran
 }
 
 // -----------------------------------------------------------------------------
+// Return false when the caller cancelled the repository refresh.
+// -----------------------------------------------------------------------------
+bool
+refresh_cancelled(GCancellable *cancellable, std::string &error_out)
+{
+  if (cancellable && g_cancellable_is_cancelled(cancellable)) {
+    error_out = _("Repository refresh was cancelled.");
+    return true;
+  }
+  return false;
+}
+
+// -----------------------------------------------------------------------------
+// dnf5daemon reports a missing cache directory as a clean failure.
+// For Refresh Repositories, a missing cache is already clean.
+// -----------------------------------------------------------------------------
+bool
+daemon_clean_missing_cache_error(const std::string &error)
+{
+  return error.find("Cannot iterate the cache directory") != std::string::npos;
+}
+
+// -----------------------------------------------------------------------------
+// Call one dnf5daemon Base method that returns success and an error string.
+// -----------------------------------------------------------------------------
+bool
+call_daemon_base_status_method(GDBusConnection *connection,
+                               const std::string &transaction_path,
+                               const char *method,
+                               GVariant *parameters,
+                               GCancellable *cancellable,
+                               std::string &error_out)
+{
+  GError *error = nullptr;
+  GVariant *reply = g_dbus_connection_call_sync(connection,
+                                                kDnfDaemonName,
+                                                transaction_path.c_str(),
+                                                kDnfDaemonBaseInterface,
+                                                method,
+                                                parameters,
+                                                G_VARIANT_TYPE("(bs)"),
+                                                G_DBUS_CALL_FLAGS_NONE,
+                                                G_MAXINT,
+                                                cancellable,
+                                                &error);
+  if (!reply) {
+    error_out = error ? error->message : _("dnf5daemon repository refresh failed.");
+    g_clear_error(&error);
+    return false;
+  }
+
+  gboolean success = FALSE;
+  const gchar *message = nullptr;
+  g_variant_get(reply, "(b&s)", &success, &message);
+  if (!success) {
+    error_out = message && *message ? message : _("dnf5daemon repository refresh failed.");
+    g_variant_unref(reply);
+    return false;
+  }
+
+  g_variant_unref(reply);
+  return true;
+}
+
+// -----------------------------------------------------------------------------
+// Clean one daemon cache type, accepting a missing cache directory as empty cache.
+// -----------------------------------------------------------------------------
+bool
+call_daemon_base_clean_method(GDBusConnection *connection,
+                              const std::string &transaction_path,
+                              const char *cache_type,
+                              GCancellable *cancellable,
+                              std::string &error_out)
+{
+  std::string clean_error;
+  bool ok = call_daemon_base_status_method(connection,
+                                           transaction_path,
+                                           "clean_with_options",
+                                           g_variant_new("(s@a{sv})", cache_type, interactive_options()),
+                                           cancellable,
+                                           clean_error);
+  if (ok) {
+    return true;
+  }
+
+  if (daemon_clean_missing_cache_error(clean_error)) {
+    DNFUI_TRACE("dnf5daemon cache clean skipped missing cache directory type=%s", cache_type);
+    error_out.clear();
+    return true;
+  }
+
+  error_out = clean_error;
+  return false;
+}
+
+// -----------------------------------------------------------------------------
+// Call one dnf5daemon Base method that returns only success.
+// -----------------------------------------------------------------------------
+bool
+call_daemon_base_success_method(GDBusConnection *connection,
+                                const std::string &transaction_path,
+                                const char *method,
+                                GCancellable *cancellable,
+                                std::string &error_out)
+{
+  GError *error = nullptr;
+  GVariant *reply = g_dbus_connection_call_sync(connection,
+                                                kDnfDaemonName,
+                                                transaction_path.c_str(),
+                                                kDnfDaemonBaseInterface,
+                                                method,
+                                                nullptr,
+                                                G_VARIANT_TYPE("(b)"),
+                                                G_DBUS_CALL_FLAGS_NONE,
+                                                G_MAXINT,
+                                                cancellable,
+                                                &error);
+  if (!reply) {
+    error_out = error ? error->message : _("dnf5daemon repository refresh failed.");
+    g_clear_error(&error);
+    return false;
+  }
+
+  gboolean success = FALSE;
+  g_variant_get(reply, "(b)", &success);
+  if (!success) {
+    error_out = _("dnf5daemon repository refresh failed.");
+    g_variant_unref(reply);
+    return false;
+  }
+
+  g_variant_unref(reply);
+  return true;
+}
+
+// -----------------------------------------------------------------------------
 // Call one dnf5daemon method that marks package specs for the session.
 // -----------------------------------------------------------------------------
 bool
@@ -473,10 +625,13 @@ mark_package_specs(GDBusConnection *connection,
 }
 
 // -----------------------------------------------------------------------------
-// Open one dnf5daemon session and return its object path.
+// Open one dnf5daemon session with explicit options and return its object path.
 // -----------------------------------------------------------------------------
 bool
-open_daemon_session(GDBusConnection *connection, std::string &transaction_path_out, std::string &error_out)
+open_daemon_session_with_options(GDBusConnection *connection,
+                                 GVariant *options,
+                                 std::string &transaction_path_out,
+                                 std::string &error_out)
 {
   transaction_path_out.clear();
   error_out.clear();
@@ -491,7 +646,7 @@ open_daemon_session(GDBusConnection *connection, std::string &transaction_path_o
                                                 kDnfDaemonManagerPath,
                                                 kDnfDaemonSessionManagerInterface,
                                                 "open_session",
-                                                g_variant_new("(@a{sv})", empty_options()),
+                                                g_variant_new("(@a{sv})", options),
                                                 G_VARIANT_TYPE("(o)"),
                                                 G_DBUS_CALL_FLAGS_NONE,
                                                 -1,
@@ -526,6 +681,15 @@ open_daemon_session(GDBusConnection *connection, std::string &transaction_path_o
               transaction_path_out.c_str(),
               elapsed_ms_since(started_at_us));
   return true;
+}
+
+// -----------------------------------------------------------------------------
+// Open one normal dnf5daemon session and return its object path.
+// -----------------------------------------------------------------------------
+bool
+open_daemon_session(GDBusConnection *connection, std::string &transaction_path_out, std::string &error_out)
+{
+  return open_daemon_session_with_options(connection, empty_options(), transaction_path_out, error_out);
 }
 
 } // namespace
@@ -707,15 +871,11 @@ transaction_service_client_start_upgrade_all_transaction_request(GDBusConnection
 }
 
 // -----------------------------------------------------------------------------
-// List upgrade package labels using dnf5daemon's package query API.
-// This is cheaper than resolving a full Upgrade All transaction for the package table.
+// Refresh dnf5daemon repository metadata for the manual Refresh Repositories action.
 // -----------------------------------------------------------------------------
 bool
-transaction_service_client_list_upgrade_labels(std::vector<std::string> &labels_out,
-                                               std::string &error_out,
-                                               GCancellable *cancellable)
+transaction_service_client_refresh_repositories(std::string &error_out, GCancellable *cancellable)
 {
-  labels_out.clear();
   error_out.clear();
 
   std::string connect_error;
@@ -726,57 +886,44 @@ transaction_service_client_list_upgrade_labels(std::vector<std::string> &labels_
   }
 
   std::string transaction_path;
-  if (!open_daemon_session(connection, transaction_path, error_out)) {
+  if (!open_daemon_session_with_options(connection, refresh_session_options(), transaction_path, error_out)) {
     g_object_unref(connection);
     return false;
   }
 
-  GError *error = nullptr;
-  GVariant *reply = g_dbus_connection_call_sync(connection,
-                                                kDnfDaemonName,
-                                                transaction_path.c_str(),
-                                                kDnfDaemonRpmInterface,
-                                                "list",
-                                                g_variant_new("(@a{sv})", upgrade_list_options()),
-                                                G_VARIANT_TYPE("(aa{sv})"),
-                                                G_DBUS_CALL_FLAGS_NONE,
-                                                G_MAXINT,
-                                                cancellable,
-                                                &error);
+  bool ok = true;
+  if (refresh_cancelled(cancellable, error_out)) {
+    ok = false;
+  }
+  if (ok) {
+    DNFUI_TRACE("dnf5daemon repository refresh expire cache start path=%s", transaction_path.c_str());
+    ok = call_daemon_base_clean_method(connection, transaction_path, "expire-cache", cancellable, error_out);
+  }
+  if (ok && refresh_cancelled(cancellable, error_out)) {
+    ok = false;
+  }
+  if (ok) {
+    DNFUI_TRACE("dnf5daemon repository refresh reset start path=%s", transaction_path.c_str());
+    ok = call_daemon_base_status_method(connection, transaction_path, "reset", nullptr, cancellable, error_out);
+  }
+  if (ok && refresh_cancelled(cancellable, error_out)) {
+    ok = false;
+  }
+  if (ok) {
+    DNFUI_TRACE("dnf5daemon repository refresh read repos start path=%s", transaction_path.c_str());
+    ok = call_daemon_base_success_method(connection, transaction_path, "read_all_repos", cancellable, error_out);
+  }
 
   std::string release_error;
   transaction_service_client_release_transaction_request(connection, transaction_path, release_error);
   g_object_unref(connection);
 
-  if (!reply) {
-    error_out = error ? error->message : _("Unable to list upgradable packages with dnf5daemon.");
-    DNFUI_TRACE("dnf5daemon upgrade list failed error=%s", error_out.c_str());
-    g_clear_error(&error);
+  if (!ok) {
+    DNFUI_TRACE("dnf5daemon repository refresh failed error=%s", error_out.c_str());
     return false;
   }
 
-  GVariant *packages = nullptr;
-  g_variant_get(reply, "(@aa{sv})", &packages);
-
-  GVariantIter iter;
-  g_variant_iter_init(&iter, packages);
-
-  GVariant *package = nullptr;
-  while ((package = g_variant_iter_next_value(&iter)) != nullptr) {
-    std::string label;
-    if (!package_label_from_daemon_object(package, label, error_out)) {
-      g_variant_unref(package);
-      g_variant_unref(packages);
-      g_variant_unref(reply);
-      return false;
-    }
-    labels_out.push_back(label);
-    g_variant_unref(package);
-  }
-
-  DNFUI_TRACE("dnf5daemon upgrade list done labels=%zu", labels_out.size());
-  g_variant_unref(packages);
-  g_variant_unref(reply);
+  DNFUI_TRACE("dnf5daemon repository refresh done path=%s", transaction_path.c_str());
   return true;
 }
 
@@ -789,10 +936,14 @@ transaction_service_client_get_transaction_preview(GDBusConnection *connection,
                                                    TransactionServiceProgressForwarder *progress_forwarder,
                                                    GCancellable *cancellable,
                                                    TransactionPreview &preview_out,
-                                                   std::string &error_out)
+                                                   std::string &error_out,
+                                                   std::vector<std::string> *upgrade_keys_out)
 {
   preview_out = {};
   error_out.clear();
+  if (upgrade_keys_out) {
+    upgrade_keys_out->clear();
+  }
 
   if (!connection || transaction_path.empty()) {
     error_out = _("dnf5daemon transaction session is not available.");
@@ -943,6 +1094,14 @@ transaction_service_client_get_transaction_preview(GDBusConnection *connection,
     g_variant_get(item, "(&s&s&s@a{sv}@a{sv})", &object_type, &action, &reason, &attributes, &object);
     bool ok = append_daemon_preview_item(
         built_preview, object_type ? object_type : "", action ? action : "", object, error_out);
+    if (ok && upgrade_keys_out && ascii_lower(object_type ? object_type : "") == "package" &&
+        ascii_lower(action ? action : "") == "upgrade") {
+      std::string key;
+      ok = package_upgrade_key_from_daemon_object(object, key, error_out);
+      if (ok) {
+        upgrade_keys_out->push_back(std::move(key));
+      }
+    }
 
     g_variant_unref(attributes);
     g_variant_unref(object);

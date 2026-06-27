@@ -71,6 +71,8 @@ base_repo_state_trace_name(BaseRepoState state)
   switch (state) {
   case BaseRepoState::LIVE_METADATA:
     return "live-metadata";
+  case BaseRepoState::DAEMON_SYNCED_METADATA:
+    return "daemon-synced-metadata";
   case BaseRepoState::CACHED_METADATA:
     return "cached-metadata";
   case BaseRepoState::INSTALLED_ONLY:
@@ -303,8 +305,8 @@ on_backend_warmup_task_finished(GObject *, GAsyncResult *result, gpointer user_d
     DNFUI_TRACE("Backend warm up task failed: %s", error->message);
   } else {
     DNFUI_TRACE("Backend warm up task done: %s", base_repo_state_trace_name(*repo_state));
-    if (*repo_state == BaseRepoState::LIVE_METADATA) {
-      ui_helpers_set_status(widgets->query.status_label, _("Ready. Live repository metadata loaded."), "gray");
+    if (*repo_state == BaseRepoState::LIVE_METADATA || *repo_state == BaseRepoState::DAEMON_SYNCED_METADATA) {
+      ui_helpers_set_status(widgets->query.status_label, _("Ready. Repository metadata loaded."), "gray");
     } else if (*repo_state == BaseRepoState::CACHED_METADATA) {
       ui_helpers_set_status(widgets->query.status_label, _("Ready. Using cached repository metadata."), "blue");
     } else {
