@@ -9,6 +9,7 @@
 #include "i18n.hpp"
 #include "package_query_controller.hpp"
 #include "package_query_controller_internal.hpp"
+#include "package_table_view.hpp"
 #include "pending_transaction_apply.hpp"
 #include "transaction_service_client.hpp"
 #include "ui_helpers.hpp"
@@ -119,6 +120,21 @@ queue_repository_refresh_phase_label(GtkLabel *label, const std::string &message
   update->label = GTK_LABEL(g_object_ref(label));
   update->message = message;
   g_main_context_invoke(nullptr, repository_refresh_phase_label_update_on_main, update);
+}
+
+// -----------------------------------------------------------------------------
+// Clear a List Upgradable table after repository metadata was refreshed.
+// The old rows came from the previous metadata generation and should not remain visible.
+// -----------------------------------------------------------------------------
+static bool
+repository_refresh_clear_stale_upgradeable_table(SearchWidgets *widgets)
+{
+  if (!widgets || !package_query_displayed_view_is_upgradeable(widgets)) {
+    return false;
+  }
+
+  package_table_fill_package_view(widgets, {});
+  return true;
 }
 
 // -----------------------------------------------------------------------------
@@ -319,8 +335,13 @@ widgets_on_force_rebuild_task(GTask *task, gpointer, gpointer task_data, GCancel
     DNFUI_TRACE("Repository refresh daemon metadata done");
     queue_repository_refresh_phase_label(refresh_data ? refresh_data->progress_label : nullptr,
                                          _("Loading refreshed metadata..."));
-    BaseRepoState refresh_state = BaseManager::instance().rebuild(
-        BaseRefreshMode::FORCE_METADATA_CHECK, refresh_data ? refresh_data->cancel_requested : nullptr, {});
+    auto progress_callback = [refresh_data](const std::string &message) {
+      queue_repository_refresh_phase_label(refresh_data ? refresh_data->progress_label : nullptr, message);
+    };
+    BaseRepoState refresh_state =
+        BaseManager::instance().rebuild(BaseRefreshMode::FORCE_METADATA_CHECK,
+                                        refresh_data ? refresh_data->cancel_requested : nullptr,
+                                        progress_callback);
     DNFUI_TRACE("Repository refresh worker done state=%d", static_cast<int>(refresh_state));
     // GTask completion transfers this heap value back to the GTK thread.
     // The force refresh completion handler deletes it after reading the result.
@@ -456,8 +477,15 @@ widgets_on_force_rebuild_task_finished(GObject *, GAsyncResult *res, gpointer us
     // Search caches are bound to the old Base generation and must be dropped
     // before the user can query against freshly refreshed repositories.
     package_query_clear_search_cache();
+    bool cleared_upgradeable_table = repository_refresh_clear_stale_upgradeable_table(widgets);
     if (*refresh_state == BaseRepoState::LIVE_METADATA || *refresh_state == BaseRepoState::DAEMON_SYNCED_METADATA) {
-      ui_helpers_set_status(widgets->query.status_label, _("Repositories refreshed."), "green");
+      if (cleared_upgradeable_table) {
+        ui_helpers_set_status(widgets->query.status_label,
+                              _("Repositories refreshed. Press List Upgradable to load updated upgrades."),
+                              "green");
+      } else {
+        ui_helpers_set_status(widgets->query.status_label, _("Repositories refreshed."), "green");
+      }
     } else if (*refresh_state == BaseRepoState::CACHED_METADATA) {
       ui_helpers_set_status(
           widgets->query.status_label, _("Live repo refresh failed. Using cached repository metadata."), "blue");
@@ -465,7 +493,7 @@ widgets_on_force_rebuild_task_finished(GObject *, GAsyncResult *res, gpointer us
       ui_helpers_set_status(
           widgets->query.status_label, _("Live repo refresh failed. Showing installed packages only."), "blue");
     }
-    if (!package_query_displayed_view_is_upgradeable(widgets)) {
+    if (!cleared_upgradeable_table) {
       package_query_reload_current_view(widgets);
     }
     delete refresh_state;

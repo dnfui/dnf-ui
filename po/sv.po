@@ -261,6 +261,9 @@ msgstr "Uppdatering av valt paket avbröts."
 msgid "Repositories refreshed."
 msgstr "Förråd uppdaterade."
 
+msgid "Repositories refreshed. Press List Upgradable to load updated upgrades."
+msgstr "Förråd uppdaterade. Tryck på Lista uppgraderbara för att läsa in uppdaterade uppgraderingar."
+
 msgid "Refreshing repositories..."
 msgstr "Uppdaterar förråd..."
 
