@@ -6,6 +6,7 @@
 // -----------------------------------------------------------------------------
 #include "pending_transaction_apply.hpp"
 
+#include "base_manager.hpp"
 #include "debug_trace.hpp"
 #include "dnf_backend/dnf_backend.hpp"
 #include "i18n.hpp"
@@ -217,13 +218,19 @@ rebuild_after_tx_finished(GObject *, GAsyncResult *res, gpointer user_data)
   }
 
   GError *error = nullptr;
-  gboolean ok = g_task_propagate_boolean(task, &error);
+  // widgets_on_rebuild_task() returns the refreshed Base state as a pointer.
+  BaseRepoState *refresh_state = static_cast<BaseRepoState *>(g_task_propagate_pointer(task, &error));
 
-  if (!ok && error) {
-    ui_helpers_set_status(widgets->query.status_label, error->message, "red");
-    g_error_free(error);
+  if (!refresh_state) {
+    ui_helpers_set_status(
+        widgets->query.status_label, error ? error->message : _("Repository refresh failed after transaction."), "red");
+    if (error) {
+      g_error_free(error);
+    }
     return;
   }
+
+  delete refresh_state;
 
   // Transaction follow-up rebuilds produce a new Base generation.
   // Cached search result rows must be discarded before the next search.

@@ -288,6 +288,9 @@ msgstr "Förrådsuppdatering stoppas fortfarande."
 msgid "Repo refresh failed."
 msgstr "Förrådsuppdatering misslyckades."
 
+msgid "Repository refresh failed after transaction."
+msgstr "Förrådsuppdatering efter transaktion misslyckades."
+
 msgid "Package info loaded."
 msgstr "Paketinfo lästes in."
 
