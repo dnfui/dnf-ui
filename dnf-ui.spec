@@ -1,5 +1,5 @@
 Name:           dnf-ui
-Version:        0.2.5
+Version:        0.3.0
 Release:        1%{?dist}
 Summary:        GTK frontend for DNF5
 
@@ -57,6 +57,13 @@ appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/com.fedora.dnfui
 %{_datadir}/metainfo/com.fedora.dnfui.metainfo.xml
 
 %changelog
+* Sat Jun 27 2026 ErikMN <erik@example.invalid> - 0.3.0-1
+- Add configurable package table columns with saved visibility settings
+- Add reset action for package table columns
+- Sync manual repository refresh with dnf5daemon and the UI package cache
+- Align List Upgradable with the resolved dnf5daemon Upgrade All preview
+- Avoid stale upgrade rows and details after repository refresh
+
 * Sat Jun 20 2026 ErikMN <erik@example.invalid> - 0.2.5-1
 - Speed up List Upgradable and Upgrade All preview preparation
 - Add repository signing key approval prompts for dnf5daemon transactions
