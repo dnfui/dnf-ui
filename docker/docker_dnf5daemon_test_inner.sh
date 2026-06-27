@@ -73,6 +73,9 @@ remove_test_package
 run_daemon_test "dnf5daemon client previews upgrade-all requests"
 remove_test_package
 
+run_daemon_test "dnf5daemon client lists upgrade keys"
+remove_test_package
+
 run_daemon_test "dnf5daemon client refreshes repositories"
 remove_test_package
 

@@ -7,6 +7,7 @@
 #include "base_manager.hpp"
 #include "debug_trace.hpp"
 #include "i18n.hpp"
+#include "package_info_controller.hpp"
 #include "package_query_controller.hpp"
 #include "package_query_controller_internal.hpp"
 #include "package_table_view.hpp"
@@ -133,7 +134,10 @@ repository_refresh_clear_stale_upgradeable_table(SearchWidgets *widgets)
     return false;
   }
 
+  widgets->query_state.preserve_selection_on_reload = false;
+  widgets->query_state.reload_selected_nevra.clear();
   package_table_fill_package_view(widgets, {});
+  package_info_reset_details_view(widgets);
   return true;
 }
 
@@ -388,13 +392,18 @@ widgets_on_rebuild_task_finished(GObject *, GAsyncResult *res, gpointer user_dat
     // Search caches are bound to the old Base generation and must be dropped
     // before the user can query against freshly refreshed repositories.
     package_query_clear_search_cache();
+    bool cleared_upgradeable_table = repository_refresh_clear_stale_upgradeable_table(widgets);
     if (*refresh_state == BaseRepoState::INSTALLED_ONLY) {
       ui_helpers_set_status(
           widgets->query.status_label, _("Repository refresh failed. Showing installed packages only."), "blue");
+    } else if (cleared_upgradeable_table) {
+      ui_helpers_set_status(widgets->query.status_label,
+                            _("Repositories refreshed. Press List Upgradable to load updated upgrades."),
+                            "green");
     } else {
       ui_helpers_set_status(widgets->query.status_label, _("Repositories refreshed."), "green");
     }
-    if (!package_query_displayed_view_is_upgradeable(widgets)) {
+    if (!cleared_upgradeable_table) {
       package_query_reload_current_view(widgets);
     }
     delete refresh_state;
