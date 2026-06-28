@@ -204,7 +204,7 @@ class BaseManager {
   std::atomic<uint64_t> generation { 0 };
   std::atomic<uint64_t> base_epoch { 0 };
 
-  // Serializes Base queries, rebuilds, transactions, and Base destruction.
+  // Serializes Base queries, rebuilds, and Base destruction.
   mutable std::shared_mutex base_mutex;
 };
 
