@@ -36,20 +36,6 @@ class BaseGuard {
   std::unique_lock<std::shared_mutex> lock;
 };
 
-class BaseWriteGuard {
-  public:
-  // -----------------------------------------------------------------------------
-  // Take ownership of a unique BaseManager lock.
-  // -----------------------------------------------------------------------------
-  explicit BaseWriteGuard(std::unique_lock<std::shared_mutex> &&l)
-      : lock(std::move(l))
-  {
-  }
-
-  private:
-  std::unique_lock<std::shared_mutex> lock;
-};
-
 // -----------------------------------------------------------------------------
 // Serialized read access bundle with Base reference, lock guard, and generation snapshot.
 // -----------------------------------------------------------------------------
@@ -128,10 +114,6 @@ class BaseManager {
   // Return serialized read access, stopping while waiting or initializing Base.
   // -----------------------------------------------------------------------------
   BaseRead acquire_read(std::shared_ptr<std::atomic<bool>> cancel_requested);
-  // -----------------------------------------------------------------------------
-  // Return write access to the cached Base with its lock guard.
-  // -----------------------------------------------------------------------------
-  std::pair<libdnf5::Base &, BaseWriteGuard> acquire_write();
   // -----------------------------------------------------------------------------
   // Build a temporary Base that includes repository changelog metadata.
   // -----------------------------------------------------------------------------

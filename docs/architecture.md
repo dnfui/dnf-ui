@@ -23,7 +23,7 @@ and Polkit behavior.
 ## Key terms
 
 - GTK is the user interface toolkit used to build the window.
-- libdnf5 is the Fedora package management library used for package queries and transactions.
+- libdnf5 is the Fedora package management library used for package queries and details.
 - Base is the libdnf5 object that holds loaded repository and installed package
   state.
 - rpmdb is the local database of packages installed on the system.

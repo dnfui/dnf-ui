@@ -579,24 +579,6 @@ BaseManager::acquire_system_only_read()
 }
 
 // -----------------------------------------------------------------------------
-// Return write access to the current Base.
-// -----------------------------------------------------------------------------
-std::pair<libdnf5::Base &, BaseWriteGuard>
-BaseManager::acquire_write()
-{
-  std::unique_lock<std::shared_mutex> write_lock(base_mutex);
-  if (!base_ptr) {
-    ensure_base_initialized();
-  }
-  if (!base_ptr) {
-    // Never return a null Base reference.
-    throw std::runtime_error("DNF backend not initialized (Base is null).");
-  }
-
-  return { *base_ptr, BaseWriteGuard(std::move(write_lock)) };
-}
-
-// -----------------------------------------------------------------------------
 // Build a temporary Base that includes repository changelog metadata.
 // -----------------------------------------------------------------------------
 std::shared_ptr<libdnf5::Base>

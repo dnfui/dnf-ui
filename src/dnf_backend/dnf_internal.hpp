@@ -4,7 +4,7 @@
 //
 // The public backend contract lives in the backend facade header. This header is
 // shared only by the backend implementation units so the app-facing API can stay
-// small while query, details, state-cache, and transaction code remain in separate files.
+// small while query, details, and state-cache code remain in separate files.
 // -----------------------------------------------------------------------------
 #pragma once
 
