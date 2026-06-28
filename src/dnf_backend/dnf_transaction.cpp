@@ -348,23 +348,6 @@ transaction_previews_match(const TransactionPreview &left, const TransactionPrev
 
 #ifdef DNFUI_BUILD_TESTS
 // -----------------------------------------------------------------------------
-// Test-only access to the package-name exclusion used by upgrade-all self-protection.
-// -----------------------------------------------------------------------------
-bool
-dnf_backend_testonly_query_excludes_package_name(const std::string &package_name)
-{
-  auto [base, guard] = BaseManager::instance().acquire_write();
-  libdnf5::rpm::PackageQuery query(base);
-  query.filter_name(package_name);
-  if (query.empty()) {
-    return false;
-  }
-
-  remove_packages_by_name(base, query, { package_name });
-  return query.empty();
-}
-
-// -----------------------------------------------------------------------------
 // Test-only access to the preview comparison used before apply.
 // -----------------------------------------------------------------------------
 bool

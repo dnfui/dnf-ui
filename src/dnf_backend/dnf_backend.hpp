@@ -334,10 +334,6 @@ bool dnf_backend_testonly_transaction_previews_match(const TransactionPreview &l
 bool dnf_backend_testonly_build_preview_from_actions(const std::vector<int> &action_codes,
                                                      TransactionPreview &preview,
                                                      std::string &error_out);
-// -----------------------------------------------------------------------------
-// Verify package-query exclusion behavior used by upgrade-all self-protection.
-// -----------------------------------------------------------------------------
-bool dnf_backend_testonly_query_excludes_package_name(const std::string &package_name);
 #endif
 
 // -----------------------------------------------------------------------------
