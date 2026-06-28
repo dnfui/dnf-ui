@@ -18,7 +18,7 @@
 #include "repository_refresh_controller.hpp"
 #include "transaction_progress.hpp"
 #include "transaction_review_dialog.hpp"
-#include "transaction_service_client.hpp"
+#include "dnf5daemon_client/transaction_service_client.hpp"
 #include "ui_helpers.hpp"
 #include "widgets.hpp"
 #include "widgets_internal.hpp"

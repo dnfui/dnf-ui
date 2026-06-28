@@ -33,9 +33,9 @@ app_sources = files(
   'ui/repository_refresh_controller.cpp',
   'ui/transaction_progress.cpp',
   'ui/transaction_review_dialog.cpp',
-  'transaction_service_client_dbus.cpp',
-  'transaction_service_client.cpp',
-  'transaction_service_client_wait.cpp',
+  'dnf5daemon_client/transaction_service_client_dbus.cpp',
+  'dnf5daemon_client/transaction_service_client.cpp',
+  'dnf5daemon_client/transaction_service_client_wait.cpp',
   'ui/ui_helpers.cpp',
   'ui/widgets.cpp',
 )

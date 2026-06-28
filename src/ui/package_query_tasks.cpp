@@ -12,7 +12,7 @@
 #include "i18n.hpp"
 #include "package_query_cache.hpp"
 #include "package_table_view.hpp"
-#include "transaction_service_client.hpp"
+#include "dnf5daemon_client/transaction_service_client.hpp"
 #include "ui_helpers.hpp"
 #include "widgets.hpp"
 #include "widgets_internal.hpp"

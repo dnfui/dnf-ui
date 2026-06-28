@@ -19,9 +19,9 @@ dnfui_tests = executable(
   ) + backend_sources + files(
     '../src/i18n.cpp',
     '../src/config.cpp',
-    '../src/transaction_service_client_dbus.cpp',
-    '../src/transaction_service_client.cpp',
-    '../src/transaction_service_client_wait.cpp',
+    '../src/dnf5daemon_client/transaction_service_client_dbus.cpp',
+    '../src/dnf5daemon_client/transaction_service_client.cpp',
+    '../src/dnf5daemon_client/transaction_service_client_wait.cpp',
     '../src/ui/package_action_rows.cpp',
     '../src/ui/package_table_columns.cpp',
     '../src/ui/package_table_model.cpp',

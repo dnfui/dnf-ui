@@ -8,7 +8,7 @@
 
 #include "dnf_backend/dnf_backend.hpp"
 #include "i18n.hpp"
-#include "transaction_service_client.hpp"
+#include "dnf5daemon_client/transaction_service_client.hpp"
 #include "widgets.hpp"
 
 #include <condition_variable>

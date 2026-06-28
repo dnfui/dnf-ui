@@ -82,7 +82,7 @@ Maintenance check:
 
 Code:
 
-- [src/transaction_service_client_dbus.cpp](../src/transaction_service_client_dbus.cpp)
+- [src/dnf5daemon_client/transaction_service_client_dbus.cpp](../src/dnf5daemon_client/transaction_service_client_dbus.cpp)
 - [src/ui/pending_transaction_request.cpp](../src/ui/pending_transaction_request.cpp)
 
 Assumption:
@@ -212,9 +212,9 @@ Maintenance check:
 
 Code:
 
-- [src/transaction_service_client.cpp](../src/transaction_service_client.cpp)
-- [src/transaction_service_client_dbus.cpp](../src/transaction_service_client_dbus.cpp)
-- [src/transaction_service_client_wait.cpp](../src/transaction_service_client_wait.cpp)
+- [src/dnf5daemon_client/transaction_service_client.cpp](../src/dnf5daemon_client/transaction_service_client.cpp)
+- [src/dnf5daemon_client/transaction_service_client_dbus.cpp](../src/dnf5daemon_client/transaction_service_client_dbus.cpp)
+- [src/dnf5daemon_client/transaction_service_client_wait.cpp](../src/dnf5daemon_client/transaction_service_client_wait.cpp)
 
 Checked against:
 
@@ -297,7 +297,7 @@ Maintenance check:
 
 Code:
 
-- [src/transaction_service_client_dbus.cpp](../src/transaction_service_client_dbus.cpp)
+- [src/dnf5daemon_client/transaction_service_client_dbus.cpp](../src/dnf5daemon_client/transaction_service_client_dbus.cpp)
 
 Assumptions:
 

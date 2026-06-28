@@ -14,7 +14,7 @@
 #include "package_table_view.hpp"
 #include "pending_transaction_controller.hpp"
 #include "repository_refresh_controller.hpp"
-#include "transaction_service_client.hpp"
+#include "dnf5daemon_client/transaction_service_client.hpp"
 #include "ui_helpers.hpp"
 #include "widgets.hpp"
 

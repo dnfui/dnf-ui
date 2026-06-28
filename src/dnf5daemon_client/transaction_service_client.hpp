@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// src/transaction_service_client.hpp
+// src/dnf5daemon_client/transaction_service_client.hpp
 // GUI client helpers for the dnf5daemon transaction path
 // Declares the small client API used by the GTK frontend to prepare, apply, and
 // release transaction requests.
