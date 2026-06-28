@@ -2,16 +2,15 @@
 // Public libdnf5 backend facade
 //
 // This header is the app-facing contract for the libdnf5 integration.
-// It keeps libdnf5 types out of the GTK controller layer by exposing value models and string transaction specs.
+// It keeps libdnf5 types out of the GTK controller layer by exposing value models.
 // The implementation owns Base access, rpmdb and repo queries, EVR comparison, cache updates,
-// and transaction resolution.
+// and package details.
 //
 // Callers should depend only on the types and functions declared here.
 // Helpers under the internal backend header are private implementation details for backend files.
 #pragma once
 
 #include <cstddef>
-#include <functional>
 #include <set>
 #include <string>
 #include <vector>
@@ -154,8 +153,6 @@ struct TransactionPreview {
   }
 };
 
-using TransactionProgressCallback = std::function<void(const std::string &)>;
-
 // -----------------------------------------------------------------------------
 // Search flags used by backend search queries.
 // The UI can update them from the search controls.
@@ -282,27 +279,6 @@ std::string dnf_backend_get_package_deps(const std::string &pkg_nevra);
 // Return formatted changelog entries for one NEVRA.
 // -----------------------------------------------------------------------------
 std::string dnf_backend_get_package_changelog(const std::string &pkg_nevra);
-// -----------------------------------------------------------------------------
-// Resolve the pending transaction and summarize the final package changes for UI review.
-// On failure, preview is reset to an empty preview and no partial result is returned.
-// -----------------------------------------------------------------------------
-bool dnf_backend_preview_transaction(const std::vector<std::string> &install_nevras,
-                                     const std::vector<std::string> &remove_nevras,
-                                     const std::vector<std::string> &reinstall_nevras,
-                                     TransactionPreview &preview,
-                                     std::string &error_out,
-                                     const TransactionProgressCallback &progress_cb = {},
-                                     bool upgrade_all = false);
-// -----------------------------------------------------------------------------
-// Resolve and apply the requested transaction and report progress.
-// -----------------------------------------------------------------------------
-bool dnf_backend_apply_transaction(const std::vector<std::string> &install_nevras,
-                                   const std::vector<std::string> &remove_nevras,
-                                   const std::vector<std::string> &reinstall_nevras,
-                                   std::string &error_out,
-                                   const TransactionProgressCallback &progress_cb = {},
-                                   bool upgrade_all = false,
-                                   const TransactionPreview *approved_preview = nullptr);
 
 #ifdef DNFUI_BUILD_TESTS
 // -----------------------------------------------------------------------------
@@ -324,16 +300,6 @@ void dnf_backend_testonly_replace_installed_snapshot_rows(const std::vector<Pack
 // whether all rows kept UNKNOWN repo-candidate relation afterwards.
 // -----------------------------------------------------------------------------
 bool dnf_backend_testonly_annotation_fallback_leaves_rows_unknown(std::vector<PackageRow> &rows);
-// -----------------------------------------------------------------------------
-// Compare transaction previews using the same check the backend runs before apply.
-// -----------------------------------------------------------------------------
-bool dnf_backend_testonly_transaction_previews_match(const TransactionPreview &left, const TransactionPreview &right);
-// -----------------------------------------------------------------------------
-// Feed a sequence of transaction actions through the preview builder for tests.
-// -----------------------------------------------------------------------------
-bool dnf_backend_testonly_build_preview_from_actions(const std::vector<int> &action_codes,
-                                                     TransactionPreview &preview,
-                                                     std::string &error_out);
 #endif
 
 // -----------------------------------------------------------------------------

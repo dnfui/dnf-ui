@@ -15,7 +15,6 @@ dnfui_tests = executable(
     'unit/test_package_query_cache.cpp',
     'unit/test_pending_transaction_request.cpp',
     'unit/test_search.cpp',
-    'unit/test_transaction_preview.cpp',
     'unit/test_transaction_request.cpp',
   ) + backend_sources + files(
     '../src/i18n.cpp',

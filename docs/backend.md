@@ -34,9 +34,8 @@ The Base can be in one of four repository states:
 
 Most UI queries use serialized read access through `BaseManager::acquire_read`.
 The access is serialized because read-only `PackageQuery` work can still touch
-shared libdnf5 `Base` internals. The remaining local backend transaction
-helpers use write access through `BaseManager::acquire_write`. The normal GUI
-preview and apply path goes through dnf5daemon.
+shared libdnf5 `Base` internals. Package transaction preview and apply work
+goes through dnf5daemon instead of a local libdnf transaction path.
 
 Installed-package snapshot refresh uses `BaseManager::acquire_system_only_read`.
 That creates a short-lived Base for the local rpm database and does not replace
@@ -208,46 +207,24 @@ It provides:
 These helpers perform read-only libdnf5 queries and do not mutate the installed
 snapshot.
 
-Normal package details use the shared Base. Changelog lookups first read
-installed packages from the shared Base because the rpmdb provides that metadata.
-Available package changelogs use a temporary Base that requests repository
-changelog metadata. The shared Base read lock is released before that temporary
-Base is loaded, so transaction preview and apply do not wait behind optional
-changelog metadata loading.
-
 ## Transactions
 
-[src/dnf_backend/dnf_transaction.cpp](../src/dnf_backend/dnf_transaction.cpp)
-contains the backend transaction resolver and apply entry points.
-
-[src/dnf_backend/dnf_transaction_callbacks.cpp](../src/dnf_backend/dnf_transaction_callbacks.cpp)
-contains the libdnf download and rpm progress callback adapters.
-
-[src/dnf_backend/dnf_transaction_format.cpp](../src/dnf_backend/dnf_transaction_format.cpp)
-contains shared transaction text formatting.
-
-It can resolve previews and apply transactions locally, but the normal GUI apply
-path goes through dnf5daemon. The local apply path remains for tests and shared
-preview formatting. Keep this area under review so unused apply-only code can be
-removed when it is no longer needed.
-
-The preview builder fails closed when libdnf resolves an action that the
-preview model cannot represent. That keeps the GUI review step from showing a
-partial transaction summary.
+DNF UI does not keep a local libdnf transaction apply path. Transaction preview
+and apply go through dnf5daemon so privileged package changes stay outside the
+GTK process.
 
 Selected package upgrades are sent to dnf5daemon as explicit upgrade specs.
 Upgrade All uses dnf5daemon's native upgrade-all behavior instead of building a
 local list of upgrade specs.
 
-The GUI should not call local transaction apply directly. Apply should go
-through dnf5daemon so the privileged package operation stays outside the GTK
-process.
+The dnf5daemon client builds `TransactionPreview` values from daemon replies and
+fails closed when a daemon transaction item cannot be represented by the UI
+preview model.
 
 ## Internal helpers
 
-[src/dnf_backend/dnf_internal.hpp](../src/dnf_backend/dnf_internal.hpp) and
-[src/dnf_backend/dnf_transaction_internal.hpp](../src/dnf_backend/dnf_transaction_internal.hpp)
-are shared only by backend implementation files.
+[src/dnf_backend/dnf_internal.hpp](../src/dnf_backend/dnf_internal.hpp) is shared
+only by backend implementation files.
 
 It is not a public UI contract. New UI code should include
 `dnf_backend.hpp` instead.

@@ -168,15 +168,10 @@ is in without becoming a debug log. Current messages cover:
 - package processing
 - unpack errors
 
-## Local backend transaction code
+## Local transaction path
 
-Some local backend transaction code still exists:
+DNF UI does not keep a local libdnf transaction apply path.
 
-- [src/dnf_backend/dnf_transaction.cpp](../src/dnf_backend/dnf_transaction.cpp)
-- [src/dnf_backend/dnf_transaction_callbacks.cpp](../src/dnf_backend/dnf_transaction_callbacks.cpp)
-- [src/dnf_backend/dnf_transaction_format.cpp](../src/dnf_backend/dnf_transaction_format.cpp)
-
-That code is no longer the normal privileged apply path. It remains because some
-preview helpers and tests still use shared transaction formatting and preview
-types. Keep this area under review so unused apply-only code can be removed when
-the dnf5daemon test coverage is complete.
+The GTK process may query package metadata with libdnf5, but transaction preview
+and apply go through dnf5daemon. That keeps privileged package changes outside
+the GUI process and avoids carrying a second transaction implementation.

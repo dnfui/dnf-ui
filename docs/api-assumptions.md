@@ -136,8 +136,8 @@ Assumptions:
 - `BaseManager::acquire_read()` is serialized with an exclusive guard. Do not
   change it back to shared locking unless libdnf5 `Base` and `PackageQuery`
   concurrent access has been verified against the local libdnf5 version.
-- The remaining local backend transaction helpers take `BaseManager::acquire_write()` because transaction
-  resolution and apply operate on shared libdnf5 state. The normal GUI transaction path uses dnf5daemon.
+- Transaction preview and apply use dnf5daemon. The GTK process does not keep a
+  local libdnf transaction apply path.
 - Changelog lookups read installed packages from the shared Base first because rpmdb changelog metadata
   does not need repo `other` metadata.
 - Available package changelogs use a temporary Base with repo `other` metadata.

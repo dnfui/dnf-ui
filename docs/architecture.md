@@ -150,16 +150,11 @@ The backend implementation is split by responsibility:
 - [src/dnf_backend/dnf_query.cpp](../src/dnf_backend/dnf_query.cpp) builds package rows for search, browse, and installed-list views.
 - [src/dnf_backend/dnf_details.cpp](../src/dnf_backend/dnf_details.cpp) formats package details, files, dependencies, and changelog text.
 - [src/dnf_backend/dnf_state.cpp](../src/dnf_backend/dnf_state.cpp) keeps installed-package snapshot state and package status classification.
-- [src/dnf_backend/dnf_transaction.cpp](../src/dnf_backend/dnf_transaction.cpp) resolves previews and applies transactions.
-- [src/dnf_backend/dnf_transaction_callbacks.cpp](../src/dnf_backend/dnf_transaction_callbacks.cpp) adapts libdnf download and rpm callbacks into progress lines.
-- [src/dnf_backend/dnf_transaction_format.cpp](../src/dnf_backend/dnf_transaction_format.cpp) keeps shared transaction text formatting out of the resolver.
 
 Most query and details calls take serialized read access to the shared Base.
 That access is exclusive inside `BaseManager` because read-only `PackageQuery`
-work can still touch shared libdnf5 `Base` internals. The remaining local
-backend transaction helpers take write access because libdnf5 transaction work
-changes Base state while it is being resolved or run. The normal GUI preview
-and apply path goes through dnf5daemon instead.
+work can still touch shared libdnf5 `Base` internals. Transaction preview and
+apply work goes through dnf5daemon instead of a local libdnf transaction path.
 
 The shared Base does not request changelog `other` metadata. Changelog details
 read installed packages from the shared Base because rpmdb changelog metadata
