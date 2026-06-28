@@ -81,18 +81,5 @@ struct SearchWidgets : std::enable_shared_from_this<SearchWidgets> {
 };
 
 // -----------------------------------------------------------------------------
-// Handle the refresh repositories button click.
-// -----------------------------------------------------------------------------
-void widgets_on_refresh_button_clicked(GtkButton *, gpointer user_data);
-// -----------------------------------------------------------------------------
-// Return true while the repository refresh worker is running.
-// -----------------------------------------------------------------------------
-bool widgets_repository_refresh_is_running();
-// -----------------------------------------------------------------------------
-// Ask an active repository refresh to stop.
-// -----------------------------------------------------------------------------
-void widgets_repository_refresh_cancel_active();
-
-// -----------------------------------------------------------------------------
 // EOF
 // -----------------------------------------------------------------------------

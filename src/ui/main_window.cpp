@@ -13,6 +13,7 @@
 #include "package_query_controller.hpp"
 #include "package_table_view.hpp"
 #include "pending_transaction_controller.hpp"
+#include "repository_refresh_controller.hpp"
 #include "transaction_service_client.hpp"
 #include "ui_helpers.hpp"
 #include "widgets.hpp"
@@ -382,7 +383,7 @@ connect_signals(const AppWidgets *ui, SearchWidgets *widgets)
   g_signal_connect(
       ui->clear_pending_button, "clicked", G_CALLBACK(pending_transaction_on_clear_pending_button_clicked), widgets);
 
-  g_signal_connect(ui->refresh_button, "clicked", G_CALLBACK(widgets_on_refresh_button_clicked), widgets);
+  g_signal_connect(ui->refresh_button, "clicked", G_CALLBACK(repository_refresh_on_button_clicked), widgets);
 
   // Intercept window close when pending or running transaction work needs attention.
   g_signal_connect(ui->window, "close-request", G_CALLBACK(on_main_window_close_request), widgets);
@@ -566,7 +567,7 @@ connect_cleanup(GtkWidget *window, std::shared_ptr<SearchWidgets> widgets, GCanc
                        g_object_unref(widgets->query_state.package_list_cancellable);
                        widgets->query_state.package_list_cancellable = nullptr;
                      }
-                     widgets_repository_refresh_cancel_active();
+                     repository_refresh_cancel_active();
                      package_info_cancel_active_load(widgets);
                      if (!widgets->transaction.preview_transaction_path.empty()) {
                        transaction_service_client_release_request_async(widgets->transaction.preview_transaction_path);

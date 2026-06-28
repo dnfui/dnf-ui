@@ -13,6 +13,7 @@
 #include "ui/package_query_controller.hpp"
 #include "ui/main_window.hpp"
 #include "ui/pending_transaction_apply.hpp"
+#include "ui/repository_refresh_controller.hpp"
 #include "ui/ui_helpers.hpp"
 #include "ui/widgets.hpp"
 #include "ui/widgets_internal.hpp"
@@ -135,7 +136,7 @@ start_installed_refresh_task(void)
 {
   // Repository refresh already owns the shared backend work.
   // Do not queue the periodic installed refresh behind it.
-  if (widgets_repository_refresh_is_running()) {
+  if (repository_refresh_is_running()) {
     DNFUI_TRACE("Installed package refresh skipped because repository refresh is running");
     return;
   }

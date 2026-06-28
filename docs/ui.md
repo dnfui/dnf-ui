@@ -15,8 +15,8 @@ The shared widget state lives in [src/ui/widgets.hpp](../src/ui/widgets.hpp).
 Controller files receive a `SearchWidgets` pointer and use it to update the
 parts of the window they own.
 
-This keeps widget construction, package query behavior, package details, and
-pending transaction behavior in separate files.
+This keeps widget construction, package query behavior, package details,
+repository refresh behavior, and pending transaction behavior in separate files.
 
 ## Window construction
 
@@ -94,6 +94,11 @@ and installed-state refreshes clear cached search rows and advance that epoch,
 so older search workers cannot repopulate the cache with rows the UI has already
 invalidated. Dropping the cached Base to save memory does not invalidate search
 rows by itself.
+
+[src/ui/repository_refresh_controller.cpp](../src/ui/repository_refresh_controller.cpp)
+owns the Refresh Repositories button workflow. It refreshes dnf5daemon metadata,
+rebuilds the libdnf5 Base, updates the lower-right progress text, and clears
+stale upgradable rows after repository metadata changes.
 
 ### Package info controller
 

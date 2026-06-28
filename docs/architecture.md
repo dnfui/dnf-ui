@@ -109,7 +109,8 @@ The main window is built once and the controller files own behavior.
 - [src/ui/main_window.cpp](../src/ui/main_window.cpp) creates shared widget state and connects signals.
 - [src/ui/main_window_layout.cpp](../src/ui/main_window_layout.cpp) builds the main window widget tree.
 - [src/ui/widgets.hpp](../src/ui/widgets.hpp) groups the widget pointers and shared UI state.
-- [src/ui/widgets.cpp](../src/ui/widgets.cpp) handles repository refresh callbacks and task helpers shared by controllers.
+- [src/ui/widgets.cpp](../src/ui/widgets.cpp) handles task helpers shared by controllers.
+- [src/ui/repository_refresh_controller.cpp](../src/ui/repository_refresh_controller.cpp) handles manual repository refresh.
 - [src/ui/main_menu.cpp](../src/ui/main_menu.cpp) handles top menu actions.
 - [src/ui/package_query_controller.cpp](../src/ui/package_query_controller.cpp) handles the public search, list, history, clear, and reload callbacks.
 - [src/ui/package_query_controls.cpp](../src/ui/package_query_controls.cpp) handles active package-query request state, Stop button handling, cancellation, and refresh completion.

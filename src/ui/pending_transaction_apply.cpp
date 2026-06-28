@@ -15,6 +15,7 @@
 #include "pending_transaction_controller.hpp"
 #include "pending_transaction_request.hpp"
 #include "pending_transaction_view.hpp"
+#include "repository_refresh_controller.hpp"
 #include "transaction_progress.hpp"
 #include "transaction_review_dialog.hpp"
 #include "transaction_service_client.hpp"
@@ -218,7 +219,7 @@ rebuild_after_tx_finished(GObject *, GAsyncResult *res, gpointer user_data)
   }
 
   GError *error = nullptr;
-  // widgets_on_rebuild_task() returns the refreshed Base state as a pointer.
+  // repository_refresh_on_rebuild_task() returns the refreshed Base state as a pointer.
   BaseRepoState *refresh_state = static_cast<BaseRepoState *>(g_task_propagate_pointer(task, &error));
 
   if (!refresh_state) {
@@ -252,7 +253,7 @@ rebuild_after_tx_async(SearchWidgets *widgets)
 
   GCancellable *c = widgets_make_task_cancellable_for(GTK_WIDGET(widgets->query.entry));
   GTask *task = widgets_task_new_for_search_widgets(widgets, c, rebuild_after_tx_finished);
-  g_task_run_in_thread(task, widgets_on_rebuild_task);
+  g_task_run_in_thread(task, repository_refresh_on_rebuild_task);
   g_object_unref(task);
   g_object_unref(c);
 }
