@@ -83,7 +83,7 @@ Maintenance check:
 Code:
 
 - [src/dnf5daemon_client/transaction_service_client_dbus.cpp](../src/dnf5daemon_client/transaction_service_client_dbus.cpp)
-- [src/ui/pending_transaction_request.cpp](../src/ui/pending_transaction_request.cpp)
+- [src/ui/transaction/pending_transaction_request.cpp](../src/ui/transaction/pending_transaction_request.cpp)
 
 Assumption:
 
@@ -169,9 +169,9 @@ Maintenance check:
 
 Code:
 
-- [src/ui/package_query_controller.cpp](../src/ui/package_query_controller.cpp)
-- [src/ui/package_info_controller.cpp](../src/ui/package_info_controller.cpp)
-- [src/ui/widgets.cpp](../src/ui/widgets.cpp)
+- [src/ui/package_query/package_query_controller.cpp](../src/ui/package_query/package_query_controller.cpp)
+- [src/ui/details/package_info_controller.cpp](../src/ui/details/package_info_controller.cpp)
+- [src/ui/common/widgets.cpp](../src/ui/common/widgets.cpp)
 - [src/app.cpp](../src/app.cpp)
 
 Assumptions:

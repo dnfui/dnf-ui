@@ -6,7 +6,7 @@
 
 #include "base_manager.hpp"
 #include "test_utils.hpp"
-#include "ui/package_query_cache.hpp"
+#include "ui/package_query/package_query_cache.hpp"
 
 #include <string>
 #include <vector>

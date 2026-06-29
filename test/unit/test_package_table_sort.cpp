@@ -2,7 +2,7 @@
 
 #include "dnf_backend/dnf_backend.hpp"
 #include "test_utils.hpp"
-#include "ui/package_table_view_internal.hpp"
+#include "ui/package_table/package_table_view_internal.hpp"
 
 static PackageRow
 make_table_test_row(const std::string &nevra,

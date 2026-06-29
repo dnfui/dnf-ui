@@ -5,7 +5,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "config.hpp"
-#include "ui/package_table_columns.hpp"
+#include "ui/package_table/package_table_columns.hpp"
 
 #include <filesystem>
 #include <fstream>

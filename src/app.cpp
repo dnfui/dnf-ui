@@ -10,13 +10,13 @@
 #include "debug_trace.hpp"
 #include "dnf_backend/dnf_backend.hpp"
 #include "i18n.hpp"
-#include "ui/package_query_controller.hpp"
-#include "ui/main_window.hpp"
-#include "ui/pending_transaction_apply.hpp"
-#include "ui/repository_refresh_controller.hpp"
-#include "ui/ui_helpers.hpp"
-#include "ui/widgets.hpp"
-#include "ui/widgets_internal.hpp"
+#include "ui/package_query/package_query_controller.hpp"
+#include "ui/window/main_window.hpp"
+#include "ui/transaction/pending_transaction_apply.hpp"
+#include "ui/refresh/repository_refresh_controller.hpp"
+#include "ui/common/ui_helpers.hpp"
+#include "ui/common/widgets.hpp"
+#include "ui/common/widgets_internal.hpp"
 
 #include <atomic>
 #include <gtk/gtk.h>

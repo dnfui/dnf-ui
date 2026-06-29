@@ -5,7 +5,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "test_utils.hpp"
-#include "ui/package_action_rows.hpp"
+#include "ui/transaction/package_action_rows.hpp"
 
 // -----------------------------------------------------------------------------
 // Build one small package row for resolver tests.

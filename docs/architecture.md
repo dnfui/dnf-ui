@@ -48,8 +48,8 @@ The application is split into five main areas:
 ```mermaid
 flowchart TD
     Main[main.cpp] --> App[app.cpp]
-    App --> Window[ui/main_window.cpp]
-    Window --> Layout[ui/main_window_layout.cpp]
+    App --> Window[ui/window/main_window.cpp]
+    Window --> Layout[ui/window/main_window_layout.cpp]
     Window --> Controllers[UI controllers]
     Controllers --> Backend[dnf_backend]
     Controllers --> Client[dnf5daemon_client]
@@ -85,8 +85,8 @@ Startup follows a short path:
 
 - [src/main.cpp](../src/main.cpp) calls `app_run_dnfui`
 - [src/app.cpp](../src/app.cpp) creates the GTK application and handles activation
-- [src/ui/main_window.cpp](../src/ui/main_window.cpp) creates the main window and wires signals
-- [src/ui/main_window_layout.cpp](../src/ui/main_window_layout.cpp) builds the main window widget tree
+- [src/ui/window/main_window.cpp](../src/ui/window/main_window.cpp) creates the main window and wires signals
+- [src/ui/window/main_window_layout.cpp](../src/ui/window/main_window_layout.cpp) builds the main window widget tree
 
 After the window is created, `app.cpp` also starts two background tasks:
 
@@ -105,25 +105,27 @@ flowchart TD
 ## UI structure
 
 The main window is built once and the controller files own behavior.
+The `src/ui` directory is split by UI concern: `window`, `package_query`,
+`package_table`, `details`, `transaction`, `refresh`, and `common`.
 
-- [src/ui/main_window.cpp](../src/ui/main_window.cpp) creates shared widget state and connects signals.
-- [src/ui/main_window_layout.cpp](../src/ui/main_window_layout.cpp) builds the main window widget tree.
-- [src/ui/widgets.hpp](../src/ui/widgets.hpp) groups the widget pointers and shared UI state.
-- [src/ui/widgets.cpp](../src/ui/widgets.cpp) handles task helpers shared by controllers.
-- [src/ui/repository_refresh_controller.cpp](../src/ui/repository_refresh_controller.cpp) handles manual repository refresh.
-- [src/ui/main_menu.cpp](../src/ui/main_menu.cpp) handles top menu actions.
-- [src/ui/package_query_controller.cpp](../src/ui/package_query_controller.cpp) handles the public search, list, history, clear, and reload callbacks.
-- [src/ui/package_query_controls.cpp](../src/ui/package_query_controls.cpp) handles active package-query request state, Stop button handling, cancellation, and refresh completion.
-- [src/ui/package_query_tasks.cpp](../src/ui/package_query_tasks.cpp) contains package-query worker tasks and completion handlers.
-- [src/ui/package_info_controller.cpp](../src/ui/package_info_controller.cpp) handles selection and details loading.
-- [src/ui/package_table_view.cpp](../src/ui/package_table_view.cpp) builds the package table.
-- [src/ui/package_table_model.cpp](../src/ui/package_table_model.cpp) stores package rows in GTK objects.
-- [src/ui/package_table_sort.cpp](../src/ui/package_table_sort.cpp) contains package table sorting rules.
-- [src/ui/pending_transaction_controller.cpp](../src/ui/pending_transaction_controller.cpp) handles package action buttons.
-- [src/ui/pending_transaction_view.cpp](../src/ui/pending_transaction_view.cpp) builds the Pending Actions tab.
-- [src/ui/pending_transaction_apply.cpp](../src/ui/pending_transaction_apply.cpp) handles preview, apply, and post-apply refresh.
-- [src/ui/transaction_review_dialog.cpp](../src/ui/transaction_review_dialog.cpp) builds the review and error dialogs.
-- [src/ui/transaction_progress.cpp](../src/ui/transaction_progress.cpp) manages the live progress window.
+- [src/ui/window/main_window.cpp](../src/ui/window/main_window.cpp) creates shared widget state and connects signals.
+- [src/ui/window/main_window_layout.cpp](../src/ui/window/main_window_layout.cpp) builds the main window widget tree.
+- [src/ui/common/widgets.hpp](../src/ui/common/widgets.hpp) groups the widget pointers and shared UI state.
+- [src/ui/common/widgets.cpp](../src/ui/common/widgets.cpp) handles task helpers shared by controllers.
+- [src/ui/refresh/repository_refresh_controller.cpp](../src/ui/refresh/repository_refresh_controller.cpp) handles manual repository refresh.
+- [src/ui/window/main_menu.cpp](../src/ui/window/main_menu.cpp) handles top menu actions.
+- [src/ui/package_query/package_query_controller.cpp](../src/ui/package_query/package_query_controller.cpp) handles the public search, list, history, clear, and reload callbacks.
+- [src/ui/package_query/package_query_controls.cpp](../src/ui/package_query/package_query_controls.cpp) handles active package-query request state, Stop button handling, cancellation, and refresh completion.
+- [src/ui/package_query/package_query_tasks.cpp](../src/ui/package_query/package_query_tasks.cpp) contains package-query worker tasks and completion handlers.
+- [src/ui/details/package_info_controller.cpp](../src/ui/details/package_info_controller.cpp) handles selection and details loading.
+- [src/ui/package_table/package_table_view.cpp](../src/ui/package_table/package_table_view.cpp) builds the package table.
+- [src/ui/package_table/package_table_model.cpp](../src/ui/package_table/package_table_model.cpp) stores package rows in GTK objects.
+- [src/ui/package_table/package_table_sort.cpp](../src/ui/package_table/package_table_sort.cpp) contains package table sorting rules.
+- [src/ui/transaction/pending_transaction_controller.cpp](../src/ui/transaction/pending_transaction_controller.cpp) handles package action buttons.
+- [src/ui/transaction/pending_transaction_view.cpp](../src/ui/transaction/pending_transaction_view.cpp) builds the Pending Actions tab.
+- [src/ui/transaction/pending_transaction_apply.cpp](../src/ui/transaction/pending_transaction_apply.cpp) handles preview, apply, and post-apply refresh.
+- [src/ui/transaction/transaction_review_dialog.cpp](../src/ui/transaction/transaction_review_dialog.cpp) builds the review and error dialogs.
+- [src/ui/transaction/transaction_progress.cpp](../src/ui/transaction/transaction_progress.cpp) manages the live progress window.
 
 The UI controller pattern follows this shape:
 
@@ -225,13 +227,13 @@ A practical reading order for new contributors:
 
 1. [src/main.cpp](../src/main.cpp)
 2. [src/app.cpp](../src/app.cpp)
-3. [src/ui/main_window.cpp](../src/ui/main_window.cpp)
-4. [src/ui/main_window_layout.cpp](../src/ui/main_window_layout.cpp)
-5. [src/ui/widgets.hpp](../src/ui/widgets.hpp)
-6. [src/ui/package_query_controller.cpp](../src/ui/package_query_controller.cpp)
-7. [src/ui/pending_transaction_controller.cpp](../src/ui/pending_transaction_controller.cpp)
-8. [src/ui/pending_transaction_view.cpp](../src/ui/pending_transaction_view.cpp)
-9. [src/ui/pending_transaction_apply.cpp](../src/ui/pending_transaction_apply.cpp)
+3. [src/ui/window/main_window.cpp](../src/ui/window/main_window.cpp)
+4. [src/ui/window/main_window_layout.cpp](../src/ui/window/main_window_layout.cpp)
+5. [src/ui/common/widgets.hpp](../src/ui/common/widgets.hpp)
+6. [src/ui/package_query/package_query_controller.cpp](../src/ui/package_query/package_query_controller.cpp)
+7. [src/ui/transaction/pending_transaction_controller.cpp](../src/ui/transaction/pending_transaction_controller.cpp)
+8. [src/ui/transaction/pending_transaction_view.cpp](../src/ui/transaction/pending_transaction_view.cpp)
+9. [src/ui/transaction/pending_transaction_apply.cpp](../src/ui/transaction/pending_transaction_apply.cpp)
 10. [src/dnf_backend/dnf_backend.hpp](../src/dnf_backend/dnf_backend.hpp)
 11. [src/base_manager.cpp](../src/base_manager.cpp)
 12. [src/dnf_backend/dnf_query.cpp](../src/dnf_backend/dnf_query.cpp)

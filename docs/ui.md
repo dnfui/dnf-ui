@@ -11,17 +11,27 @@ For source-backed GTK and GIO assumptions, see
 shared widget state and connects behavior. Controller files own the behavior
 behind each part of the window.
 
-The shared widget state lives in [src/ui/widgets.hpp](../src/ui/widgets.hpp).
+The shared widget state lives in [src/ui/common/widgets.hpp](../src/ui/common/widgets.hpp).
 Controller files receive a `SearchWidgets` pointer and use it to update the
 parts of the window they own.
 
 This keeps widget construction, package query behavior, package details,
 repository refresh behavior, and pending transaction behavior in separate files.
 
+The UI source tree is grouped by the part of the window it owns:
+
+- `src/ui/window` for the main window, layout, and menu
+- `src/ui/package_query` for search, package listing, query cache, and Stop handling
+- `src/ui/package_table` for the package table model, columns, status, sorting, and context menu
+- `src/ui/details` for the package details panel
+- `src/ui/transaction` for marked actions, preview, apply, review dialogs, and progress
+- `src/ui/refresh` for manual repository refresh
+- `src/ui/common` for shared widget state and small GTK helpers
+
 ## Window construction
 
-[src/ui/main_window.cpp](../src/ui/main_window.cpp) creates the main window.
-[src/ui/main_window_layout.cpp](../src/ui/main_window_layout.cpp) builds the
+[src/ui/window/main_window.cpp](../src/ui/window/main_window.cpp) creates the main window.
+[src/ui/window/main_window_layout.cpp](../src/ui/window/main_window_layout.cpp) builds the
 GTK widget tree used by that window.
 
 The layout file is responsible for:
@@ -43,7 +53,7 @@ belong in the controller files.
 
 ## Shared widget state
 
-[src/ui/widgets.hpp](../src/ui/widgets.hpp) groups the widget pointers into
+[src/ui/common/widgets.hpp](../src/ui/common/widgets.hpp) groups the widget pointers into
 smaller structs:
 
 - `PackageQueryWidgets` for search controls and status
@@ -59,7 +69,7 @@ GTK pointers that several controllers need.
 
 ### Package query controller
 
-[src/ui/package_query_controller.cpp](../src/ui/package_query_controller.cpp)
+[src/ui/package_query/package_query_controller.cpp](../src/ui/package_query/package_query_controller.cpp)
 handles the public GTK callbacks for package list workflows:
 
 - list installed packages
@@ -73,12 +83,12 @@ handles the public GTK callbacks for package list workflows:
 The supporting package query files keep the slower and more stateful parts out
 of the public callback file:
 
-- [src/ui/package_query_controls.cpp](../src/ui/package_query_controls.cpp)
+- [src/ui/package_query/package_query_controls.cpp](../src/ui/package_query/package_query_controls.cpp)
   handles active request state, Stop button handling, cancellation, and refresh
   completion.
-- [src/ui/package_query_tasks.cpp](../src/ui/package_query_tasks.cpp)
+- [src/ui/package_query/package_query_tasks.cpp](../src/ui/package_query/package_query_tasks.cpp)
   contains the `GTask` workers and completion handlers for package queries.
-- [src/ui/package_query_controller_internal.hpp](../src/ui/package_query_controller_internal.hpp)
+- [src/ui/package_query/package_query_controller_internal.hpp](../src/ui/package_query/package_query_controller_internal.hpp)
   declares the shared functions used by those files.
 
 Long-running package queries run on worker threads through `GTask`. Completion
@@ -87,7 +97,7 @@ callbacks run on the GTK thread before they update widgets.
 The bottom bar shows the visible row count on the left and the last completed
 package query time on the right.
 
-Search results are cached in [src/ui/package_query_cache.cpp](../src/ui/package_query_cache.cpp).
+Search results are cached in [src/ui/package_query/package_query_cache.cpp](../src/ui/package_query/package_query_cache.cpp).
 The cache is tied to the current backend Base generation and a cache epoch kept
 by the query cache layer. Repository refreshes, transaction follow-up refreshes,
 and installed-state refreshes clear cached search rows and advance that epoch,
@@ -95,14 +105,14 @@ so older search workers cannot repopulate the cache with rows the UI has already
 invalidated. Dropping the cached Base to save memory does not invalidate search
 rows by itself.
 
-[src/ui/repository_refresh_controller.cpp](../src/ui/repository_refresh_controller.cpp)
+[src/ui/refresh/repository_refresh_controller.cpp](../src/ui/refresh/repository_refresh_controller.cpp)
 owns the Refresh Repositories button workflow. It refreshes dnf5daemon metadata,
 rebuilds the libdnf5 Base, updates the lower-right progress text, and clears
 stale upgradable rows after repository metadata changes.
 
 ### Package info controller
 
-[src/ui/package_info_controller.cpp](../src/ui/package_info_controller.cpp)
+[src/ui/details/package_info_controller.cpp](../src/ui/details/package_info_controller.cpp)
 updates the details pane for the selected package.
 
 It updates:
@@ -119,7 +129,7 @@ the backend generation changes, the old result is ignored.
 
 ### Package table view
 
-[src/ui/package_table_view.cpp](../src/ui/package_table_view.cpp) builds the
+[src/ui/package_table/package_table_view.cpp](../src/ui/package_table/package_table_view.cpp) builds the
 package table, including column setup, selection, and status refresh.
 
 The table columns can be shown or hidden from `View -> Columns`, and the same
@@ -128,25 +138,25 @@ as `package_table_hidden_columns`, using stable column ids so new default-visibl
 columns can be added without hiding them for existing users. Older
 `package_table_columns` settings are migrated when they are read.
 
-[src/ui/package_table_columns.cpp](../src/ui/package_table_columns.cpp) owns the
+[src/ui/package_table/package_table_columns.cpp](../src/ui/package_table/package_table_columns.cpp) owns the
 package table column definitions, stable column ids, saved visibility settings,
 and config migration.
 
-[src/ui/package_table_model.cpp](../src/ui/package_table_model.cpp) contains the
+[src/ui/package_table/package_table_model.cpp](../src/ui/package_table/package_table_model.cpp) contains the
 GTK object wrapper used to store package rows in the table model.
 
-[src/ui/package_table_sort.cpp](../src/ui/package_table_sort.cpp) contains package
+[src/ui/package_table/package_table_sort.cpp](../src/ui/package_table/package_table_sort.cpp) contains package
 table cell text and sorting rules.
 
-[src/ui/package_table_status.cpp](../src/ui/package_table_status.cpp) keeps the
+[src/ui/package_table/package_table_status.cpp](../src/ui/package_table/package_table_status.cpp) keeps the
 status text, tooltip text, and CSS classes separate from table construction.
 
-[src/ui/package_table_context_menu.cpp](../src/ui/package_table_context_menu.cpp)
+[src/ui/package_table/package_table_context_menu.cpp](../src/ui/package_table/package_table_context_menu.cpp)
 builds right-click actions for package rows.
 
 ### Pending transaction controller
 
-[src/ui/pending_transaction_controller.cpp](../src/ui/pending_transaction_controller.cpp)
+[src/ui/transaction/pending_transaction_controller.cpp](../src/ui/transaction/pending_transaction_controller.cpp)
 handles the package action buttons.
 
 It is responsible for:
@@ -155,7 +165,7 @@ It is responsible for:
 - validating self-protected package rules
 - clearing pending actions
 
-[src/ui/pending_transaction_view.cpp](../src/ui/pending_transaction_view.cpp)
+[src/ui/transaction/pending_transaction_view.cpp](../src/ui/transaction/pending_transaction_view.cpp)
 builds the Pending Actions tab.
 
 It is responsible for:
@@ -164,7 +174,7 @@ It is responsible for:
 - jumping from a pending action back to its package row
 - enabling the Apply button only when actions are pending
 
-[src/ui/pending_transaction_apply.cpp](../src/ui/pending_transaction_apply.cpp)
+[src/ui/transaction/pending_transaction_apply.cpp](../src/ui/transaction/pending_transaction_apply.cpp)
 handles preview and apply work.
 
 It is responsible for:
@@ -175,9 +185,9 @@ It is responsible for:
 - clearing pending actions after a successful apply
 - refreshing package state after apply
 
-The pending action data model lives in [src/ui/pending_transaction_state.hpp](../src/ui/pending_transaction_state.hpp).
+The pending action data model lives in [src/ui/transaction/pending_transaction_state.hpp](../src/ui/transaction/pending_transaction_state.hpp).
 Conversion from pending actions to a shared `TransactionRequest` lives in
-[src/ui/pending_transaction_request.cpp](../src/ui/pending_transaction_request.cpp).
+[src/ui/transaction/pending_transaction_request.cpp](../src/ui/transaction/pending_transaction_request.cpp).
 
 Upgradable rows are visible as repository candidates, but they represent an
 installed package with a newer version available. The UI treats the main action
@@ -188,17 +198,17 @@ in the Version column and shows the candidate version in the Update column. The
 Repo column shows the repository that provides the update. Remove and reinstall
 act on the currently installed NEVRA for the same package name and architecture.
 
-[src/ui/package_action_rows.cpp](../src/ui/package_action_rows.cpp) keeps those
+[src/ui/transaction/package_action_rows.cpp](../src/ui/transaction/package_action_rows.cpp) keeps those
 row-selection rules in one place. This is needed because an update can be shown
 from either the installed package list or the upgradable package list. The helper
 must not run libdnf queries because it is called while updating GTK controls.
 
 ### Transaction progress
 
-[src/ui/transaction_progress.cpp](../src/ui/transaction_progress.cpp) manages the
+[src/ui/transaction/transaction_progress.cpp](../src/ui/transaction/transaction_progress.cpp) manages the
 live progress window shown while apply is running.
 
-[src/ui/transaction_review_dialog.cpp](../src/ui/transaction_review_dialog.cpp)
+[src/ui/transaction/transaction_review_dialog.cpp](../src/ui/transaction/transaction_review_dialog.cpp)
 builds the confirmation dialog shown before apply and the error dialog shown when
 preview or apply fails.
 
@@ -241,4 +251,4 @@ When that happens, the UI should:
   rows are not left visible
 - keep pending action state consistent with the visible rows
 
-The shared refresh helpers live in [src/ui/widgets.cpp](../src/ui/widgets.cpp).
+The shared task and spinner helpers live in [src/ui/common/widgets.cpp](../src/ui/common/widgets.cpp).
