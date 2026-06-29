@@ -57,7 +57,7 @@ When you apply a transaction, the desktop Polkit prompt should appear.
 
 [Docker](https://www.docker.com/) is the default container runtime.
 The container targets also support [Podman](https://podman.io/)
-by setting `CONTAINER_RUNTIME=podman`. The target names still says Docker though.
+by setting `CONTAINER_RUNTIME=podman`. The target names still say Docker though.
 
 Running the application in a container is useful for testing and developing
 without affecting the host system.

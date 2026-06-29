@@ -32,6 +32,7 @@ Key files:
 - [test/unit/test_dnf5daemon_client.cpp](../test/unit/test_dnf5daemon_client.cpp)
 - [test/unit/test_pending_transaction_action_rows.cpp](../test/unit/test_pending_transaction_action_rows.cpp)
 - [test/unit/test_package_query_cache.cpp](../test/unit/test_package_query_cache.cpp)
+- [test/unit/test_package_table_sort.cpp](../test/unit/test_package_table_sort.cpp)
 - [test/unit/test_pending_transaction_request.cpp](../test/unit/test_pending_transaction_request.cpp)
 - [test/unit/test_search.cpp](../test/unit/test_search.cpp)
 - [test/unit/test_transaction_request.cpp](../test/unit/test_transaction_request.cpp)
@@ -43,6 +44,7 @@ These tests protect:
 - config file parsing and fallback behavior
 - installed snapshot behavior
 - pending transaction action row selection for install, upgrade, remove, and reinstall
+- package table column text and sorting behavior
 - dnf5daemon transaction preview parsing and failure handling
 - transaction request validation
 - offline and cached metadata behavior
