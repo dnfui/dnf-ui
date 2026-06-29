@@ -115,7 +115,7 @@ transaction_progress_release(TransactionProgressWindow *progress)
 // Build the transaction popup used for streaming package install output
 // -----------------------------------------------------------------------------
 TransactionProgressWindow *
-transaction_progress_create_window(SearchWidgets *widgets, size_t pending_count)
+transaction_progress_create_window(MainWindowUiState *widgets, size_t pending_count)
 {
   auto *progress = new TransactionProgressWindow();
   progress->finished = false;

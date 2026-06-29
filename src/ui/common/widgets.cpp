@@ -11,21 +11,21 @@
 
 namespace {
 
-constexpr const char *kTaskSearchWidgetsHoldKey = "dnfui-task-search-widgets-hold";
+constexpr const char *kTaskMainWindowUiStateHoldKey = "dnfui-task-main-window-ui-state-hold";
 
 // -----------------------------------------------------------------------------
 // Keep the shared widget state alive while a task can still use it.
 // -----------------------------------------------------------------------------
 static void
-hold_search_widgets_for_task(GTask *task, SearchWidgets *widgets)
+hold_main_window_ui_state_for_task(GTask *task, MainWindowUiState *widgets)
 {
   if (!task || !widgets) {
     return;
   }
 
-  auto *held_widgets = new std::shared_ptr<SearchWidgets>(widgets->shared_from_this());
-  g_object_set_data_full(G_OBJECT(task), kTaskSearchWidgetsHoldKey, held_widgets, [](gpointer p) {
-    delete static_cast<std::shared_ptr<SearchWidgets> *>(p);
+  auto *held_widgets = new std::shared_ptr<MainWindowUiState>(widgets->shared_from_this());
+  g_object_set_data_full(G_OBJECT(task), kTaskMainWindowUiStateHoldKey, held_widgets, [](gpointer p) {
+    delete static_cast<std::shared_ptr<MainWindowUiState> *>(p);
   });
 }
 
@@ -59,13 +59,13 @@ widgets_make_task_cancellable_for(GtkWidget *w)
 }
 
 // -----------------------------------------------------------------------------
-// Create a task that keeps SearchWidgets alive until its completion callback returns.
+// Create a task that keeps MainWindowUiState alive until its completion callback returns.
 // -----------------------------------------------------------------------------
 GTask *
-widgets_task_new_for_search_widgets(SearchWidgets *widgets, GCancellable *c, GAsyncReadyCallback callback)
+widgets_task_new_for_main_window_ui_state(MainWindowUiState *widgets, GCancellable *c, GAsyncReadyCallback callback)
 {
   GTask *task = g_task_new(nullptr, c, callback, widgets);
-  hold_search_widgets_for_task(task, widgets);
+  hold_main_window_ui_state_for_task(task, widgets);
   return task;
 }
 
@@ -73,7 +73,7 @@ widgets_task_new_for_search_widgets(SearchWidgets *widgets, GCancellable *c, GAs
 // Return true when a task result should not update the window.
 // -----------------------------------------------------------------------------
 bool
-widgets_task_should_skip_completion(GTask *task, SearchWidgets *widgets)
+widgets_task_should_skip_completion(GTask *task, MainWindowUiState *widgets)
 {
   if (!widgets || widgets->window_state.destroyed) {
     return true;

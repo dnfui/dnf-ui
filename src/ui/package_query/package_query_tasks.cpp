@@ -211,7 +211,7 @@ static void
 on_list_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
 {
   GTask *task = G_TASK(res);
-  SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
+  MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
   const PackageListTaskData *td = static_cast<const PackageListTaskData *>(g_task_get_task_data(task));
 
   if (widgets_task_should_skip_completion(task, widgets)) {
@@ -296,7 +296,7 @@ static void
 on_list_available_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
 {
   GTask *task = G_TASK(res);
-  SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
+  MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
   const PackageListTaskData *td = static_cast<const PackageListTaskData *>(g_task_get_task_data(task));
 
   if (widgets_task_should_skip_completion(task, widgets)) {
@@ -391,7 +391,7 @@ static void
 on_list_upgradeable_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
 {
   GTask *task = G_TASK(res);
-  SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
+  MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
   const PackageListTaskData *td = static_cast<const PackageListTaskData *>(g_task_get_task_data(task));
 
   if (widgets_task_should_skip_completion(task, widgets)) {
@@ -487,7 +487,7 @@ static void
 on_search_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
 {
   GTask *task = G_TASK(res);
-  SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
+  MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
   GCancellable *c = g_task_get_cancellable(task);
   const SearchTaskData *td = static_cast<const SearchTaskData *>(g_task_get_task_data(task));
 
@@ -587,7 +587,7 @@ static void
 on_exact_package_reload_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
 {
   GTask *task = G_TASK(res);
-  SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
+  MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
   const ExactPackageReloadTaskData *td = static_cast<const ExactPackageReloadTaskData *>(g_task_get_task_data(task));
   const std::string task_nevra = td && td->nevra ? td->nevra : "";
 
@@ -647,7 +647,7 @@ on_exact_package_reload_task_finished(GObject *, GAsyncResult *res, gpointer use
 // Start one installed-package list worker.
 // -----------------------------------------------------------------------------
 void
-package_query_start_list_installed_task(SearchWidgets *widgets)
+package_query_start_list_installed_task(MainWindowUiState *widgets)
 {
   widgets_spinner_acquire(widgets->query.spinner);
 
@@ -658,7 +658,7 @@ package_query_start_list_installed_task(SearchWidgets *widgets)
   td->started_at_us = g_get_monotonic_time();
 
   package_query_begin_package_list_request(widgets, c, td->request_id, PackageListRequestKind::LIST_INSTALLED);
-  GTask *task = widgets_task_new_for_search_widgets(widgets, c, on_list_task_finished);
+  GTask *task = widgets_task_new_for_main_window_ui_state(widgets, c, on_list_task_finished);
   g_task_set_task_data(task, td, [](gpointer p) { delete static_cast<PackageListTaskData *>(p); });
 
   g_task_run_in_thread(task, on_list_task);
@@ -670,7 +670,7 @@ package_query_start_list_installed_task(SearchWidgets *widgets)
 // Start one package browse worker.
 // -----------------------------------------------------------------------------
 void
-package_query_start_list_available_task(SearchWidgets *widgets)
+package_query_start_list_available_task(MainWindowUiState *widgets)
 {
   widgets_spinner_acquire(widgets->query.spinner);
 
@@ -681,7 +681,7 @@ package_query_start_list_available_task(SearchWidgets *widgets)
   td->started_at_us = g_get_monotonic_time();
 
   package_query_begin_package_list_request(widgets, c, td->request_id, PackageListRequestKind::LIST_AVAILABLE);
-  GTask *task = widgets_task_new_for_search_widgets(widgets, c, on_list_available_task_finished);
+  GTask *task = widgets_task_new_for_main_window_ui_state(widgets, c, on_list_available_task_finished);
   g_task_set_task_data(task, td, [](gpointer p) { delete static_cast<PackageListTaskData *>(p); });
 
   g_task_run_in_thread(task, on_list_available_task);
@@ -693,7 +693,7 @@ package_query_start_list_available_task(SearchWidgets *widgets)
 // Start one upgradable-package list worker.
 // -----------------------------------------------------------------------------
 void
-package_query_start_list_upgradeable_task(SearchWidgets *widgets)
+package_query_start_list_upgradeable_task(MainWindowUiState *widgets)
 {
   widgets_spinner_acquire(widgets->query.spinner);
 
@@ -704,7 +704,7 @@ package_query_start_list_upgradeable_task(SearchWidgets *widgets)
   td->started_at_us = g_get_monotonic_time();
 
   package_query_begin_package_list_request(widgets, c, td->request_id, PackageListRequestKind::LIST_UPGRADEABLE);
-  GTask *task = widgets_task_new_for_search_widgets(widgets, c, on_list_upgradeable_task_finished);
+  GTask *task = widgets_task_new_for_main_window_ui_state(widgets, c, on_list_upgradeable_task_finished);
   g_task_set_task_data(task, td, [](gpointer p) { delete static_cast<PackageListTaskData *>(p); });
 
   g_task_run_in_thread(task, on_list_upgradeable_task);
@@ -716,7 +716,7 @@ package_query_start_list_upgradeable_task(SearchWidgets *widgets)
 // Start one package search worker.
 // -----------------------------------------------------------------------------
 void
-package_query_start_search_task(SearchWidgets *widgets,
+package_query_start_search_task(MainWindowUiState *widgets,
                                 const std::string &term,
                                 const std::string &cache_key,
                                 uint64_t generation,
@@ -737,7 +737,7 @@ package_query_start_search_task(SearchWidgets *widgets,
 
   GCancellable *c = widgets_make_task_cancellable_for(GTK_WIDGET(widgets->query.entry));
   package_query_begin_package_list_request(widgets, c, td->request_id, PackageListRequestKind::SEARCH);
-  GTask *task = widgets_task_new_for_search_widgets(widgets, c, on_search_task_finished);
+  GTask *task = widgets_task_new_for_main_window_ui_state(widgets, c, on_search_task_finished);
   g_task_set_task_data(task, td, search_task_data_free);
   g_task_run_in_thread(task, on_search_task);
   g_object_unref(task);
@@ -748,7 +748,7 @@ package_query_start_search_task(SearchWidgets *widgets,
 // Start one exact selected-package reload worker.
 // -----------------------------------------------------------------------------
 void
-package_query_start_exact_package_reload_task(SearchWidgets *widgets, const std::string &nevra)
+package_query_start_exact_package_reload_task(MainWindowUiState *widgets, const std::string &nevra)
 {
   if (!widgets || nevra.empty()) {
     return;
@@ -764,7 +764,7 @@ package_query_start_exact_package_reload_task(SearchWidgets *widgets, const std:
 
   GCancellable *c = widgets_make_task_cancellable_for(GTK_WIDGET(widgets->query.entry));
   package_query_begin_package_list_request(widgets, c, td->request_id, PackageListRequestKind::EXACT_RELOAD);
-  GTask *task = widgets_task_new_for_search_widgets(widgets, c, on_exact_package_reload_task_finished);
+  GTask *task = widgets_task_new_for_main_window_ui_state(widgets, c, on_exact_package_reload_task_finished);
   g_task_set_task_data(task, td, exact_package_reload_task_data_free);
   g_task_run_in_thread(task, on_exact_package_reload_task);
   g_object_unref(task);

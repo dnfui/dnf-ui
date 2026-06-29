@@ -18,7 +18,7 @@
 // Transaction and repository rebuilds use this to rerun the same query with fresh backend data.
 // -----------------------------------------------------------------------------
 void
-package_query_set_displayed_query_kind(SearchWidgets *widgets, DisplayedPackageQueryKind kind)
+package_query_set_displayed_query_kind(MainWindowUiState *widgets, DisplayedPackageQueryKind kind)
 {
   if (!widgets) {
     return;
@@ -32,7 +32,7 @@ package_query_set_displayed_query_kind(SearchWidgets *widgets, DisplayedPackageQ
 // Return true when the currently displayed table came from List Upgradable.
 // -----------------------------------------------------------------------------
 bool
-package_query_displayed_view_is_upgradeable(const SearchWidgets *widgets)
+package_query_displayed_view_is_upgradeable(const MainWindowUiState *widgets)
 {
   return widgets && widgets->query_state.displayed_query.kind == DisplayedPackageQueryKind::LIST_UPGRADEABLE;
 }
@@ -43,7 +43,7 @@ package_query_displayed_view_is_upgradeable(const SearchWidgets *widgets)
 // while the background work is still running.
 // -----------------------------------------------------------------------------
 void
-package_query_set_displayed_search_query(SearchWidgets *widgets,
+package_query_set_displayed_search_query(MainWindowUiState *widgets,
                                          const std::string &term,
                                          bool search_in_description,
                                          bool exact_match)
@@ -65,7 +65,7 @@ package_query_set_displayed_search_query(SearchWidgets *widgets,
 // Otherwise clear it so outdated package info is not shown for rows that disappeared.
 // -----------------------------------------------------------------------------
 void
-package_query_finish_results_refresh(SearchWidgets *widgets)
+package_query_finish_results_refresh(MainWindowUiState *widgets)
 {
   if (!widgets) {
     return;
@@ -88,7 +88,7 @@ package_query_finish_results_refresh(SearchWidgets *widgets)
 // Hide the package query timing label while new work is running.
 // -----------------------------------------------------------------------------
 void
-package_query_clear_duration_label(SearchWidgets *widgets)
+package_query_clear_duration_label(MainWindowUiState *widgets)
 {
   if (!widgets || !widgets->window_state.query_duration_label) {
     return;
@@ -102,7 +102,7 @@ package_query_clear_duration_label(SearchWidgets *widgets)
 // Show how long a package query took in the bottom bar.
 // -----------------------------------------------------------------------------
 void
-package_query_show_duration_label(SearchWidgets *widgets, const char *title, gint64 started_at_us)
+package_query_show_duration_label(MainWindowUiState *widgets, const char *title, gint64 started_at_us)
 {
   if (!widgets || !widgets->window_state.query_duration_label || started_at_us <= 0) {
     return;
@@ -124,7 +124,7 @@ package_query_show_duration_label(SearchWidgets *widgets, const char *title, gin
 // Return true when a package list task is currently running.
 // -----------------------------------------------------------------------------
 bool
-package_query_has_active_package_list_request(const SearchWidgets *widgets)
+package_query_has_active_package_list_request(const MainWindowUiState *widgets)
 {
   return widgets && widgets->query_state.package_list_cancellable;
 }
@@ -133,7 +133,7 @@ package_query_has_active_package_list_request(const SearchWidgets *widgets)
 // Enable or disable the idle package query controls.
 // -----------------------------------------------------------------------------
 void
-package_query_set_idle_controls_sensitive(SearchWidgets *widgets, bool sensitive)
+package_query_set_idle_controls_sensitive(MainWindowUiState *widgets, bool sensitive)
 {
   if (!widgets) {
     return;
@@ -153,7 +153,7 @@ package_query_set_idle_controls_sensitive(SearchWidgets *widgets, bool sensitive
 // Return the button that currently works as Stop.
 // -----------------------------------------------------------------------------
 static GtkButton *
-package_list_stop_button(SearchWidgets *widgets, PackageListRequestKind kind)
+package_list_stop_button(MainWindowUiState *widgets, PackageListRequestKind kind)
 {
   if (!widgets) {
     return nullptr;
@@ -225,7 +225,7 @@ package_list_stopping_status(PackageListRequestKind kind)
 // Record the active package list task and switch its button to Stop.
 // -----------------------------------------------------------------------------
 void
-package_query_begin_package_list_request(SearchWidgets *widgets,
+package_query_begin_package_list_request(MainWindowUiState *widgets,
                                          GCancellable *c,
                                          uint64_t request_id,
                                          PackageListRequestKind kind)
@@ -258,7 +258,7 @@ package_query_begin_package_list_request(SearchWidgets *widgets,
 // Restore the normal search and list controls after a package query stops or finishes.
 // -----------------------------------------------------------------------------
 static void
-restore_package_list_controls(SearchWidgets *widgets)
+restore_package_list_controls(MainWindowUiState *widgets)
 {
   if (!widgets) {
     return;
@@ -275,7 +275,7 @@ restore_package_list_controls(SearchWidgets *widgets)
 // Restore the package list controls when the active task is done.
 // -----------------------------------------------------------------------------
 void
-package_query_end_package_list_request(SearchWidgets *widgets, uint64_t request_id, PackageListRequestKind kind)
+package_query_end_package_list_request(MainWindowUiState *widgets, uint64_t request_id, PackageListRequestKind kind)
 {
   if (!widgets || widgets->query_state.current_package_list_request_id != request_id ||
       widgets->query_state.current_package_list_request_kind != kind) {
@@ -303,7 +303,7 @@ package_query_end_package_list_request(SearchWidgets *widgets, uint64_t request_
 // Controls stay busy until the worker reaches a cancellation point.
 // -----------------------------------------------------------------------------
 void
-package_query_cancel_active_package_list_request(SearchWidgets *widgets)
+package_query_cancel_active_package_list_request(MainWindowUiState *widgets)
 {
   if (!widgets || !widgets->query_state.package_list_cancellable) {
     return;

@@ -28,7 +28,7 @@ package_row_quark()
 // Snapshot the visible status text and its sort order for one package row.
 // -----------------------------------------------------------------------------
 void
-package_table_fill_item_status(SearchWidgets *widgets, PackageItem &item)
+package_table_fill_item_status(MainWindowUiState *widgets, PackageItem &item)
 {
   // Keep Status sorting tied to the stable package state so marking a pending
   // action does not move the row away from the user in the current view.
@@ -62,7 +62,7 @@ package_table_fill_item_status(SearchWidgets *widgets, PackageItem &item)
 // Wrap one package row in a GObject so GTK list models can sort and select it.
 // -----------------------------------------------------------------------------
 GObject *
-make_package_object(SearchWidgets *widgets, const PackageRow &row)
+make_package_object(MainWindowUiState *widgets, const PackageRow &row)
 {
   GObject *obj = G_OBJECT(g_object_new(G_TYPE_OBJECT, nullptr));
   auto *item = new PackageItem { row, {}, 0 };

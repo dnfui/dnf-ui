@@ -15,7 +15,7 @@
 // Find the pending action for the clicked package row, if one exists.
 // -----------------------------------------------------------------------------
 static bool
-get_context_menu_pending_action(SearchWidgets *widgets, const std::string &nevra, PendingAction::Type &out_type)
+get_context_menu_pending_action(MainWindowUiState *widgets, const std::string &nevra, PendingAction::Type &out_type)
 {
   for (const auto &action : widgets->transaction.actions) {
     if (action.nevra == nevra) {
@@ -35,7 +35,7 @@ append_context_menu_action(GtkBox *box,
                            const char *label,
                            gboolean sensitive,
                            GCallback callback,
-                           SearchWidgets *widgets)
+                           MainWindowUiState *widgets)
 {
   GtkWidget *button = gtk_button_new_with_label(label);
   gtk_widget_set_halign(button, GTK_ALIGN_FILL);
@@ -49,7 +49,7 @@ append_context_menu_action(GtkBox *box,
 // -----------------------------------------------------------------------------
 void
 package_table_show_context_menu(GtkWidget *anchor,
-                                SearchWidgets *widgets,
+                                MainWindowUiState *widgets,
                                 const PackageRow &row,
                                 double x,
                                 double y,

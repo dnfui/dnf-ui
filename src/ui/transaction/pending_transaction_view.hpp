@@ -3,7 +3,7 @@
 // Pending transaction tab helpers
 //
 // Owns the small UI helpers for the Pending Actions tab and the package action
-// list stored in SearchWidgets.
+// list stored in MainWindowUiState.
 // -----------------------------------------------------------------------------
 #pragma once
 
@@ -11,21 +11,22 @@
 
 #include <string>
 
-struct SearchWidgets;
+struct MainWindowUiState;
 
 // -----------------------------------------------------------------------------
 // Rebuild the Pending Actions tab from the current pending actions.
 // -----------------------------------------------------------------------------
-void pending_transaction_refresh_pending_tab(SearchWidgets *widgets);
+void pending_transaction_refresh_pending_tab(MainWindowUiState *widgets);
 // -----------------------------------------------------------------------------
 // Remove one pending action by package ID.
 // -----------------------------------------------------------------------------
-bool pending_transaction_remove_action(SearchWidgets *widgets, const std::string &nevra);
+bool pending_transaction_remove_action(MainWindowUiState *widgets, const std::string &nevra);
 // -----------------------------------------------------------------------------
 // Return the pending action type for one package ID.
 // -----------------------------------------------------------------------------
-bool
-pending_transaction_get_action_type(SearchWidgets *widgets, const std::string &nevra, PendingAction::Type &out_type);
+bool pending_transaction_get_action_type(MainWindowUiState *widgets,
+                                         const std::string &nevra,
+                                         PendingAction::Type &out_type);
 
 // -----------------------------------------------------------------------------
 // EOF

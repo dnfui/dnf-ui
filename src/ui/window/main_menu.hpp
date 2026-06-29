@@ -6,7 +6,7 @@
 
 #include <gtk/gtk.h>
 
-struct SearchWidgets;
+struct MainWindowUiState;
 
 struct MainMenuWidgets {
   GtkWidget *window = nullptr;
@@ -21,7 +21,7 @@ GtkWidget *main_menu_create();
 // -----------------------------------------------------------------------------
 // Connect menu actions to the main window widget state.
 // -----------------------------------------------------------------------------
-void main_menu_connect_actions(const MainMenuWidgets &menu_widgets, SearchWidgets *widgets);
+void main_menu_connect_actions(const MainMenuWidgets &menu_widgets, MainWindowUiState *widgets);
 
 // -----------------------------------------------------------------------------
 // EOF

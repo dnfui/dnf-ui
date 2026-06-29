@@ -9,7 +9,7 @@
 
 #include <gtk/gtk.h>
 
-struct SearchWidgets;
+struct MainWindowUiState;
 
 // -----------------------------------------------------------------------------
 // Handle the installed packages list button click.
@@ -42,7 +42,7 @@ void package_query_clear_search_cache();
 // -----------------------------------------------------------------------------
 // Reload the currently displayed package query view.
 // -----------------------------------------------------------------------------
-void package_query_reload_current_view(SearchWidgets *widgets);
+void package_query_reload_current_view(MainWindowUiState *widgets);
 
 // -----------------------------------------------------------------------------
 // EOF

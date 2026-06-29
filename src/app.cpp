@@ -34,7 +34,7 @@ on_installed_refresh_task(GTask *task, gpointer source_object, gpointer task_dat
 static void on_installed_refresh_task_finished(GObject *source_object, GAsyncResult *result, gpointer user_data);
 static void startup_warmup_data_free(gpointer data);
 static gboolean start_backend_warmup_idle(gpointer user_data);
-static void start_backend_warmup_task(SearchWidgets *widgets);
+static void start_backend_warmup_task(MainWindowUiState *widgets);
 static void on_backend_warmup_task(GTask *task, gpointer source_object, gpointer task_data, GCancellable *cancellable);
 static void on_backend_warmup_task_finished(GObject *source_object, GAsyncResult *result, gpointer user_data);
 #ifdef DNFUI_DEBUG_TRACE
@@ -48,10 +48,10 @@ static guint g_periodic_installed_refresh_source_id = 0;
 // Keep one main window so global tasks do not have to decide which window owns
 // refresh, spinner, or transaction state.
 static GtkWidget *g_main_window = nullptr;
-static SearchWidgets *g_main_widgets = nullptr;
+static MainWindowUiState *g_main_widgets = nullptr;
 
 struct StartupWarmupData {
-  SearchWidgets *widgets = nullptr;
+  MainWindowUiState *widgets = nullptr;
   GCancellable *startup_cancellable = nullptr;
 };
 
@@ -237,7 +237,7 @@ start_backend_warmup_idle(gpointer user_data)
 // Start a quiet background task that warms up the shared DNF base.
 // -----------------------------------------------------------------------------
 static void
-start_backend_warmup_task(SearchWidgets *widgets)
+start_backend_warmup_task(MainWindowUiState *widgets)
 {
   if (!widgets || !widgets->window_state.backend_warmup_label) {
     return;
@@ -248,7 +248,7 @@ start_backend_warmup_task(SearchWidgets *widgets)
 
   widgets->window_state.backend_warmup_cancellable = g_cancellable_new();
 
-  GTask *task = widgets_task_new_for_search_widgets(
+  GTask *task = widgets_task_new_for_main_window_ui_state(
       widgets, widgets->window_state.backend_warmup_cancellable, on_backend_warmup_task_finished);
   g_task_run_in_thread(task, on_backend_warmup_task);
   g_object_unref(task);
@@ -287,7 +287,7 @@ on_backend_warmup_task(GTask *task, gpointer, gpointer, GCancellable *cancellabl
 static void
 on_backend_warmup_task_finished(GObject *, GAsyncResult *result, gpointer user_data)
 {
-  SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
+  MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
   GTask *task = G_TASK(result);
   if (widgets_task_should_skip_completion(task, widgets)) {
     return;

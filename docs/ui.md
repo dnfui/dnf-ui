@@ -12,7 +12,7 @@ shared widget state and connects behavior. Controller files own the behavior
 behind each part of the window.
 
 The shared widget state lives in [src/ui/common/widgets.hpp](../src/ui/common/widgets.hpp).
-Controller files receive a `SearchWidgets` pointer and use it to update the
+Controller files receive a `MainWindowUiState` pointer and use it to update the
 parts of the window they own.
 
 This keeps widget construction, package query behavior, package details,
@@ -60,7 +60,7 @@ smaller structs:
 - `PackageResultsWidgets` for the package table and details panel
 - `PendingTransactionWidgets` for marked actions and apply controls
 - `MainWindowState` for window-level state
-- `SearchWidgets` as the top-level shared state passed to controllers
+- `MainWindowUiState` as the top-level shared state passed to controllers
 
 This state is not meant to hide ownership. It is a practical place to store
 GTK pointers that several controllers need.

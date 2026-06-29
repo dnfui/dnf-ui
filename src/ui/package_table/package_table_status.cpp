@@ -87,7 +87,7 @@ status_cell_icon(GtkWidget *cell)
 // Return the CSS class for a pending action NEVRA.
 // -----------------------------------------------------------------------------
 static const char *
-pending_css_class(SearchWidgets *widgets, const std::string &nevra, const std::string &alternate_nevra)
+pending_css_class(MainWindowUiState *widgets, const std::string &nevra, const std::string &alternate_nevra)
 {
   for (const auto &a : widgets->transaction.actions) {
     if (a.nevra == nevra || (!alternate_nevra.empty() && a.nevra == alternate_nevra)) {
@@ -110,7 +110,7 @@ pending_css_class(SearchWidgets *widgets, const std::string &nevra, const std::s
 // Return the pending action CSS class for one package row.
 // -----------------------------------------------------------------------------
 const char *
-package_table_pending_action_css_class(SearchWidgets *widgets, const PackageRow &row)
+package_table_pending_action_css_class(MainWindowUiState *widgets, const PackageRow &row)
 {
   PackageInstallState install_state = dnf_backend_get_package_install_state(row);
   PendingTransactionActionRows action_rows;
@@ -199,7 +199,7 @@ package_table_clear_pending_action_css(GtkWidget *cell)
 // Apply text, CSS, and tooltip for one Status cell.
 // -----------------------------------------------------------------------------
 void
-package_table_update_status_label(GtkWidget *cell, SearchWidgets *widgets, const PackageRow &row)
+package_table_update_status_label(GtkWidget *cell, MainWindowUiState *widgets, const PackageRow &row)
 {
   PackageInstallState install_state = dnf_backend_get_package_install_state(row);
   PendingTransactionActionRows action_rows;

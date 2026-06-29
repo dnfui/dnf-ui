@@ -72,7 +72,7 @@ struct MainWindowState {
 // -----------------------------------------------------------------------------
 // Shared widget state passed between controller modules
 // -----------------------------------------------------------------------------
-struct SearchWidgets : std::enable_shared_from_this<SearchWidgets> {
+struct MainWindowUiState : std::enable_shared_from_this<MainWindowUiState> {
   PackageQueryWidgets query;
   PackageResultsWidgets results;
   PendingTransactionWidgets transaction;

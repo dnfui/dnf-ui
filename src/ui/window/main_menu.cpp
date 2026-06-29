@@ -19,7 +19,7 @@
 #endif
 
 struct MainMenuActionData {
-  SearchWidgets *widgets = nullptr;
+  MainWindowUiState *widgets = nullptr;
   GtkWidget *window = nullptr;
   GtkWidget *history_panel = nullptr;
   GtkWidget *info_panel = nullptr;
@@ -280,7 +280,7 @@ main_menu_create()
 // Connect menu actions to existing UI behavior
 // -----------------------------------------------------------------------------
 void
-main_menu_connect_actions(const MainMenuWidgets &menu_widgets, SearchWidgets *widgets)
+main_menu_connect_actions(const MainMenuWidgets &menu_widgets, MainWindowUiState *widgets)
 {
   MainMenuActionData *data = new MainMenuActionData();
   data->widgets = widgets;

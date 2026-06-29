@@ -11,28 +11,28 @@
 
 #include <vector>
 
-struct SearchWidgets;
+struct MainWindowUiState;
 
 // -----------------------------------------------------------------------------
 // Return the currently selected package row.
 // -----------------------------------------------------------------------------
-bool package_table_get_selected_package_row(SearchWidgets *widgets, PackageRow &out_pkg);
+bool package_table_get_selected_package_row(MainWindowUiState *widgets, PackageRow &out_pkg);
 // -----------------------------------------------------------------------------
 // Replace the package table contents with the provided rows.
 // -----------------------------------------------------------------------------
-void package_table_fill_package_view(SearchWidgets *widgets, const std::vector<PackageRow> &items);
+void package_table_fill_package_view(MainWindowUiState *widgets, const std::vector<PackageRow> &items);
 // -----------------------------------------------------------------------------
 // Refresh status values for all visible package rows.
 // -----------------------------------------------------------------------------
-void package_table_refresh_statuses(SearchWidgets *widgets);
+void package_table_refresh_statuses(MainWindowUiState *widgets);
 // -----------------------------------------------------------------------------
 // Change one package table column setting and update the current table if shown.
 // -----------------------------------------------------------------------------
-bool package_table_set_column_visible(SearchWidgets *widgets, const char *column_id, bool visible);
+bool package_table_set_column_visible(MainWindowUiState *widgets, const char *column_id, bool visible);
 // -----------------------------------------------------------------------------
 // Reset package table columns to their default visibility and update the table.
 // -----------------------------------------------------------------------------
-void package_table_reset_columns_to_default(SearchWidgets *widgets);
+void package_table_reset_columns_to_default(MainWindowUiState *widgets);
 
 // -----------------------------------------------------------------------------
 // EOF

@@ -12,7 +12,7 @@
 
 #include <string>
 
-struct SearchWidgets;
+struct MainWindowUiState;
 
 // Package row wrapper used by the sortable GTK model.
 struct PackageItem {
@@ -26,11 +26,11 @@ struct ColumnSorterData {
   PackageColumnKind kind;
 };
 
-GObject *make_package_object(SearchWidgets *widgets, const PackageRow &row);
+GObject *make_package_object(MainWindowUiState *widgets, const PackageRow &row);
 const PackageItem *package_item_from_object(GObject *obj);
 PackageItem *mutable_package_item_from_object(GObject *obj);
 const PackageRow *package_row_from_object(GObject *obj);
-void package_table_fill_item_status(SearchWidgets *widgets, PackageItem &item);
+void package_table_fill_item_status(MainWindowUiState *widgets, PackageItem &item);
 
 std::string package_table_column_text(const PackageItem &item, PackageColumnKind kind);
 void package_table_column_sorter_data_free(gpointer p);

@@ -17,14 +17,14 @@
 #include <sstream>
 
 struct SummaryDialogApplyData {
-  std::shared_ptr<SearchWidgets> widgets;
+  std::shared_ptr<MainWindowUiState> widgets;
   TransactionApplyCallback on_apply;
   TransactionApplyCallback on_cancel;
   bool apply_requested;
 };
 
 struct KeyImportDialogState {
-  SearchWidgets *widgets = nullptr;
+  MainWindowUiState *widgets = nullptr;
   TransactionKeyImportRequest request;
   std::mutex mutex;
   std::condition_variable condition;
@@ -299,7 +299,7 @@ append_transaction_summary_section(GtkBox *parent, const char *title, const std:
 // Show the final confirmation dialog before starting the package transaction.
 // -----------------------------------------------------------------------------
 void
-transaction_review_show_summary_dialog(SearchWidgets *widgets,
+transaction_review_show_summary_dialog(MainWindowUiState *widgets,
                                        const TransactionPreview &preview,
                                        TransactionApplyCallback on_apply,
                                        TransactionApplyCallback on_cancel)
@@ -438,7 +438,7 @@ transaction_review_show_summary_dialog(SearchWidgets *widgets,
                    "clicked",
                    G_CALLBACK(+[](GtkButton *button, gpointer user_data) {
                      SummaryDialogApplyData *data = static_cast<SummaryDialogApplyData *>(user_data);
-                     SearchWidgets *widgets = data && data->widgets ? data->widgets.get() : nullptr;
+                     MainWindowUiState *widgets = data && data->widgets ? data->widgets.get() : nullptr;
                      TransactionApplyCallback on_apply = data ? data->on_apply : nullptr;
                      GtkRoot *root = gtk_widget_get_root(GTK_WIDGET(button));
                      if (data) {
@@ -462,7 +462,7 @@ transaction_review_show_summary_dialog(SearchWidgets *widgets,
 // Show the GTK dialog on the main thread and wait for the user answer.
 // -----------------------------------------------------------------------------
 bool
-transaction_review_confirm_key_import(SearchWidgets *widgets, const TransactionKeyImportRequest &request)
+transaction_review_confirm_key_import(MainWindowUiState *widgets, const TransactionKeyImportRequest &request)
 {
   if (!widgets) {
     return false;
@@ -483,7 +483,7 @@ transaction_review_confirm_key_import(SearchWidgets *widgets, const TransactionK
 // Show a modal dialog with selectable transaction error details.
 // -----------------------------------------------------------------------------
 void
-transaction_review_show_error_dialog(SearchWidgets *widgets,
+transaction_review_show_error_dialog(MainWindowUiState *widgets,
                                      const char *title,
                                      const char *intro,
                                      const std::string &details)

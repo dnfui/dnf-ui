@@ -17,7 +17,7 @@
 
 // Button payload used to jump from one pending action back to its package row.
 struct PendingJumpButtonData {
-  SearchWidgets *widgets;
+  MainWindowUiState *widgets;
   PendingAction action;
 };
 
@@ -42,7 +42,7 @@ pending_jump_button_data_free(gpointer p)
 // Show the selected pending action in the main package list.
 // -----------------------------------------------------------------------------
 static void
-show_pending_action_package(SearchWidgets *widgets, const PendingAction &action)
+show_pending_action_package(MainWindowUiState *widgets, const PendingAction &action)
 {
   if (!widgets) {
     return;
@@ -79,7 +79,7 @@ show_pending_action_package(SearchWidgets *widgets, const PendingAction &action)
 // Enable the Apply button only when actions are pending.
 // -----------------------------------------------------------------------------
 static void
-update_apply_button(SearchWidgets *widgets)
+update_apply_button(MainWindowUiState *widgets)
 {
   if (!widgets || !widgets->transaction.apply_button || !widgets->transaction.clear_pending_button) {
     return;
@@ -101,7 +101,7 @@ update_apply_button(SearchWidgets *widgets)
 // Rebuild the Pending Actions tab from the current pending actions.
 // -----------------------------------------------------------------------------
 void
-pending_transaction_refresh_pending_tab(SearchWidgets *widgets)
+pending_transaction_refresh_pending_tab(MainWindowUiState *widgets)
 {
   // Remove existing rows.
   while (GtkListBoxRow *row = gtk_list_box_get_row_at_index(widgets->transaction.pending_list, 0)) {
@@ -161,7 +161,7 @@ pending_transaction_refresh_pending_tab(SearchWidgets *widgets)
 // Remove one pending action by package ID.
 // -----------------------------------------------------------------------------
 bool
-pending_transaction_remove_action(SearchWidgets *widgets, const std::string &nevra)
+pending_transaction_remove_action(MainWindowUiState *widgets, const std::string &nevra)
 {
   for (size_t i = 0; i < widgets->transaction.actions.size(); ++i) {
     if (widgets->transaction.actions[i].nevra == nevra) {
@@ -176,7 +176,7 @@ pending_transaction_remove_action(SearchWidgets *widgets, const std::string &nev
 // Return the pending action type for one package ID.
 // -----------------------------------------------------------------------------
 bool
-pending_transaction_get_action_type(SearchWidgets *widgets, const std::string &nevra, PendingAction::Type &out_type)
+pending_transaction_get_action_type(MainWindowUiState *widgets, const std::string &nevra, PendingAction::Type &out_type)
 {
   for (const auto &a : widgets->transaction.actions) {
     if (a.nevra == nevra) {

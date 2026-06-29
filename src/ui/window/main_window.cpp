@@ -21,7 +21,7 @@
 #include <memory>
 
 struct MainWindowCleanupData {
-  std::shared_ptr<SearchWidgets> widgets;
+  std::shared_ptr<MainWindowUiState> widgets;
   GCancellable *startup_cancellable = nullptr;
 };
 
@@ -31,13 +31,13 @@ struct MainWindowCleanupData {
 static GtkWidget *create_window(GtkApplication *app);
 static gboolean toggle_stateful_window_action(GtkWidget *widget, const char *action_name);
 static void setup_shortcuts(GtkWidget *window, GtkWidget *entry);
-static std::shared_ptr<SearchWidgets> create_search_widgets(const AppWidgets *ui);
-static void setup_css(SearchWidgets *widgets);
-static void initialize_ui_state(SearchWidgets *widgets);
-static void connect_signals(const AppWidgets *ui, SearchWidgets *widgets);
+static std::shared_ptr<MainWindowUiState> create_main_window_ui_state(const AppWidgets *ui);
+static void setup_css(MainWindowUiState *widgets);
+static void initialize_ui_state(MainWindowUiState *widgets);
+static void connect_signals(const AppWidgets *ui, MainWindowUiState *widgets);
 static void
-connect_cleanup(GtkWidget *window, std::shared_ptr<SearchWidgets> widgets, GCancellable *startup_cancellable);
-static void show_pending_quit_dialog(SearchWidgets *widgets);
+connect_cleanup(GtkWidget *window, std::shared_ptr<MainWindowUiState> widgets, GCancellable *startup_cancellable);
+static void show_pending_quit_dialog(MainWindowUiState *widgets);
 static gboolean on_main_window_close_request(GtkWindow *window, gpointer user_data);
 
 // -----------------------------------------------------------------------------
@@ -149,13 +149,13 @@ setup_shortcuts(GtkWidget *window, GtkWidget *entry)
 }
 
 // -----------------------------------------------------------------------------
-// Create shared SearchWidgets state from UI handles
+// Create shared MainWindowUiState state from UI handles
 // Kept alive by the main window cleanup data and running UI tasks
 // -----------------------------------------------------------------------------
-static std::shared_ptr<SearchWidgets>
-create_search_widgets(const AppWidgets *ui)
+static std::shared_ptr<MainWindowUiState>
+create_main_window_ui_state(const AppWidgets *ui)
 {
-  auto widgets = std::make_shared<SearchWidgets>();
+  auto widgets = std::make_shared<MainWindowUiState>();
   widgets->query.entry = GTK_ENTRY(ui->entry);
   widgets->query.history_list = GTK_LIST_BOX(ui->history_list);
   widgets->query.spinner = GTK_SPINNER(ui->spinner);
@@ -203,7 +203,7 @@ create_search_widgets(const AppWidgets *ui)
 // Setup GTK CSS styling
 // -----------------------------------------------------------------------------
 static void
-setup_css(SearchWidgets *widgets)
+setup_css(MainWindowUiState *widgets)
 {
   GtkCssProvider *css = gtk_css_provider_new();
   // The few custom style rules are kept next to the widgets they style.
@@ -334,7 +334,7 @@ setup_css(SearchWidgets *widgets)
 // Initialize widget state after construction
 // -----------------------------------------------------------------------------
 static void
-initialize_ui_state(SearchWidgets *widgets)
+initialize_ui_state(MainWindowUiState *widgets)
 {
   // Apply and Clear Transactions are meaningful only when there are pending actions
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.apply_button), FALSE);
@@ -348,7 +348,7 @@ initialize_ui_state(SearchWidgets *widgets)
 // Connect all GTK signals and callbacks
 // -----------------------------------------------------------------------------
 static void
-connect_signals(const AppWidgets *ui, SearchWidgets *widgets)
+connect_signals(const AppWidgets *ui, MainWindowUiState *widgets)
 {
   MainMenuWidgets menu_widgets;
   menu_widgets.window = ui->window;
@@ -399,7 +399,7 @@ connect_signals(const AppWidgets *ui, SearchWidgets *widgets)
 // Show a confirmation dialog before closing the app with unapplied changes.
 // -----------------------------------------------------------------------------
 static void
-show_pending_quit_dialog(SearchWidgets *widgets)
+show_pending_quit_dialog(MainWindowUiState *widgets)
 {
   if (!widgets) {
     return;
@@ -465,7 +465,7 @@ show_pending_quit_dialog(SearchWidgets *widgets)
   g_signal_connect(quit_button,
                    "clicked",
                    G_CALLBACK(+[](GtkButton *button, gpointer user_data) {
-                     SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
+                     MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
                      widgets->window_state.allow_close_with_pending = true;
 
                      GtkRoot *dialog_root = gtk_widget_get_root(GTK_WIDGET(button));
@@ -483,7 +483,7 @@ show_pending_quit_dialog(SearchWidgets *widgets)
   g_signal_connect(dialog,
                    "destroy",
                    G_CALLBACK(+[](GtkWidget *, gpointer user_data) {
-                     SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
+                     MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
                      widgets->window_state.pending_quit_dialog_open = false;
                    }),
                    widgets);
@@ -497,7 +497,7 @@ show_pending_quit_dialog(SearchWidgets *widgets)
 static gboolean
 on_main_window_close_request(GtkWindow *window, gpointer user_data)
 {
-  SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
+  MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
 
   if (!widgets) {
     config_save_window_geometry(window);
@@ -536,7 +536,7 @@ on_main_window_close_request(GtkWindow *window, gpointer user_data)
 // Connect window cleanup.
 // -----------------------------------------------------------------------------
 static void
-connect_cleanup(GtkWidget *window, std::shared_ptr<SearchWidgets> widgets, GCancellable *startup_cancellable)
+connect_cleanup(GtkWidget *window, std::shared_ptr<MainWindowUiState> widgets, GCancellable *startup_cancellable)
 {
   MainWindowCleanupData *cleanup_data = new MainWindowCleanupData();
   cleanup_data->widgets = std::move(widgets);
@@ -546,7 +546,7 @@ connect_cleanup(GtkWidget *window, std::shared_ptr<SearchWidgets> widgets, GCanc
                    "destroy",
                    G_CALLBACK(+[](GtkWidget *, gpointer data) {
                      MainWindowCleanupData *cleanup_data = static_cast<MainWindowCleanupData *>(data);
-                     SearchWidgets *widgets = cleanup_data ? cleanup_data->widgets.get() : nullptr;
+                     MainWindowUiState *widgets = cleanup_data ? cleanup_data->widgets.get() : nullptr;
                      if (cleanup_data && cleanup_data->startup_cancellable) {
                        g_cancellable_cancel(cleanup_data->startup_cancellable);
                        g_object_unref(cleanup_data->startup_cancellable);
@@ -589,7 +589,7 @@ main_window_create(GtkApplication *app)
 
   main_window_build_layout(&ui);
 
-  std::shared_ptr<SearchWidgets> widgets = create_search_widgets(&ui);
+  std::shared_ptr<MainWindowUiState> widgets = create_main_window_ui_state(&ui);
   GCancellable *startup_cancellable = g_cancellable_new();
 
   setup_shortcuts(ui.window, ui.entry);

@@ -7,12 +7,12 @@
 // -----------------------------------------------------------------------------
 #pragma once
 
-struct SearchWidgets;
+struct MainWindowUiState;
 
 // -----------------------------------------------------------------------------
 // Release any prepared service preview because the pending actions changed.
 // -----------------------------------------------------------------------------
-void pending_transaction_invalidate_service_preview(SearchWidgets *widgets);
+void pending_transaction_invalidate_service_preview(MainWindowUiState *widgets);
 // -----------------------------------------------------------------------------
 // Return the status text shown while a preview request is running.
 // -----------------------------------------------------------------------------
@@ -20,7 +20,7 @@ const char *pending_transaction_preview_busy_message();
 // -----------------------------------------------------------------------------
 // Return true when a preview request is running.
 // -----------------------------------------------------------------------------
-bool pending_transaction_preview_is_busy(SearchWidgets *widgets);
+bool pending_transaction_preview_is_busy(MainWindowUiState *widgets);
 // -----------------------------------------------------------------------------
 // Return the status text shown while an apply request is running.
 // -----------------------------------------------------------------------------
@@ -28,11 +28,11 @@ const char *pending_transaction_apply_busy_message();
 // -----------------------------------------------------------------------------
 // Return true when an apply request is running.
 // -----------------------------------------------------------------------------
-bool pending_transaction_apply_is_busy(SearchWidgets *widgets);
+bool pending_transaction_apply_is_busy(MainWindowUiState *widgets);
 // -----------------------------------------------------------------------------
 // Enable or disable the controls that can start a new transaction preview.
 // -----------------------------------------------------------------------------
-void pending_transaction_set_preview_controls_sensitive(SearchWidgets *widgets, bool sensitive);
+void pending_transaction_set_preview_controls_sensitive(MainWindowUiState *widgets, bool sensitive);
 
 // -----------------------------------------------------------------------------
 // EOF

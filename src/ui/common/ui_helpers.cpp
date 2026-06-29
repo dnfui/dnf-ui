@@ -94,7 +94,7 @@ ui_helpers_set_status(GtkLabel *label, const std::string &text, const std::strin
 // Return true when one pending action matches the requested package and type.
 // -----------------------------------------------------------------------------
 static bool
-has_pending_action(SearchWidgets *widgets, const std::string &nevra, PendingAction::Type type)
+has_pending_action(MainWindowUiState *widgets, const std::string &nevra, PendingAction::Type type)
 {
   for (const auto &a : widgets->transaction.actions) {
     if (a.nevra == nevra && a.type == type) {
@@ -109,7 +109,7 @@ has_pending_action(SearchWidgets *widgets, const std::string &nevra, PendingActi
 // Update transaction action button labels based on pending actions.
 // -----------------------------------------------------------------------------
 void
-ui_helpers_update_action_button_labels_for_selection(SearchWidgets *widgets,
+ui_helpers_update_action_button_labels_for_selection(MainWindowUiState *widgets,
                                                      const std::string &install_nevra,
                                                      const std::string &remove_nevra,
                                                      const std::string &reinstall_nevra,
@@ -146,7 +146,7 @@ ui_helpers_update_action_button_labels_for_selection(SearchWidgets *widgets,
 // Update transaction action button labels when all actions use one package ID.
 // -----------------------------------------------------------------------------
 void
-ui_helpers_update_action_button_labels(SearchWidgets *widgets, const std::string &pkg)
+ui_helpers_update_action_button_labels(MainWindowUiState *widgets, const std::string &pkg)
 {
   ui_helpers_update_action_button_labels_for_selection(widgets, pkg, pkg, pkg, false);
 }

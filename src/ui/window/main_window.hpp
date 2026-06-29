@@ -7,12 +7,12 @@
 
 #include <gtk/gtk.h>
 
-struct SearchWidgets;
+struct MainWindowUiState;
 
 struct MainWindow {
   GtkWidget *window = nullptr;
   // Non-owning pointer used by startup code before window destruction.
-  SearchWidgets *widgets = nullptr;
+  MainWindowUiState *widgets = nullptr;
   // Caller owns this reference and should release it after scheduling startup work.
   GCancellable *startup_cancellable = nullptr;
 };

@@ -34,7 +34,7 @@ package_query_clear_search_cache()
 // Add a new search term to history if it is not already present.
 // -----------------------------------------------------------------------------
 static void
-add_to_history(SearchWidgets *widgets, const std::string &term)
+add_to_history(MainWindowUiState *widgets, const std::string &term)
 {
   if (term.empty()) {
     return;
@@ -58,7 +58,7 @@ add_to_history(SearchWidgets *widgets, const std::string &term)
 // Run a search from cache or start a background search task.
 // -----------------------------------------------------------------------------
 static void
-perform_search(SearchWidgets *widgets, const std::string &term)
+perform_search(MainWindowUiState *widgets, const std::string &term)
 {
   if (term.empty()) {
     return;
@@ -115,7 +115,7 @@ perform_search(SearchWidgets *widgets, const std::string &term)
 void
 package_query_on_list_button_clicked(GtkButton *, gpointer user_data)
 {
-  SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
+  MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
   if (package_query_has_active_package_list_request(widgets)) {
     if (widgets->query_state.current_package_list_request_kind == PackageListRequestKind::LIST_INSTALLED) {
       package_query_cancel_active_package_list_request(widgets);
@@ -135,7 +135,7 @@ package_query_on_list_button_clicked(GtkButton *, gpointer user_data)
 void
 package_query_on_list_available_button_clicked(GtkButton *, gpointer user_data)
 {
-  SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
+  MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
   if (package_query_has_active_package_list_request(widgets)) {
     if (widgets->query_state.current_package_list_request_kind == PackageListRequestKind::LIST_AVAILABLE) {
       package_query_cancel_active_package_list_request(widgets);
@@ -155,7 +155,7 @@ package_query_on_list_available_button_clicked(GtkButton *, gpointer user_data)
 void
 package_query_on_list_upgradeable_button_clicked(GtkButton *, gpointer user_data)
 {
-  SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
+  MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
   if (package_query_has_active_package_list_request(widgets)) {
     if (widgets->query_state.current_package_list_request_kind == PackageListRequestKind::LIST_UPGRADEABLE) {
       package_query_cancel_active_package_list_request(widgets);
@@ -175,7 +175,7 @@ package_query_on_list_upgradeable_button_clicked(GtkButton *, gpointer user_data
 void
 package_query_on_search_button_clicked(GtkButton *, gpointer user_data)
 {
-  SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
+  MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
   if (package_query_has_active_package_list_request(widgets)) {
     if (widgets->query_state.current_package_list_request_kind == PackageListRequestKind::SEARCH ||
         widgets->query_state.current_package_list_request_kind == PackageListRequestKind::EXACT_RELOAD) {
@@ -206,7 +206,7 @@ package_query_on_history_row_selected(GtkListBox *, GtkListBoxRow *row, gpointer
     return;
   }
 
-  SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
+  MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
   GtkWidget *child = gtk_list_box_row_get_child(row);
   const char *term = gtk_label_get_text(GTK_LABEL(child));
   perform_search(widgets, term);
@@ -219,7 +219,7 @@ package_query_on_history_row_selected(GtkListBox *, GtkListBoxRow *row, gpointer
 void
 package_query_on_clear_button_clicked(GtkButton *, gpointer user_data)
 {
-  SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
+  MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
 
   package_query_cancel_active_package_list_request(widgets);
 
@@ -242,7 +242,7 @@ package_query_on_clear_button_clicked(GtkButton *, gpointer user_data)
 // points, exact one-package views are refreshed from the selected NEVRA.
 // -----------------------------------------------------------------------------
 void
-package_query_reload_current_view(SearchWidgets *widgets)
+package_query_reload_current_view(MainWindowUiState *widgets)
 {
   if (!widgets || package_query_has_active_package_list_request(widgets)) {
     return;

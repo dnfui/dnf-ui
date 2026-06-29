@@ -12,13 +12,13 @@
 
 #include <gtk/gtk.h>
 
-struct SearchWidgets;
+struct MainWindowUiState;
 
 // -----------------------------------------------------------------------------
 // Show the package table context menu for one row.
 // -----------------------------------------------------------------------------
 void package_table_show_context_menu(GtkWidget *anchor,
-                                     SearchWidgets *widgets,
+                                     MainWindowUiState *widgets,
                                      const PackageRow &row,
                                      double x,
                                      double y,

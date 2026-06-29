@@ -29,14 +29,14 @@
 // The worker uses transaction_path to call the service, and progress_window receives text lines while the service
 // applies.
 struct ApplyTaskData {
-  SearchWidgets *widgets = nullptr;
+  MainWindowUiState *widgets = nullptr;
   std::string transaction_path;
   TransactionProgressWindow *progress_window;
 };
 
 // Data passed to the transaction preview worker.
 struct PreviewTaskData {
-  SearchWidgets *widgets = nullptr;
+  MainWindowUiState *widgets = nullptr;
   TransactionRequest request;
   TransactionPreview preview;
   std::string transaction_path;
@@ -81,7 +81,7 @@ preview_task_data_free(gpointer p)
 // Release any prepared service preview because the pending actions changed.
 // -----------------------------------------------------------------------------
 void
-pending_transaction_invalidate_service_preview(SearchWidgets *widgets)
+pending_transaction_invalidate_service_preview(MainWindowUiState *widgets)
 {
   if (!widgets) {
     return;
@@ -100,7 +100,7 @@ pending_transaction_invalidate_service_preview(SearchWidgets *widgets)
 // Close a prepared preview from the summary dialog without applying it.
 // -----------------------------------------------------------------------------
 static void
-pending_transaction_cancel_service_preview(SearchWidgets *widgets)
+pending_transaction_cancel_service_preview(MainWindowUiState *widgets)
 {
   pending_transaction_invalidate_service_preview(widgets);
   if (widgets) {
@@ -134,7 +134,7 @@ empty_preview_status_message(const TransactionRequest &request)
 // Return true when a preview request is running.
 // -----------------------------------------------------------------------------
 bool
-pending_transaction_preview_is_busy(SearchWidgets *widgets)
+pending_transaction_preview_is_busy(MainWindowUiState *widgets)
 {
   return widgets && widgets->transaction.preview_request_in_progress;
 }
@@ -152,7 +152,7 @@ pending_transaction_apply_busy_message()
 // Return true when an apply request is running.
 // -----------------------------------------------------------------------------
 bool
-pending_transaction_apply_is_busy(SearchWidgets *widgets)
+pending_transaction_apply_is_busy(MainWindowUiState *widgets)
 {
   return widgets && widgets->transaction.apply_in_progress;
 }
@@ -161,7 +161,7 @@ pending_transaction_apply_is_busy(SearchWidgets *widgets)
 // Enable or disable the controls that can start a new transaction preview.
 // -----------------------------------------------------------------------------
 void
-pending_transaction_set_preview_controls_sensitive(SearchWidgets *widgets, bool sensitive)
+pending_transaction_set_preview_controls_sensitive(MainWindowUiState *widgets, bool sensitive)
 {
   if (!widgets) {
     return;
@@ -191,7 +191,7 @@ pending_transaction_set_preview_controls_sensitive(SearchWidgets *widgets, bool 
 // Enable or disable controls while a preview request is running.
 // -----------------------------------------------------------------------------
 static void
-set_preview_request_busy_state(SearchWidgets *widgets, bool busy)
+set_preview_request_busy_state(MainWindowUiState *widgets, bool busy)
 {
   if (!widgets) {
     return;
@@ -213,7 +213,7 @@ static void
 rebuild_after_tx_finished(GObject *, GAsyncResult *res, gpointer user_data)
 {
   GTask *task = G_TASK(res);
-  SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
+  MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
   if (widgets_task_should_skip_completion(task, widgets)) {
     return;
   }
@@ -245,14 +245,14 @@ rebuild_after_tx_finished(GObject *, GAsyncResult *res, gpointer user_data)
 // Rebuild repository data after a transaction completes.
 // -----------------------------------------------------------------------------
 static void
-rebuild_after_tx_async(SearchWidgets *widgets)
+rebuild_after_tx_async(MainWindowUiState *widgets)
 {
   // Once the post-transaction rebuild begins, stop serving cached search results from the pre-transaction Base
   // generation.
   package_query_clear_search_cache();
 
   GCancellable *c = widgets_make_task_cancellable_for(GTK_WIDGET(widgets->query.entry));
-  GTask *task = widgets_task_new_for_search_widgets(widgets, c, rebuild_after_tx_finished);
+  GTask *task = widgets_task_new_for_main_window_ui_state(widgets, c, rebuild_after_tx_finished);
   g_task_run_in_thread(task, repository_refresh_on_rebuild_task);
   g_object_unref(task);
   g_object_unref(c);
@@ -263,7 +263,7 @@ rebuild_after_tx_async(SearchWidgets *widgets)
 // The service streams progress back through the callback passed to the client.
 // -----------------------------------------------------------------------------
 static void
-start_apply_transaction(SearchWidgets *widgets)
+start_apply_transaction(MainWindowUiState *widgets)
 {
   if (!widgets) {
     return;
@@ -299,11 +299,11 @@ start_apply_transaction(SearchWidgets *widgets)
   widgets_spinner_acquire(widgets->query.spinner);
 
   GCancellable *c = widgets_make_task_cancellable_for(GTK_WIDGET(widgets->query.entry));
-  GTask *task = widgets_task_new_for_search_widgets(
+  GTask *task = widgets_task_new_for_main_window_ui_state(
       widgets, c, +[](GObject *, GAsyncResult *res, gpointer user_data) {
         GTask *task = G_TASK(res);
         ApplyTaskData *td = static_cast<ApplyTaskData *>(g_task_get_task_data(task));
-        SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
+        MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
         if (widgets_task_should_skip_completion(task, widgets)) {
           return;
         }
@@ -373,7 +373,7 @@ start_apply_transaction(SearchWidgets *widgets)
 // Prepare a service-backed transaction preview and show the confirmation dialog.
 // -----------------------------------------------------------------------------
 static void
-start_preview_request(SearchWidgets *widgets, TransactionRequest request)
+start_preview_request(MainWindowUiState *widgets, TransactionRequest request)
 {
   package_details_cancel_active_load(widgets);
   pending_transaction_invalidate_service_preview(widgets);
@@ -393,10 +393,10 @@ start_preview_request(SearchWidgets *widgets, TransactionRequest request)
   td->request = std::move(request);
 
   GCancellable *c = widgets_make_task_cancellable_for(GTK_WIDGET(widgets->query.entry));
-  GTask *task = widgets_task_new_for_search_widgets(
+  GTask *task = widgets_task_new_for_main_window_ui_state(
       widgets, c, +[](GObject *, GAsyncResult *res, gpointer user_data) {
         GTask *task = G_TASK(res);
-        SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
+        MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
         PreviewTaskData *td = static_cast<PreviewTaskData *>(g_task_get_task_data(task));
 
         if (widgets_task_should_skip_completion(task, widgets)) {
@@ -517,7 +517,7 @@ start_preview_request(SearchWidgets *widgets, TransactionRequest request)
 void
 pending_transaction_on_upgrade_all_button_clicked(GtkButton *, gpointer user_data)
 {
-  SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
+  MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
   if (pending_transaction_preview_is_busy(widgets)) {
     ui_helpers_set_status(widgets->query.status_label, pending_transaction_preview_busy_message(), "blue");
     return;
@@ -551,7 +551,7 @@ pending_transaction_on_upgrade_all_button_clicked(GtkButton *, gpointer user_dat
 void
 pending_transaction_on_apply_button_clicked(GtkButton *, gpointer user_data)
 {
-  SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
+  MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
   if (pending_transaction_preview_is_busy(widgets)) {
     ui_helpers_set_status(widgets->query.status_label, pending_transaction_preview_busy_message(), "blue");
     return;

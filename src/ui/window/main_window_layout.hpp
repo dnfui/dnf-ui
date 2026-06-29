@@ -3,7 +3,7 @@
 // Main window layout handles
 //
 // Defines the temporary widget handle set used while building the main window.
-// The main window module turns these handles into SearchWidgets and connects
+// The main window module turns these handles into MainWindowUiState and connects
 // behavior after layout construction is finished.
 // -----------------------------------------------------------------------------
 #pragma once
@@ -12,7 +12,7 @@
 
 // -----------------------------------------------------------------------------
 // Internal UI handles used only during application setup.
-// Keeps widget construction readable without extending SearchWidgets.
+// Keeps widget construction readable without extending MainWindowUiState.
 // -----------------------------------------------------------------------------
 struct AppWidgets {
   GtkWidget *window = NULL;

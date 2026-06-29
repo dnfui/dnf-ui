@@ -8,30 +8,30 @@
 
 #include <string>
 
-struct SearchWidgets;
+struct MainWindowUiState;
 struct TransactionKeyImportRequest;
 struct TransactionPreview;
 
-using TransactionApplyCallback = void (*)(SearchWidgets *widgets);
+using TransactionApplyCallback = void (*)(MainWindowUiState *widgets);
 
 // -----------------------------------------------------------------------------
 // Show a transaction error dialog with optional details.
 // -----------------------------------------------------------------------------
-void transaction_review_show_error_dialog(SearchWidgets *widgets,
+void transaction_review_show_error_dialog(MainWindowUiState *widgets,
                                           const char *title,
                                           const char *intro,
                                           const std::string &details);
 // -----------------------------------------------------------------------------
 // Show the resolved transaction summary before apply.
 // -----------------------------------------------------------------------------
-void transaction_review_show_summary_dialog(SearchWidgets *widgets,
+void transaction_review_show_summary_dialog(MainWindowUiState *widgets,
                                             const TransactionPreview &preview,
                                             TransactionApplyCallback on_apply,
                                             TransactionApplyCallback on_cancel);
 // -----------------------------------------------------------------------------
 // Ask the user whether dnf5daemon may import one repository signing key.
 // -----------------------------------------------------------------------------
-bool transaction_review_confirm_key_import(SearchWidgets *widgets, const TransactionKeyImportRequest &request);
+bool transaction_review_confirm_key_import(MainWindowUiState *widgets, const TransactionKeyImportRequest &request);
 
 // -----------------------------------------------------------------------------
 // EOF

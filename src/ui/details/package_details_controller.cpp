@@ -90,7 +90,7 @@ set_details_text(GtkTextBuffer *buffer, const char *text)
 // Reset the details panel after repopulating the main package view.
 // -----------------------------------------------------------------------------
 void
-package_details_reset_details_view(SearchWidgets *widgets)
+package_details_reset_details_view(MainWindowUiState *widgets)
 {
   if (!widgets) {
     return;
@@ -106,7 +106,7 @@ package_details_reset_details_view(SearchWidgets *widgets)
 // Disable transaction actions when no package row is currently selected.
 // -----------------------------------------------------------------------------
 void
-package_details_clear_selected_package_state(SearchWidgets *widgets)
+package_details_clear_selected_package_state(MainWindowUiState *widgets)
 {
   if (!widgets) {
     return;
@@ -123,7 +123,7 @@ package_details_clear_selected_package_state(SearchWidgets *widgets)
 // Stop the active package details load, if one is still running.
 // -----------------------------------------------------------------------------
 void
-package_details_cancel_active_load(SearchWidgets *widgets)
+package_details_cancel_active_load(MainWindowUiState *widgets)
 {
   if (!widgets || !widgets->results.package_details_cancellable) {
     return;
@@ -138,7 +138,7 @@ package_details_cancel_active_load(SearchWidgets *widgets)
 // Enable only the transaction actions that make sense for the selected row.
 // -----------------------------------------------------------------------------
 static void
-update_selected_package_actions(SearchWidgets *widgets, const PackageRow &selected)
+update_selected_package_actions(MainWindowUiState *widgets, const PackageRow &selected)
 {
   PendingTransactionActionRows action_rows = pending_transaction_action_rows_for_selection(selected);
 
@@ -250,7 +250,7 @@ static void
 on_package_details_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
 {
   GTask *task = G_TASK(res);
-  SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
+  MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
   if (widgets_task_should_skip_completion(task, widgets)) {
     return;
   }
@@ -316,7 +316,7 @@ on_package_details_task_finished(GObject *, GAsyncResult *res, gpointer user_dat
 // Start the async package details load for the newly selected package row.
 // -----------------------------------------------------------------------------
 void
-package_details_load_selected_package_info(SearchWidgets *widgets, const PackageRow &selected)
+package_details_load_selected_package_info(MainWindowUiState *widgets, const PackageRow &selected)
 {
   if (!widgets) {
     return;
@@ -329,7 +329,7 @@ package_details_load_selected_package_info(SearchWidgets *widgets, const Package
   update_selected_package_actions(widgets, selected);
 
   GCancellable *c = widgets_make_task_cancellable_for(GTK_WIDGET(widgets->query.entry));
-  GTask *task = widgets_task_new_for_search_widgets(widgets, c, on_package_details_task_finished);
+  GTask *task = widgets_task_new_for_main_window_ui_state(widgets, c, on_package_details_task_finished);
   widgets->results.package_details_cancellable = G_CANCELLABLE(g_object_ref(c));
 
   // Pass package NEVRA to background task

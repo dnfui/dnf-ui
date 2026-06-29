@@ -8,24 +8,24 @@
 
 #include "dnf_backend/dnf_backend.hpp"
 
-struct SearchWidgets;
+struct MainWindowUiState;
 
 // -----------------------------------------------------------------------------
 // Clear the selected package state and disable package actions.
 // -----------------------------------------------------------------------------
-void package_details_clear_selected_package_state(SearchWidgets *widgets);
+void package_details_clear_selected_package_state(MainWindowUiState *widgets);
 // -----------------------------------------------------------------------------
 // Stop the active package details load, if one is still running.
 // -----------------------------------------------------------------------------
-void package_details_cancel_active_load(SearchWidgets *widgets);
+void package_details_cancel_active_load(MainWindowUiState *widgets);
 // -----------------------------------------------------------------------------
 // Start loading details for the selected package.
 // -----------------------------------------------------------------------------
-void package_details_load_selected_package_info(SearchWidgets *widgets, const PackageRow &selected);
+void package_details_load_selected_package_info(MainWindowUiState *widgets, const PackageRow &selected);
 // -----------------------------------------------------------------------------
 // Reset the package details panel to its empty state.
 // -----------------------------------------------------------------------------
-void package_details_reset_details_view(SearchWidgets *widgets);
+void package_details_reset_details_view(MainWindowUiState *widgets);
 
 // -----------------------------------------------------------------------------
 // EOF

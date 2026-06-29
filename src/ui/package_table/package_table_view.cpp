@@ -19,13 +19,13 @@
 #include <string>
 #include <vector>
 
-static void update_pending_action_css_for_cell(GtkWidget *cell, SearchWidgets *widgets, const PackageRow &row);
+static void update_pending_action_css_for_cell(GtkWidget *cell, MainWindowUiState *widgets, const PackageRow &row);
 
 // -----------------------------------------------------------------------------
 // Refresh stored package status values without changing the GTK model.
 // -----------------------------------------------------------------------------
 static void
-refresh_model_status_values(GtkColumnView *view, SearchWidgets *widgets)
+refresh_model_status_values(GtkColumnView *view, MainWindowUiState *widgets)
 {
   GtkSelectionModel *model = gtk_column_view_get_model(view);
   if (!model || !GTK_IS_SINGLE_SELECTION(model)) {
@@ -53,7 +53,7 @@ refresh_model_status_values(GtkColumnView *view, SearchWidgets *widgets)
 // Refresh status cells and pending row colors currently realized by the virtualized view.
 // -----------------------------------------------------------------------------
 static void
-refresh_visible_status_labels(GtkWidget *widget, SearchWidgets *widgets)
+refresh_visible_status_labels(GtkWidget *widget, MainWindowUiState *widgets)
 {
   if (!widget) {
     return;
@@ -172,7 +172,7 @@ clear_pending_row_css_for_cell(GtkWidget *cell)
 // Return the pending row CSS class for one package row.
 // -----------------------------------------------------------------------------
 static const char *
-pending_row_css_class(SearchWidgets *widgets, const PackageRow &row)
+pending_row_css_class(MainWindowUiState *widgets, const PackageRow &row)
 {
   const char *status_class = package_table_pending_action_css_class(widgets, row);
   if (!status_class) {
@@ -196,7 +196,7 @@ pending_row_css_class(SearchWidgets *widgets, const PackageRow &row)
 // Apply pending action color to one table cell.
 // -----------------------------------------------------------------------------
 static void
-update_pending_action_css_for_cell(GtkWidget *cell, SearchWidgets *widgets, const PackageRow &row)
+update_pending_action_css_for_cell(GtkWidget *cell, MainWindowUiState *widgets, const PackageRow &row)
 {
   const char *pending_class = pending_row_css_class(widgets, row);
   GtkWidget *target = table_cell_color_target(cell);
@@ -402,7 +402,7 @@ package_table_apply_column_visibility(GtkColumnView *view)
 // Build one text column for the package table.
 // -----------------------------------------------------------------------------
 static GtkColumnViewColumn *
-create_text_column(SearchWidgets *widgets, const PackageTableColumnDefinition &definition)
+create_text_column(MainWindowUiState *widgets, const PackageTableColumnDefinition &definition)
 {
   GtkListItemFactory *factory = gtk_signal_list_item_factory_new();
   g_object_set_data(G_OBJECT(factory), "package-column-kind", GINT_TO_POINTER(static_cast<int>(definition.kind)));
@@ -451,7 +451,7 @@ create_text_column(SearchWidgets *widgets, const PackageTableColumnDefinition &d
                          context_click,
                          "pressed",
                          G_CALLBACK(+[](GtkGestureClick *gesture, int, double x, double y, gpointer user_data) {
-                           SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
+                           MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
                            GtkWidget *cell = gtk_event_controller_get_widget(GTK_EVENT_CONTROLLER(gesture));
                            PackageRow *row =
                                static_cast<PackageRow *>(g_object_get_data(G_OBJECT(cell), "package-context-row"));
@@ -478,8 +478,8 @@ create_text_column(SearchWidgets *widgets, const PackageTableColumnDefinition &d
   g_signal_connect(factory,
                    "bind",
                    G_CALLBACK(+[](GtkSignalListItemFactory *factory, GtkListItem *item, gpointer) {
-                     SearchWidgets *widgets =
-                         static_cast<SearchWidgets *>(g_object_get_data(G_OBJECT(factory), "package-table-widgets"));
+                     MainWindowUiState *widgets = static_cast<MainWindowUiState *>(
+                         g_object_get_data(G_OBJECT(factory), "package-table-widgets"));
                      PackageColumnKind kind = static_cast<PackageColumnKind>(
                          GPOINTER_TO_INT(g_object_get_data(G_OBJECT(factory), "package-column-kind")));
 
@@ -550,7 +550,7 @@ append_package_column(GtkColumnView *view, GtkColumnViewColumn *column)
 // Read the current primary package table sort before rebuilding the GTK view.
 // -----------------------------------------------------------------------------
 static bool
-get_package_view_sort_state(SearchWidgets *widgets, PackageColumnKind &out_kind, GtkSortType &out_order)
+get_package_view_sort_state(MainWindowUiState *widgets, PackageColumnKind &out_kind, GtkSortType &out_order)
 {
   if (!widgets || !widgets->results.list_scroller) {
     return false;
@@ -610,7 +610,7 @@ restore_package_view_sort_state(GtkColumnView *view, PackageColumnKind kind, Gtk
 // Return the selected package row from the current package table.
 // -----------------------------------------------------------------------------
 bool
-package_table_get_selected_package_row(SearchWidgets *widgets, PackageRow &out_pkg)
+package_table_get_selected_package_row(MainWindowUiState *widgets, PackageRow &out_pkg)
 {
   if (!widgets || !widgets->results.list_scroller) {
     return false;
@@ -651,7 +651,7 @@ package_table_get_selected_package_row(SearchWidgets *widgets, PackageRow &out_p
 // Refresh package status text and colors without rebuilding the package table.
 // -----------------------------------------------------------------------------
 void
-package_table_refresh_statuses(SearchWidgets *widgets)
+package_table_refresh_statuses(MainWindowUiState *widgets)
 {
   if (!widgets || !widgets->results.list_scroller) {
     return;
@@ -670,7 +670,7 @@ package_table_refresh_statuses(SearchWidgets *widgets)
 // Change one package table column setting and update the current table if shown.
 // -----------------------------------------------------------------------------
 bool
-package_table_set_column_visible(SearchWidgets *widgets, const char *column_id, bool visible)
+package_table_set_column_visible(MainWindowUiState *widgets, const char *column_id, bool visible)
 {
   if (!package_table_column_definition_by_id(column_id)) {
     return false;
@@ -697,7 +697,7 @@ package_table_set_column_visible(SearchWidgets *widgets, const char *column_id, 
 // Reset package table columns to their default visibility and update the table.
 // -----------------------------------------------------------------------------
 void
-package_table_reset_columns_to_default(SearchWidgets *widgets)
+package_table_reset_columns_to_default(MainWindowUiState *widgets)
 {
   package_table_reset_visible_column_ids();
 
@@ -715,7 +715,7 @@ package_table_reset_columns_to_default(SearchWidgets *widgets)
 // Preserves the selected NEVRA across list refreshes when possible.
 // -----------------------------------------------------------------------------
 void
-package_table_fill_package_view(SearchWidgets *widgets, const std::vector<PackageRow> &items)
+package_table_fill_package_view(MainWindowUiState *widgets, const std::vector<PackageRow> &items)
 {
   if (items.empty()) {
     gtk_scrolled_window_set_child(widgets->results.list_scroller, create_empty_package_view());
@@ -763,7 +763,7 @@ package_table_fill_package_view(SearchWidgets *widgets, const std::vector<Packag
   g_signal_connect(sel,
                    "selection-changed",
                    G_CALLBACK(+[](GtkSingleSelection *self, guint, guint, gpointer user_data) {
-                     SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
+                     MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
                      guint index = gtk_single_selection_get_selected(self);
 
                      if (index == GTK_INVALID_LIST_POSITION) {
@@ -794,7 +794,7 @@ package_table_fill_package_view(SearchWidgets *widgets, const std::vector<Packag
   g_signal_connect(view,
                    "activate",
                    G_CALLBACK(+[](GtkColumnView *self, guint position, gpointer user_data) {
-                     SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
+                     MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
                      GtkSelectionModel *model = gtk_column_view_get_model(self);
                      if (!model || !GTK_IS_SINGLE_SELECTION(model)) {
                        return;

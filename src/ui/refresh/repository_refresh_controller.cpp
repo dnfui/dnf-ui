@@ -131,7 +131,7 @@ queue_repository_refresh_phase_label(GtkLabel *label, const std::string &message
 // The old rows came from the previous metadata generation and should not remain visible.
 // -----------------------------------------------------------------------------
 static bool
-repository_refresh_clear_stale_upgradeable_table(SearchWidgets *widgets)
+repository_refresh_clear_stale_upgradeable_table(MainWindowUiState *widgets)
 {
   if (!widgets || !package_query_displayed_view_is_upgradeable(widgets)) {
     return false;
@@ -148,7 +148,7 @@ repository_refresh_clear_stale_upgradeable_table(SearchWidgets *widgets)
 // Release the spinner slot owned by user-triggered repository refresh.
 // -----------------------------------------------------------------------------
 static void
-repository_refresh_release_spinner(SearchWidgets *widgets)
+repository_refresh_release_spinner(MainWindowUiState *widgets)
 {
   if (!repository_refresh_spinner_owned) {
     return;
@@ -162,7 +162,7 @@ repository_refresh_release_spinner(SearchWidgets *widgets)
 // Return the Refresh Repositories button to its normal label.
 // -----------------------------------------------------------------------------
 static void
-repository_refresh_set_button_idle(SearchWidgets *widgets)
+repository_refresh_set_button_idle(MainWindowUiState *widgets)
 {
   if (!widgets) {
     return;
@@ -175,7 +175,7 @@ repository_refresh_set_button_idle(SearchWidgets *widgets)
 // Make the Refresh Repositories button show Stop while refresh is running.
 // -----------------------------------------------------------------------------
 static void
-repository_refresh_set_button_stop(SearchWidgets *widgets)
+repository_refresh_set_button_stop(MainWindowUiState *widgets)
 {
   if (!widgets) {
     return;
@@ -257,7 +257,7 @@ void
 repository_refresh_on_rebuild_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
 {
   GTask *task = G_TASK(res);
-  SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
+  MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
   if (widgets_task_should_skip_completion(task, widgets)) {
     repository_refresh_running = false;
     return;
@@ -312,7 +312,7 @@ void
 repository_refresh_on_force_rebuild_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
 {
   GTask *task = G_TASK(res);
-  SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
+  MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
   DNFUI_TRACE("Repository refresh completion start");
   if (widgets_task_should_skip_completion(task, widgets)) {
     DNFUI_TRACE("Repository refresh completion skipped");
@@ -416,7 +416,7 @@ repository_refresh_on_force_rebuild_task_finished(GObject *, GAsyncResult *res, 
 void
 repository_refresh_on_button_clicked(GtkButton *, gpointer user_data)
 {
-  SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
+  MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
   if (!widgets) {
     return;
   }
@@ -479,7 +479,8 @@ repository_refresh_on_button_clicked(GtkButton *, gpointer user_data)
   pending_transaction_set_preview_controls_sensitive(widgets, false);
 
   GCancellable *c = widgets_make_task_cancellable_for(GTK_WIDGET(widgets->query.entry));
-  GTask *task = widgets_task_new_for_search_widgets(widgets, c, repository_refresh_on_force_rebuild_task_finished);
+  GTask *task =
+      widgets_task_new_for_main_window_ui_state(widgets, c, repository_refresh_on_force_rebuild_task_finished);
   repository_refresh_operation_cancellable = g_cancellable_new();
   repository_refresh_cancel_requested = std::make_shared<std::atomic<bool>>(false);
   auto *refresh_data = new RepositoryRefreshTaskData;
