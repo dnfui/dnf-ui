@@ -1,7 +1,7 @@
 // -----------------------------------------------------------------------------
 // src/ui/transaction/transaction_progress.cpp
 // Transaction progress window helpers
-// Keeps the live apply progress window separate from transaction review dialogs.
+// Keeps the live apply progress window separate from transaction dialogs.
 // -----------------------------------------------------------------------------
 #include "ui/transaction/transaction_progress.hpp"
 

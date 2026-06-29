@@ -1,10 +1,10 @@
 // -----------------------------------------------------------------------------
-// Transaction review dialog helpers
+// Transaction dialog helpers
 //
 // Owns the confirmation and error dialogs used around transaction preview and apply.
 // The live progress window is handled in transaction_progress.cpp.
 // -----------------------------------------------------------------------------
-#include "ui/transaction/transaction_review_dialog.hpp"
+#include "ui/transaction/transaction_dialogs.hpp"
 
 #include "dnf_backend/dnf_backend.hpp"
 #include "i18n.hpp"
@@ -299,10 +299,10 @@ append_transaction_summary_section(GtkBox *parent, const char *title, const std:
 // Show the final confirmation dialog before starting the package transaction.
 // -----------------------------------------------------------------------------
 void
-transaction_review_show_summary_dialog(MainWindowUiState *widgets,
-                                       const TransactionPreview &preview,
-                                       TransactionApplyCallback on_apply,
-                                       TransactionApplyCallback on_cancel)
+transaction_dialogs_show_summary_dialog(MainWindowUiState *widgets,
+                                        const TransactionPreview &preview,
+                                        TransactionApplyCallback on_apply,
+                                        TransactionApplyCallback on_cancel)
 {
   GtkWindow *dialog = GTK_WINDOW(gtk_window_new());
   gtk_window_set_title(dialog, _("Summary"));
@@ -462,7 +462,7 @@ transaction_review_show_summary_dialog(MainWindowUiState *widgets,
 // Show the GTK dialog on the main thread and wait for the user answer.
 // -----------------------------------------------------------------------------
 bool
-transaction_review_confirm_key_import(MainWindowUiState *widgets, const TransactionKeyImportRequest &request)
+transaction_dialogs_confirm_key_import(MainWindowUiState *widgets, const TransactionKeyImportRequest &request)
 {
   if (!widgets) {
     return false;
@@ -483,10 +483,10 @@ transaction_review_confirm_key_import(MainWindowUiState *widgets, const Transact
 // Show a modal dialog with selectable transaction error details.
 // -----------------------------------------------------------------------------
 void
-transaction_review_show_error_dialog(MainWindowUiState *widgets,
-                                     const char *title,
-                                     const char *intro,
-                                     const std::string &details)
+transaction_dialogs_show_error_dialog(MainWindowUiState *widgets,
+                                      const char *title,
+                                      const char *intro,
+                                      const std::string &details)
 {
   if (!widgets || !title || !intro) {
     return;

@@ -124,7 +124,7 @@ The `src/ui` directory is split by UI concern: `window`, `package_query`,
 - [src/ui/transaction/pending_transaction_controller.cpp](../src/ui/transaction/pending_transaction_controller.cpp) handles package action buttons.
 - [src/ui/transaction/pending_transaction_view.cpp](../src/ui/transaction/pending_transaction_view.cpp) builds the Pending Actions tab.
 - [src/ui/transaction/pending_transaction_apply.cpp](../src/ui/transaction/pending_transaction_apply.cpp) handles preview, apply, and post-apply refresh.
-- [src/ui/transaction/transaction_review_dialog.cpp](../src/ui/transaction/transaction_review_dialog.cpp) builds the review and error dialogs.
+- [src/ui/transaction/transaction_dialogs.cpp](../src/ui/transaction/transaction_dialogs.cpp) builds review, error, and repository key dialogs.
 - [src/ui/transaction/transaction_progress.cpp](../src/ui/transaction/transaction_progress.cpp) manages the live progress window.
 
 The UI controller pattern follows this shape:

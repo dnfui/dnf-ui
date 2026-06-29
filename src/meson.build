@@ -32,7 +32,7 @@ app_sources = files(
   'ui/transaction/pending_transaction_view.cpp',
   'ui/refresh/repository_refresh_controller.cpp',
   'ui/transaction/transaction_progress.cpp',
-  'ui/transaction/transaction_review_dialog.cpp',
+  'ui/transaction/transaction_dialogs.cpp',
   'dnf5daemon_client/transaction_service_client_dbus.cpp',
   'dnf5daemon_client/transaction_service_client.cpp',
   'dnf5daemon_client/transaction_service_client_wait.cpp',

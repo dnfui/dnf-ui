@@ -208,9 +208,9 @@ must not run libdnf queries because it is called while updating GTK controls.
 [src/ui/transaction/transaction_progress.cpp](../src/ui/transaction/transaction_progress.cpp) manages the
 live progress window shown while apply is running.
 
-[src/ui/transaction/transaction_review_dialog.cpp](../src/ui/transaction/transaction_review_dialog.cpp)
-builds the confirmation dialog shown before apply and the error dialog shown when
-preview or apply fails.
+[src/ui/transaction/transaction_dialogs.cpp](../src/ui/transaction/transaction_dialogs.cpp)
+builds the confirmation dialog shown before apply, the error dialog shown when
+preview or apply fails, and the repository signing key prompt.
 
 The progress window can receive progress messages after the apply request has
 started. The code keeps the progress state alive while queued GTK callbacks are

@@ -17,7 +17,7 @@
 #include "ui/transaction/pending_transaction_view.hpp"
 #include "ui/refresh/repository_refresh_controller.hpp"
 #include "ui/transaction/transaction_progress.hpp"
-#include "ui/transaction/transaction_review_dialog.hpp"
+#include "ui/transaction/transaction_dialogs.hpp"
 #include "dnf5daemon_client/transaction_service_client.hpp"
 #include "ui/common/ui_helpers.hpp"
 #include "ui/common/widgets.hpp"
@@ -333,10 +333,10 @@ start_apply_transaction(MainWindowUiState *widgets)
           std::string details = error ? error->message : _("Transaction failed.");
           ui_helpers_set_status(widgets->query.status_label, details.c_str(), "red");
           // Show the full backend error in a copyable dialog instead of only in the status bar.
-          transaction_review_show_error_dialog(widgets,
-                                               _("Transaction Failed"),
-                                               _("The transaction could not be completed. Review the details below."),
-                                               details);
+          transaction_dialogs_show_error_dialog(widgets,
+                                                _("Transaction Failed"),
+                                                _("The transaction could not be completed. Review the details below."),
+                                                details);
           if (error) {
             g_error_free(error);
           }
@@ -355,7 +355,7 @@ start_apply_transaction(MainWindowUiState *widgets)
             td->transaction_path,
             [td](const std::string &message) { transaction_progress_append(td->progress_window, message); },
             [td](const TransactionKeyImportRequest &request) {
-              return transaction_review_confirm_key_import(td->widgets, request);
+              return transaction_dialogs_confirm_key_import(td->widgets, request);
             },
             err);
         if (ok) {
@@ -414,10 +414,10 @@ start_preview_request(MainWindowUiState *widgets, TransactionRequest request)
           DNFUI_TRACE("Transaction preview request failed error=%s", status_message);
           widgets->transaction.preview_upgrade_all = false;
           ui_helpers_set_status(widgets->query.status_label, status_message, "red");
-          transaction_review_show_error_dialog(widgets,
-                                               _("Transaction Preview Failed"),
-                                               _("The transaction could not be prepared. Review the details below."),
-                                               status_message);
+          transaction_dialogs_show_error_dialog(widgets,
+                                                _("Transaction Preview Failed"),
+                                                _("The transaction could not be prepared. Review the details below."),
+                                                status_message);
           if (error) {
             g_error_free(error);
           }
@@ -450,7 +450,7 @@ start_preview_request(MainWindowUiState *widgets, TransactionRequest request)
                     td->request.upgrade_all ? 1 : 0,
                     widgets->transaction.preview_transaction_path.c_str());
         ui_helpers_set_status(widgets->query.status_label, _("Ready."), "gray");
-        transaction_review_show_summary_dialog(
+        transaction_dialogs_show_summary_dialog(
             widgets, td->preview, start_apply_transaction, pending_transaction_cancel_service_preview);
       });
 
@@ -467,7 +467,7 @@ start_preview_request(MainWindowUiState *widgets, TransactionRequest request)
               td->transaction_path,
               error,
               [td](const TransactionKeyImportRequest &request) {
-                return transaction_review_confirm_key_import(td->widgets, request);
+                return transaction_dialogs_confirm_key_import(td->widgets, request);
               },
               cancellable);
         } else if (td) {
@@ -485,7 +485,7 @@ start_preview_request(MainWindowUiState *widgets, TransactionRequest request)
                 td->transaction_path,
                 error,
                 [td](const TransactionKeyImportRequest &request) {
-                  return transaction_review_confirm_key_import(td->widgets, request);
+                  return transaction_dialogs_confirm_key_import(td->widgets, request);
                 },
                 cancellable);
           }
