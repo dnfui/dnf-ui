@@ -48,7 +48,7 @@ struct PackageResultsWidgets {
   GtkTextBuffer *changelog_buffer = nullptr;
   GtkLabel *count_label = nullptr;
   std::string selected_nevra;
-  GCancellable *package_info_cancellable = nullptr;
+  GCancellable *package_details_cancellable = nullptr;
 };
 
 // -----------------------------------------------------------------------------

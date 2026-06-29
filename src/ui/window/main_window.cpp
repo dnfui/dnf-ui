@@ -9,7 +9,7 @@
 #include "i18n.hpp"
 #include "ui/window/main_menu.hpp"
 #include "ui/window/main_window_layout.hpp"
-#include "ui/details/package_info_controller.hpp"
+#include "ui/details/package_details_controller.hpp"
 #include "ui/package_query/package_query_controller.hpp"
 #include "ui/package_table/package_table_view.hpp"
 #include "ui/transaction/pending_transaction_controller.hpp"
@@ -568,7 +568,7 @@ connect_cleanup(GtkWidget *window, std::shared_ptr<SearchWidgets> widgets, GCanc
                        widgets->query_state.package_list_cancellable = nullptr;
                      }
                      repository_refresh_cancel_active();
-                     package_info_cancel_active_load(widgets);
+                     package_details_cancel_active_load(widgets);
                      if (!widgets->transaction.preview_transaction_path.empty()) {
                        transaction_service_client_release_request_async(widgets->transaction.preview_transaction_path);
                        widgets->transaction.preview_transaction_path.clear();

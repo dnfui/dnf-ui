@@ -1,22 +1,22 @@
 // -----------------------------------------------------------------------------
-// src/ui/details/package_info_controller.cpp
+// src/ui/details/package_details_controller.cpp
 // Package selection and details panel controller
 // Handles package selection state, action-button sensitivity, and the async
-// package info load that updates the details panel.
+// package details load that updates the details panel.
 // -----------------------------------------------------------------------------
-#include "ui/details/package_info_controller.hpp"
+#include "ui/details/package_details_controller.hpp"
 
 #include "base_manager.hpp"
 #include "debug_trace.hpp"
 #include "i18n.hpp"
-#include "ui/transaction/package_action_rows.hpp"
+#include "ui/transaction/pending_transaction_action_rows.hpp"
 #include "ui/common/ui_helpers.hpp"
 #include "ui/common/widgets.hpp"
 #include "ui/common/widgets_internal.hpp"
 
 #include <cstring>
 
-// Task data for package-info operation.
+// Task data for one package details load.
 // Snapshot generation at dispatch time.
 // Outdated results can be dropped after a Base rebuild.
 struct InfoTaskData {
@@ -24,7 +24,7 @@ struct InfoTaskData {
   uint64_t generation;
 };
 
-// Text payload returned by the background package-info task.
+// Text payload returned by the background package details task.
 struct InfoTaskResult {
   char *info;
   char *files;
@@ -33,7 +33,7 @@ struct InfoTaskResult {
 };
 
 // -----------------------------------------------------------------------------
-// Free data owned by one package-info task.
+// Free data owned by one package details task.
 // -----------------------------------------------------------------------------
 static void
 info_task_data_free(gpointer p)
@@ -47,7 +47,7 @@ info_task_data_free(gpointer p)
 }
 
 // -----------------------------------------------------------------------------
-// Release the text payload returned by the background package-info task.
+// Release the text payload returned by the background package details task.
 // -----------------------------------------------------------------------------
 static void
 info_task_result_free(gpointer p)
@@ -65,10 +65,10 @@ info_task_result_free(gpointer p)
 }
 
 // -----------------------------------------------------------------------------
-// Complete the package-info task when the user cancels the current request.
+// Complete the package details task when the user cancels the current request.
 // -----------------------------------------------------------------------------
 static void
-return_package_info_task_cancelled(GTask *task)
+return_package_details_task_cancelled(GTask *task)
 {
   g_task_return_new_error(task, G_IO_ERROR, G_IO_ERROR_CANCELLED, "%s", _("Package info load was cancelled."));
 }
@@ -90,7 +90,7 @@ set_details_text(GtkTextBuffer *buffer, const char *text)
 // Reset the details panel after repopulating the main package view.
 // -----------------------------------------------------------------------------
 void
-package_info_reset_details_view(SearchWidgets *widgets)
+package_details_reset_details_view(SearchWidgets *widgets)
 {
   if (!widgets) {
     return;
@@ -106,7 +106,7 @@ package_info_reset_details_view(SearchWidgets *widgets)
 // Disable transaction actions when no package row is currently selected.
 // -----------------------------------------------------------------------------
 void
-package_info_clear_selected_package_state(SearchWidgets *widgets)
+package_details_clear_selected_package_state(SearchWidgets *widgets)
 {
   if (!widgets) {
     return;
@@ -123,15 +123,15 @@ package_info_clear_selected_package_state(SearchWidgets *widgets)
 // Stop the active package details load, if one is still running.
 // -----------------------------------------------------------------------------
 void
-package_info_cancel_active_load(SearchWidgets *widgets)
+package_details_cancel_active_load(SearchWidgets *widgets)
 {
-  if (!widgets || !widgets->results.package_info_cancellable) {
+  if (!widgets || !widgets->results.package_details_cancellable) {
     return;
   }
 
-  g_cancellable_cancel(widgets->results.package_info_cancellable);
-  g_object_unref(widgets->results.package_info_cancellable);
-  widgets->results.package_info_cancellable = nullptr;
+  g_cancellable_cancel(widgets->results.package_details_cancellable);
+  g_object_unref(widgets->results.package_details_cancellable);
+  widgets->results.package_details_cancellable = nullptr;
 }
 
 // -----------------------------------------------------------------------------
@@ -140,7 +140,7 @@ package_info_cancel_active_load(SearchWidgets *widgets)
 static void
 update_selected_package_actions(SearchWidgets *widgets, const PackageRow &selected)
 {
-  PackageActionRows action_rows = package_action_rows_for_selection(selected);
+  PendingTransactionActionRows action_rows = pending_transaction_action_rows_for_selection(selected);
 
   // Install and upgrade use the available package row.
   // Remove and reinstall use the installed package row.
@@ -166,10 +166,10 @@ update_selected_package_actions(SearchWidgets *widgets, const PackageRow &select
 // Load package detail text on a worker thread.
 // -----------------------------------------------------------------------------
 static void
-on_package_info_task(GTask *task, gpointer, gpointer task_data, GCancellable *cancellable)
+on_package_details_task(GTask *task, gpointer, gpointer task_data, GCancellable *cancellable)
 {
   if (cancellable && g_cancellable_is_cancelled(cancellable)) {
-    return_package_info_task_cancelled(task);
+    return_package_details_task_cancelled(task);
     return;
   }
 
@@ -185,7 +185,7 @@ on_package_info_task(GTask *task, gpointer, gpointer task_data, GCancellable *ca
 
     if (cancellable && g_cancellable_is_cancelled(cancellable)) {
       info_task_result_free(result);
-      return_package_info_task_cancelled(task);
+      return_package_details_task_cancelled(task);
       return;
     }
 
@@ -203,7 +203,7 @@ on_package_info_task(GTask *task, gpointer, gpointer task_data, GCancellable *ca
 
     if (cancellable && g_cancellable_is_cancelled(cancellable)) {
       info_task_result_free(result);
-      return_package_info_task_cancelled(task);
+      return_package_details_task_cancelled(task);
       return;
     }
 
@@ -220,7 +220,7 @@ on_package_info_task(GTask *task, gpointer, gpointer task_data, GCancellable *ca
 
     if (cancellable && g_cancellable_is_cancelled(cancellable)) {
       info_task_result_free(result);
-      return_package_info_task_cancelled(task);
+      return_package_details_task_cancelled(task);
       return;
     }
 
@@ -247,7 +247,7 @@ on_package_info_task(GTask *task, gpointer, gpointer task_data, GCancellable *ca
 // Update the details panel after package text has loaded.
 // -----------------------------------------------------------------------------
 static void
-on_package_info_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
+on_package_details_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
 {
   GTask *task = G_TASK(res);
   SearchWidgets *widgets = static_cast<SearchWidgets *>(user_data);
@@ -270,9 +270,9 @@ on_package_info_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
   }
 
   GCancellable *c = g_task_get_cancellable(task);
-  if (c && widgets->results.package_info_cancellable == c) {
-    g_object_unref(widgets->results.package_info_cancellable);
-    widgets->results.package_info_cancellable = nullptr;
+  if (c && widgets->results.package_details_cancellable == c) {
+    g_object_unref(widgets->results.package_details_cancellable);
+    widgets->results.package_details_cancellable = nullptr;
   }
 
   if (td->generation != BaseManager::instance().current_generation() || widgets->results.selected_nevra != td->nevra) {
@@ -313,24 +313,24 @@ on_package_info_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
 }
 
 // -----------------------------------------------------------------------------
-// Start the async package info load for the newly selected package row.
+// Start the async package details load for the newly selected package row.
 // -----------------------------------------------------------------------------
 void
-package_info_load_selected_package_info(SearchWidgets *widgets, const PackageRow &selected)
+package_details_load_selected_package_info(SearchWidgets *widgets, const PackageRow &selected)
 {
   if (!widgets) {
     return;
   }
 
-  package_info_cancel_active_load(widgets);
+  package_details_cancel_active_load(widgets);
 
   widgets->results.selected_nevra = selected.nevra;
   ui_helpers_set_status(widgets->query.status_label, _("Fetching package info..."), "blue");
   update_selected_package_actions(widgets, selected);
 
   GCancellable *c = widgets_make_task_cancellable_for(GTK_WIDGET(widgets->query.entry));
-  GTask *task = widgets_task_new_for_search_widgets(widgets, c, on_package_info_task_finished);
-  widgets->results.package_info_cancellable = G_CANCELLABLE(g_object_ref(c));
+  GTask *task = widgets_task_new_for_search_widgets(widgets, c, on_package_details_task_finished);
+  widgets->results.package_details_cancellable = G_CANCELLABLE(g_object_ref(c));
 
   // Pass package NEVRA to background task
   InfoTaskData *td = static_cast<InfoTaskData *>(g_malloc0(sizeof *td));
@@ -339,7 +339,7 @@ package_info_load_selected_package_info(SearchWidgets *widgets, const PackageRow
   g_task_set_task_data(task, td, info_task_data_free);
 
   // Run background task to fetch metadata using dnf_backend
-  g_task_run_in_thread(task, on_package_info_task);
+  g_task_run_in_thread(task, on_package_details_task);
 
   g_object_unref(task);
   g_object_unref(c);

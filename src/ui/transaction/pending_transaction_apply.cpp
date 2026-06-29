@@ -10,7 +10,7 @@
 #include "debug_trace.hpp"
 #include "dnf_backend/dnf_backend.hpp"
 #include "i18n.hpp"
-#include "ui/details/package_info_controller.hpp"
+#include "ui/details/package_details_controller.hpp"
 #include "ui/package_query/package_query_controller.hpp"
 #include "ui/transaction/pending_transaction_controller.hpp"
 #include "ui/transaction/pending_transaction_request.hpp"
@@ -274,7 +274,7 @@ start_apply_transaction(SearchWidgets *widgets)
     return;
   }
 
-  package_info_cancel_active_load(widgets);
+  package_details_cancel_active_load(widgets);
 
   widgets->transaction.apply_in_progress = true;
   pending_transaction_set_preview_controls_sensitive(widgets, false);
@@ -375,7 +375,7 @@ start_apply_transaction(SearchWidgets *widgets)
 static void
 start_preview_request(SearchWidgets *widgets, TransactionRequest request)
 {
-  package_info_cancel_active_load(widgets);
+  package_details_cancel_active_load(widgets);
   pending_transaction_invalidate_service_preview(widgets);
   widgets->transaction.preview_upgrade_all = request.upgrade_all;
   DNFUI_TRACE("Transaction preview request start upgrade_all=%d install=%zu upgrade=%zu remove=%zu reinstall=%zu",

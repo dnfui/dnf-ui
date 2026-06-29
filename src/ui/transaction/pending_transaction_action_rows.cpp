@@ -1,12 +1,12 @@
 // -----------------------------------------------------------------------------
-// src/ui/transaction/package_action_rows.cpp
-// Package action row resolver
+// src/ui/transaction/pending_transaction_action_rows.cpp
+// Pending transaction action row resolver
 //
 // Keeps the package ID rules for upgrade, install, remove, and reinstall in one
 // place. This file must not run libdnf queries because it is used while GTK is
 // updating buttons and opening context menus.
 // -----------------------------------------------------------------------------
-#include "ui/transaction/package_action_rows.hpp"
+#include "ui/transaction/pending_transaction_action_rows.hpp"
 
 namespace {
 
@@ -28,10 +28,10 @@ upgrade_transaction_spec(const PackageRow &row)
 // -----------------------------------------------------------------------------
 // Resolve package IDs for action buttons without running libdnf queries.
 // -----------------------------------------------------------------------------
-PackageActionRows
-package_action_rows_for_selection(const PackageRow &selected)
+PendingTransactionActionRows
+pending_transaction_action_rows_for_selection(const PackageRow &selected)
 {
-  PackageActionRows rows;
+  PendingTransactionActionRows rows;
   rows.state = dnf_backend_get_package_install_state(selected);
   rows.install_is_upgrade = rows.state == PackageInstallState::UPGRADEABLE;
   rows.install_row = selected;

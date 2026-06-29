@@ -110,9 +110,9 @@ owns the Refresh Repositories button workflow. It refreshes dnf5daemon metadata,
 rebuilds the libdnf5 Base, updates the lower-right progress text, and clears
 stale upgradable rows after repository metadata changes.
 
-### Package info controller
+### Package details controller
 
-[src/ui/details/package_info_controller.cpp](../src/ui/details/package_info_controller.cpp)
+[src/ui/details/package_details_controller.cpp](../src/ui/details/package_details_controller.cpp)
 updates the details pane for the selected package.
 
 It updates:
@@ -198,7 +198,7 @@ in the Version column and shows the candidate version in the Update column. The
 Repo column shows the repository that provides the update. Remove and reinstall
 act on the currently installed NEVRA for the same package name and architecture.
 
-[src/ui/transaction/package_action_rows.cpp](../src/ui/transaction/package_action_rows.cpp) keeps those
+[src/ui/transaction/pending_transaction_action_rows.cpp](../src/ui/transaction/pending_transaction_action_rows.cpp) keeps those
 row-selection rules in one place. This is needed because an update can be shown
 from either the installed package list or the upgradable package list. The helper
 must not run libdnf queries because it is called while updating GTK controls.

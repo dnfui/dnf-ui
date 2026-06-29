@@ -10,7 +10,7 @@
 #include "base_manager.hpp"
 #include "debug_trace.hpp"
 #include "i18n.hpp"
-#include "ui/details/package_info_controller.hpp"
+#include "ui/details/package_details_controller.hpp"
 #include "ui/package_query/package_query_controller.hpp"
 #include "ui/package_query/package_query_controller_internal.hpp"
 #include "ui/package_table/package_table_view.hpp"
@@ -140,7 +140,7 @@ repository_refresh_clear_stale_upgradeable_table(SearchWidgets *widgets)
   widgets->query_state.preserve_selection_on_reload = false;
   widgets->query_state.reload_selected_nevra.clear();
   package_table_fill_package_view(widgets, {});
-  package_info_reset_details_view(widgets);
+  package_details_reset_details_view(widgets);
   return true;
 }
 

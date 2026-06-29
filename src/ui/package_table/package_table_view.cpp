@@ -6,7 +6,7 @@
 #include "ui/common/ui_helpers.hpp"
 
 #include "i18n.hpp"
-#include "ui/details/package_info_controller.hpp"
+#include "ui/details/package_details_controller.hpp"
 #include "ui/package_table/package_table_context_menu.hpp"
 #include "ui/package_table/package_table_columns.hpp"
 #include "ui/package_table/package_table_status.hpp"
@@ -721,7 +721,7 @@ package_table_fill_package_view(SearchWidgets *widgets, const std::vector<Packag
     gtk_scrolled_window_set_child(widgets->results.list_scroller, create_empty_package_view());
     widgets->results.listbox = nullptr;
     gtk_label_set_text(widgets->results.count_label, _("Items: 0"));
-    package_info_clear_selected_package_state(widgets);
+    package_details_clear_selected_package_state(widgets);
     return;
   }
 
@@ -767,7 +767,7 @@ package_table_fill_package_view(SearchWidgets *widgets, const std::vector<Packag
                      guint index = gtk_single_selection_get_selected(self);
 
                      if (index == GTK_INVALID_LIST_POSITION) {
-                       package_info_clear_selected_package_state(widgets);
+                       package_details_clear_selected_package_state(widgets);
                        return;
                      }
 
@@ -775,13 +775,13 @@ package_table_fill_package_view(SearchWidgets *widgets, const std::vector<Packag
                      const PackageRow *row = package_row_from_object(obj);
                      if (!row) {
                        g_object_unref(obj);
-                       package_info_clear_selected_package_state(widgets);
+                       package_details_clear_selected_package_state(widgets);
                        return;
                      }
 
                      PackageRow selected = *row;
                      g_object_unref(obj);
-                     package_info_load_selected_package_info(widgets, selected);
+                     package_details_load_selected_package_info(widgets, selected);
                    }),
                    widgets);
 
@@ -859,7 +859,7 @@ package_table_fill_package_view(SearchWidgets *widgets, const std::vector<Packag
   }
 
   if (!restored) {
-    package_info_clear_selected_package_state(widgets);
+    package_details_clear_selected_package_state(widgets);
   }
 
   g_object_unref(sort_model);

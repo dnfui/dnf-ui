@@ -10,7 +10,7 @@
 #include "base_manager.hpp"
 #include "dnf_backend/dnf_backend.hpp"
 #include "i18n.hpp"
-#include "ui/details/package_info_controller.hpp"
+#include "ui/details/package_details_controller.hpp"
 #include "ui/package_query/package_query_cache.hpp"
 #include "ui/package_query/package_query_controller_internal.hpp"
 #include "ui/package_table/package_table_view.hpp"
@@ -232,7 +232,7 @@ package_query_on_clear_button_clicked(GtkButton *, gpointer user_data)
 
   // Reset status labels and package actions.
   ui_helpers_set_status(widgets->query.status_label, _("Ready."), "gray");
-  package_info_reset_details_view(widgets);
+  package_details_reset_details_view(widgets);
   ui_helpers_update_action_button_labels(widgets, "");
 }
 

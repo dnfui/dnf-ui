@@ -9,7 +9,7 @@
 
 #include "dnf_backend/dnf_backend.hpp"
 #include "i18n.hpp"
-#include "ui/transaction/package_action_rows.hpp"
+#include "ui/transaction/pending_transaction_action_rows.hpp"
 #include "ui/package_table/package_table_view.hpp"
 #include "ui/transaction/pending_transaction_apply.hpp"
 #include "ui/transaction/pending_transaction_controller.hpp"
@@ -65,7 +65,7 @@ pending_transaction_on_install_button_clicked(GtkButton *, gpointer user_data)
   }
 
   // Resolve the package ID to queue before adding an install or upgrade action.
-  PackageActionRows action_rows = package_action_rows_for_selection(pkg);
+  PendingTransactionActionRows action_rows = pending_transaction_action_rows_for_selection(pkg);
   if (!action_rows.has_install_row) {
     ui_helpers_set_status(widgets->query.status_label, _("No install or upgrade action is available."), "gray");
     return;
@@ -128,7 +128,7 @@ pending_transaction_on_remove_button_clicked(GtkButton *, gpointer user_data)
     return;
   }
 
-  PackageActionRows action_rows = package_action_rows_for_selection(pkg);
+  PendingTransactionActionRows action_rows = pending_transaction_action_rows_for_selection(pkg);
 
   // Removal checks the installed row.
   // Upgrade candidates use the currently installed NEVRA for removal.
@@ -194,7 +194,7 @@ pending_transaction_on_reinstall_button_clicked(GtkButton *, gpointer user_data)
     return;
   }
 
-  PackageActionRows action_rows = package_action_rows_for_selection(pkg);
+  PendingTransactionActionRows action_rows = pending_transaction_action_rows_for_selection(pkg);
 
   // Reinstall must check the installed package, not the visible update row.
   if (!action_rows.has_installed_row) {

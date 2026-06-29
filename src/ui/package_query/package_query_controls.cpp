@@ -7,7 +7,7 @@
 #include "ui/package_query/package_query_controller_internal.hpp"
 
 #include "i18n.hpp"
-#include "ui/details/package_info_controller.hpp"
+#include "ui/details/package_details_controller.hpp"
 #include "ui/package_table/package_table_view.hpp"
 #include "ui/common/ui_helpers.hpp"
 #include "ui/common/widgets.hpp"
@@ -74,10 +74,10 @@ package_query_finish_results_refresh(SearchWidgets *widgets)
   if (widgets->query_state.preserve_selection_on_reload) {
     PackageRow selected;
     if (!package_table_get_selected_package_row(widgets, selected)) {
-      package_info_reset_details_view(widgets);
+      package_details_reset_details_view(widgets);
     }
   } else {
-    package_info_reset_details_view(widgets);
+    package_details_reset_details_view(widgets);
   }
 
   widgets->query_state.preserve_selection_on_reload = false;

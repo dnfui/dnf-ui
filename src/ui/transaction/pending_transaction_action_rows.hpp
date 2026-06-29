@@ -1,6 +1,6 @@
 // -----------------------------------------------------------------------------
-// src/ui/transaction/package_action_rows.hpp
-// Package action row resolver
+// src/ui/transaction/pending_transaction_action_rows.hpp
+// Pending transaction action row resolver
 //
 // A visible package row can mean two things when an update exists:
 //   - the installed package currently on disk
@@ -14,7 +14,7 @@
 
 #include "dnf_backend/dnf_backend.hpp"
 
-struct PackageActionRows {
+struct PendingTransactionActionRows {
   PackageInstallState state = PackageInstallState::AVAILABLE;
   bool install_is_upgrade = false;
   bool has_install_row = false;
@@ -30,7 +30,7 @@ struct PackageActionRows {
 // Resolve package IDs for action buttons without running libdnf queries.
 // This is used from GTK selection and context-menu code.
 // -----------------------------------------------------------------------------
-PackageActionRows package_action_rows_for_selection(const PackageRow &selected);
+PendingTransactionActionRows pending_transaction_action_rows_for_selection(const PackageRow &selected);
 
 // -----------------------------------------------------------------------------
 // EOF

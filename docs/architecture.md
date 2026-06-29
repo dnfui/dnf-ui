@@ -117,7 +117,7 @@ The `src/ui` directory is split by UI concern: `window`, `package_query`,
 - [src/ui/package_query/package_query_controller.cpp](../src/ui/package_query/package_query_controller.cpp) handles the public search, list, history, clear, and reload callbacks.
 - [src/ui/package_query/package_query_controls.cpp](../src/ui/package_query/package_query_controls.cpp) handles active package-query request state, Stop button handling, cancellation, and refresh completion.
 - [src/ui/package_query/package_query_tasks.cpp](../src/ui/package_query/package_query_tasks.cpp) contains package-query worker tasks and completion handlers.
-- [src/ui/details/package_info_controller.cpp](../src/ui/details/package_info_controller.cpp) handles selection and details loading.
+- [src/ui/details/package_details_controller.cpp](../src/ui/details/package_details_controller.cpp) handles selection and details loading.
 - [src/ui/package_table/package_table_view.cpp](../src/ui/package_table/package_table_view.cpp) builds the package table.
 - [src/ui/package_table/package_table_model.cpp](../src/ui/package_table/package_table_model.cpp) stores package rows in GTK objects.
 - [src/ui/package_table/package_table_sort.cpp](../src/ui/package_table/package_table_sort.cpp) contains package table sorting rules.

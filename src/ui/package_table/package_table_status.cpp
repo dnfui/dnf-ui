@@ -7,7 +7,7 @@
 #include "ui/package_table/package_table_status.hpp"
 
 #include "i18n.hpp"
-#include "ui/transaction/package_action_rows.hpp"
+#include "ui/transaction/pending_transaction_action_rows.hpp"
 #include "ui/common/widgets.hpp"
 
 #include <string>
@@ -113,9 +113,9 @@ const char *
 package_table_pending_action_css_class(SearchWidgets *widgets, const PackageRow &row)
 {
   PackageInstallState install_state = dnf_backend_get_package_install_state(row);
-  PackageActionRows action_rows;
+  PendingTransactionActionRows action_rows;
   if (install_state == PackageInstallState::UPGRADEABLE) {
-    action_rows = package_action_rows_for_selection(row);
+    action_rows = pending_transaction_action_rows_for_selection(row);
   }
 
   std::string alternate_nevra;
@@ -202,9 +202,9 @@ void
 package_table_update_status_label(GtkWidget *cell, SearchWidgets *widgets, const PackageRow &row)
 {
   PackageInstallState install_state = dnf_backend_get_package_install_state(row);
-  PackageActionRows action_rows;
+  PendingTransactionActionRows action_rows;
   if (install_state == PackageInstallState::UPGRADEABLE) {
-    action_rows = package_action_rows_for_selection(row);
+    action_rows = pending_transaction_action_rows_for_selection(row);
   }
 
   const char *text = package_table_status_text(install_state);

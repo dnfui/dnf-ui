@@ -170,7 +170,7 @@ Maintenance check:
 Code:
 
 - [src/ui/package_query/package_query_controller.cpp](../src/ui/package_query/package_query_controller.cpp)
-- [src/ui/details/package_info_controller.cpp](../src/ui/details/package_info_controller.cpp)
+- [src/ui/details/package_details_controller.cpp](../src/ui/details/package_details_controller.cpp)
 - [src/ui/common/widgets.cpp](../src/ui/common/widgets.cpp)
 - [src/app.cpp](../src/app.cpp)
 

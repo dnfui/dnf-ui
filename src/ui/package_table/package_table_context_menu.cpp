@@ -6,7 +6,7 @@
 #include "ui/package_table/package_table_context_menu.hpp"
 
 #include "i18n.hpp"
-#include "ui/transaction/package_action_rows.hpp"
+#include "ui/transaction/pending_transaction_action_rows.hpp"
 #include "ui/transaction/pending_transaction_controller.hpp"
 #include "ui/transaction/pending_transaction_state.hpp"
 #include "ui/common/widgets.hpp"
@@ -78,7 +78,7 @@ package_table_show_context_menu(GtkWidget *anchor,
   GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
   gtk_popover_set_child(GTK_POPOVER(popover), box);
 
-  PackageActionRows action_rows = package_action_rows_for_selection(row);
+  PendingTransactionActionRows action_rows = pending_transaction_action_rows_for_selection(row);
 
   // Match the main action buttons: install and upgrade use the available row,
   // while remove and reinstall use the installed row.

@@ -1,11 +1,11 @@
 // -----------------------------------------------------------------------------
-// Package action row resolver tests
-// Covers the package IDs used by install, upgrade, remove, and reinstall actions.
+// Pending transaction action row resolver tests
+// Covers the package IDs used by pending install, upgrade, remove, and reinstall actions.
 // -----------------------------------------------------------------------------
 #include <catch2/catch_test_macros.hpp>
 
 #include "test_utils.hpp"
-#include "ui/transaction/package_action_rows.hpp"
+#include "ui/transaction/pending_transaction_action_rows.hpp"
 
 // -----------------------------------------------------------------------------
 // Build one small package row for resolver tests.
@@ -25,13 +25,13 @@ make_test_package_row(const char *nevra, const char *name, const char *version, 
 // -----------------------------------------------------------------------------
 // Verify that an available row with no installed match can only be installed.
 // -----------------------------------------------------------------------------
-TEST_CASE("Package action rows resolve plain available package")
+TEST_CASE("Pending transaction action rows resolve plain available package")
 {
   reset_backend_globals();
 
   PackageRow available = make_test_package_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
 
-  PackageActionRows rows = package_action_rows_for_selection(available);
+  PendingTransactionActionRows rows = pending_transaction_action_rows_for_selection(available);
 
   REQUIRE(rows.state == PackageInstallState::AVAILABLE);
   REQUIRE_FALSE(rows.install_is_upgrade);
@@ -44,7 +44,7 @@ TEST_CASE("Package action rows resolve plain available package")
 // -----------------------------------------------------------------------------
 // Verify that an installed row with a stored repo candidate upgrades that candidate.
 // -----------------------------------------------------------------------------
-TEST_CASE("Package action rows resolve upgrade from installed package row")
+TEST_CASE("Pending transaction action rows resolve upgrade from installed package row")
 {
   reset_backend_globals();
 
@@ -54,7 +54,7 @@ TEST_CASE("Package action rows resolve upgrade from installed package row")
 
   dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
 
-  PackageActionRows rows = package_action_rows_for_selection(installed);
+  PendingTransactionActionRows rows = pending_transaction_action_rows_for_selection(installed);
 
   REQUIRE(rows.state == PackageInstallState::UPGRADEABLE);
   REQUIRE(rows.install_is_upgrade);
@@ -69,7 +69,7 @@ TEST_CASE("Package action rows resolve upgrade from installed package row")
 // -----------------------------------------------------------------------------
 // Verify that an update candidate upgrades itself but removes the installed row.
 // -----------------------------------------------------------------------------
-TEST_CASE("Package action rows resolve upgrade from available update row")
+TEST_CASE("Pending transaction action rows resolve upgrade from available update row")
 {
   reset_backend_globals();
 
@@ -78,7 +78,7 @@ TEST_CASE("Package action rows resolve upgrade from available update row")
 
   dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
 
-  PackageActionRows rows = package_action_rows_for_selection(update);
+  PendingTransactionActionRows rows = pending_transaction_action_rows_for_selection(update);
 
   REQUIRE(rows.state == PackageInstallState::UPGRADEABLE);
   REQUIRE(rows.install_is_upgrade);
@@ -93,7 +93,7 @@ TEST_CASE("Package action rows resolve upgrade from available update row")
 // -----------------------------------------------------------------------------
 // Verify that local-only installed packages cannot be reinstalled from repositories.
 // -----------------------------------------------------------------------------
-TEST_CASE("Package action rows reject reinstall for local only installed package")
+TEST_CASE("Pending transaction action rows reject reinstall for local only installed package")
 {
   reset_backend_globals();
 
@@ -102,7 +102,7 @@ TEST_CASE("Package action rows reject reinstall for local only installed package
 
   dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
 
-  PackageActionRows rows = package_action_rows_for_selection(installed);
+  PendingTransactionActionRows rows = pending_transaction_action_rows_for_selection(installed);
 
   REQUIRE(rows.state == PackageInstallState::LOCAL_ONLY);
   REQUIRE_FALSE(rows.has_install_row);
