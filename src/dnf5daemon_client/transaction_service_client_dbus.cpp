@@ -1139,6 +1139,7 @@ bool
 transaction_service_client_start_apply_request(GDBusConnection *connection,
                                                const std::string &transaction_path,
                                                TransactionServiceProgressForwarder *progress_forwarder,
+                                               GCancellable *cancellable,
                                                std::string &error_out)
 {
   error_out.clear();
@@ -1159,6 +1160,20 @@ transaction_service_client_start_apply_request(GDBusConnection *connection,
   }
 
   GCancellable *call_cancellable = g_cancellable_new();
+  if (cancellable && g_cancellable_is_cancelled(cancellable)) {
+    error_out = _("Transaction apply was cancelled.");
+    g_object_unref(call_cancellable);
+    return false;
+  }
+
+  gulong cancel_handler_id = 0;
+  if (cancellable) {
+    cancel_handler_id = g_cancellable_connect(
+        cancellable,
+        G_CALLBACK(+[](GCancellable *, gpointer user_data) { g_cancellable_cancel(G_CANCELLABLE(user_data)); }),
+        g_object_ref(call_cancellable),
+        [](gpointer data) { g_object_unref(data); });
+  }
   g_dbus_connection_call(
       connection,
       kDnfDaemonName,
@@ -1189,7 +1204,18 @@ transaction_service_client_start_apply_request(GDBusConnection *connection,
       cancel_requested = true;
     }
   }
+  if (cancellable && cancel_handler_id != 0) {
+    g_cancellable_disconnect(cancellable, cancel_handler_id);
+  }
   g_object_unref(call_cancellable);
+
+  if (cancellable && g_cancellable_is_cancelled(cancellable)) {
+    error_out = _("Transaction apply was cancelled.");
+    if (state.error) {
+      g_clear_error(&state.error);
+    }
+    return false;
+  }
 
   if (progress_forwarder && !progress_forwarder->key_confirm_error.empty()) {
     error_out = progress_forwarder->key_confirm_error;

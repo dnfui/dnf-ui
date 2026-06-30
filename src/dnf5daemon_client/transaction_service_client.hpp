@@ -61,7 +61,8 @@ bool transaction_service_client_refresh_repositories(std::string &error_out, GCa
 bool transaction_service_client_apply_started_request(const std::string &transaction_path,
                                                       const std::function<void(const std::string &)> &progress_callback,
                                                       const TransactionKeyImportCallback &key_import_callback,
-                                                      std::string &error_out);
+                                                      std::string &error_out,
+                                                      GCancellable *cancellable = nullptr);
 
 // -----------------------------------------------------------------------------
 // Release one finished transaction request that is no longer needed.

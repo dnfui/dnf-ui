@@ -346,7 +346,7 @@ start_apply_transaction(MainWindowUiState *widgets)
   g_task_set_task_data(task, td, apply_task_data_free);
 
   g_task_run_in_thread(
-      task, +[](GTask *t, gpointer, gpointer task_data, GCancellable *) {
+      task, +[](GTask *t, gpointer, gpointer task_data, GCancellable *cancellable) {
         ApplyTaskData *td = static_cast<ApplyTaskData *>(task_data);
         std::string err;
         // This callback runs on the apply worker thread when the client receives a service Progress signal.
@@ -357,7 +357,8 @@ start_apply_transaction(MainWindowUiState *widgets)
             [td](const TransactionKeyImportRequest &request) {
               return transaction_dialogs_confirm_key_import(td->widgets, request);
             },
-            err);
+            err,
+            cancellable);
         if (ok) {
           g_task_return_boolean(t, TRUE);
         } else {

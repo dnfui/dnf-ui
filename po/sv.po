@@ -384,6 +384,9 @@ msgstr "Vänta tills den aktuella transaktionen har verkställts."
 msgid "Transaction preview was cancelled."
 msgstr "Transaktionsgranskningen avbröts."
 
+msgid "Transaction apply was cancelled."
+msgstr "Transaktionsverkställningen avbröts."
+
 msgid "dnf5daemon transaction session is not available."
 msgstr "dnf5daemon-transaktionssessionen är inte tillgänglig."
 
