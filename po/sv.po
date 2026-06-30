@@ -108,6 +108,9 @@ msgstr "Ändringslogg"
 msgid "Pending"
 msgstr "Väntande"
 
+msgid "Status"
+msgstr "Status"
+
 msgid "Installed"
 msgstr "Installerat"
 

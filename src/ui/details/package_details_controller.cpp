@@ -13,14 +13,17 @@
 #include "ui/common/ui_helpers.hpp"
 #include "ui/common/widgets.hpp"
 #include "ui/common/widgets_internal.hpp"
+#include "ui/package_table/package_table_status.hpp"
 
 #include <cstring>
+#include <string>
 
 // Task data for one package details load.
 // Snapshot generation at dispatch time.
 // Outdated results can be dropped after a Base rebuild.
 struct InfoTaskData {
   char *nevra;
+  char *status_text;
   uint64_t generation;
 };
 
@@ -43,6 +46,7 @@ info_task_data_free(gpointer p)
     return;
   }
   g_free(d->nevra);
+  g_free(d->status_text);
   g_free(d);
 }
 
@@ -293,8 +297,20 @@ on_package_details_task_finished(GObject *, GAsyncResult *res, gpointer user_dat
     return;
   }
 
-  // Display general package information
-  set_details_text(widgets->results.details_buffer, result->info ? result->info : _("No details found."));
+  // Show the row status even when the Status column is hidden.
+  const char *info_text = result->info ? result->info : _("No details found.");
+  std::string details_text;
+  if (td->status_text && *td->status_text) {
+    details_text = _("Status");
+    details_text += ": ";
+    details_text += td->status_text;
+    details_text += "\n\n";
+    details_text += info_text;
+    info_text = details_text.c_str();
+  }
+
+  // Display general package information.
+  set_details_text(widgets->results.details_buffer, info_text);
 
   // Display the file list fetched by the background task.
   set_details_text(widgets->results.files_buffer,
@@ -332,9 +348,10 @@ package_details_load_selected_package_info(MainWindowUiState *widgets, const Pac
   GTask *task = widgets_task_new_for_main_window_ui_state(widgets, c, on_package_details_task_finished);
   widgets->results.package_details_cancellable = G_CANCELLABLE(g_object_ref(c));
 
-  // Pass package NEVRA to background task
+  // Pass selected row state to the background task.
   InfoTaskData *td = static_cast<InfoTaskData *>(g_malloc0(sizeof *td));
   td->nevra = g_strdup(selected.nevra.c_str());
+  td->status_text = g_strdup(package_table_status_text(dnf_backend_get_package_install_state(selected)));
   td->generation = BaseManager::instance().current_generation();
   g_task_set_task_data(task, td, info_task_data_free);
 
