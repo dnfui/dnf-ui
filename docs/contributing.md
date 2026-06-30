@@ -17,6 +17,6 @@ Small focused patches are easier to review than large rewrites. If you want to
 change behavior or add a feature, please explain what problem it solves and how
 you tested it.
 
-Before changing code, start with [architecture.md](architecture.md) for the
-source layout, [project-rules.md](project-rules.md) for project boundaries, and
-[testing.md](testing.md) for the test commands that match each area.
+Before changing code, start with [architecture.md](/docs/architecture.md) for the
+source layout, [project-rules.md](/docs/project-rules.md) for project boundaries, and
+[testing.md](/docs/testing.md) for the test commands that match each area.
