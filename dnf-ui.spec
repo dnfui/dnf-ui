@@ -1,5 +1,5 @@
 Name:           dnf-ui
-Version:        0.3.0
+Version:        0.3.1
 Release:        1%{?dist}
 Summary:        GTK frontend for DNF5
 
@@ -57,6 +57,13 @@ appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/com.fedora.dnfui
 %{_datadir}/metainfo/com.fedora.dnfui.metainfo.xml
 
 %changelog
+* Tue Jun 30 2026 ErikMN <erik@example.invalid> - 0.3.1-1
+- Show package status in the Info tab
+- Fix search casing so installed packages keep the same repository status
+- Improve dnf5daemon apply cancellation during UI teardown
+- Move backend BaseManager code into the backend source directory
+- Clean up internal UI names and contributor documentation links
+
 * Sat Jun 27 2026 ErikMN <erik@example.invalid> - 0.3.0-1
 - Add configurable package table columns with saved visibility settings
 - Add reset action for package table columns
