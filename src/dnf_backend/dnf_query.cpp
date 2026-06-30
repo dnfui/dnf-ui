@@ -207,18 +207,6 @@ collect_available_rows_by_name_arch(libdnf5::Base &base,
   query.filter_available();
   query.filter_latest_evr();
 
-  // If description search is disabled, let libdnf narrow the package set by name before we iterate it.
-  // Description search is handled below because it needs both package names and descriptions.
-  if (pattern && !search_options.search_in_description) {
-    if (search_options.exact_match) {
-      query.filter_name(*pattern, libdnf5::sack::QueryCmp::EQ);
-    } else if (search_pattern_uses_wildcards(*pattern)) {
-      query.filter_name(*pattern, libdnf5::sack::QueryCmp::IGLOB);
-    } else {
-      query.filter_name(*pattern, libdnf5::sack::QueryCmp::CONTAINS);
-    }
-  }
-
   const std::string pattern_lower = pattern ? utf8_casefold_copy(*pattern) : "";
   std::map<std::string, PackageRow> rows_by_name_arch;
 
@@ -228,8 +216,9 @@ collect_available_rows_by_name_arch(libdnf5::Base &base,
       return rows_by_name_arch;
     }
 
-    if (pattern && search_options.search_in_description &&
-        !package_matches_search(pkg, pattern_lower, search_options)) {
+    // Use the same case-folded search check as installed rows.
+    // Otherwise search casing can change whether an installed row finds its repository candidate.
+    if (pattern && !package_matches_search(pkg, pattern_lower, search_options)) {
       continue;
     }
 

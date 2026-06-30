@@ -23,6 +23,21 @@ contains_package_name(const std::vector<PackageRow> &rows, const std::string &na
   return false;
 }
 
+// -----------------------------------------------------------------------------
+// Return the first search row for a package name.
+// -----------------------------------------------------------------------------
+const PackageRow *
+find_package_name(const std::vector<PackageRow> &rows, const std::string &name)
+{
+  for (const auto &row : rows) {
+    if (row.name == name) {
+      return &row;
+    }
+  }
+
+  return nullptr;
+}
+
 } // namespace
 
 // -----------------------------------------------------------------------------
@@ -37,6 +52,27 @@ TEST_CASE("Search contains mode returns results for common package")
   auto results = dnf_backend_search_package_rows_interruptible("bash", nullptr);
 
   REQUIRE(!results.empty());
+}
+
+// -----------------------------------------------------------------------------
+// Verify that search casing does not change installed package state.
+// -----------------------------------------------------------------------------
+TEST_CASE("Search contains mode is case-insensitive for installed package annotation")
+{
+  reset_backend_globals();
+
+  set_backend_search_options(false, false);
+
+  auto lower_results = dnf_backend_search_package_rows_interruptible("bash", nullptr);
+  auto upper_results = dnf_backend_search_package_rows_interruptible("BASH", nullptr);
+
+  const PackageRow *lower_bash = find_package_name(lower_results, "bash");
+  const PackageRow *upper_bash = find_package_name(upper_results, "bash");
+
+  REQUIRE(lower_bash != nullptr);
+  REQUIRE(upper_bash != nullptr);
+  REQUIRE(dnf_backend_get_package_install_state(*upper_bash) == dnf_backend_get_package_install_state(*lower_bash));
+  REQUIRE(upper_bash->repo_candidate_relation == lower_bash->repo_candidate_relation);
 }
 
 // -----------------------------------------------------------------------------
