@@ -7,7 +7,7 @@
 // -----------------------------------------------------------------------------
 #include "ui/package_query/package_query_controller_internal.hpp"
 
-#include "base_manager.hpp"
+#include "dnf_backend/base_manager.hpp"
 #include "debug_trace.hpp"
 #include "i18n.hpp"
 #include "ui/package_query/package_query_cache.hpp"

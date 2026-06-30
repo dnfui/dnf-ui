@@ -149,7 +149,7 @@ It exposes small value types such as `PackageRow`, `PackageInstallState`, and
 
 The backend implementation is split by responsibility:
 
-- [src/base_manager.cpp](../src/base_manager.cpp) manages the shared libdnf5 `Base`.
+- [src/dnf_backend/base_manager.cpp](../src/dnf_backend/base_manager.cpp) manages the shared libdnf5 `Base`.
 - [src/dnf_backend/dnf_query.cpp](../src/dnf_backend/dnf_query.cpp) builds package rows for search, browse, and installed-list views.
 - [src/dnf_backend/dnf_details.cpp](../src/dnf_backend/dnf_details.cpp) formats package details, files, dependencies, and changelog text.
 - [src/dnf_backend/dnf_state.cpp](../src/dnf_backend/dnf_state.cpp) keeps installed-package snapshot state and package status classification.
@@ -235,7 +235,7 @@ A practical reading order for new contributors:
 8. [src/ui/transaction/pending_transaction_view.cpp](../src/ui/transaction/pending_transaction_view.cpp)
 9. [src/ui/transaction/pending_transaction_apply.cpp](../src/ui/transaction/pending_transaction_apply.cpp)
 10. [src/dnf_backend/dnf_backend.hpp](../src/dnf_backend/dnf_backend.hpp)
-11. [src/base_manager.cpp](../src/base_manager.cpp)
+11. [src/dnf_backend/base_manager.cpp](../src/dnf_backend/base_manager.cpp)
 12. [src/dnf_backend/dnf_query.cpp](../src/dnf_backend/dnf_query.cpp)
 13. [src/dnf5daemon_client/transaction_service_client.cpp](../src/dnf5daemon_client/transaction_service_client.cpp)
 14. [src/dnf5daemon_client/transaction_service_client_dbus.cpp](../src/dnf5daemon_client/transaction_service_client_dbus.cpp)

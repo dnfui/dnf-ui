@@ -1,9 +1,9 @@
 // -----------------------------------------------------------------------------
-// src/base_manager.cpp
+// src/dnf_backend/base_manager.cpp
 // Shared libdnf5 Base manager
 // Creates, reuses, and rebuilds Base objects while protecting access from worker threads.
 // -----------------------------------------------------------------------------
-#include "base_manager.hpp"
+#include "dnf_backend/base_manager.hpp"
 #include "debug_trace.hpp"
 #include "i18n.hpp"
 

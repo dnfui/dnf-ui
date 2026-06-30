@@ -1,7 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "dnf_backend/dnf_backend.hpp"
-#include "base_manager.hpp"
+#include "dnf_backend/base_manager.hpp"
 #include "test_utils.hpp"
 
 #include <map>

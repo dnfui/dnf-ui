@@ -7,7 +7,7 @@
 // -----------------------------------------------------------------------------
 #include "ui/refresh/repository_refresh_controller.hpp"
 
-#include "base_manager.hpp"
+#include "dnf_backend/base_manager.hpp"
 #include "debug_trace.hpp"
 #include "i18n.hpp"
 #include "ui/details/package_details_controller.hpp"

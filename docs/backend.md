@@ -23,7 +23,7 @@ Controller code should use this public API instead of calling libdnf5 directly.
 
 ## BaseManager
 
-[src/base_manager.cpp](../src/base_manager.cpp) manages the shared libdnf5 `Base`.
+[src/dnf_backend/base_manager.cpp](../src/dnf_backend/base_manager.cpp) manages the shared libdnf5 `Base`.
 
 The Base can be in one of four repository states:
 

@@ -8,7 +8,7 @@
 // -----------------------------------------------------------------------------
 #include "dnf_backend/dnf_internal.hpp"
 
-#include "base_manager.hpp"
+#include "dnf_backend/base_manager.hpp"
 #include "debug_trace.hpp"
 
 #include <ctime>

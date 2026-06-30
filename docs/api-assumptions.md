@@ -126,8 +126,8 @@ Maintenance check:
 
 Code:
 
-- [src/base_manager.cpp](../src/base_manager.cpp)
-- [src/base_manager.hpp](../src/base_manager.hpp)
+- [src/dnf_backend/base_manager.cpp](../src/dnf_backend/base_manager.cpp)
+- [src/dnf_backend/base_manager.hpp](../src/dnf_backend/base_manager.hpp)
 
 Assumptions:
 

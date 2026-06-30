@@ -4,7 +4,7 @@
 // -----------------------------------------------------------------------------
 #include <catch2/catch_test_macros.hpp>
 
-#include "base_manager.hpp"
+#include "dnf_backend/base_manager.hpp"
 #include "test_utils.hpp"
 #include "ui/package_query/package_query_cache.hpp"
 

@@ -1,5 +1,5 @@
 backend_sources = files(
-  'base_manager.cpp',
+  'dnf_backend/base_manager.cpp',
   'dnf_backend/dnf_common.cpp',
   'dnf_backend/dnf_details.cpp',
   'dnf_backend/dnf_query.cpp',
