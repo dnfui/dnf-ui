@@ -11,3 +11,4 @@ external/dnf5/
 *.exe
 *.o
 *.d
+*.csv
