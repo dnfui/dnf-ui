@@ -8,6 +8,7 @@
 #include "i18n.hpp"
 #include "ui/package_query/package_query_controller.hpp"
 #include "ui/package_table/package_table_columns.hpp"
+#include "ui/package_table/package_table_export.hpp"
 #include "ui/package_table/package_table_view.hpp"
 #include "ui/common/ui_helpers.hpp"
 #include "ui/common/widgets.hpp"
@@ -89,6 +90,20 @@ on_menu_clear_list(GSimpleAction *, GVariant *, gpointer user_data)
   }
 
   package_query_on_clear_button_clicked(nullptr, data->widgets);
+}
+
+// -----------------------------------------------------------------------------
+// Export the currently visible package table rows.
+// -----------------------------------------------------------------------------
+static void
+on_menu_export_package_list(GSimpleAction *, GVariant *, gpointer user_data)
+{
+  MainMenuActionData *data = static_cast<MainMenuActionData *>(user_data);
+  if (!data || !data->widgets || !data->window) {
+    return;
+  }
+
+  package_table_export_visible_rows_to_csv(data->widgets, GTK_WINDOW(data->window));
 }
 
 // -----------------------------------------------------------------------------
@@ -240,6 +255,7 @@ main_menu_create()
   GMenu *menu_bar = g_menu_new();
 
   GMenu *file_menu = g_menu_new();
+  g_menu_append(file_menu, _("Export Package List..."), "win.export-package-list");
   g_menu_append(file_menu, _("Quit"), "win.quit");
   g_menu_append_submenu(menu_bar, _("File"), G_MENU_MODEL(file_menu));
   g_object_unref(file_menu);
@@ -292,7 +308,7 @@ main_menu_connect_actions(const MainMenuWidgets &menu_widgets, MainWindowUiState
         delete static_cast<MainMenuActionData *>(p);
       });
 
-  GActionEntry entries[7] = {};
+  GActionEntry entries[8] = {};
   entries[0].name = "quit";
   entries[0].activate = on_menu_quit;
   entries[1].name = "clear-list";
@@ -309,6 +325,8 @@ main_menu_connect_actions(const MainMenuWidgets &menu_widgets, MainWindowUiState
   entries[5].activate = on_menu_about;
   entries[6].name = "restore-default-columns";
   entries[6].activate = on_menu_restore_default_columns;
+  entries[7].name = "export-package-list";
+  entries[7].activate = on_menu_export_package_list;
 
   GSimpleActionGroup *actions = g_simple_action_group_new();
   g_action_map_add_action_entries(G_ACTION_MAP(actions), entries, G_N_ELEMENTS(entries), data);

@@ -60,6 +60,21 @@ msgstr "Paket"
 msgid "File"
 msgstr "Arkiv"
 
+msgid "Export Package List..."
+msgstr "Exportera paketlista..."
+
+msgid "Export Package List"
+msgstr "Exportera paketlista"
+
+msgid "No package rows to export."
+msgstr "Det finns inga paketrader att exportera."
+
+msgid "Package list exported."
+msgstr "Paketlistan exporterades."
+
+msgid "Could not export package list."
+msgstr "Kunde inte exportera paketlistan."
+
 msgid "Help"
 msgstr "Hjälp"
 

@@ -23,6 +23,8 @@ app_sources = files(
   'ui/package_table/package_table_model.cpp',
   'ui/package_table/package_table_context_menu.cpp',
   'ui/package_table/package_table_columns.cpp',
+  'ui/package_table/package_table_export.cpp',
+  'ui/package_table/package_table_export_csv.cpp',
   'ui/package_table/package_table_sort.cpp',
   'ui/package_table/package_table_status.cpp',
   'ui/package_table/package_table_view.cpp',
