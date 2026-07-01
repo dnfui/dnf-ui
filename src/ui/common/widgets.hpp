@@ -41,6 +41,7 @@ struct PackageResultsWidgets {
   GtkListBox *listbox = nullptr;
   GtkScrolledWindow *list_scroller = nullptr;
   GtkPaned *inner_paned = nullptr;
+  GtkStack *details_stack = nullptr;
   // Text buffers owned by the details panel text views.
   GtkTextBuffer *details_buffer = nullptr;
   GtkTextBuffer *files_buffer = nullptr;
@@ -48,7 +49,9 @@ struct PackageResultsWidgets {
   GtkTextBuffer *changelog_buffer = nullptr;
   GtkLabel *count_label = nullptr;
   std::string selected_nevra;
+  std::string changelog_loaded_nevra;
   GCancellable *package_details_cancellable = nullptr;
+  GCancellable *package_changelog_cancellable = nullptr;
 };
 
 // -----------------------------------------------------------------------------

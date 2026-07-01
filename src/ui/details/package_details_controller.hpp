@@ -8,6 +8,9 @@
 
 #include "dnf_backend/dnf_backend.hpp"
 
+typedef struct _GParamSpec GParamSpec;
+typedef struct _GtkStack GtkStack;
+
 struct MainWindowUiState;
 
 // -----------------------------------------------------------------------------
@@ -22,6 +25,10 @@ void package_details_cancel_active_load(MainWindowUiState *widgets);
 // Start loading details for the selected package.
 // -----------------------------------------------------------------------------
 void package_details_load_selected_package_info(MainWindowUiState *widgets, const PackageRow &selected);
+// -----------------------------------------------------------------------------
+// Load tab content that is fetched only when the tab is opened.
+// -----------------------------------------------------------------------------
+void package_details_on_details_page_changed(GtkStack *stack, GParamSpec *, gpointer user_data);
 // -----------------------------------------------------------------------------
 // Reset the package details panel to its empty state.
 // -----------------------------------------------------------------------------

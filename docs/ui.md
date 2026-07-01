@@ -120,12 +120,14 @@ It updates:
 - package details text
 - installed file list
 - dependencies
-- changelog
+- changelog, loaded only when the Changelog tab is opened
 - install, remove, and reinstall button sensitivity
 
 Details are loaded in the background. The controller records the selected NEVRA
-and backend generation when the task starts. If the selected package changes or
-the backend generation changes, the old result is ignored.
+and backend generation when each task starts. If the selected package changes or
+the backend generation changes, the old result is ignored. Changelog loading is
+kept separate because available-package changelog data can require extra
+repository metadata.
 
 ### Package table view
 

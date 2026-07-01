@@ -47,6 +47,7 @@ struct AppWidgets {
   GtkWidget *scrolled_list = NULL;
   GtkWidget *listbox = NULL;
   GtkWidget *details_panel = NULL;
+  GtkWidget *details_stack = NULL;
 
   GtkTextBuffer *details_buffer = NULL;
   GtkTextBuffer *files_buffer = NULL;

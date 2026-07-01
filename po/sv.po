@@ -297,6 +297,15 @@ msgstr "Förrådsuppdatering efter transaktion misslyckades."
 msgid "Package info loaded."
 msgstr "Paketinfo lästes in."
 
+msgid "Open the Changelog tab to load the changelog."
+msgstr "Öppna fliken Ändringslogg för att läsa in ändringsloggen."
+
+msgid "Fetching changelog..."
+msgstr "Hämtar ändringslogg..."
+
+msgid "Error loading changelog."
+msgstr "Fel vid inläsning av ändringslogg."
+
 msgid "Error refreshing package."
 msgstr "Fel vid uppdatering av paket."
 

@@ -217,6 +217,7 @@ main_window_build_layout(AppWidgets *ui)
   gtk_stack_set_transition_type(GTK_STACK(details_stack), GTK_STACK_TRANSITION_TYPE_CROSSFADE);
   gtk_widget_set_hexpand(details_stack, TRUE);
   gtk_widget_set_vexpand(details_stack, TRUE);
+  ui->details_stack = details_stack;
 
   GtkWidget *details_switcher = gtk_stack_switcher_new();
   gtk_stack_switcher_set_stack(GTK_STACK_SWITCHER(details_switcher), GTK_STACK(details_stack));

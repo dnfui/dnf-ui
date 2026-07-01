@@ -171,6 +171,7 @@ create_main_window_ui_state(const AppWidgets *ui)
   widgets->results.listbox = GTK_LIST_BOX(ui->listbox);
   widgets->results.list_scroller = GTK_SCROLLED_WINDOW(ui->scrolled_list);
   widgets->results.inner_paned = GTK_PANED(ui->inner_paned);
+  widgets->results.details_stack = GTK_STACK(ui->details_stack);
   widgets->results.details_buffer = ui->details_buffer;
   widgets->results.files_buffer = ui->files_buffer;
   widgets->results.deps_buffer = ui->deps_buffer;
@@ -384,6 +385,9 @@ connect_signals(const AppWidgets *ui, MainWindowUiState *widgets)
       ui->clear_pending_button, "clicked", G_CALLBACK(pending_transaction_on_clear_pending_button_clicked), widgets);
 
   g_signal_connect(ui->refresh_button, "clicked", G_CALLBACK(repository_refresh_on_button_clicked), widgets);
+
+  g_signal_connect(
+      ui->details_stack, "notify::visible-child-name", G_CALLBACK(package_details_on_details_page_changed), widgets);
 
   // Intercept window close when pending or running transaction work needs attention.
   g_signal_connect(ui->window, "close-request", G_CALLBACK(on_main_window_close_request), widgets);
