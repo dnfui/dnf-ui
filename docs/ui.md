@@ -140,9 +140,9 @@ as `package_table_hidden_columns`, using stable column ids so new default-visibl
 columns can be added without hiding them for existing users. Older
 `package_table_columns` settings are migrated when they are read.
 
-`File -> Export Package List...` writes the currently visible package table rows
-to a CSV file. It exports the table model that is already shown to the user
-instead of running another backend query.
+`File -> Export Package List...` or Ctrl+E writes the currently visible package
+table rows to a CSV file. It exports the table model that is already shown to
+the user instead of running another backend query.
 
 [src/ui/package_table/package_table_columns.cpp](../src/ui/package_table/package_table_columns.cpp) owns the
 package table column definitions, stable column ids, saved visibility settings,

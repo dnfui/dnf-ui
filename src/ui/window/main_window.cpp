@@ -127,6 +127,17 @@ setup_shortcuts(GtkWidget *window, GtkWidget *entry)
                                                  NULL));
   gtk_shortcut_controller_add_shortcut(GTK_SHORTCUT_CONTROLLER(shortcuts), clear_list);
 
+  // Export Package List with Ctrl+E.
+  GtkShortcut *export_package_list =
+      gtk_shortcut_new(gtk_keyval_trigger_new(GDK_KEY_e, GDK_CONTROL_MASK),
+                       gtk_callback_action_new(
+                           +[](GtkWidget *widget, GVariant *, gpointer) -> gboolean {
+                             return gtk_widget_activate_action(widget, "win.export-package-list", NULL);
+                           },
+                           NULL,
+                           NULL));
+  gtk_shortcut_controller_add_shortcut(GTK_SHORTCUT_CONTROLLER(shortcuts), export_package_list);
+
   // Toggle Package Info Panel with Ctrl+I.
   GtkShortcut *toggle_info = gtk_shortcut_new(gtk_keyval_trigger_new(GDK_KEY_i, GDK_CONTROL_MASK),
                                               gtk_callback_action_new(
