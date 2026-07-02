@@ -7,6 +7,8 @@
 // -----------------------------------------------------------------------------
 #include "dnf_backend/dnf_internal.hpp"
 
+#include "i18n.hpp"
+
 #include <string>
 
 #include <gio/gio.h>
@@ -89,20 +91,20 @@ dnf_backend_install_reason_to_string(PackageInstallReason reason)
 {
   switch (reason) {
   case PackageInstallReason::DEPENDENCY:
-    return "Dependency";
+    return _("Dependency");
   case PackageInstallReason::USER:
-    return "User";
+    return _("User");
   case PackageInstallReason::CLEAN:
-    return "Clean";
+    return _("Clean");
   case PackageInstallReason::WEAK_DEPENDENCY:
-    return "Weak dependency";
+    return _("Weak dependency");
   case PackageInstallReason::GROUP:
-    return "Group";
+    return _("Group");
   case PackageInstallReason::EXTERNAL:
-    return "External";
+    return _("External");
   case PackageInstallReason::UNKNOWN:
   default:
-    return "Unknown";
+    return _("Unknown");
   }
 }
 

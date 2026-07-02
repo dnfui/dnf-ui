@@ -143,6 +143,48 @@ msgstr "Uppdateringsutgåva"
 msgid "Repo"
 msgstr "Förråd"
 
+msgid "Name"
+msgstr "Namn"
+
+msgid "Package ID"
+msgstr "Paket-ID"
+
+msgid "Install Size"
+msgstr "Installationsstorlek"
+
+msgid "Install Reason"
+msgstr "Installationsorsak"
+
+msgid "Download Size"
+msgstr "Nedladdningsstorlek"
+
+msgid "Installed Version"
+msgstr "Installerad version"
+
+msgid "Upgradable Version"
+msgstr "Uppgraderbar version"
+
+msgid "Dependency"
+msgstr "Beroende"
+
+msgid "User"
+msgstr "Användare"
+
+msgid "Clean"
+msgstr "Rensning"
+
+msgid "Weak dependency"
+msgstr "Svagt beroende"
+
+msgid "Group"
+msgstr "Grupp"
+
+msgid "External"
+msgstr "Externt"
+
+msgid "Unknown"
+msgstr "Okänt"
+
 msgid "Info"
 msgstr "Info"
 
@@ -290,6 +332,12 @@ msgstr "Diskanvändningen ändras inte."
 msgid "Applying package transaction"
 msgstr "Verkställer pakettransaktion"
 
+#, c-format
+msgid "Applying %zu pending package change"
+msgid_plural "Applying %zu pending package changes"
+msgstr[0] "Verkställer %zu väntande paketändring"
+msgstr[1] "Verkställer %zu väntande paketändringar"
+
 msgid "Searching for '%s'..."
 msgstr "Söker efter '%s'..."
 
@@ -386,6 +434,9 @@ msgstr "Fel vid uppdatering av paket."
 msgid "Package info load was cancelled."
 msgstr "Inläsning av paketinfo avbröts."
 
+msgid "No package selected."
+msgstr "Inget paket valt."
+
 msgid "No install or upgrade action is available."
 msgstr "Ingen installation eller uppgradering är tillgänglig."
 
@@ -394,6 +445,24 @@ msgstr "Paketet är inte installerat."
 
 msgid "Package cannot be reinstalled from current repositories."
 msgstr "Paketet kan inte ominstalleras från nuvarande förråd."
+
+msgid "Unmarked: "
+msgstr "Avmarkerat: "
+
+msgid "Marked for install: "
+msgstr "Markerat för installation: "
+
+msgid "Marked for upgrade: "
+msgstr "Markerat för uppgradering: "
+
+msgid "Marked for removal: "
+msgstr "Markerat för borttagning: "
+
+msgid "Marked for reinstall: "
+msgstr "Markerat för ominstallation: "
+
+msgid "No pending actions to clear."
+msgstr "Det finns inga väntande åtgärder att rensa."
 
 msgid "Apply authorization is already in progress."
 msgstr "Behörighetskontroll för verkställning pågår redan."
@@ -608,3 +677,268 @@ msgid "%zu package will be replaced."
 msgid_plural "%zu packages will be replaced."
 msgstr[0] "%zu paket kommer att ersättas."
 msgstr[1] "%zu paket kommer att ersättas."
+
+msgid "Error loading info."
+msgstr "Fel vid inläsning av information."
+
+msgid "No details found."
+msgstr "Inga detaljer hittades."
+
+msgid "Fetching package info..."
+msgstr "Hämtar paketinformation..."
+
+msgid "Repository refresh was cancelled."
+msgstr "Förrådsuppdateringen avbröts."
+
+msgid "Repository refresh failed. Showing installed packages only."
+msgstr "Förrådsuppdatering misslyckades. Visar endast installerade paket."
+
+msgid "Repository refresh stopped."
+msgstr "Förrådsuppdatering stoppades."
+
+msgid "Live repo refresh failed. Using cached repository metadata."
+msgstr "Direkt förrådsuppdatering misslyckades. Använder cachad förrådsmetadata."
+
+msgid "Live repo refresh failed. Showing installed packages only."
+msgstr "Direkt förrådsuppdatering misslyckades. Visar endast installerade paket."
+
+msgid "Wait for the current package query to finish."
+msgstr "Vänta tills aktuell paketfråga är klar."
+
+msgid "Stopping repository refresh..."
+msgstr "Stoppar förrådsuppdatering..."
+
+msgid "Repository refresh is stopping."
+msgstr "Förrådsuppdatering stoppas."
+
+msgid "Installed package refresh failed."
+msgstr "Uppdatering av installerade paket misslyckades."
+
+msgid "Backend warm up was cancelled."
+msgstr "Backend-uppvärmning avbröts."
+
+msgid "Backend warm up failed."
+msgstr "Backend-uppvärmning misslyckades."
+
+msgid "Ready. Repository metadata loaded."
+msgstr "Redo. Förrådsmetadata inläst."
+
+msgid "Ready. Using cached repository metadata."
+msgstr "Redo. Använder cachad förrådsmetadata."
+
+msgid "Ready. Showing installed packages only."
+msgstr "Redo. Visar endast installerade paket."
+
+#, c-format
+msgid "Cannot modify %s while DNF UI is running. Close the application and use another tool."
+msgstr "Kan inte ändra %s medan DNF UI körs. Stäng programmet och använd ett annat verktyg."
+
+msgid "Pending package could not be found in current package data."
+msgstr "Det väntande paketet hittades inte i aktuell paketdata."
+
+msgid "Install: "
+msgstr "Installera: "
+
+msgid "Upgrade: "
+msgstr "Uppgradera: "
+
+msgid "Reinstall: "
+msgstr "Ominstallera: "
+
+msgid "Remove: "
+msgstr "Ta bort: "
+
+msgid "Ready."
+msgstr "Redo."
+
+msgid "Wait for the current transaction preview to finish."
+msgstr "Vänta tills aktuell transaktionsförhandsgranskning är klar."
+
+msgid "All packages are already up to date."
+msgstr "Alla paket är redan uppdaterade."
+
+msgid "Preparing Preview..."
+msgstr "Förbereder förhandsgranskning..."
+
+msgid "No prepared transaction request is available."
+msgstr "Ingen förberedd transaktionsbegäran är tillgänglig."
+
+msgid "Transaction successful."
+msgstr "Transaktionen lyckades."
+
+msgid "Transaction failed."
+msgstr "Transaktionen misslyckades."
+
+msgid "Transaction Failed"
+msgstr "Transaktionen misslyckades"
+
+msgid "The transaction could not be completed. Review the details below."
+msgstr "Transaktionen kunde inte slutföras. Granska detaljerna nedan."
+
+msgid "Preparing transaction preview..."
+msgstr "Förbereder transaktionsförhandsgranskning..."
+
+msgid "Unable to prepare transaction preview."
+msgstr "Kunde inte förbereda transaktionsförhandsgranskning."
+
+msgid "Transaction Preview Failed"
+msgstr "Transaktionsförhandsgranskning misslyckades"
+
+msgid "The transaction could not be prepared. Review the details below."
+msgstr "Transaktionen kunde inte förberedas. Granska detaljerna nedan."
+
+msgid "Clear pending package actions before upgrading all packages."
+msgstr "Rensa väntande paketåtgärder innan alla paket uppgraderas."
+
+msgid "No pending changes."
+msgstr "Inga väntande ändringar."
+
+msgid "Transaction Progress"
+msgstr "Transaktionsförlopp"
+
+msgid "Resolving dependency changes..."
+msgstr "Löser beroendeändringar..."
+
+msgid "Transaction finished successfully."
+msgstr "Transaktionen slutfördes."
+
+msgid "Transaction finished with errors."
+msgstr "Transaktionen slutfördes med fel."
+
+msgid "Transaction Complete"
+msgstr "Transaktionen klar"
+
+#, c-format
+msgid "%s extra disk space will be used."
+msgstr "%s extra diskutrymme kommer att användas."
+
+#, c-format
+msgid "%s of disk space will be freed."
+msgstr "%s diskutrymme kommer att frigöras."
+
+msgid "To be downgraded"
+msgstr "Kommer att nedgraderas"
+
+msgid "To be reinstalled"
+msgstr "Kommer att ominstalleras"
+
+msgid "DNF UI cannot remove the package that owns the running application. Close DNF UI and remove it from another tool."
+msgstr "DNF UI kan inte ta bort paketet som äger det körande programmet. Stäng DNF UI och ta bort det med ett annat verktyg."
+
+msgid "DNF UI cannot reinstall the package that owns the running application while it is running."
+msgstr "DNF UI kan inte ominstallera paketet som äger det körande programmet medan det körs."
+
+msgid "Install reason: "
+msgstr "Installationsorsak: "
+
+msgid "Arch"
+msgstr "Arkitektur"
+
+msgid "Query"
+msgstr "Fråga"
+
+#, c-format
+msgid "%s: %.1f s"
+msgstr "%s: %.1f s"
+
+msgid "Operation cancelled."
+msgstr "Åtgärden avbröts."
+
+msgid "Quit and discard marked changes?"
+msgstr "Avsluta och kasta markerade ändringar?"
+
+msgid "There are still marked changes that have not yet been applied. They will get lost if you choose to quit."
+msgstr "Det finns fortfarande markerade ändringar som inte har verkställts. De går förlorade om du avslutar."
+
+msgid "Starting package downloads..."
+msgstr "Startar paketnedladdningar..."
+
+msgid "package download"
+msgstr "paketnedladdning"
+
+msgid "Download mirror failed."
+msgstr "Nedladdningsspegel misslyckades."
+
+msgid "Package download failed."
+msgstr "Paketnedladdning misslyckades."
+
+msgid "Running transaction."
+msgstr "Kör transaktion."
+
+msgid "Verifying package files."
+msgstr "Verifierar paketfiler."
+
+msgid "Preparing transaction."
+msgstr "Förbereder transaktion."
+
+msgid "Processing package."
+msgstr "Bearbetar paket."
+
+msgid "Processing package: "
+msgstr "Bearbetar paket: "
+
+msgid "Package unpack failed."
+msgstr "Uppackning av paket misslyckades."
+
+msgid "Package unpack failed: "
+msgstr "Uppackning av paket misslyckades: "
+
+msgid "Error listing packages."
+msgstr "Fel vid listning av paket."
+
+msgid "Error listing upgradable packages."
+msgstr "Fel vid listning av uppgraderbara paket."
+
+msgid "Error or no results."
+msgstr "Fel eller inga resultat."
+
+msgid "Use the upgrade-all preview helper for upgrade-all requests."
+msgstr "Använd förhandsgranskningshjälpen för uppgradera alla vid begäran om att uppgradera alla."
+
+msgid "dnf5daemon session path is empty."
+msgstr "dnf5daemon-sessionssökvägen är tom."
+
+msgid "Connecting to dnf5daemon..."
+msgstr "Ansluter till dnf5daemon..."
+
+msgid "dnf5daemon repository refresh failed."
+msgstr "dnf5daemon-förrådsuppdatering misslyckades."
+
+msgid "Could not mark packages in dnf5daemon."
+msgstr "Kunde inte markera paket i dnf5daemon."
+
+msgid "Could not open a dnf5daemon session."
+msgstr "Kunde inte öppna en dnf5daemon-session."
+
+msgid "dnf5daemon returned an empty session path."
+msgstr "dnf5daemon returnerade en tom sessionssökväg."
+
+msgid "Could not connect to the system D-Bus."
+msgstr "Kunde inte ansluta till systemets D-Bus."
+
+msgid "dnf5daemon connection is not available."
+msgstr "dnf5daemon-anslutning är inte tillgänglig."
+
+msgid "Could not mark upgrade-all in dnf5daemon."
+msgstr "Kunde inte markera uppgradera alla i dnf5daemon."
+
+msgid "dnf5daemon failed to resolve the transaction."
+msgstr "dnf5daemon kunde inte lösa transaktionen."
+
+msgid "dnf5daemon could not resolve the transaction."
+msgstr "dnf5daemon kunde inte lösa transaktionen."
+
+msgid "Failed to close the dnf5daemon session."
+msgstr "Kunde inte stänga dnf5daemon-sessionen."
+
+msgid "Search cache cleared."
+msgstr "Sökcache rensades."
+
+msgid "Graphical package manager frontend for Fedora."
+msgstr "Grafiskt gränssnitt för Fedors pakethanterare."
+
+msgid "GitHub repository"
+msgstr "GitHub-förråd"
+
+msgid "Loading package data..."
+msgstr "Läser in paketdata..."

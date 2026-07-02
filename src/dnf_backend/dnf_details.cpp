@@ -10,6 +10,7 @@
 
 #include "dnf_backend/base_manager.hpp"
 #include "debug_trace.hpp"
+#include "i18n.hpp"
 
 #include <ctime>
 #include <iomanip>
@@ -157,32 +158,28 @@ dnf_backend_get_package_info(const std::string &pkg_nevra)
   const std::string &display_description = have_installed_counterpart ? installed_description : selected_description;
 
   std::ostringstream oss;
-  oss << "Name: " << display_row.name << "\n"
-      << "Package ID: " << display_row.nevra << "\n"
-      << "Version: " << display_row.version << "\n"
-      << "Release: " << display_row.release << "\n"
-      << "Arch: " << display_row.arch << "\n"
-      << "Repo: " << display_row.repo << "\n"
-      << "Install Size: " << format_package_size(display_install_size) << "\n";
+  oss << _("Name") << ": " << display_row.name << "\n"
+      << _("Package ID") << ": " << display_row.nevra << "\n"
+      << _("Version") << ": " << display_row.version << "\n"
+      << _("Release") << ": " << display_row.release << "\n"
+      << _("Arch") << ": " << display_row.arch << "\n"
+      << _("Repo") << ": " << display_row.repo << "\n"
+      << _("Install Size") << ": " << format_package_size(display_install_size) << "\n";
 
   if (have_installed_counterpart) {
-    oss << "Install Reason: " << dnf_backend_install_reason_to_string(installed_row.install_reason) << "\n";
+    oss << _("Install Reason") << ": " << dnf_backend_install_reason_to_string(installed_row.install_reason) << "\n";
   }
 
   if (upgrade_download_size > 0) {
-    oss << "Download Size: " << format_package_size(upgrade_download_size) << "\n";
+    oss << _("Download Size") << ": " << format_package_size(upgrade_download_size) << "\n";
   }
 
   if (have_upgrade) {
-    oss << "Installed Version: " << installed_row.display_version() << "\n";
-    oss << "Upgradable Version: " << upgrade_row.display_version() << "\n";
+    oss << _("Installed Version") << ": " << installed_row.display_version() << "\n";
+    oss << _("Upgradable Version") << ": " << upgrade_row.display_version() << "\n";
   }
 
-  oss << "\n"
-      << "Summary:\n"
-      << display_summary << "\n\n"
-      << "Description:\n"
-      << display_description;
+  oss << "\n" << _("Summary") << ":\n" << display_summary << "\n\n" << _("Description") << ":\n" << display_description;
 
   return oss.str();
 }
