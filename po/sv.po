@@ -75,6 +75,18 @@ msgstr "Paketlistan exporterades."
 msgid "Could not export package list."
 msgstr "Kunde inte exportera paketlistan."
 
+msgid "Find packages"
+msgstr "Hitta paket"
+
+msgid "Search for packages, or choose a list option to browse packages."
+msgstr "Sök efter paket, eller välj ett listalternativ för att bläddra bland paket."
+
+msgid "No packages found"
+msgstr "Inga paket hittades"
+
+msgid "Try a different search or refresh repositories."
+msgstr "Prova en annan sökning eller uppdatera förråden."
+
 msgid ""
 "Shortcuts\n"
 "Ctrl+F: Focus search\n"

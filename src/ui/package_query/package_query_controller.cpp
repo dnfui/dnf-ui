@@ -93,7 +93,10 @@ perform_search(MainWindowUiState *widgets, const std::string &term)
     package_query_set_displayed_search_query(
         widgets, term, search_options.search_in_description, search_options.exact_match);
 
-    package_table_fill_package_view(widgets, cached_packages);
+    package_table_fill_package_view(widgets,
+                                    cached_packages,
+                                    cached_packages.empty() ? PackageTableEmptyState::NO_RESULTS
+                                                            : PackageTableEmptyState::READY);
 
     std::string msg =
         dnfui_i18n_format_count(cached_packages.size(), "Loaded %zu cached result.", "Loaded %zu cached results.");

@@ -76,7 +76,7 @@ refresh_visible_status_labels(GtkWidget *widget, MainWindowUiState *widgets)
 // Build the message shown when the package table has no rows.
 // -----------------------------------------------------------------------------
 static GtkWidget *
-create_empty_package_view()
+create_empty_package_view(PackageTableEmptyState state)
 {
   GtkWidget *outer = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
   gtk_widget_set_halign(outer, GTK_ALIGN_CENTER);
@@ -85,15 +85,22 @@ create_empty_package_view()
   gtk_widget_set_vexpand(outer, TRUE);
   gtk_widget_add_css_class(outer, "package-empty-state");
 
+  const char *title_text = _("Find packages");
+  const char *message_text = _("Search for packages, or choose a list option to browse packages.");
+  if (state == PackageTableEmptyState::NO_RESULTS) {
+    title_text = _("No packages found");
+    message_text = _("Try a different search or refresh repositories.");
+  }
+
   GtkWidget *title = gtk_label_new(nullptr);
-  gchar *title_markup = g_markup_printf_escaped("<b>%s</b>", _("No packages to show"));
+  gchar *title_markup = g_markup_printf_escaped("<b>%s</b>", title_text);
   gtk_label_set_markup(GTK_LABEL(title), title_markup);
   g_free(title_markup);
   gtk_label_set_xalign(GTK_LABEL(title), 0.0f);
   gtk_widget_add_css_class(title, "package-empty-title");
   gtk_box_append(GTK_BOX(outer), title);
 
-  GtkWidget *message = gtk_label_new(_("Search for packages or choose List Packages."));
+  GtkWidget *message = gtk_label_new(message_text);
   gtk_label_set_xalign(GTK_LABEL(message), 0.0f);
   gtk_label_set_wrap(GTK_LABEL(message), TRUE);
   gtk_widget_add_css_class(message, "package-empty-message");
@@ -716,10 +723,12 @@ package_table_reset_columns_to_default(MainWindowUiState *widgets)
 // Preserves the selected NEVRA across list refreshes when possible.
 // -----------------------------------------------------------------------------
 void
-package_table_fill_package_view(MainWindowUiState *widgets, const std::vector<PackageRow> &items)
+package_table_fill_package_view(MainWindowUiState *widgets,
+                                const std::vector<PackageRow> &items,
+                                PackageTableEmptyState empty_state)
 {
   if (items.empty()) {
-    gtk_scrolled_window_set_child(widgets->results.list_scroller, create_empty_package_view());
+    gtk_scrolled_window_set_child(widgets->results.list_scroller, create_empty_package_view(empty_state));
     widgets->results.listbox = nullptr;
     gtk_label_set_text(widgets->results.count_label, _("Items: 0"));
     package_details_clear_selected_package_state(widgets);

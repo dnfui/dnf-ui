@@ -253,7 +253,8 @@ on_list_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
     } else {
       widgets->results.selected_nevra.clear();
     }
-    package_table_fill_package_view(widgets, *packages);
+    package_table_fill_package_view(
+        widgets, *packages, packages->empty() ? PackageTableEmptyState::NO_RESULTS : PackageTableEmptyState::READY);
     std::string msg =
         dnfui_i18n_format_count(packages->size(), "Found %zu installed package.", "Found %zu installed packages.");
     ui_helpers_set_status(widgets->query.status_label, msg, "green");
@@ -335,7 +336,8 @@ on_list_available_task_finished(GObject *, GAsyncResult *res, gpointer user_data
     } else {
       widgets->results.selected_nevra.clear();
     }
-    package_table_fill_package_view(widgets, *packages);
+    package_table_fill_package_view(
+        widgets, *packages, packages->empty() ? PackageTableEmptyState::NO_RESULTS : PackageTableEmptyState::READY);
     std::string msg = dnfui_i18n_format_count(packages->size(), "Found %zu package.", "Found %zu packages.");
     ui_helpers_set_status(widgets->query.status_label, msg, "green");
     package_query_show_duration_label(widgets, _("List Packages"), td ? td->started_at_us : 0);
@@ -430,7 +432,8 @@ on_list_upgradeable_task_finished(GObject *, GAsyncResult *res, gpointer user_da
     } else {
       widgets->results.selected_nevra.clear();
     }
-    package_table_fill_package_view(widgets, *packages);
+    package_table_fill_package_view(
+        widgets, *packages, packages->empty() ? PackageTableEmptyState::NO_RESULTS : PackageTableEmptyState::READY);
     std::string msg =
         dnfui_i18n_format_count(packages->size(), "Found %zu upgradable package.", "Found %zu upgradable packages.");
     ui_helpers_set_status(widgets->query.status_label, msg, packages->empty() ? "gray" : "green");
@@ -533,7 +536,8 @@ on_search_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
     } else {
       widgets->results.selected_nevra.clear();
     }
-    package_table_fill_package_view(widgets, *packages);
+    package_table_fill_package_view(
+        widgets, *packages, packages->empty() ? PackageTableEmptyState::NO_RESULTS : PackageTableEmptyState::READY);
     std::string msg = dnfui_i18n_format_count(packages->size(), "Found %zu package.", "Found %zu packages.");
     ui_helpers_set_status(widgets->query.status_label, msg, "green");
     package_query_show_duration_label(widgets, _("Search"), td ? td->started_at_us : 0);
@@ -628,7 +632,8 @@ on_exact_package_reload_task_finished(GObject *, GAsyncResult *res, gpointer use
 
   if (packages) {
     widgets->results.selected_nevra = packages->empty() ? "" : task_nevra;
-    package_table_fill_package_view(widgets, *packages);
+    package_table_fill_package_view(
+        widgets, *packages, packages->empty() ? PackageTableEmptyState::NO_RESULTS : PackageTableEmptyState::READY);
     package_query_show_duration_label(widgets, _("Refresh"), td ? td->started_at_us : 0);
     package_query_finish_results_refresh(widgets);
     delete packages;
