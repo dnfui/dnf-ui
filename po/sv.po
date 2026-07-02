@@ -45,6 +45,9 @@ msgstr "Paketinfopanel"
 msgid "Columns"
 msgstr "Kolumner"
 
+msgid "View"
+msgstr "Visa"
+
 msgid "Restore Default Columns"
 msgstr "Återställ standardkolumner"
 
@@ -74,6 +77,9 @@ msgstr "Paketlistan exporterades."
 
 msgid "Could not export package list."
 msgstr "Kunde inte exportera paketlistan."
+
+msgid "Items: 0"
+msgstr "Objekt: 0"
 
 msgid "Find packages"
 msgstr "Hitta paket"
@@ -140,14 +146,26 @@ msgstr "Förråd"
 msgid "Info"
 msgstr "Info"
 
+msgid "Select a package for details."
+msgstr "Välj ett paket för att visa detaljer."
+
 msgid "Files"
 msgstr "Filer"
+
+msgid "Select an installed package to view its file list."
+msgstr "Välj ett installerat paket för att visa dess fillista."
 
 msgid "Dependencies"
 msgstr "Beroenden"
 
+msgid "Select a package to view dependencies."
+msgstr "Välj ett paket för att visa beroenden."
+
 msgid "Changelog"
 msgstr "Ändringslogg"
+
+msgid "Select a package to view its changelog."
+msgstr "Välj ett paket för att visa ändringsloggen."
 
 msgid "Pending"
 msgstr "Väntande"
@@ -193,6 +211,18 @@ msgstr "Markera för ominstallation"
 
 msgid "Mark for Removal"
 msgstr "Markera för borttagning"
+
+msgid "Unmark Install"
+msgstr "Avmarkera installation"
+
+msgid "Unmark Upgrade"
+msgstr "Avmarkera uppgradering"
+
+msgid "Unmark Reinstall"
+msgstr "Avmarkera ominstallation"
+
+msgid "Unmark Removal"
+msgstr "Avmarkera borttagning"
 
 msgid "List Installed"
 msgstr "Lista installerade"
