@@ -353,6 +353,9 @@ msgstr "Listar paket..."
 msgid "Listing upgradable packages..."
 msgstr "Listar uppgraderbara paket..."
 
+msgid "Loading package..."
+msgstr "Läser in paket..."
+
 msgid "Stopping search..."
 msgstr "Stoppar sökning..."
 

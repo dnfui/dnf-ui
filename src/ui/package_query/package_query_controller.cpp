@@ -297,5 +297,30 @@ package_query_reload_current_view(MainWindowUiState *widgets)
 }
 
 // -----------------------------------------------------------------------------
+// Show one exact package from a pending action without doing backend work on the GTK thread.
+// -----------------------------------------------------------------------------
+void
+package_query_show_exact_package(MainWindowUiState *widgets, const std::string &nevra)
+{
+  if (!widgets || nevra.empty()) {
+    return;
+  }
+
+  if (package_query_has_active_package_list_request(widgets)) {
+    ui_helpers_set_status(widgets->query.status_label, _("Wait for the current package query to finish."), "blue");
+    return;
+  }
+
+  widgets->query_state.displayed_query = DisplayedPackageQueryState();
+  widgets->query_state.preserve_selection_on_reload = true;
+  widgets->query_state.reload_selected_nevra = nevra;
+  widgets->results.selected_nevra = nevra;
+
+  ui_helpers_set_status(widgets->query.status_label, _("Loading package..."), "blue");
+  package_query_clear_duration_label(widgets);
+  package_query_start_exact_package_reload_task(widgets, nevra);
+}
+
+// -----------------------------------------------------------------------------
 // EOF
 // -----------------------------------------------------------------------------

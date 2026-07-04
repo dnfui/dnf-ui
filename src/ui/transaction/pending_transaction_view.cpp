@@ -7,11 +7,8 @@
 // -----------------------------------------------------------------------------
 #include "ui/transaction/pending_transaction_view.hpp"
 
-#include "dnf_backend/base_manager.hpp"
-#include "dnf_backend/dnf_backend.hpp"
 #include "i18n.hpp"
 #include "ui/package_query/package_query_controller.hpp"
-#include "ui/package_table/package_table_view.hpp"
 #include "ui/common/ui_helpers.hpp"
 #include "ui/common/widgets.hpp"
 
@@ -19,13 +16,6 @@
 struct PendingJumpButtonData {
   MainWindowUiState *widgets;
   PendingAction action;
-};
-
-struct PendingBackendBaseDropGuard {
-  ~PendingBackendBaseDropGuard()
-  {
-    BaseManager::instance().drop_cached_base();
-  }
 };
 
 // -----------------------------------------------------------------------------
@@ -48,31 +38,7 @@ show_pending_action_package(MainWindowUiState *widgets, const PendingAction &act
     return;
   }
 
-  PendingBackendBaseDropGuard base_drop_guard;
-
-  std::vector<PackageRow> rows;
-  switch (action.type) {
-  case PendingAction::INSTALL:
-  case PendingAction::UPGRADE:
-    rows = dnf_backend_get_available_package_rows_by_nevra(action.nevra);
-    break;
-  case PendingAction::REMOVE:
-  case PendingAction::REINSTALL:
-    rows = dnf_backend_get_installed_package_rows_by_nevra(action.nevra);
-    break;
-  }
-
-  if (rows.empty()) {
-    ui_helpers_set_status(
-        widgets->query.status_label, _("Pending package could not be found in current package data."), "red");
-    return;
-  }
-
-  // Selecting a pending action shows only that package in the table.
-  // After a transaction, refresh it from the selected NEVRA instead of replaying an old search or list view.
-  widgets->query_state.displayed_query = DisplayedPackageQueryState();
-  widgets->results.selected_nevra = action.nevra;
-  package_table_fill_package_view(widgets, rows);
+  package_query_show_exact_package(widgets, action.nevra);
 }
 
 // -----------------------------------------------------------------------------

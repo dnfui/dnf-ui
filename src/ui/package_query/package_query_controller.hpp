@@ -9,6 +9,8 @@
 
 #include <gtk/gtk.h>
 
+#include <string>
+
 struct MainWindowUiState;
 
 // -----------------------------------------------------------------------------
@@ -43,6 +45,10 @@ void package_query_clear_search_cache();
 // Reload the currently displayed package query view.
 // -----------------------------------------------------------------------------
 void package_query_reload_current_view(MainWindowUiState *widgets);
+// -----------------------------------------------------------------------------
+// Show one package row by exact package ID on a background task.
+// -----------------------------------------------------------------------------
+void package_query_show_exact_package(MainWindowUiState *widgets, const std::string &nevra);
 
 // -----------------------------------------------------------------------------
 // EOF
