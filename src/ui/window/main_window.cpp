@@ -220,7 +220,7 @@ setup_css(MainWindowUiState *widgets)
   GtkCssProvider *css = gtk_css_provider_new();
   // The few custom style rules are kept next to the widgets they style.
   gtk_css_provider_load_from_string(css,
-                                    "label.status-bar { padding: 4px; border-radius: 4px; } "
+                                    "label.status-bar { padding: 6px 8px; border-radius: 6px; } "
                                     ".top-controls { "
                                     "  padding: 10px 12px 8px 12px; "
                                     "  border-bottom: 1px solid @borders; "
@@ -318,10 +318,13 @@ setup_css(MainWindowUiState *widgets)
                                     "} "
                                     ".package-empty-state { "
                                     "  min-width: 340px; "
-                                    "  padding: 24px 28px; "
-                                    "  border-radius: 18px; "
-                                    "  border: 1px solid alpha(@theme_fg_color, 0.16); "
-                                    "  background-color: alpha(@theme_base_color, 0.88); "
+                                    "  padding: 26px 30px; "
+                                    "  border-radius: 14px; "
+                                    "  border: 1px solid alpha(@theme_fg_color, 0.12); "
+                                    "  background-color: alpha(@theme_base_color, 0.92); "
+                                    "} "
+                                    ".package-empty-icon { "
+                                    "  opacity: 0.62; "
                                     "} "
                                     ".package-empty-title { "
                                     "  font-size: 1.25em; "

@@ -73,13 +73,13 @@ ui_helpers_set_status(GtkLabel *label, const std::string &text, const std::strin
 {
   std::string bg;
   if (color == "green")
-    bg = "#ccffcc";
+    bg = "#e6f4ea";
   else if (color == "red")
-    bg = "#ffcccc";
+    bg = "#fce8e6";
   else if (color == "blue")
-    bg = "#cce5ff";
+    bg = "#e8f0fe";
   else if (color == "gray")
-    bg = "#f0f0f0";
+    bg = "#f3f4f6";
   else
     bg = "#ffffff";
 

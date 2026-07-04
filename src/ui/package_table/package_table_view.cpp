@@ -85,6 +85,12 @@ create_empty_package_view(PackageTableEmptyState state)
   gtk_widget_set_vexpand(outer, TRUE);
   gtk_widget_add_css_class(outer, "package-empty-state");
 
+  GtkWidget *icon = gtk_image_new_from_icon_name("system-search-symbolic");
+  gtk_image_set_pixel_size(GTK_IMAGE(icon), 36);
+  gtk_widget_set_halign(icon, GTK_ALIGN_START);
+  gtk_widget_add_css_class(icon, "package-empty-icon");
+  gtk_box_append(GTK_BOX(outer), icon);
+
   const char *title_text = _("Find packages");
   const char *message_text = _("Search for packages, or choose a list option to browse packages.");
   if (state == PackageTableEmptyState::NO_RESULTS) {

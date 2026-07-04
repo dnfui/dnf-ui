@@ -165,6 +165,7 @@ main_window_build_layout(AppWidgets *ui)
   ui->upgrade_all_button = upgrade_all_button;
 
   GtkWidget *apply_button = ui_helpers_create_icon_button("object-select-symbolic", _("Apply Transactions"));
+  gtk_widget_add_css_class(apply_button, "suggested-action");
   gtk_box_append(GTK_BOX(hbox_tx_buttons), apply_button);
   ui->apply_button = apply_button;
 
