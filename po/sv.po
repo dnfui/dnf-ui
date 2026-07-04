@@ -197,6 +197,9 @@ msgstr "Filer"
 msgid "Select an installed package to view its file list."
 msgstr "Välj ett installerat paket för att visa dess fillista."
 
+msgid "File list available only for installed packages."
+msgstr "Fillista är endast tillgänglig för installerade paket."
+
 msgid "Dependencies"
 msgstr "Beroenden"
 

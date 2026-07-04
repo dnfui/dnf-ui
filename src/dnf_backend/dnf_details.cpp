@@ -202,7 +202,7 @@ dnf_backend_get_installed_package_files(const std::string &pkg_nevra, size_t max
   query.filter_nevra(pkg_nevra);
   if (query.empty()) {
     DNFUI_TRACE("Backend file list package not found nevra=%s", pkg_nevra.c_str());
-    return "File list available only for installed packages.";
+    return _("File list available only for installed packages.");
   }
 
   std::string installed_nevra;
@@ -247,7 +247,7 @@ dnf_backend_get_installed_package_files(const std::string &pkg_nevra, size_t max
 
   if (installed_nevra.empty()) {
     DNFUI_TRACE("Backend file list not installed nevra=%s", pkg_nevra.c_str());
-    return "File list available only for installed packages.";
+    return _("File list available only for installed packages.");
   }
 
   // Load the resolved installed package before reading its recorded file list.
@@ -260,7 +260,7 @@ dnf_backend_get_installed_package_files(const std::string &pkg_nevra, size_t max
     DNFUI_TRACE("Backend file list installed package not found nevra=%s installed_nevra=%s",
                 pkg_nevra.c_str(),
                 installed_nevra.c_str());
-    return "File list available only for installed packages.";
+    return _("File list available only for installed packages.");
   }
 
   installed_files_query.filter_latest_evr();
