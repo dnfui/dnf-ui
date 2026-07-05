@@ -204,6 +204,20 @@ struct TransactionHistoryPackageRow {
 struct TransactionHistoryCursor {
   size_t transaction_offset = 0;
   size_t package_offset = 0;
+
+  // -----------------------------------------------------------------------------
+  // Return a cursor that starts the next transaction when the current package
+  // offset has reached the end of this transaction.
+  // -----------------------------------------------------------------------------
+  TransactionHistoryCursor normalized_for_package_count(size_t package_count) const
+  {
+    TransactionHistoryCursor cursor = *this;
+    if (cursor.package_offset >= package_count) {
+      ++cursor.transaction_offset;
+      cursor.package_offset = 0;
+    }
+    return cursor;
+  }
 };
 
 enum class TransactionHistoryResultFilter {

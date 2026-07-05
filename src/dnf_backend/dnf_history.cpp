@@ -259,7 +259,7 @@ dnf_backend_list_transaction_history_page(TransactionHistoryCursor cursor,
       if (collect_page && !page_full) {
         page.rows.push_back(std::move(row));
         if (page.rows.size() >= max_package_rows) {
-          page.next_cursor = scan_cursor;
+          page.next_cursor = scan_cursor.normalized_for_package_count(packages.size());
           page_full = true;
         }
       } else if (collect_page && page_full) {

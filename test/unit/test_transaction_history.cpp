@@ -25,5 +25,21 @@ TEST_CASE("Transaction history actions have labels")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that a page ending on the last package in a transaction continues at
+// the next transaction.
+// -----------------------------------------------------------------------------
+TEST_CASE("Transaction history cursor moves past transaction boundary")
+{
+  TransactionHistoryCursor cursor;
+  cursor.transaction_offset = 4;
+  cursor.package_offset = 3;
+
+  TransactionHistoryCursor next = cursor.normalized_for_package_count(3);
+
+  REQUIRE(next.transaction_offset == 5);
+  REQUIRE(next.package_offset == 0);
+}
+
+// -----------------------------------------------------------------------------
 // EOF
 // -----------------------------------------------------------------------------
