@@ -296,6 +296,75 @@ msgstr "Rensa lista"
 msgid "Clear Search Cache"
 msgstr "Rensa sökcache"
 
+msgid "Transaction History..."
+msgstr "Transaktionshistorik..."
+
+msgid "Transaction History"
+msgstr "Transaktionshistorik"
+
+msgid "Filter transaction history..."
+msgstr "Filtrera transaktionshistorik..."
+
+msgid "Loading transaction history..."
+msgstr "Läser in transaktionshistorik..."
+
+msgid "No transaction history rows match the filter."
+msgstr "Inga transaktionshistorikrader matchar filtret."
+
+#, c-format
+msgid "Showing %zu transaction history row."
+msgid_plural "Showing %zu transaction history rows."
+msgstr[0] "Visar %zu transaktionshistorikrad."
+msgstr[1] "Visar %zu transaktionshistorikrader."
+
+msgid "History load was cancelled."
+msgstr "Historikinläsningen avbröts."
+
+msgid "Failed to load transaction history."
+msgstr "Kunde inte läsa in transaktionshistorik."
+
+msgid "Unknown time"
+msgstr "Okänd tid"
+
+msgid "Transaction"
+msgstr "Transaktion"
+
+msgid "Result"
+msgstr "Resultat"
+
+msgid "OK"
+msgstr "OK"
+
+msgid "Failed"
+msgstr "Misslyckades"
+
+msgid "Command"
+msgstr "Kommando"
+
+msgid "Install"
+msgstr "Installera"
+
+msgid "Upgrade"
+msgstr "Uppgradera"
+
+msgid "Downgrade"
+msgstr "Nedgradera"
+
+msgid "Reinstall"
+msgstr "Installera om"
+
+msgid "Remove"
+msgstr "Ta bort"
+
+msgid "Replaced"
+msgstr "Ersattes"
+
+msgid "Reason changed"
+msgstr "Orsak ändrades"
+
+msgid "Other"
+msgstr "Annat"
+
 msgid "Stop"
 msgstr "Stoppa"
 

@@ -62,7 +62,8 @@ DNF UI deliberately uses two package-management paths.
 
 libdnf5 is used for package views. It is fast, runs in the unprivileged GUI
 process, and gives the app the package details needed for the table, search,
-installed packages, files, dependencies, and changelog text.
+installed packages, files, dependencies, changelog text, and read-only
+transaction history.
 
 dnf5daemon is used for transaction decisions and package changes. It is the
 service that resolves previews, applies transactions, handles Polkit
@@ -114,6 +115,7 @@ The `src/ui` directory is split by UI concern: `window`, `package_query`,
 - [src/ui/common/widgets.cpp](../src/ui/common/widgets.cpp) handles task helpers shared by controllers.
 - [src/ui/refresh/repository_refresh_controller.cpp](../src/ui/refresh/repository_refresh_controller.cpp) handles manual repository refresh.
 - [src/ui/window/main_menu.cpp](../src/ui/window/main_menu.cpp) handles top menu actions.
+- [src/ui/history/transaction_history_view.cpp](../src/ui/history/transaction_history_view.cpp) shows read-only transaction history.
 - [src/ui/package_query/package_query_controller.cpp](../src/ui/package_query/package_query_controller.cpp) handles the public search, list, history, clear, and reload callbacks.
 - [src/ui/package_query/package_query_controls.cpp](../src/ui/package_query/package_query_controls.cpp) handles active package-query request state, Stop button handling, cancellation, and refresh completion.
 - [src/ui/package_query/package_query_tasks.cpp](../src/ui/package_query/package_query_tasks.cpp) contains package-query worker tasks and completion handlers.

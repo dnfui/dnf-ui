@@ -11,6 +11,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <set>
 #include <string>
 #include <vector>
@@ -152,6 +153,63 @@ struct TransactionPreview {
         replaced.empty();
   }
 };
+
+// -----------------------------------------------------------------------------
+// Read-only transaction history model.
+// The UI uses this to inspect past package changes without depending on
+// libdnf5 transaction classes.
+// -----------------------------------------------------------------------------
+enum class TransactionHistoryAction {
+  INSTALL,
+  UPGRADE,
+  DOWNGRADE,
+  REINSTALL,
+  REMOVE,
+  REPLACED,
+  REASON_CHANGE,
+  OTHER,
+};
+
+struct TransactionHistoryPackageRow {
+  int64_t transaction_id = 0;
+  int64_t started_at = 0;
+  int64_t ended_at = 0;
+  bool succeeded = false;
+  TransactionHistoryAction action = TransactionHistoryAction::OTHER;
+  std::string package_id;
+  std::string name;
+  std::string epoch;
+  std::string version;
+  std::string release;
+  std::string arch;
+  std::string repo;
+  std::string description;
+
+  // -----------------------------------------------------------------------------
+  // Return the user-visible version and release string.
+  // -----------------------------------------------------------------------------
+  std::string display_version() const
+  {
+    if (version.empty()) {
+      return release;
+    }
+    if (release.empty()) {
+      return version;
+    }
+    return version + "-" + release;
+  }
+};
+
+// -----------------------------------------------------------------------------
+// Convert one transaction history action to user-facing text.
+// -----------------------------------------------------------------------------
+std::string dnf_backend_transaction_history_action_to_string(TransactionHistoryAction action);
+
+// -----------------------------------------------------------------------------
+// Return recent package changes from the libdnf5 transaction history database.
+// The limit is counted in transactions, not package rows.
+// -----------------------------------------------------------------------------
+std::vector<TransactionHistoryPackageRow> dnf_backend_list_transaction_history_rows(size_t max_transactions);
 
 // -----------------------------------------------------------------------------
 // Search flags used by backend search queries.

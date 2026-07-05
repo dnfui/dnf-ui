@@ -165,6 +165,17 @@ status text, tooltip text, and CSS classes separate from table construction.
 [src/ui/package_table/package_table_context_menu.cpp](../src/ui/package_table/package_table_context_menu.cpp)
 builds right-click actions for package rows.
 
+### Transaction history
+
+`Package -> Transaction History...` opens a read-only window backed by libdnf5
+transaction history. It lists recent package changes and lets the user filter
+them by package, action, repository, or command text.
+
+The history window lives in [src/ui/history/transaction_history_view.cpp](../src/ui/history/transaction_history_view.cpp).
+It loads history on a worker thread and displays value objects from the backend
+instead of libdnf5 objects. The feature is intentionally read-only. It does not
+offer rollback, replay, or undo actions.
+
 ### Pending transaction controller
 
 [src/ui/transaction/pending_transaction_controller.cpp](../src/ui/transaction/pending_transaction_controller.cpp)

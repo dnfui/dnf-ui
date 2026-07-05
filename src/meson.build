@@ -2,6 +2,7 @@ backend_sources = files(
   'dnf_backend/base_manager.cpp',
   'dnf_backend/dnf_common.cpp',
   'dnf_backend/dnf_details.cpp',
+  'dnf_backend/dnf_history.cpp',
   'dnf_backend/dnf_query.cpp',
   'dnf_backend/dnf_state.cpp',
 )
@@ -14,6 +15,7 @@ app_sources = files(
   'ui/window/main_window.cpp',
   'ui/window/main_window_layout.cpp',
   'main.cpp',
+  'ui/history/transaction_history_view.cpp',
   'ui/transaction/pending_transaction_action_rows.cpp',
   'ui/details/package_details_controller.cpp',
   'ui/package_query/package_query_cache.cpp',
