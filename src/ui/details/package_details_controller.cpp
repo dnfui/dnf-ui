@@ -112,6 +112,32 @@ set_details_text(GtkTextBuffer *buffer, const char *text)
 }
 
 // -----------------------------------------------------------------------------
+// Insert the UI row status between package metadata and summary text.
+// -----------------------------------------------------------------------------
+static std::string
+package_info_text_with_status(const char *info_text, const char *status_text)
+{
+  std::string text = info_text ? info_text : _("No details found.");
+  if (!status_text || !*status_text) {
+    return text;
+  }
+
+  std::string status_line = _("Status");
+  status_line += ": ";
+  status_line += status_text;
+
+  size_t summary_separator = text.find("\n\n");
+  if (summary_separator == std::string::npos) {
+    text += "\n";
+    text += status_line;
+    return text;
+  }
+  text.insert(summary_separator, "\n\n" + status_line);
+
+  return text;
+}
+
+// -----------------------------------------------------------------------------
 // Reset the details panel after repopulating the main package view.
 // -----------------------------------------------------------------------------
 void
@@ -318,19 +344,10 @@ on_package_details_task_finished(GObject *, GAsyncResult *res, gpointer user_dat
   }
 
   // Show the row status even when the Status column is hidden.
-  const char *info_text = result->info ? result->info : _("No details found.");
-  std::string details_text;
-  if (td->status_text && *td->status_text) {
-    details_text = _("Status");
-    details_text += ": ";
-    details_text += td->status_text;
-    details_text += "\n\n";
-    details_text += info_text;
-    info_text = details_text.c_str();
-  }
+  std::string info_text = package_info_text_with_status(result->info, td->status_text);
 
   // Display general package information.
-  set_details_text(widgets->results.details_buffer, info_text);
+  set_details_text(widgets->results.details_buffer, info_text.c_str());
 
   // Display the file list fetched by the background task.
   set_details_text(widgets->results.files_buffer,
