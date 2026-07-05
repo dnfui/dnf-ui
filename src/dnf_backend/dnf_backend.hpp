@@ -202,21 +202,29 @@ struct TransactionHistoryPackageRow {
 };
 
 struct TransactionHistoryCursor {
-  size_t transaction_offset = 0;
-  size_t package_offset = 0;
+  size_t row_offset = 0;
 
   // -----------------------------------------------------------------------------
-  // Return a cursor that starts the next transaction when the current package
-  // offset has reached the end of this transaction.
+  // Return the cursor for one one-based page number.
   // -----------------------------------------------------------------------------
-  TransactionHistoryCursor normalized_for_package_count(size_t package_count) const
+  static TransactionHistoryCursor for_page(size_t page, size_t rows_per_page)
   {
-    TransactionHistoryCursor cursor = *this;
-    if (cursor.package_offset >= package_count) {
-      ++cursor.transaction_offset;
-      cursor.package_offset = 0;
+    TransactionHistoryCursor cursor;
+    if (page > 1 && rows_per_page > 0) {
+      cursor.row_offset = (page - 1) * rows_per_page;
     }
     return cursor;
+  }
+
+  // -----------------------------------------------------------------------------
+  // Return the one-based page number for this cursor.
+  // -----------------------------------------------------------------------------
+  size_t page(size_t rows_per_page) const
+  {
+    if (rows_per_page == 0) {
+      return 1;
+    }
+    return (row_offset / rows_per_page) + 1;
   }
 };
 
@@ -251,7 +259,7 @@ std::string dnf_backend_transaction_history_action_to_string(TransactionHistoryA
 
 // -----------------------------------------------------------------------------
 // Return one page of package changes from the libdnf5 transaction history database.
-// The cursor lets the UI continue inside a large transaction without loading all matching rows at once.
+// The cursor stores the first matching row offset for the requested page.
 // -----------------------------------------------------------------------------
 TransactionHistoryPage dnf_backend_list_transaction_history_page(TransactionHistoryCursor cursor,
                                                                  const TransactionHistoryFilter &filter,

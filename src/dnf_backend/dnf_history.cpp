@@ -193,7 +193,7 @@ dnf_backend_transaction_history_action_to_string(TransactionHistoryAction action
 
 // -----------------------------------------------------------------------------
 // Return one page of package changes from the libdnf5 transaction history database.
-// The cursor lets the UI continue inside a large transaction without loading all rows at once.
+// The cursor stores the first matching row offset for the requested page.
 // -----------------------------------------------------------------------------
 TransactionHistoryPage
 dnf_backend_list_transaction_history_page(TransactionHistoryCursor cursor,
@@ -210,45 +210,32 @@ dnf_backend_list_transaction_history_page(TransactionHistoryCursor cursor,
   std::vector<int64_t> transaction_ids = history->list_transaction_ids();
   TransactionHistoryPage page;
   if (transaction_ids.empty() || max_package_rows == 0) {
-    page.next_cursor.transaction_offset = transaction_ids.size();
+    page.next_cursor.row_offset = cursor.row_offset;
     return page;
   }
 
-  TransactionHistoryCursor scan_cursor;
-  bool collect_page = cursor.transaction_offset == 0 && cursor.package_offset == 0;
-  bool page_full = false;
+  const size_t page_start = cursor.row_offset;
+  const size_t page_end = page_start + max_package_rows;
+  size_t matching_row_index = 0;
 
-  while (scan_cursor.transaction_offset < transaction_ids.size()) {
+  size_t transaction_offset = 0;
+  while (transaction_offset < transaction_ids.size()) {
     throw_if_history_cancelled(cancellable);
 
-    const size_t id_index = transaction_ids.size() - scan_cursor.transaction_offset - 1;
+    const size_t id_index = transaction_ids.size() - transaction_offset - 1;
     auto transactions = history->list_transactions(std::vector<int64_t> { transaction_ids[id_index] });
     if (transactions.empty()) {
-      ++scan_cursor.transaction_offset;
-      scan_cursor.package_offset = 0;
+      ++transaction_offset;
       continue;
     }
 
     auto &transaction = transactions.front();
     auto packages = transaction.get_packages();
-    if (scan_cursor.package_offset >= packages.size()) {
-      ++scan_cursor.transaction_offset;
-      scan_cursor.package_offset = 0;
-      continue;
-    }
-
     bool transaction_matches = false;
-    while (scan_cursor.package_offset < packages.size()) {
+    for (auto &package : packages) {
       throw_if_history_cancelled(cancellable);
 
-      if (!collect_page && scan_cursor.transaction_offset == cursor.transaction_offset &&
-          scan_cursor.package_offset == cursor.package_offset) {
-        collect_page = true;
-      }
-
-      TransactionHistoryPackageRow row = make_history_row(transaction, packages[scan_cursor.package_offset]);
-      ++scan_cursor.package_offset;
-
+      TransactionHistoryPackageRow row = make_history_row(transaction, package);
       if (!history_row_matches_filter(row, normalized_filter)) {
         continue;
       }
@@ -256,28 +243,21 @@ dnf_backend_list_transaction_history_page(TransactionHistoryCursor cursor,
       ++page.total_package_rows;
       transaction_matches = true;
 
-      if (collect_page && !page_full) {
+      if (matching_row_index >= page_start && matching_row_index < page_end) {
         page.rows.push_back(std::move(row));
-        if (page.rows.size() >= max_package_rows) {
-          page.next_cursor = scan_cursor.normalized_for_package_count(packages.size());
-          page_full = true;
-        }
-      } else if (collect_page && page_full) {
-        page.has_more = true;
       }
+      ++matching_row_index;
     }
 
     if (transaction_matches) {
       ++page.total_transactions;
     }
 
-    ++scan_cursor.transaction_offset;
-    scan_cursor.package_offset = 0;
+    ++transaction_offset;
   }
 
-  if (!page_full) {
-    page.next_cursor = scan_cursor;
-  }
+  page.next_cursor.row_offset = page_start + page.rows.size();
+  page.has_more = page.next_cursor.row_offset < page.total_package_rows;
 
   return page;
 }

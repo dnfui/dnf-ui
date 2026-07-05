@@ -331,6 +331,12 @@ msgstr "Nyare"
 msgid "Older"
 msgstr "Äldre"
 
+msgid "Page"
+msgstr "Sida"
+
+msgid "Go"
+msgstr "Gå"
+
 msgid "Use Older to show more history."
 msgstr "Använd Äldre för att visa mer historik."
 

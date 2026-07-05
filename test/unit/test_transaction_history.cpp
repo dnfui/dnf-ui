@@ -25,19 +25,17 @@ TEST_CASE("Transaction history actions have labels")
 }
 
 // -----------------------------------------------------------------------------
-// Verify that a page ending on the last package in a transaction continues at
-// the next transaction.
+// Verify that history cursors map between row offsets and one-based pages.
 // -----------------------------------------------------------------------------
-TEST_CASE("Transaction history cursor moves past transaction boundary")
+TEST_CASE("Transaction history cursor maps pages to row offsets")
 {
-  TransactionHistoryCursor cursor;
-  cursor.transaction_offset = 4;
-  cursor.package_offset = 3;
+  TransactionHistoryCursor first_page = TransactionHistoryCursor::for_page(1, 100);
+  TransactionHistoryCursor later_page = TransactionHistoryCursor::for_page(75, 100);
 
-  TransactionHistoryCursor next = cursor.normalized_for_package_count(3);
-
-  REQUIRE(next.transaction_offset == 5);
-  REQUIRE(next.package_offset == 0);
+  REQUIRE(first_page.row_offset == 0);
+  REQUIRE(first_page.page(100) == 1);
+  REQUIRE(later_page.row_offset == 7400);
+  REQUIRE(later_page.page(100) == 75);
 }
 
 // -----------------------------------------------------------------------------
