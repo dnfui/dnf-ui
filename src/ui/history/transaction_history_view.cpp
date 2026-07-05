@@ -19,8 +19,13 @@
 
 namespace {
 
-constexpr size_t kHistoryTransactionLimit = 200;
-constexpr size_t kHistoryPackageRowLimit = 2000;
+constexpr size_t kHistoryPackageRowsPerPage = 100;
+
+enum class HistoryPageDirection {
+  FRESH,
+  NEWER,
+  OLDER,
+};
 
 struct TransactionHistoryWindowState {
   GtkWindow *window = nullptr;
@@ -33,36 +38,118 @@ struct TransactionHistoryWindowState {
   GtkListBox *list_box = nullptr;
   GtkLabel *status_label = nullptr;
   GtkSpinner *spinner = nullptr;
+  GtkButton *refresh_button = nullptr;
+  GtkButton *newer_button = nullptr;
+  GtkButton *older_button = nullptr;
   GCancellable *cancellable = nullptr;
   std::vector<TransactionHistoryPackageRow> rows;
+  std::vector<TransactionHistoryCursor> newer_page_cursors;
+  TransactionHistoryCursor current_cursor;
+  TransactionHistoryCursor next_cursor;
+  TransactionHistoryFilter current_filter;
+  size_t current_page = 1;
+  size_t total_package_rows = 0;
+  size_t total_transactions = 0;
+  bool has_older_history = false;
   uint64_t load_id = 0;
   bool destroyed = false;
 };
 
 struct HistoryFilters {
-  std::string package;
-  std::string text;
-  int64_t from = 0;
-  int64_t to = std::numeric_limits<int64_t>::max();
-  guint action_index = 0;
-  guint result_index = 0;
+  TransactionHistoryFilter backend;
   std::string error;
 };
 
 struct HistoryTaskUserData {
   std::shared_ptr<TransactionHistoryWindowState> state;
   uint64_t load_id = 0;
+  TransactionHistoryCursor cursor;
+  TransactionHistoryFilter filter;
+  HistoryPageDirection direction = HistoryPageDirection::FRESH;
 };
 
+void history_start_load(const std::shared_ptr<TransactionHistoryWindowState> &state,
+                        TransactionHistoryCursor cursor,
+                        const TransactionHistoryFilter &filter,
+                        HistoryPageDirection direction);
+
 // -----------------------------------------------------------------------------
-// Return ASCII-lowercase text for simple package history filtering.
+// Return true when the selected action row enables an action filter.
 // -----------------------------------------------------------------------------
-std::string
-history_filter_text(std::string text)
+bool
+history_filter_action_from_index(guint action_index, TransactionHistoryAction &action)
 {
-  std::transform(
-      text.begin(), text.end(), text.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-  return text;
+  switch (action_index) {
+  case 1:
+    action = TransactionHistoryAction::INSTALL;
+    return true;
+  case 2:
+    action = TransactionHistoryAction::UPGRADE;
+    return true;
+  case 3:
+    action = TransactionHistoryAction::DOWNGRADE;
+    return true;
+  case 4:
+    action = TransactionHistoryAction::REINSTALL;
+    return true;
+  case 5:
+    action = TransactionHistoryAction::REMOVE;
+    return true;
+  case 6:
+    action = TransactionHistoryAction::REPLACED;
+    return true;
+  case 7:
+    action = TransactionHistoryAction::REASON_CHANGE;
+    return true;
+  case 8:
+    action = TransactionHistoryAction::OTHER;
+    return true;
+  case 0:
+  default:
+    action = TransactionHistoryAction::OTHER;
+    return false;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Convert the selected result row to the backend history filter value.
+// -----------------------------------------------------------------------------
+TransactionHistoryResultFilter
+history_result_filter_from_index(guint result_index)
+{
+  switch (result_index) {
+  case 1:
+    return TransactionHistoryResultFilter::OK;
+  case 2:
+    return TransactionHistoryResultFilter::FAILED;
+  case 0:
+  default:
+    return TransactionHistoryResultFilter::ALL;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Return true when the current history filter narrows the page load.
+// -----------------------------------------------------------------------------
+bool
+history_filter_is_active(const TransactionHistoryFilter &filter)
+{
+  return !filter.package_text.empty() || !filter.detail_text.empty() || filter.from != 0 ||
+      filter.to != std::numeric_limits<int64_t>::max() || filter.action_enabled ||
+      filter.result != TransactionHistoryResultFilter::ALL;
+}
+
+// -----------------------------------------------------------------------------
+// Return the number of pages needed to show all matching history rows.
+// -----------------------------------------------------------------------------
+size_t
+history_total_pages(size_t total_package_rows)
+{
+  if (total_package_rows == 0) {
+    return 0;
+  }
+
+  return ((total_package_rows - 1) / kHistoryPackageRowsPerPage) + 1;
 }
 
 // -----------------------------------------------------------------------------
@@ -142,28 +229,30 @@ history_current_filters(const std::shared_ptr<TransactionHistoryWindowState> &st
     return filters;
   }
 
-  filters.package = history_filter_text(
-      history_trim_filter_text(state->package_entry ? gtk_editable_get_text(GTK_EDITABLE(state->package_entry)) : ""));
-  filters.text = history_filter_text(
-      history_trim_filter_text(state->text_entry ? gtk_editable_get_text(GTK_EDITABLE(state->text_entry)) : ""));
-  filters.action_index = state->action_dropdown ? gtk_drop_down_get_selected(state->action_dropdown) : 0;
-  filters.result_index = state->result_dropdown ? gtk_drop_down_get_selected(state->result_dropdown) : 0;
+  filters.backend.package_text =
+      history_trim_filter_text(state->package_entry ? gtk_editable_get_text(GTK_EDITABLE(state->package_entry)) : "");
+  filters.backend.detail_text =
+      history_trim_filter_text(state->text_entry ? gtk_editable_get_text(GTK_EDITABLE(state->text_entry)) : "");
+  filters.backend.action_enabled = history_filter_action_from_index(
+      state->action_dropdown ? gtk_drop_down_get_selected(state->action_dropdown) : 0, filters.backend.action);
+  filters.backend.result =
+      history_result_filter_from_index(state->result_dropdown ? gtk_drop_down_get_selected(state->result_dropdown) : 0);
 
   if (!history_parse_date_filter(state->from_entry ? gtk_editable_get_text(GTK_EDITABLE(state->from_entry)) : "",
                                  false,
-                                 filters.from,
+                                 filters.backend.from,
                                  filters.error)) {
     return filters;
   }
 
   if (!history_parse_date_filter(state->to_entry ? gtk_editable_get_text(GTK_EDITABLE(state->to_entry)) : "",
                                  true,
-                                 filters.to,
+                                 filters.backend.to,
                                  filters.error)) {
     return filters;
   }
 
-  if (filters.from > filters.to) {
+  if (filters.backend.from > filters.backend.to) {
     filters.error = _("The start date must be before the end date.");
   }
 
@@ -190,90 +279,6 @@ history_time_text(int64_t timestamp)
   }
 
   return buffer;
-}
-
-// -----------------------------------------------------------------------------
-// Return true when a history row matches the selected action filter.
-// -----------------------------------------------------------------------------
-bool
-history_row_matches_action(const TransactionHistoryPackageRow &row, guint action_index)
-{
-  switch (action_index) {
-  case 1:
-    return row.action == TransactionHistoryAction::INSTALL;
-  case 2:
-    return row.action == TransactionHistoryAction::UPGRADE;
-  case 3:
-    return row.action == TransactionHistoryAction::DOWNGRADE;
-  case 4:
-    return row.action == TransactionHistoryAction::REINSTALL;
-  case 5:
-    return row.action == TransactionHistoryAction::REMOVE;
-  case 6:
-    return row.action == TransactionHistoryAction::REPLACED;
-  case 7:
-    return row.action == TransactionHistoryAction::REASON_CHANGE;
-  case 8:
-    return row.action == TransactionHistoryAction::OTHER;
-  case 0:
-  default:
-    return true;
-  }
-}
-
-// -----------------------------------------------------------------------------
-// Return true when a history row matches the selected result filter.
-// -----------------------------------------------------------------------------
-bool
-history_row_matches_result(const TransactionHistoryPackageRow &row, guint result_index)
-{
-  switch (result_index) {
-  case 1:
-    return row.succeeded;
-  case 2:
-    return !row.succeeded;
-  case 0:
-  default:
-    return true;
-  }
-}
-
-// -----------------------------------------------------------------------------
-// Return true when a history row matches the active filters.
-// -----------------------------------------------------------------------------
-bool
-history_row_matches_filters(const TransactionHistoryPackageRow &row, const HistoryFilters &filters)
-{
-  if (!history_row_matches_action(row, filters.action_index) ||
-      !history_row_matches_result(row, filters.result_index)) {
-    return false;
-  }
-
-  if (row.started_at < filters.from || row.started_at > filters.to) {
-    return false;
-  }
-
-  if (!filters.package.empty()) {
-    std::string package_text = row.name;
-    package_text += "\n";
-    package_text += row.package_id;
-    if (history_filter_text(package_text).find(filters.package) == std::string::npos) {
-      return false;
-    }
-  }
-
-  if (!filters.text.empty()) {
-    std::string text = row.repo;
-    text += "\n";
-    text += row.description;
-    text += "\n";
-    text += row.arch;
-    if (history_filter_text(text).find(filters.text) == std::string::npos) {
-      return false;
-    }
-  }
-
-  return true;
 }
 
 // -----------------------------------------------------------------------------
@@ -314,6 +319,29 @@ history_list_clear(GtkListBox *list_box)
     GtkWidget *next = gtk_widget_get_next_sibling(child);
     gtk_list_box_remove(list_box, child);
     child = next;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Update controls that depend on whether a history load is currently running.
+// -----------------------------------------------------------------------------
+void
+history_set_loading(const std::shared_ptr<TransactionHistoryWindowState> &state, bool loading)
+{
+  if (!state || state->destroyed) {
+    return;
+  }
+
+  gtk_widget_set_sensitive(GTK_WIDGET(state->refresh_button), !loading);
+  gtk_widget_set_sensitive(GTK_WIDGET(state->newer_button), !loading && !state->newer_page_cursors.empty());
+  gtk_widget_set_sensitive(GTK_WIDGET(state->older_button), !loading && state->has_older_history);
+
+  if (loading) {
+    gtk_spinner_start(state->spinner);
+    gtk_widget_set_visible(GTK_WIDGET(state->spinner), TRUE);
+  } else {
+    gtk_spinner_stop(state->spinner);
+    gtk_widget_set_visible(GTK_WIDGET(state->spinner), FALSE);
   }
 }
 
@@ -377,7 +405,7 @@ history_list_append_row(GtkListBox *list_box, const TransactionHistoryPackageRow
 }
 
 // -----------------------------------------------------------------------------
-// Render loaded history rows using the current filters.
+// Render the current page returned by the backend history query.
 // -----------------------------------------------------------------------------
 void
 history_render_rows(const std::shared_ptr<TransactionHistoryWindowState> &state)
@@ -386,45 +414,108 @@ history_render_rows(const std::shared_ptr<TransactionHistoryWindowState> &state)
     return;
   }
 
-  HistoryFilters filters = history_current_filters(state);
-
   history_list_clear(state->list_box);
-  if (!filters.error.empty()) {
-    gtk_label_set_text(GTK_LABEL(state->status_label), filters.error.c_str());
-    return;
-  }
 
   if (state->rows.empty()) {
-    gtk_label_set_text(GTK_LABEL(state->status_label), _("No transaction history was found."));
+    gtk_label_set_text(GTK_LABEL(state->status_label),
+                       history_filter_is_active(state->current_filter)
+                           ? _("No transaction history rows match the filter.")
+                           : _("No transaction history was found."));
     return;
   }
 
-  size_t shown = 0;
   for (const auto &row : state->rows) {
-    if (!history_row_matches_filters(row, filters)) {
-      continue;
-    }
     history_list_append_row(state->list_box, row);
-    ++shown;
   }
 
-  if (shown == 0) {
-    gtk_label_set_text(GTK_LABEL(state->status_label), _("No transaction history rows match the filter."));
-  } else {
-    std::string status = dnfui_i18n_format_count(shown, "Showing %zu package change.", "Showing %zu package changes.");
-    gtk_label_set_text(GTK_LABEL(state->status_label), status.c_str());
+  std::string status =
+      dnfui_i18n_format_count(state->rows.size(), "Showing %zu package change.", "Showing %zu package changes.");
+
+  size_t total_pages = history_total_pages(state->total_package_rows);
+  if (total_pages > 0) {
+    status += " ";
+    status += dnfui_i18n_format(_("Page %zu of %zu."), state->current_page, total_pages);
   }
+
+  status += " ";
+  status += dnfui_i18n_format_count(
+      state->total_package_rows, "%zu matching package change total.", "%zu matching package changes total.");
+
+  status += " ";
+  status +=
+      dnfui_i18n_format_count(state->total_transactions, "%zu matching transaction.", "%zu matching transactions.");
+
+  if (state->has_older_history) {
+    status += " ";
+    status += _("Use Older to show more history.");
+  }
+  gtk_label_set_text(GTK_LABEL(state->status_label), status.c_str());
 }
 
 // -----------------------------------------------------------------------------
-// Reapply filters when one filter control changes.
+// Cancel the active history load and release the window reference to its cancellable.
+// -----------------------------------------------------------------------------
+void
+history_cancel_active_load(const std::shared_ptr<TransactionHistoryWindowState> &state)
+{
+  if (!state || state->destroyed || !state->cancellable) {
+    return;
+  }
+
+  g_cancellable_cancel(state->cancellable);
+  g_object_unref(state->cancellable);
+  state->cancellable = nullptr;
+}
+
+// -----------------------------------------------------------------------------
+// Show one filter error and prevent an older worker from replacing the message.
+// -----------------------------------------------------------------------------
+void
+history_show_filter_error(const std::shared_ptr<TransactionHistoryWindowState> &state, const std::string &error)
+{
+  if (!state || state->destroyed) {
+    return;
+  }
+
+  history_cancel_active_load(state);
+  ++state->load_id;
+  state->rows.clear();
+  state->newer_page_cursors.clear();
+  state->current_cursor = TransactionHistoryCursor {};
+  state->next_cursor = TransactionHistoryCursor {};
+  state->current_page = 1;
+  state->total_package_rows = 0;
+  state->total_transactions = 0;
+  state->has_older_history = false;
+  history_list_clear(state->list_box);
+  history_set_loading(state, false);
+  gtk_label_set_text(GTK_LABEL(state->status_label), error.c_str());
+}
+
+// -----------------------------------------------------------------------------
+// Start a fresh backend load from the current filter controls.
+// -----------------------------------------------------------------------------
+void
+history_reload_from_controls(const std::shared_ptr<TransactionHistoryWindowState> &state)
+{
+  HistoryFilters filters = history_current_filters(state);
+  if (!filters.error.empty()) {
+    history_show_filter_error(state, filters.error);
+    return;
+  }
+
+  history_start_load(state, TransactionHistoryCursor {}, filters.backend, HistoryPageDirection::FRESH);
+}
+
+// -----------------------------------------------------------------------------
+// Reload history when one filter control changes.
 // -----------------------------------------------------------------------------
 void
 on_history_filter_changed(gpointer user_data)
 {
   auto *state_holder = static_cast<std::shared_ptr<TransactionHistoryWindowState> *>(user_data);
   if (state_holder) {
-    history_render_rows(*state_holder);
+    history_reload_from_controls(*state_holder);
   }
 }
 
@@ -440,10 +531,12 @@ on_history_load_task(GTask *task, gpointer, gpointer, GCancellable *cancellable)
   }
 
   try {
-    auto *rows = new std::vector<TransactionHistoryPackageRow>(
-        dnf_backend_list_transaction_history_rows(kHistoryTransactionLimit, kHistoryPackageRowLimit, cancellable));
-    g_task_return_pointer(
-        task, rows, [](gpointer p) { delete static_cast<std::vector<TransactionHistoryPackageRow> *>(p); });
+    const auto *task_data = static_cast<const HistoryTaskUserData *>(g_task_get_task_data(task));
+    const TransactionHistoryCursor cursor = task_data ? task_data->cursor : TransactionHistoryCursor {};
+    const TransactionHistoryFilter filter = task_data ? task_data->filter : TransactionHistoryFilter {};
+    auto *page = new TransactionHistoryPage(
+        dnf_backend_list_transaction_history_page(cursor, filter, kHistoryPackageRowsPerPage, cancellable));
+    g_task_return_pointer(task, page, [](gpointer p) { delete static_cast<TransactionHistoryPage *>(p); });
   } catch (const std::exception &e) {
     if (cancellable && g_cancellable_is_cancelled(cancellable)) {
       g_task_return_new_error(task, G_IO_ERROR, G_IO_ERROR_CANCELLED, "%s", _("History load was cancelled."));
@@ -462,25 +555,27 @@ on_history_load_finished(GObject *, GAsyncResult *result, gpointer user_data)
   auto *task_user_data = static_cast<HistoryTaskUserData *>(user_data);
   std::shared_ptr<TransactionHistoryWindowState> state = task_user_data ? task_user_data->state : nullptr;
   uint64_t load_id = task_user_data ? task_user_data->load_id : 0;
+  TransactionHistoryCursor requested_cursor = task_user_data ? task_user_data->cursor : TransactionHistoryCursor {};
+  TransactionHistoryFilter requested_filter = task_user_data ? task_user_data->filter : TransactionHistoryFilter {};
+  HistoryPageDirection direction = task_user_data ? task_user_data->direction : HistoryPageDirection::FRESH;
   delete task_user_data;
 
   if (!state || state->destroyed || load_id != state->load_id) {
     return;
   }
 
-  gtk_spinner_stop(state->spinner);
-  gtk_widget_set_visible(GTK_WIDGET(state->spinner), FALSE);
+  history_set_loading(state, false);
 
   GTask *task = G_TASK(result);
   GError *error = nullptr;
-  auto *rows = static_cast<std::vector<TransactionHistoryPackageRow> *>(g_task_propagate_pointer(task, &error));
+  auto *page = static_cast<TransactionHistoryPage *>(g_task_propagate_pointer(task, &error));
 
   if (state->cancellable) {
     g_object_unref(state->cancellable);
     state->cancellable = nullptr;
   }
 
-  if (!rows) {
+  if (!page) {
     if (error && !g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
       std::string message = _("Failed to load transaction history.");
       message += " ";
@@ -493,16 +588,37 @@ on_history_load_finished(GObject *, GAsyncResult *result, gpointer user_data)
     return;
   }
 
-  state->rows = std::move(*rows);
-  delete rows;
+  {
+    if (direction == HistoryPageDirection::FRESH) {
+      state->newer_page_cursors.clear();
+    } else if (direction == HistoryPageDirection::OLDER) {
+      state->newer_page_cursors.push_back(state->current_cursor);
+    } else if (direction == HistoryPageDirection::NEWER && !state->newer_page_cursors.empty()) {
+      state->newer_page_cursors.pop_back();
+    }
+    state->current_cursor = requested_cursor;
+    state->current_page = state->newer_page_cursors.size() + 1;
+  }
+
+  state->rows = std::move(page->rows);
+  state->next_cursor = page->next_cursor;
+  state->current_filter = requested_filter;
+  state->total_package_rows = page->total_package_rows;
+  state->total_transactions = page->total_transactions;
+  state->has_older_history = page->has_more;
+  delete page;
+  history_set_loading(state, false);
   history_render_rows(state);
 }
 
 // -----------------------------------------------------------------------------
-// Start or restart the background history load.
+// Start or restart the background history load for one page of package changes.
 // -----------------------------------------------------------------------------
 void
-history_start_load(const std::shared_ptr<TransactionHistoryWindowState> &state)
+history_start_load(const std::shared_ptr<TransactionHistoryWindowState> &state,
+                   TransactionHistoryCursor cursor,
+                   const TransactionHistoryFilter &filter,
+                   HistoryPageDirection direction)
 {
   if (!state || state->destroyed) {
     return;
@@ -516,13 +632,15 @@ history_start_load(const std::shared_ptr<TransactionHistoryWindowState> &state)
   state->cancellable = g_cancellable_new();
   ++state->load_id;
 
-  gtk_spinner_start(state->spinner);
-  gtk_widget_set_visible(GTK_WIDGET(state->spinner), TRUE);
-  gtk_label_set_text(state->status_label, _("Loading transaction history..."));
+  state->rows.clear();
   history_list_clear(state->list_box);
 
-  auto *task_user_data = new HistoryTaskUserData { state, state->load_id };
+  history_set_loading(state, true);
+  gtk_label_set_text(state->status_label, _("Loading transaction history..."));
+
+  auto *task_user_data = new HistoryTaskUserData { state, state->load_id, cursor, filter, direction };
   GTask *task = g_task_new(state->window, state->cancellable, on_history_load_finished, task_user_data);
+  g_task_set_task_data(task, task_user_data, nullptr);
   g_task_run_in_thread(task, on_history_load_task);
   g_object_unref(task);
 }
@@ -626,6 +744,17 @@ transaction_history_show_window(GtkWindow *parent)
 
   GtkWidget *refresh_button = gtk_button_new_with_label(_("Refresh"));
   gtk_box_append(GTK_BOX(date_row), refresh_button);
+  state->refresh_button = GTK_BUTTON(refresh_button);
+
+  GtkWidget *newer_button = gtk_button_new_with_label(_("Newer"));
+  gtk_widget_set_sensitive(newer_button, FALSE);
+  gtk_box_append(GTK_BOX(date_row), newer_button);
+  state->newer_button = GTK_BUTTON(newer_button);
+
+  GtkWidget *older_button = gtk_button_new_with_label(_("Older"));
+  gtk_widget_set_sensitive(older_button, FALSE);
+  gtk_box_append(GTK_BOX(date_row), older_button);
+  state->older_button = GTK_BUTTON(older_button);
 
   GtkWidget *spinner = gtk_spinner_new();
   gtk_widget_set_visible(spinner, FALSE);
@@ -680,13 +809,39 @@ transaction_history_show_window(GtkWindow *parent)
                    G_CALLBACK(+[](GtkButton *, gpointer user_data) {
                      auto *state_holder = static_cast<std::shared_ptr<TransactionHistoryWindowState> *>(user_data);
                      if (state_holder) {
-                       history_start_load(*state_holder);
+                       history_reload_from_controls(*state_holder);
+                     }
+                   }),
+                   state_holder);
+
+  g_signal_connect(newer_button,
+                   "clicked",
+                   G_CALLBACK(+[](GtkButton *, gpointer user_data) {
+                     auto *state_holder = static_cast<std::shared_ptr<TransactionHistoryWindowState> *>(user_data);
+                     if (state_holder && *state_holder && !(*state_holder)->newer_page_cursors.empty()) {
+                       history_start_load(*state_holder,
+                                          (*state_holder)->newer_page_cursors.back(),
+                                          (*state_holder)->current_filter,
+                                          HistoryPageDirection::NEWER);
+                     }
+                   }),
+                   state_holder);
+
+  g_signal_connect(older_button,
+                   "clicked",
+                   G_CALLBACK(+[](GtkButton *, gpointer user_data) {
+                     auto *state_holder = static_cast<std::shared_ptr<TransactionHistoryWindowState> *>(user_data);
+                     if (state_holder && *state_holder && (*state_holder)->has_older_history) {
+                       history_start_load(*state_holder,
+                                          (*state_holder)->next_cursor,
+                                          (*state_holder)->current_filter,
+                                          HistoryPageDirection::OLDER);
                      }
                    }),
                    state_holder);
 
   gtk_window_present(window);
-  history_start_load(state);
+  history_start_load(state, TransactionHistoryCursor {}, TransactionHistoryFilter {}, HistoryPageDirection::FRESH);
 }
 
 // -----------------------------------------------------------------------------

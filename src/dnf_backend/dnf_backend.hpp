@@ -12,6 +12,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <set>
 #include <string>
 #include <vector>
@@ -200,18 +201,48 @@ struct TransactionHistoryPackageRow {
   }
 };
 
+struct TransactionHistoryCursor {
+  size_t transaction_offset = 0;
+  size_t package_offset = 0;
+};
+
+enum class TransactionHistoryResultFilter {
+  ALL,
+  OK,
+  FAILED,
+};
+
+struct TransactionHistoryFilter {
+  std::string package_text;
+  std::string detail_text;
+  int64_t from = 0;
+  int64_t to = std::numeric_limits<int64_t>::max();
+  bool action_enabled = false;
+  TransactionHistoryAction action = TransactionHistoryAction::OTHER;
+  TransactionHistoryResultFilter result = TransactionHistoryResultFilter::ALL;
+};
+
+struct TransactionHistoryPage {
+  std::vector<TransactionHistoryPackageRow> rows;
+  TransactionHistoryCursor next_cursor;
+  size_t total_package_rows = 0;
+  size_t total_transactions = 0;
+  bool has_more = false;
+};
+
 // -----------------------------------------------------------------------------
 // Convert one transaction history action to user-facing text.
 // -----------------------------------------------------------------------------
 std::string dnf_backend_transaction_history_action_to_string(TransactionHistoryAction action);
 
 // -----------------------------------------------------------------------------
-// Return recent package changes from the libdnf5 transaction history database.
-// The transaction limit bounds how far back the query reads.
-// The package row limit bounds how many rows the GTK history list may render.
+// Return one page of package changes from the libdnf5 transaction history database.
+// The cursor lets the UI continue inside a large transaction without loading all matching rows at once.
 // -----------------------------------------------------------------------------
-std::vector<TransactionHistoryPackageRow>
-dnf_backend_list_transaction_history_rows(size_t max_transactions, size_t max_package_rows, GCancellable *cancellable);
+TransactionHistoryPage dnf_backend_list_transaction_history_page(TransactionHistoryCursor cursor,
+                                                                 const TransactionHistoryFilter &filter,
+                                                                 size_t max_package_rows,
+                                                                 GCancellable *cancellable);
 
 // -----------------------------------------------------------------------------
 // Search flags used by backend search queries.

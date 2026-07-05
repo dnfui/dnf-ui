@@ -8,7 +8,9 @@
 #include "i18n.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <stdexcept>
+#include <utility>
 
 #include <libdnf5/transaction/transaction.hpp>
 #include <libdnf5/transaction/transaction_history.hpp>
@@ -80,6 +82,86 @@ make_history_row(libdnf5::transaction::Transaction &transaction, libdnf5::transa
   return row;
 }
 
+// -----------------------------------------------------------------------------
+// Return ASCII-lowercase text for simple history filtering.
+// -----------------------------------------------------------------------------
+std::string
+history_filter_text(std::string text)
+{
+  std::transform(
+      text.begin(), text.end(), text.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+  return text;
+}
+
+// -----------------------------------------------------------------------------
+// Normalize filter text once before scanning history rows.
+// -----------------------------------------------------------------------------
+TransactionHistoryFilter
+normalize_history_filter(TransactionHistoryFilter filter)
+{
+  filter.package_text = history_filter_text(std::move(filter.package_text));
+  filter.detail_text = history_filter_text(std::move(filter.detail_text));
+  return filter;
+}
+
+// -----------------------------------------------------------------------------
+// Return true when one history row matches the selected result filter.
+// -----------------------------------------------------------------------------
+bool
+history_row_matches_result(const TransactionHistoryPackageRow &row, TransactionHistoryResultFilter result)
+{
+  switch (result) {
+  case TransactionHistoryResultFilter::OK:
+    return row.succeeded;
+  case TransactionHistoryResultFilter::FAILED:
+    return !row.succeeded;
+  case TransactionHistoryResultFilter::ALL:
+  default:
+    return true;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Return true when one history row matches the current backend history filter.
+// -----------------------------------------------------------------------------
+bool
+history_row_matches_filter(const TransactionHistoryPackageRow &row, const TransactionHistoryFilter &filter)
+{
+  if (filter.action_enabled && row.action != filter.action) {
+    return false;
+  }
+
+  if (!history_row_matches_result(row, filter.result)) {
+    return false;
+  }
+
+  if (row.started_at < filter.from || row.started_at > filter.to) {
+    return false;
+  }
+
+  if (!filter.package_text.empty()) {
+    std::string package_text = row.name;
+    package_text += "\n";
+    package_text += row.package_id;
+    if (history_filter_text(package_text).find(filter.package_text) == std::string::npos) {
+      return false;
+    }
+  }
+
+  if (!filter.detail_text.empty()) {
+    std::string detail_text = row.repo;
+    detail_text += "\n";
+    detail_text += row.description;
+    detail_text += "\n";
+    detail_text += row.arch;
+    if (history_filter_text(detail_text).find(filter.detail_text) == std::string::npos) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 }
 
 // -----------------------------------------------------------------------------
@@ -110,46 +192,94 @@ dnf_backend_transaction_history_action_to_string(TransactionHistoryAction action
 }
 
 // -----------------------------------------------------------------------------
-// Return recent package changes from the libdnf5 transaction history database.
-// The transaction limit bounds how far back the query reads.
-// The package row limit bounds how many rows the GTK history list may render.
+// Return one page of package changes from the libdnf5 transaction history database.
+// The cursor lets the UI continue inside a large transaction without loading all rows at once.
 // -----------------------------------------------------------------------------
-std::vector<TransactionHistoryPackageRow>
-dnf_backend_list_transaction_history_rows(size_t max_transactions, size_t max_package_rows, GCancellable *cancellable)
+TransactionHistoryPage
+dnf_backend_list_transaction_history_page(TransactionHistoryCursor cursor,
+                                          const TransactionHistoryFilter &filter,
+                                          size_t max_package_rows,
+                                          GCancellable *cancellable)
 {
   throw_if_history_cancelled(cancellable);
 
   auto read = BaseManager::instance().acquire_system_only_read();
   auto history = read.base->get_transaction_history();
+  TransactionHistoryFilter normalized_filter = normalize_history_filter(filter);
 
   std::vector<int64_t> transaction_ids = history->list_transaction_ids();
-  if (max_transactions > 0 && transaction_ids.size() > max_transactions) {
-    transaction_ids.erase(transaction_ids.begin(), transaction_ids.end() - static_cast<long>(max_transactions));
+  TransactionHistoryPage page;
+  if (transaction_ids.empty() || max_package_rows == 0) {
+    page.next_cursor.transaction_offset = transaction_ids.size();
+    return page;
   }
 
-  throw_if_history_cancelled(cancellable);
+  TransactionHistoryCursor scan_cursor;
+  bool collect_page = cursor.transaction_offset == 0 && cursor.package_offset == 0;
+  bool page_full = false;
 
-  std::vector<libdnf5::transaction::Transaction> transactions = history->list_transactions(transaction_ids);
-  std::sort(transactions.begin(), transactions.end(), [](const auto &left, const auto &right) {
-    if (left.get_dt_start() != right.get_dt_start()) {
-      return left.get_dt_start() > right.get_dt_start();
-    }
-    return left.get_id() > right.get_id();
-  });
-
-  std::vector<TransactionHistoryPackageRow> rows;
-  for (auto &transaction : transactions) {
+  while (scan_cursor.transaction_offset < transaction_ids.size()) {
     throw_if_history_cancelled(cancellable);
-    for (auto &package : transaction.get_packages()) {
-      if (max_package_rows > 0 && rows.size() >= max_package_rows) {
-        return rows;
-      }
-      throw_if_history_cancelled(cancellable);
-      rows.push_back(make_history_row(transaction, package));
+
+    const size_t id_index = transaction_ids.size() - scan_cursor.transaction_offset - 1;
+    auto transactions = history->list_transactions(std::vector<int64_t> { transaction_ids[id_index] });
+    if (transactions.empty()) {
+      ++scan_cursor.transaction_offset;
+      scan_cursor.package_offset = 0;
+      continue;
     }
+
+    auto &transaction = transactions.front();
+    auto packages = transaction.get_packages();
+    if (scan_cursor.package_offset >= packages.size()) {
+      ++scan_cursor.transaction_offset;
+      scan_cursor.package_offset = 0;
+      continue;
+    }
+
+    bool transaction_matches = false;
+    while (scan_cursor.package_offset < packages.size()) {
+      throw_if_history_cancelled(cancellable);
+
+      if (!collect_page && scan_cursor.transaction_offset == cursor.transaction_offset &&
+          scan_cursor.package_offset == cursor.package_offset) {
+        collect_page = true;
+      }
+
+      TransactionHistoryPackageRow row = make_history_row(transaction, packages[scan_cursor.package_offset]);
+      ++scan_cursor.package_offset;
+
+      if (!history_row_matches_filter(row, normalized_filter)) {
+        continue;
+      }
+
+      ++page.total_package_rows;
+      transaction_matches = true;
+
+      if (collect_page && !page_full) {
+        page.rows.push_back(std::move(row));
+        if (page.rows.size() >= max_package_rows) {
+          page.next_cursor = scan_cursor;
+          page_full = true;
+        }
+      } else if (collect_page && page_full) {
+        page.has_more = true;
+      }
+    }
+
+    if (transaction_matches) {
+      ++page.total_transactions;
+    }
+
+    ++scan_cursor.transaction_offset;
+    scan_cursor.package_offset = 0;
   }
 
-  return rows;
+  if (!page_full) {
+    page.next_cursor = scan_cursor;
+  }
+
+  return page;
 }
 
 // -----------------------------------------------------------------------------
