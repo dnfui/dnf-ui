@@ -302,8 +302,23 @@ msgstr "Transaktionshistorik..."
 msgid "Transaction History"
 msgstr "Transaktionshistorik"
 
-msgid "Filter transaction history..."
-msgstr "Filtrera transaktionshistorik..."
+msgid "Package name..."
+msgstr "Paketnamn..."
+
+msgid "Command, repository, or architecture..."
+msgstr "Kommando, förråd eller arkitektur..."
+
+msgid "All actions"
+msgstr "Alla åtgärder"
+
+msgid "All results"
+msgstr "Alla resultat"
+
+msgid "From date YYYY-MM-DD"
+msgstr "Från datum ÅÅÅÅ-MM-DD"
+
+msgid "To date YYYY-MM-DD"
+msgstr "Till datum ÅÅÅÅ-MM-DD"
 
 msgid "Loading transaction history..."
 msgstr "Läser in transaktionshistorik..."
@@ -312,10 +327,16 @@ msgid "No transaction history rows match the filter."
 msgstr "Inga transaktionshistorikrader matchar filtret."
 
 #, c-format
-msgid "Showing %zu transaction history row."
-msgid_plural "Showing %zu transaction history rows."
-msgstr[0] "Visar %zu transaktionshistorikrad."
-msgstr[1] "Visar %zu transaktionshistorikrader."
+msgid "Showing %zu package change."
+msgid_plural "Showing %zu package changes."
+msgstr[0] "Visar %zu paketändring."
+msgstr[1] "Visar %zu paketändringar."
+
+msgid "Dates must use YYYY-MM-DD."
+msgstr "Datum måste använda ÅÅÅÅ-MM-DD."
+
+msgid "The start date must be before the end date."
+msgstr "Startdatum måste vara före slutdatum."
 
 msgid "History load was cancelled."
 msgstr "Historikinläsningen avbröts."

@@ -9,8 +9,10 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdio>
 #include <ctime>
 #include <memory>
+#include <limits>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -21,7 +23,12 @@ constexpr size_t kHistoryTransactionLimit = 200;
 
 struct TransactionHistoryWindowState {
   GtkWindow *window = nullptr;
-  GtkEntry *search_entry = nullptr;
+  GtkEntry *package_entry = nullptr;
+  GtkEntry *text_entry = nullptr;
+  GtkEntry *from_entry = nullptr;
+  GtkEntry *to_entry = nullptr;
+  GtkDropDown *action_dropdown = nullptr;
+  GtkDropDown *result_dropdown = nullptr;
   GtkListBox *list_box = nullptr;
   GtkLabel *status_label = nullptr;
   GtkSpinner *spinner = nullptr;
@@ -29,6 +36,16 @@ struct TransactionHistoryWindowState {
   std::vector<TransactionHistoryPackageRow> rows;
   uint64_t load_id = 0;
   bool destroyed = false;
+};
+
+struct HistoryFilters {
+  std::string package;
+  std::string text;
+  int64_t from = 0;
+  int64_t to = std::numeric_limits<int64_t>::max();
+  guint action_index = 0;
+  guint result_index = 0;
+  std::string error;
 };
 
 struct HistoryTaskUserData {
@@ -45,6 +62,111 @@ history_filter_text(std::string text)
   std::transform(
       text.begin(), text.end(), text.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
   return text;
+}
+
+// -----------------------------------------------------------------------------
+// Remove simple ASCII whitespace from both ends of a filter field.
+// -----------------------------------------------------------------------------
+std::string
+history_trim_filter_text(const char *text)
+{
+  std::string trimmed = text ? text : "";
+  size_t start = 0;
+  while (start < trimmed.size() && std::isspace(static_cast<unsigned char>(trimmed[start]))) {
+    ++start;
+  }
+
+  size_t end = trimmed.size();
+  while (end > start && std::isspace(static_cast<unsigned char>(trimmed[end - 1]))) {
+    --end;
+  }
+
+  return trimmed.substr(start, end - start);
+}
+
+// -----------------------------------------------------------------------------
+// Parse a local date filter in YYYY-MM-DD format.
+// -----------------------------------------------------------------------------
+bool
+history_parse_date_filter(const char *text, bool end_of_day, int64_t &timestamp, std::string &error)
+{
+  std::string value = history_trim_filter_text(text);
+  if (value.empty()) {
+    timestamp = end_of_day ? std::numeric_limits<int64_t>::max() : 0;
+    return true;
+  }
+
+  if (value.size() != 10 || value[4] != '-' || value[7] != '-') {
+    error = _("Dates must use YYYY-MM-DD.");
+    return false;
+  }
+
+  int year = 0;
+  int month = 0;
+  int day = 0;
+  char extra = 0;
+  if (std::sscanf(value.c_str(), "%d-%d-%d%c", &year, &month, &day, &extra) != 3) {
+    error = _("Dates must use YYYY-MM-DD.");
+    return false;
+  }
+
+  std::tm local {};
+  local.tm_year = year - 1900;
+  local.tm_mon = month - 1;
+  local.tm_mday = day;
+  local.tm_hour = end_of_day ? 23 : 0;
+  local.tm_min = end_of_day ? 59 : 0;
+  local.tm_sec = end_of_day ? 59 : 0;
+  local.tm_isdst = -1;
+
+  std::time_t parsed = std::mktime(&local);
+  if (parsed == static_cast<std::time_t>(-1) || local.tm_year != year - 1900 || local.tm_mon != month - 1 ||
+      local.tm_mday != day) {
+    error = _("Dates must use YYYY-MM-DD.");
+    return false;
+  }
+
+  timestamp = static_cast<int64_t>(parsed);
+  return true;
+}
+
+// -----------------------------------------------------------------------------
+// Read the active history filters from the window controls.
+// -----------------------------------------------------------------------------
+HistoryFilters
+history_current_filters(const std::shared_ptr<TransactionHistoryWindowState> &state)
+{
+  HistoryFilters filters;
+  if (!state) {
+    return filters;
+  }
+
+  filters.package = history_filter_text(
+      history_trim_filter_text(state->package_entry ? gtk_editable_get_text(GTK_EDITABLE(state->package_entry)) : ""));
+  filters.text = history_filter_text(
+      history_trim_filter_text(state->text_entry ? gtk_editable_get_text(GTK_EDITABLE(state->text_entry)) : ""));
+  filters.action_index = state->action_dropdown ? gtk_drop_down_get_selected(state->action_dropdown) : 0;
+  filters.result_index = state->result_dropdown ? gtk_drop_down_get_selected(state->result_dropdown) : 0;
+
+  if (!history_parse_date_filter(state->from_entry ? gtk_editable_get_text(GTK_EDITABLE(state->from_entry)) : "",
+                                 false,
+                                 filters.from,
+                                 filters.error)) {
+    return filters;
+  }
+
+  if (!history_parse_date_filter(state->to_entry ? gtk_editable_get_text(GTK_EDITABLE(state->to_entry)) : "",
+                                 true,
+                                 filters.to,
+                                 filters.error)) {
+    return filters;
+  }
+
+  if (filters.from > filters.to) {
+    filters.error = _("The start date must be before the end date.");
+  }
+
+  return filters;
 }
 
 // -----------------------------------------------------------------------------
@@ -70,28 +192,87 @@ history_time_text(int64_t timestamp)
 }
 
 // -----------------------------------------------------------------------------
-// Return true when a history row matches the current search text.
+// Return true when a history row matches the selected action filter.
 // -----------------------------------------------------------------------------
 bool
-history_row_matches_filter(const TransactionHistoryPackageRow &row, const std::string &filter)
+history_row_matches_action(const TransactionHistoryPackageRow &row, guint action_index)
 {
-  if (filter.empty()) {
+  switch (action_index) {
+  case 1:
+    return row.action == TransactionHistoryAction::INSTALL;
+  case 2:
+    return row.action == TransactionHistoryAction::UPGRADE;
+  case 3:
+    return row.action == TransactionHistoryAction::DOWNGRADE;
+  case 4:
+    return row.action == TransactionHistoryAction::REINSTALL;
+  case 5:
+    return row.action == TransactionHistoryAction::REMOVE;
+  case 6:
+    return row.action == TransactionHistoryAction::REPLACED;
+  case 7:
+    return row.action == TransactionHistoryAction::REASON_CHANGE;
+  case 8:
+    return row.action == TransactionHistoryAction::OTHER;
+  case 0:
+  default:
     return true;
   }
+}
 
-  std::string text = row.package_id;
-  text += "\n";
-  text += row.name;
-  text += "\n";
-  text += row.arch;
-  text += "\n";
-  text += row.repo;
-  text += "\n";
-  text += row.description;
-  text += "\n";
-  text += dnf_backend_transaction_history_action_to_string(row.action);
+// -----------------------------------------------------------------------------
+// Return true when a history row matches the selected result filter.
+// -----------------------------------------------------------------------------
+bool
+history_row_matches_result(const TransactionHistoryPackageRow &row, guint result_index)
+{
+  switch (result_index) {
+  case 1:
+    return row.succeeded;
+  case 2:
+    return !row.succeeded;
+  case 0:
+  default:
+    return true;
+  }
+}
 
-  return history_filter_text(text).find(filter) != std::string::npos;
+// -----------------------------------------------------------------------------
+// Return true when a history row matches the active filters.
+// -----------------------------------------------------------------------------
+bool
+history_row_matches_filters(const TransactionHistoryPackageRow &row, const HistoryFilters &filters)
+{
+  if (!history_row_matches_action(row, filters.action_index) ||
+      !history_row_matches_result(row, filters.result_index)) {
+    return false;
+  }
+
+  if (row.started_at < filters.from || row.started_at > filters.to) {
+    return false;
+  }
+
+  if (!filters.package.empty()) {
+    std::string package_text = row.name;
+    package_text += "\n";
+    package_text += row.package_id;
+    if (history_filter_text(package_text).find(filters.package) == std::string::npos) {
+      return false;
+    }
+  }
+
+  if (!filters.text.empty()) {
+    std::string text = row.repo;
+    text += "\n";
+    text += row.description;
+    text += "\n";
+    text += row.arch;
+    if (history_filter_text(text).find(filters.text) == std::string::npos) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 // -----------------------------------------------------------------------------
@@ -172,14 +353,17 @@ history_render_rows(const std::shared_ptr<TransactionHistoryWindowState> &state)
     return;
   }
 
-  const char *entry_text = state->search_entry ? gtk_editable_get_text(GTK_EDITABLE(state->search_entry)) : "";
-  std::string filter = history_filter_text(entry_text ? entry_text : "");
+  HistoryFilters filters = history_current_filters(state);
 
   history_list_clear(state->list_box);
+  if (!filters.error.empty()) {
+    gtk_label_set_text(GTK_LABEL(state->status_label), filters.error.c_str());
+    return;
+  }
 
   size_t shown = 0;
   for (const auto &row : state->rows) {
-    if (!history_row_matches_filter(row, filter)) {
+    if (!history_row_matches_filters(row, filters)) {
       continue;
     }
     history_list_append_row(state->list_box, row);
@@ -189,9 +373,20 @@ history_render_rows(const std::shared_ptr<TransactionHistoryWindowState> &state)
   if (shown == 0) {
     gtk_label_set_text(GTK_LABEL(state->status_label), _("No transaction history rows match the filter."));
   } else {
-    std::string status =
-        dnfui_i18n_format_count(shown, "Showing %zu transaction history row.", "Showing %zu transaction history rows.");
+    std::string status = dnfui_i18n_format_count(shown, "Showing %zu package change.", "Showing %zu package changes.");
     gtk_label_set_text(GTK_LABEL(state->status_label), status.c_str());
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Reapply filters when one filter control changes.
+// -----------------------------------------------------------------------------
+void
+on_history_filter_changed(gpointer user_data)
+{
+  auto *state_holder = static_cast<std::shared_ptr<TransactionHistoryWindowState> *>(user_data);
+  if (state_holder) {
+    history_render_rows(*state_holder);
   }
 }
 
@@ -342,18 +537,57 @@ transaction_history_show_window(GtkWindow *parent)
   GtkWidget *top_row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
   gtk_box_append(GTK_BOX(root), top_row);
 
-  GtkWidget *search_entry = gtk_entry_new();
-  gtk_entry_set_placeholder_text(GTK_ENTRY(search_entry), _("Filter transaction history..."));
-  gtk_widget_set_hexpand(search_entry, TRUE);
-  gtk_box_append(GTK_BOX(top_row), search_entry);
-  state->search_entry = GTK_ENTRY(search_entry);
+  GtkWidget *package_entry = gtk_entry_new();
+  gtk_entry_set_placeholder_text(GTK_ENTRY(package_entry), _("Package name..."));
+  gtk_widget_set_hexpand(package_entry, TRUE);
+  gtk_box_append(GTK_BOX(top_row), package_entry);
+  state->package_entry = GTK_ENTRY(package_entry);
+
+  GtkWidget *text_entry = gtk_entry_new();
+  gtk_entry_set_placeholder_text(GTK_ENTRY(text_entry), _("Command, repository, or architecture..."));
+  gtk_widget_set_hexpand(text_entry, TRUE);
+  gtk_box_append(GTK_BOX(top_row), text_entry);
+  state->text_entry = GTK_ENTRY(text_entry);
+
+  const char *action_labels[] = {
+    _("All actions"), _("Install"),  _("Upgrade"),        _("Downgrade"), _("Reinstall"),
+    _("Remove"),      _("Replaced"), _("Reason changed"), _("Other"),     nullptr,
+  };
+  GtkWidget *action_dropdown = gtk_drop_down_new_from_strings(action_labels);
+  gtk_box_append(GTK_BOX(top_row), action_dropdown);
+  state->action_dropdown = GTK_DROP_DOWN(action_dropdown);
+
+  const char *result_labels[] = {
+    _("All results"),
+    _("OK"),
+    _("Failed"),
+    nullptr,
+  };
+  GtkWidget *result_dropdown = gtk_drop_down_new_from_strings(result_labels);
+  gtk_box_append(GTK_BOX(top_row), result_dropdown);
+  state->result_dropdown = GTK_DROP_DOWN(result_dropdown);
+
+  GtkWidget *date_row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+  gtk_box_append(GTK_BOX(root), date_row);
+
+  GtkWidget *from_entry = gtk_entry_new();
+  gtk_entry_set_placeholder_text(GTK_ENTRY(from_entry), _("From date YYYY-MM-DD"));
+  gtk_widget_set_hexpand(from_entry, TRUE);
+  gtk_box_append(GTK_BOX(date_row), from_entry);
+  state->from_entry = GTK_ENTRY(from_entry);
+
+  GtkWidget *to_entry = gtk_entry_new();
+  gtk_entry_set_placeholder_text(GTK_ENTRY(to_entry), _("To date YYYY-MM-DD"));
+  gtk_widget_set_hexpand(to_entry, TRUE);
+  gtk_box_append(GTK_BOX(date_row), to_entry);
+  state->to_entry = GTK_ENTRY(to_entry);
 
   GtkWidget *refresh_button = gtk_button_new_with_label(_("Refresh"));
-  gtk_box_append(GTK_BOX(top_row), refresh_button);
+  gtk_box_append(GTK_BOX(date_row), refresh_button);
 
   GtkWidget *spinner = gtk_spinner_new();
   gtk_widget_set_visible(spinner, FALSE);
-  gtk_box_append(GTK_BOX(top_row), spinner);
+  gtk_box_append(GTK_BOX(date_row), spinner);
   state->spinner = GTK_SPINNER(spinner);
 
   GtkWidget *status_label = gtk_label_new(_("Loading transaction history..."));
@@ -372,15 +606,32 @@ transaction_history_show_window(GtkWindow *parent)
   gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled), list_box);
   state->list_box = GTK_LIST_BOX(list_box);
 
-  g_signal_connect(search_entry,
+  g_signal_connect(package_entry,
                    "changed",
-                   G_CALLBACK(+[](GtkEditable *, gpointer user_data) {
-                     auto *state_holder = static_cast<std::shared_ptr<TransactionHistoryWindowState> *>(user_data);
-                     if (state_holder) {
-                       history_render_rows(*state_holder);
-                     }
-                   }),
+                   G_CALLBACK(+[](GtkEditable *, gpointer user_data) { on_history_filter_changed(user_data); }),
                    state_holder);
+  g_signal_connect(text_entry,
+                   "changed",
+                   G_CALLBACK(+[](GtkEditable *, gpointer user_data) { on_history_filter_changed(user_data); }),
+                   state_holder);
+  g_signal_connect(from_entry,
+                   "changed",
+                   G_CALLBACK(+[](GtkEditable *, gpointer user_data) { on_history_filter_changed(user_data); }),
+                   state_holder);
+  g_signal_connect(to_entry,
+                   "changed",
+                   G_CALLBACK(+[](GtkEditable *, gpointer user_data) { on_history_filter_changed(user_data); }),
+                   state_holder);
+  g_signal_connect(
+      action_dropdown,
+      "notify::selected",
+      G_CALLBACK(+[](GtkDropDown *, GParamSpec *, gpointer user_data) { on_history_filter_changed(user_data); }),
+      state_holder);
+  g_signal_connect(
+      result_dropdown,
+      "notify::selected",
+      G_CALLBACK(+[](GtkDropDown *, GParamSpec *, gpointer user_data) { on_history_filter_changed(user_data); }),
+      state_holder);
 
   g_signal_connect(refresh_button,
                    "clicked",
