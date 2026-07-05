@@ -154,6 +154,7 @@ The backend implementation is split by responsibility:
 - [src/dnf_backend/base_manager.cpp](../src/dnf_backend/base_manager.cpp) manages the shared libdnf5 `Base`.
 - [src/dnf_backend/dnf_query.cpp](../src/dnf_backend/dnf_query.cpp) builds package rows for search, browse, and installed-list views.
 - [src/dnf_backend/dnf_details.cpp](../src/dnf_backend/dnf_details.cpp) formats package details, files, dependencies, and changelog text.
+- [src/dnf_backend/dnf_history.cpp](../src/dnf_backend/dnf_history.cpp) reads read-only transaction history.
 - [src/dnf_backend/dnf_state.cpp](../src/dnf_backend/dnf_state.cpp) keeps installed-package snapshot state and package status classification.
 
 Most query and details calls take serialized read access to the shared Base.

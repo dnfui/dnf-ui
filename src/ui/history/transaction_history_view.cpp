@@ -20,6 +20,7 @@
 namespace {
 
 constexpr size_t kHistoryTransactionLimit = 200;
+constexpr size_t kHistoryPackageRowLimit = 2000;
 
 struct TransactionHistoryWindowState {
   GtkWindow *window = nullptr;
@@ -376,7 +377,7 @@ history_list_append_row(GtkListBox *list_box, const TransactionHistoryPackageRow
 }
 
 // -----------------------------------------------------------------------------
-// Render loaded history rows using the current search filter.
+// Render loaded history rows using the current filters.
 // -----------------------------------------------------------------------------
 void
 history_render_rows(const std::shared_ptr<TransactionHistoryWindowState> &state)
@@ -390,6 +391,11 @@ history_render_rows(const std::shared_ptr<TransactionHistoryWindowState> &state)
   history_list_clear(state->list_box);
   if (!filters.error.empty()) {
     gtk_label_set_text(GTK_LABEL(state->status_label), filters.error.c_str());
+    return;
+  }
+
+  if (state->rows.empty()) {
+    gtk_label_set_text(GTK_LABEL(state->status_label), _("No transaction history was found."));
     return;
   }
 
@@ -435,10 +441,14 @@ on_history_load_task(GTask *task, gpointer, gpointer, GCancellable *cancellable)
 
   try {
     auto *rows = new std::vector<TransactionHistoryPackageRow>(
-        dnf_backend_list_transaction_history_rows(kHistoryTransactionLimit));
+        dnf_backend_list_transaction_history_rows(kHistoryTransactionLimit, kHistoryPackageRowLimit, cancellable));
     g_task_return_pointer(
         task, rows, [](gpointer p) { delete static_cast<std::vector<TransactionHistoryPackageRow> *>(p); });
   } catch (const std::exception &e) {
+    if (cancellable && g_cancellable_is_cancelled(cancellable)) {
+      g_task_return_new_error(task, G_IO_ERROR, G_IO_ERROR_CANCELLED, "%s", _("History load was cancelled."));
+      return;
+    }
     g_task_return_error(task, g_error_new_literal(G_IO_ERROR, G_IO_ERROR_FAILED, e.what()));
   }
 }

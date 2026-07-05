@@ -174,8 +174,8 @@ architecture, or command text.
 
 The history window lives in [src/ui/history/transaction_history_view.cpp](../src/ui/history/transaction_history_view.cpp).
 It loads history on a worker thread and displays value objects from the backend
-instead of libdnf5 objects. The feature is intentionally read-only. It does not
-offer rollback, replay, or undo actions.
+instead of libdnf5 objects. The amount of package rows shown is capped so a very
+large update history cannot create an unbounded GTK list. The feature is intentionally read-only. It does not offer rollback, replay, or undo actions.
 
 ### Pending transaction controller
 

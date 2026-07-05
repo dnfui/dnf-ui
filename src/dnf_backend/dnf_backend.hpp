@@ -207,9 +207,11 @@ std::string dnf_backend_transaction_history_action_to_string(TransactionHistoryA
 
 // -----------------------------------------------------------------------------
 // Return recent package changes from the libdnf5 transaction history database.
-// The limit is counted in transactions, not package rows.
+// The transaction limit bounds how far back the query reads.
+// The package row limit bounds how many rows the GTK history list may render.
 // -----------------------------------------------------------------------------
-std::vector<TransactionHistoryPackageRow> dnf_backend_list_transaction_history_rows(size_t max_transactions);
+std::vector<TransactionHistoryPackageRow>
+dnf_backend_list_transaction_history_rows(size_t max_transactions, size_t max_package_rows, GCancellable *cancellable);
 
 // -----------------------------------------------------------------------------
 // Search flags used by backend search queries.

@@ -8,6 +8,7 @@
 #include "i18n.hpp"
 
 #include <algorithm>
+#include <stdexcept>
 
 #include <libdnf5/transaction/transaction.hpp>
 #include <libdnf5/transaction/transaction_history.hpp>
@@ -15,6 +16,17 @@
 #include <libdnf5/transaction/transaction_item_action.hpp>
 
 namespace {
+
+// -----------------------------------------------------------------------------
+// Stop history loading when the caller has cancelled the worker task.
+// -----------------------------------------------------------------------------
+void
+throw_if_history_cancelled(GCancellable *cancellable)
+{
+  if (cancellable && g_cancellable_is_cancelled(cancellable)) {
+    throw std::runtime_error(_("History load was cancelled."));
+  }
+}
 
 // -----------------------------------------------------------------------------
 // Convert libdnf5 transaction action to the backend value model.
@@ -99,11 +111,14 @@ dnf_backend_transaction_history_action_to_string(TransactionHistoryAction action
 
 // -----------------------------------------------------------------------------
 // Return recent package changes from the libdnf5 transaction history database.
-// The limit is counted in transactions, not package rows.
+// The transaction limit bounds how far back the query reads.
+// The package row limit bounds how many rows the GTK history list may render.
 // -----------------------------------------------------------------------------
 std::vector<TransactionHistoryPackageRow>
-dnf_backend_list_transaction_history_rows(size_t max_transactions)
+dnf_backend_list_transaction_history_rows(size_t max_transactions, size_t max_package_rows, GCancellable *cancellable)
 {
+  throw_if_history_cancelled(cancellable);
+
   auto read = BaseManager::instance().acquire_system_only_read();
   auto history = read.base->get_transaction_history();
 
@@ -111,6 +126,8 @@ dnf_backend_list_transaction_history_rows(size_t max_transactions)
   if (max_transactions > 0 && transaction_ids.size() > max_transactions) {
     transaction_ids.erase(transaction_ids.begin(), transaction_ids.end() - static_cast<long>(max_transactions));
   }
+
+  throw_if_history_cancelled(cancellable);
 
   std::vector<libdnf5::transaction::Transaction> transactions = history->list_transactions(transaction_ids);
   std::sort(transactions.begin(), transactions.end(), [](const auto &left, const auto &right) {
@@ -122,7 +139,12 @@ dnf_backend_list_transaction_history_rows(size_t max_transactions)
 
   std::vector<TransactionHistoryPackageRow> rows;
   for (auto &transaction : transactions) {
+    throw_if_history_cancelled(cancellable);
     for (auto &package : transaction.get_packages()) {
+      if (max_package_rows > 0 && rows.size() >= max_package_rows) {
+        return rows;
+      }
+      throw_if_history_cancelled(cancellable);
       rows.push_back(make_history_row(transaction, package));
     }
   }

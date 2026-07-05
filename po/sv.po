@@ -328,6 +328,9 @@ msgstr "Läser in transaktionshistorik..."
 msgid "No transaction history rows match the filter."
 msgstr "Inga transaktionshistorikrader matchar filtret."
 
+msgid "No transaction history was found."
+msgstr "Ingen transaktionshistorik hittades."
+
 #, c-format
 msgid "Showing %zu package change."
 msgid_plural "Showing %zu package changes."
