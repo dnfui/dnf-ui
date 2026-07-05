@@ -157,6 +157,17 @@ setup_shortcuts(GtkWidget *window, GtkWidget *entry)
                                                      NULL,
                                                      NULL));
   gtk_shortcut_controller_add_shortcut(GTK_SHORTCUT_CONTROLLER(shortcuts), toggle_history);
+
+  // Open Transaction History with Ctrl+Shift+H.
+  GtkShortcut *transaction_history = gtk_shortcut_new(
+      gtk_keyval_trigger_new(GDK_KEY_H, static_cast<GdkModifierType>(GDK_CONTROL_MASK | GDK_SHIFT_MASK)),
+      gtk_callback_action_new(
+          +[](GtkWidget *widget, GVariant *, gpointer) -> gboolean {
+            return gtk_widget_activate_action(widget, "win.transaction-history", NULL);
+          },
+          NULL,
+          NULL));
+  gtk_shortcut_controller_add_shortcut(GTK_SHORTCUT_CONTROLLER(shortcuts), transaction_history);
 }
 
 // -----------------------------------------------------------------------------
