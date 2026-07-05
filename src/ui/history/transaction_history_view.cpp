@@ -276,6 +276,33 @@ history_row_matches_filters(const TransactionHistoryPackageRow &row, const Histo
 }
 
 // -----------------------------------------------------------------------------
+// Return the CSS class used for one history action.
+// -----------------------------------------------------------------------------
+const char *
+history_action_css_class(TransactionHistoryAction action)
+{
+  switch (action) {
+  case TransactionHistoryAction::INSTALL:
+    return "transaction-history-install";
+  case TransactionHistoryAction::UPGRADE:
+    return "transaction-history-upgrade";
+  case TransactionHistoryAction::DOWNGRADE:
+    return "transaction-history-downgrade";
+  case TransactionHistoryAction::REINSTALL:
+    return "transaction-history-reinstall";
+  case TransactionHistoryAction::REMOVE:
+    return "transaction-history-remove";
+  case TransactionHistoryAction::REPLACED:
+    return "transaction-history-replaced";
+  case TransactionHistoryAction::REASON_CHANGE:
+    return "transaction-history-reason";
+  case TransactionHistoryAction::OTHER:
+  default:
+    return "transaction-history-other";
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Remove all rows from one GTK list box.
 // -----------------------------------------------------------------------------
 void
@@ -301,6 +328,11 @@ history_list_append_row(GtkListBox *list_box, const TransactionHistoryPackageRow
   gtk_widget_set_margin_end(box, 10);
   gtk_widget_set_margin_top(box, 8);
   gtk_widget_set_margin_bottom(box, 8);
+  gtk_widget_add_css_class(box, "transaction-history-row");
+  gtk_widget_add_css_class(box, history_action_css_class(row.action));
+  if (!row.succeeded) {
+    gtk_widget_add_css_class(box, "transaction-history-failed");
+  }
 
   std::string title = history_time_text(row.started_at);
   title += "   ";
