@@ -6,6 +6,7 @@
 
 #include "dnf_backend/dnf_backend.hpp"
 #include "i18n.hpp"
+#include "ui/common/ui_helpers.hpp"
 
 #include <cctype>
 #include <cstdio>
@@ -737,38 +738,9 @@ transaction_history_show_window(GtkWindow *parent)
   gtk_box_append(GTK_BOX(date_row), to_entry);
   state->to_entry = GTK_ENTRY(to_entry);
 
-  GtkWidget *search_button = gtk_button_new_with_label(_("Search"));
+  GtkWidget *search_button = ui_helpers_create_icon_button("system-search-symbolic", _("Search"));
   gtk_box_append(GTK_BOX(date_row), search_button);
   state->search_button = GTK_BUTTON(search_button);
-
-  GtkWidget *page_label = gtk_label_new(_("Page"));
-  gtk_box_append(GTK_BOX(date_row), page_label);
-
-  GtkAdjustment *page_adjustment = gtk_adjustment_new(1, 1, G_MAXINT, 1, 10, 0);
-  GtkWidget *page_spin_button = gtk_spin_button_new(page_adjustment, 1, 0);
-  gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(page_spin_button), TRUE);
-  gtk_widget_set_size_request(page_spin_button, 80, -1);
-  gtk_box_append(GTK_BOX(date_row), page_spin_button);
-  state->page_spin_button = GTK_SPIN_BUTTON(page_spin_button);
-
-  GtkWidget *goto_button = gtk_button_new_with_label(_("Go"));
-  gtk_box_append(GTK_BOX(date_row), goto_button);
-  state->goto_button = GTK_BUTTON(goto_button);
-
-  GtkWidget *newer_button = gtk_button_new_with_label(_("Newer"));
-  gtk_widget_set_sensitive(newer_button, FALSE);
-  gtk_box_append(GTK_BOX(date_row), newer_button);
-  state->newer_button = GTK_BUTTON(newer_button);
-
-  GtkWidget *older_button = gtk_button_new_with_label(_("Older"));
-  gtk_widget_set_sensitive(older_button, FALSE);
-  gtk_box_append(GTK_BOX(date_row), older_button);
-  state->older_button = GTK_BUTTON(older_button);
-
-  GtkWidget *spinner = gtk_spinner_new();
-  gtk_widget_set_visible(spinner, FALSE);
-  gtk_box_append(GTK_BOX(date_row), spinner);
-  state->spinner = GTK_SPINNER(spinner);
 
   GtkWidget *status_label = gtk_label_new(_("Loading transaction history..."));
   gtk_label_set_xalign(GTK_LABEL(status_label), 0.0f);
@@ -785,6 +757,43 @@ transaction_history_show_window(GtkWindow *parent)
   gtk_list_box_set_selection_mode(GTK_LIST_BOX(list_box), GTK_SELECTION_NONE);
   gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled), list_box);
   state->list_box = GTK_LIST_BOX(list_box);
+
+  GtkWidget *navigation_row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+  gtk_widget_set_hexpand(navigation_row, TRUE);
+  gtk_box_append(GTK_BOX(root), navigation_row);
+
+  GtkWidget *page_label = gtk_label_new(_("Page"));
+  gtk_box_append(GTK_BOX(navigation_row), page_label);
+
+  GtkAdjustment *page_adjustment = gtk_adjustment_new(1, 1, G_MAXINT, 1, 10, 0);
+  GtkWidget *page_spin_button = gtk_spin_button_new(page_adjustment, 1, 0);
+  gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(page_spin_button), TRUE);
+  gtk_widget_set_size_request(page_spin_button, 80, -1);
+  gtk_box_append(GTK_BOX(navigation_row), page_spin_button);
+  state->page_spin_button = GTK_SPIN_BUTTON(page_spin_button);
+
+  GtkWidget *goto_button = ui_helpers_create_icon_button("go-jump-symbolic", _("Go"));
+  gtk_box_append(GTK_BOX(navigation_row), goto_button);
+  state->goto_button = GTK_BUTTON(goto_button);
+
+  GtkWidget *navigation_spacer = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+  gtk_widget_set_hexpand(navigation_spacer, TRUE);
+  gtk_box_append(GTK_BOX(navigation_row), navigation_spacer);
+
+  GtkWidget *newer_button = ui_helpers_create_icon_button("go-previous-symbolic", _("Newer"));
+  gtk_widget_set_sensitive(newer_button, FALSE);
+  gtk_box_append(GTK_BOX(navigation_row), newer_button);
+  state->newer_button = GTK_BUTTON(newer_button);
+
+  GtkWidget *older_button = ui_helpers_create_icon_button("go-next-symbolic", _("Older"));
+  gtk_widget_set_sensitive(older_button, FALSE);
+  gtk_box_append(GTK_BOX(navigation_row), older_button);
+  state->older_button = GTK_BUTTON(older_button);
+
+  GtkWidget *spinner = gtk_spinner_new();
+  gtk_widget_set_visible(spinner, FALSE);
+  gtk_box_append(GTK_BOX(navigation_row), spinner);
+  state->spinner = GTK_SPINNER(spinner);
 
   g_signal_connect(package_entry,
                    "activate",
