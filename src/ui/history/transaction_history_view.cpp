@@ -7,7 +7,6 @@
 #include "dnf_backend/dnf_backend.hpp"
 #include "i18n.hpp"
 
-#include <algorithm>
 #include <cctype>
 #include <cstdio>
 #include <ctime>
@@ -32,7 +31,7 @@ struct TransactionHistoryWindowState {
   GtkListBox *list_box = nullptr;
   GtkLabel *status_label = nullptr;
   GtkSpinner *spinner = nullptr;
-  GtkButton *refresh_button = nullptr;
+  GtkButton *search_button = nullptr;
   GtkButton *newer_button = nullptr;
   GtkButton *older_button = nullptr;
   GtkSpinButton *page_spin_button = nullptr;
@@ -43,8 +42,6 @@ struct TransactionHistoryWindowState {
   TransactionHistoryCursor next_cursor;
   TransactionHistoryFilter current_filter;
   size_t current_page = 1;
-  size_t total_package_rows = 0;
-  size_t total_transactions = 0;
   bool has_older_history = false;
   uint64_t load_id = 0;
   bool destroyed = false;
@@ -130,19 +127,6 @@ history_filter_is_active(const TransactionHistoryFilter &filter)
   return !filter.package_text.empty() || !filter.detail_text.empty() || filter.from != 0 ||
       filter.to != std::numeric_limits<int64_t>::max() || filter.action_enabled ||
       filter.result != TransactionHistoryResultFilter::ALL;
-}
-
-// -----------------------------------------------------------------------------
-// Return the number of pages needed to show all matching history rows.
-// -----------------------------------------------------------------------------
-size_t
-history_total_pages(size_t total_package_rows)
-{
-  if (total_package_rows == 0) {
-    return 0;
-  }
-
-  return ((total_package_rows - 1) / kHistoryPackageRowsPerPage) + 1;
 }
 
 // -----------------------------------------------------------------------------
@@ -343,11 +327,11 @@ history_set_loading(const std::shared_ptr<TransactionHistoryWindowState> &state,
     return;
   }
 
-  gtk_widget_set_sensitive(GTK_WIDGET(state->refresh_button), !loading);
+  gtk_widget_set_sensitive(GTK_WIDGET(state->search_button), !loading);
   gtk_widget_set_sensitive(GTK_WIDGET(state->newer_button), !loading && state->current_page > 1);
   gtk_widget_set_sensitive(GTK_WIDGET(state->older_button), !loading && state->has_older_history);
-  gtk_widget_set_sensitive(GTK_WIDGET(state->page_spin_button), !loading && state->total_package_rows > 0);
-  gtk_widget_set_sensitive(GTK_WIDGET(state->goto_button), !loading && state->total_package_rows > 0);
+  gtk_widget_set_sensitive(GTK_WIDGET(state->page_spin_button), !loading);
+  gtk_widget_set_sensitive(GTK_WIDGET(state->goto_button), !loading);
 
   if (loading) {
     gtk_spinner_start(state->spinner);
@@ -430,10 +414,14 @@ history_render_rows(const std::shared_ptr<TransactionHistoryWindowState> &state)
   history_list_clear(state->list_box);
 
   if (state->rows.empty()) {
-    gtk_label_set_text(GTK_LABEL(state->status_label),
-                       history_filter_is_active(state->current_filter)
-                           ? _("No transaction history rows match the filter.")
-                           : _("No transaction history was found."));
+    if (state->current_cursor.row_offset > 0) {
+      gtk_label_set_text(GTK_LABEL(state->status_label), _("No transaction history rows were found on this page."));
+    } else {
+      gtk_label_set_text(GTK_LABEL(state->status_label),
+                         history_filter_is_active(state->current_filter)
+                             ? _("No transaction history rows match the filter.")
+                             : _("No transaction history was found."));
+    }
     return;
   }
 
@@ -444,19 +432,8 @@ history_render_rows(const std::shared_ptr<TransactionHistoryWindowState> &state)
   std::string status =
       dnfui_i18n_format_count(state->rows.size(), "Showing %zu package change.", "Showing %zu package changes.");
 
-  size_t total_pages = history_total_pages(state->total_package_rows);
-  if (total_pages > 0) {
-    status += " ";
-    status += dnfui_i18n_format(_("Page %zu of %zu."), state->current_page, total_pages);
-  }
-
   status += " ";
-  status += dnfui_i18n_format_count(
-      state->total_package_rows, "%zu matching package change total.", "%zu matching package changes total.");
-
-  status += " ";
-  status +=
-      dnfui_i18n_format_count(state->total_transactions, "%zu matching transaction.", "%zu matching transactions.");
+  status += dnfui_i18n_format(_("Page %zu."), state->current_page);
 
   if (state->has_older_history) {
     status += " ";
@@ -496,9 +473,10 @@ history_show_filter_error(const std::shared_ptr<TransactionHistoryWindowState> &
   state->current_cursor = TransactionHistoryCursor {};
   state->next_cursor = TransactionHistoryCursor {};
   state->current_page = 1;
-  state->total_package_rows = 0;
-  state->total_transactions = 0;
   state->has_older_history = false;
+  if (state->page_spin_button) {
+    gtk_spin_button_set_value(state->page_spin_button, 1);
+  }
   history_list_clear(state->list_box);
   history_set_loading(state, false);
   gtk_label_set_text(GTK_LABEL(state->status_label), error.c_str());
@@ -535,10 +513,10 @@ history_load_page_from_controls(const std::shared_ptr<TransactionHistoryWindowSt
 }
 
 // -----------------------------------------------------------------------------
-// Reload history when one filter control changes.
+// Search history with the current filters.
 // -----------------------------------------------------------------------------
 void
-on_history_filter_changed(gpointer user_data)
+on_history_search_requested(gpointer user_data)
 {
   auto *state_holder = static_cast<std::shared_ptr<TransactionHistoryWindowState> *>(user_data);
   if (state_holder) {
@@ -619,13 +597,8 @@ on_history_load_finished(GObject *, GAsyncResult *result, gpointer user_data)
   state->rows = std::move(page->rows);
   state->next_cursor = page->next_cursor;
   state->current_filter = requested_filter;
-  state->total_package_rows = page->total_package_rows;
-  state->total_transactions = page->total_transactions;
   state->has_older_history = page->has_more;
-
-  size_t total_pages = history_total_pages(state->total_package_rows);
   if (state->page_spin_button) {
-    gtk_spin_button_set_range(state->page_spin_button, 1, static_cast<double>(std::max<size_t>(total_pages, 1)));
     gtk_spin_button_set_value(state->page_spin_button, static_cast<double>(state->current_page));
   }
 
@@ -764,9 +737,23 @@ transaction_history_show_window(GtkWindow *parent)
   gtk_box_append(GTK_BOX(date_row), to_entry);
   state->to_entry = GTK_ENTRY(to_entry);
 
-  GtkWidget *refresh_button = gtk_button_new_with_label(_("Refresh"));
-  gtk_box_append(GTK_BOX(date_row), refresh_button);
-  state->refresh_button = GTK_BUTTON(refresh_button);
+  GtkWidget *search_button = gtk_button_new_with_label(_("Search"));
+  gtk_box_append(GTK_BOX(date_row), search_button);
+  state->search_button = GTK_BUTTON(search_button);
+
+  GtkWidget *page_label = gtk_label_new(_("Page"));
+  gtk_box_append(GTK_BOX(date_row), page_label);
+
+  GtkAdjustment *page_adjustment = gtk_adjustment_new(1, 1, G_MAXINT, 1, 10, 0);
+  GtkWidget *page_spin_button = gtk_spin_button_new(page_adjustment, 1, 0);
+  gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(page_spin_button), TRUE);
+  gtk_widget_set_size_request(page_spin_button, 80, -1);
+  gtk_box_append(GTK_BOX(date_row), page_spin_button);
+  state->page_spin_button = GTK_SPIN_BUTTON(page_spin_button);
+
+  GtkWidget *goto_button = gtk_button_new_with_label(_("Go"));
+  gtk_box_append(GTK_BOX(date_row), goto_button);
+  state->goto_button = GTK_BUTTON(goto_button);
 
   GtkWidget *newer_button = gtk_button_new_with_label(_("Newer"));
   gtk_widget_set_sensitive(newer_button, FALSE);
@@ -777,22 +764,6 @@ transaction_history_show_window(GtkWindow *parent)
   gtk_widget_set_sensitive(older_button, FALSE);
   gtk_box_append(GTK_BOX(date_row), older_button);
   state->older_button = GTK_BUTTON(older_button);
-
-  GtkWidget *page_label = gtk_label_new(_("Page"));
-  gtk_box_append(GTK_BOX(date_row), page_label);
-
-  GtkAdjustment *page_adjustment = gtk_adjustment_new(1, 1, 1, 1, 10, 0);
-  GtkWidget *page_spin_button = gtk_spin_button_new(page_adjustment, 1, 0);
-  gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(page_spin_button), TRUE);
-  gtk_widget_set_sensitive(page_spin_button, FALSE);
-  gtk_widget_set_size_request(page_spin_button, 80, -1);
-  gtk_box_append(GTK_BOX(date_row), page_spin_button);
-  state->page_spin_button = GTK_SPIN_BUTTON(page_spin_button);
-
-  GtkWidget *goto_button = gtk_button_new_with_label(_("Go"));
-  gtk_widget_set_sensitive(goto_button, FALSE);
-  gtk_box_append(GTK_BOX(date_row), goto_button);
-  state->goto_button = GTK_BUTTON(goto_button);
 
   GtkWidget *spinner = gtk_spinner_new();
   gtk_widget_set_visible(spinner, FALSE);
@@ -816,39 +787,45 @@ transaction_history_show_window(GtkWindow *parent)
   state->list_box = GTK_LIST_BOX(list_box);
 
   g_signal_connect(package_entry,
-                   "changed",
-                   G_CALLBACK(+[](GtkEditable *, gpointer user_data) { on_history_filter_changed(user_data); }),
+                   "activate",
+                   G_CALLBACK(+[](GtkEntry *, gpointer user_data) { on_history_search_requested(user_data); }),
                    state_holder);
   g_signal_connect(text_entry,
-                   "changed",
-                   G_CALLBACK(+[](GtkEditable *, gpointer user_data) { on_history_filter_changed(user_data); }),
+                   "activate",
+                   G_CALLBACK(+[](GtkEntry *, gpointer user_data) { on_history_search_requested(user_data); }),
                    state_holder);
   g_signal_connect(from_entry,
-                   "changed",
-                   G_CALLBACK(+[](GtkEditable *, gpointer user_data) { on_history_filter_changed(user_data); }),
+                   "activate",
+                   G_CALLBACK(+[](GtkEntry *, gpointer user_data) { on_history_search_requested(user_data); }),
                    state_holder);
   g_signal_connect(to_entry,
-                   "changed",
-                   G_CALLBACK(+[](GtkEditable *, gpointer user_data) { on_history_filter_changed(user_data); }),
+                   "activate",
+                   G_CALLBACK(+[](GtkEntry *, gpointer user_data) { on_history_search_requested(user_data); }),
                    state_holder);
-  g_signal_connect(
-      action_dropdown,
-      "notify::selected",
-      G_CALLBACK(+[](GtkDropDown *, GParamSpec *, gpointer user_data) { on_history_filter_changed(user_data); }),
-      state_holder);
-  g_signal_connect(
-      result_dropdown,
-      "notify::selected",
-      G_CALLBACK(+[](GtkDropDown *, GParamSpec *, gpointer user_data) { on_history_filter_changed(user_data); }),
-      state_holder);
 
-  g_signal_connect(refresh_button,
+  g_signal_connect(search_button,
                    "clicked",
                    G_CALLBACK(+[](GtkButton *, gpointer user_data) {
                      auto *state_holder = static_cast<std::shared_ptr<TransactionHistoryWindowState> *>(user_data);
                      if (state_holder) {
                        history_reload_from_controls(*state_holder);
                      }
+                   }),
+                   state_holder);
+
+  g_signal_connect(goto_button,
+                   "clicked",
+                   G_CALLBACK(+[](GtkButton *, gpointer user_data) {
+                     auto *state_holder = static_cast<std::shared_ptr<TransactionHistoryWindowState> *>(user_data);
+                     if (!state_holder || !*state_holder || !(*state_holder)->page_spin_button) {
+                       return;
+                     }
+
+                     int page = gtk_spin_button_get_value_as_int((*state_holder)->page_spin_button);
+                     if (page < 1) {
+                       page = 1;
+                     }
+                     history_load_page_from_controls(*state_holder, static_cast<size_t>(page));
                    }),
                    state_holder);
 
@@ -871,22 +848,6 @@ transaction_history_show_window(GtkWindow *parent)
                      if (state_holder && *state_holder && (*state_holder)->has_older_history) {
                        history_start_load(*state_holder, (*state_holder)->next_cursor, (*state_holder)->current_filter);
                      }
-                   }),
-                   state_holder);
-
-  g_signal_connect(goto_button,
-                   "clicked",
-                   G_CALLBACK(+[](GtkButton *, gpointer user_data) {
-                     auto *state_holder = static_cast<std::shared_ptr<TransactionHistoryWindowState> *>(user_data);
-                     if (!state_holder || !*state_holder || !(*state_holder)->page_spin_button) {
-                       return;
-                     }
-
-                     int page = gtk_spin_button_get_value_as_int((*state_holder)->page_spin_button);
-                     if (page < 1) {
-                       page = 1;
-                     }
-                     history_load_page_from_controls(*state_holder, static_cast<size_t>(page));
                    }),
                    state_holder);
 

@@ -247,8 +247,6 @@ struct TransactionHistoryFilter {
 struct TransactionHistoryPage {
   std::vector<TransactionHistoryPackageRow> rows;
   TransactionHistoryCursor next_cursor;
-  size_t total_package_rows = 0;
-  size_t total_transactions = 0;
   bool has_more = false;
 };
 
@@ -260,6 +258,7 @@ std::string dnf_backend_transaction_history_action_to_string(TransactionHistoryA
 // -----------------------------------------------------------------------------
 // Return one page of package changes from the libdnf5 transaction history database.
 // The cursor stores the first matching row offset for the requested page.
+// The backend stops after the requested page and one extra matching row.
 // -----------------------------------------------------------------------------
 TransactionHistoryPage dnf_backend_list_transaction_history_page(TransactionHistoryCursor cursor,
                                                                  const TransactionHistoryFilter &filter,

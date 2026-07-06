@@ -325,23 +325,26 @@ msgstr "Till datum ÅÅÅÅ-MM-DD"
 msgid "Loading transaction history..."
 msgstr "Läser in transaktionshistorik..."
 
-msgid "Newer"
-msgstr "Nyare"
-
-msgid "Older"
-msgstr "Äldre"
-
 msgid "Page"
 msgstr "Sida"
 
 msgid "Go"
 msgstr "Gå"
 
+msgid "Newer"
+msgstr "Nyare"
+
+msgid "Older"
+msgstr "Äldre"
+
 msgid "Use Older to show more history."
 msgstr "Använd Äldre för att visa mer historik."
 
 msgid "No transaction history rows match the filter."
 msgstr "Inga transaktionshistorikrader matchar filtret."
+
+msgid "No transaction history rows were found on this page."
+msgstr "Inga transaktionshistorikrader hittades på den här sidan."
 
 msgid "No transaction history was found."
 msgstr "Ingen transaktionshistorik hittades."
@@ -353,20 +356,8 @@ msgstr[0] "Visar %zu paketändring."
 msgstr[1] "Visar %zu paketändringar."
 
 #, c-format
-msgid "Page %zu of %zu."
-msgstr "Sida %zu av %zu."
-
-#, c-format
-msgid "%zu matching package change total."
-msgid_plural "%zu matching package changes total."
-msgstr[0] "%zu matchande paketändring totalt."
-msgstr[1] "%zu matchande paketändringar totalt."
-
-#, c-format
-msgid "%zu matching transaction."
-msgid_plural "%zu matching transactions."
-msgstr[0] "%zu matchande transaktion."
-msgstr[1] "%zu matchande transaktioner."
+msgid "Page %zu."
+msgstr "Sida %zu."
 
 msgid "Dates must use YYYY-MM-DD."
 msgstr "Datum måste använda ÅÅÅÅ-MM-DD."

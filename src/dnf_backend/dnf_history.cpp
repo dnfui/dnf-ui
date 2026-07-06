@@ -19,6 +19,8 @@
 
 namespace {
 
+constexpr size_t kHistoryTransactionChunkSize = 128;
+
 // -----------------------------------------------------------------------------
 // Stop history loading when the caller has cancelled the worker task.
 // -----------------------------------------------------------------------------
@@ -59,18 +61,31 @@ history_action_from_libdnf(libdnf5::transaction::TransactionItemAction action)
 }
 
 // -----------------------------------------------------------------------------
-// Convert one libdnf5 history package to the UI-facing row model.
+// Return true when libdnf5 marks the transaction as completed successfully.
+// -----------------------------------------------------------------------------
+bool
+history_transaction_succeeded(libdnf5::transaction::Transaction &transaction)
+{
+  return transaction.get_state() == libdnf5::transaction::TransactionState::OK;
+}
+
+// -----------------------------------------------------------------------------
+// Convert one matching libdnf5 history package to the UI-facing row model.
 // -----------------------------------------------------------------------------
 TransactionHistoryPackageRow
-make_history_row(libdnf5::transaction::Transaction &transaction, libdnf5::transaction::Package &package)
+make_history_row(libdnf5::transaction::Transaction &transaction,
+                 libdnf5::transaction::Package &package,
+                 bool succeeded,
+                 TransactionHistoryAction action,
+                 const std::string &description)
 {
   TransactionHistoryPackageRow row;
   row.transaction_id = transaction.get_id();
   row.started_at = transaction.get_dt_start();
   row.ended_at = transaction.get_dt_end();
   // Historical package items can keep STARTED as their item state even when the transaction completed successfully.
-  row.succeeded = transaction.get_state() == libdnf5::transaction::TransactionState::OK;
-  row.action = history_action_from_libdnf(package.get_action());
+  row.succeeded = succeeded;
+  row.action = action;
   row.package_id = package.to_string();
   row.name = package.get_name();
   row.epoch = package.get_epoch();
@@ -78,7 +93,7 @@ make_history_row(libdnf5::transaction::Transaction &transaction, libdnf5::transa
   row.release = package.get_release();
   row.arch = package.get_arch();
   row.repo = package.get_repoid();
-  row.description = transaction.get_description();
+  row.description = description;
   return row;
 }
 
@@ -105,16 +120,16 @@ normalize_history_filter(TransactionHistoryFilter filter)
 }
 
 // -----------------------------------------------------------------------------
-// Return true when one history row matches the selected result filter.
+// Return true when one transaction matches the selected result filter.
 // -----------------------------------------------------------------------------
 bool
-history_row_matches_result(const TransactionHistoryPackageRow &row, TransactionHistoryResultFilter result)
+history_transaction_matches_result(bool succeeded, TransactionHistoryResultFilter result)
 {
   switch (result) {
   case TransactionHistoryResultFilter::OK:
-    return row.succeeded;
+    return succeeded;
   case TransactionHistoryResultFilter::FAILED:
-    return !row.succeeded;
+    return !succeeded;
   case TransactionHistoryResultFilter::ALL:
   default:
     return true;
@@ -122,44 +137,58 @@ history_row_matches_result(const TransactionHistoryPackageRow &row, TransactionH
 }
 
 // -----------------------------------------------------------------------------
-// Return true when one history row matches the current backend history filter.
+// Return true when one text value contains the normalized filter text.
 // -----------------------------------------------------------------------------
 bool
-history_row_matches_filter(const TransactionHistoryPackageRow &row, const TransactionHistoryFilter &filter)
+history_text_contains_filter(const std::string &text, const std::string &filter_text)
 {
-  if (filter.action_enabled && row.action != filter.action) {
-    return false;
-  }
+  return history_filter_text(text).find(filter_text) != std::string::npos;
+}
 
-  if (!history_row_matches_result(row, filter.result)) {
-    return false;
-  }
-
-  if (row.started_at < filter.from || row.started_at > filter.to) {
+// -----------------------------------------------------------------------------
+// Return true when one history package matches the current package-level filters.
+// The transaction-level filters are checked before this function is called.
+// -----------------------------------------------------------------------------
+bool
+history_package_matches_filter(libdnf5::transaction::Package &package,
+                               const TransactionHistoryFilter &filter,
+                               TransactionHistoryAction action,
+                               const std::string &description)
+{
+  if (filter.action_enabled && action != filter.action) {
     return false;
   }
 
   if (!filter.package_text.empty()) {
-    std::string package_text = row.name;
-    package_text += "\n";
-    package_text += row.package_id;
-    if (history_filter_text(package_text).find(filter.package_text) == std::string::npos) {
+    if (!history_text_contains_filter(package.get_name(), filter.package_text) &&
+        !history_text_contains_filter(package.to_string(), filter.package_text)) {
       return false;
     }
   }
 
   if (!filter.detail_text.empty()) {
-    std::string detail_text = row.repo;
-    detail_text += "\n";
-    detail_text += row.description;
-    detail_text += "\n";
-    detail_text += row.arch;
-    if (history_filter_text(detail_text).find(filter.detail_text) == std::string::npos) {
+    if (!history_text_contains_filter(package.get_repoid(), filter.detail_text) &&
+        !history_text_contains_filter(description, filter.detail_text) &&
+        !history_text_contains_filter(package.get_arch(), filter.detail_text)) {
       return false;
     }
   }
 
   return true;
+}
+
+// -----------------------------------------------------------------------------
+// Sort history transactions newest first before scanning package rows.
+// -----------------------------------------------------------------------------
+void
+sort_history_transactions_newest_first(std::vector<libdnf5::transaction::Transaction> &transactions)
+{
+  std::sort(transactions.begin(), transactions.end(), [](const auto &left, const auto &right) {
+    if (left.get_dt_start() != right.get_dt_start()) {
+      return left.get_dt_start() > right.get_dt_start();
+    }
+    return left.get_id() > right.get_id();
+  });
 }
 
 }
@@ -194,6 +223,7 @@ dnf_backend_transaction_history_action_to_string(TransactionHistoryAction action
 // -----------------------------------------------------------------------------
 // Return one page of package changes from the libdnf5 transaction history database.
 // The cursor stores the first matching row offset for the requested page.
+// The backend stops after the requested page and one extra matching row.
 // -----------------------------------------------------------------------------
 TransactionHistoryPage
 dnf_backend_list_transaction_history_page(TransactionHistoryCursor cursor,
@@ -215,49 +245,69 @@ dnf_backend_list_transaction_history_page(TransactionHistoryCursor cursor,
   }
 
   const size_t page_start = cursor.row_offset;
-  const size_t page_end = page_start + max_package_rows;
   size_t matching_row_index = 0;
 
   size_t transaction_offset = 0;
   while (transaction_offset < transaction_ids.size()) {
     throw_if_history_cancelled(cancellable);
 
-    const size_t id_index = transaction_ids.size() - transaction_offset - 1;
-    auto transactions = history->list_transactions(std::vector<int64_t> { transaction_ids[id_index] });
+    const size_t chunk_end = transaction_ids.size() - transaction_offset;
+    const size_t chunk_size = std::min(kHistoryTransactionChunkSize, chunk_end);
+    const size_t chunk_begin = chunk_end - chunk_size;
+    std::vector<int64_t> chunk_ids(transaction_ids.begin() + static_cast<long>(chunk_begin),
+                                   transaction_ids.begin() + static_cast<long>(chunk_end));
+
+    auto transactions = history->list_transactions(chunk_ids);
     if (transactions.empty()) {
-      ++transaction_offset;
+      transaction_offset += chunk_size;
       continue;
     }
+    sort_history_transactions_newest_first(transactions);
 
-    auto &transaction = transactions.front();
-    auto packages = transaction.get_packages();
-    bool transaction_matches = false;
-    for (auto &package : packages) {
+    for (auto &transaction : transactions) {
       throw_if_history_cancelled(cancellable);
 
-      TransactionHistoryPackageRow row = make_history_row(transaction, package);
-      if (!history_row_matches_filter(row, normalized_filter)) {
+      const bool succeeded = history_transaction_succeeded(transaction);
+      if (!history_transaction_matches_result(succeeded, normalized_filter.result)) {
         continue;
       }
 
-      ++page.total_package_rows;
-      transaction_matches = true;
-
-      if (matching_row_index >= page_start && matching_row_index < page_end) {
-        page.rows.push_back(std::move(row));
+      const int64_t started_at = transaction.get_dt_start();
+      if (started_at < normalized_filter.from || started_at > normalized_filter.to) {
+        continue;
       }
-      ++matching_row_index;
+
+      bool description_loaded = !normalized_filter.detail_text.empty();
+      std::string description = description_loaded ? transaction.get_description() : "";
+      auto packages = transaction.get_packages();
+      for (auto &package : packages) {
+        throw_if_history_cancelled(cancellable);
+
+        const TransactionHistoryAction action = history_action_from_libdnf(package.get_action());
+        if (!history_package_matches_filter(package, normalized_filter, action, description)) {
+          continue;
+        }
+
+        if (matching_row_index >= page_start && page.rows.size() < max_package_rows) {
+          if (!description_loaded) {
+            description = transaction.get_description();
+            description_loaded = true;
+          }
+          TransactionHistoryPackageRow row = make_history_row(transaction, package, succeeded, action, description);
+          page.rows.push_back(std::move(row));
+        } else if (matching_row_index >= page_start) {
+          page.has_more = true;
+          page.next_cursor.row_offset = page_start + page.rows.size();
+          return page;
+        }
+        ++matching_row_index;
+      }
     }
 
-    if (transaction_matches) {
-      ++page.total_transactions;
-    }
-
-    ++transaction_offset;
+    transaction_offset += chunk_size;
   }
 
   page.next_cursor.row_offset = page_start + page.rows.size();
-  page.has_more = page.next_cursor.row_offset < page.total_package_rows;
 
   return page;
 }

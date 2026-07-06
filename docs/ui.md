@@ -176,11 +176,14 @@ The history window lives in [src/ui/history/transaction_history_view.cpp](../src
 It loads history on a worker thread and displays value objects from the backend
 instead of libdnf5 objects. It shows 100 package changes per page and supports
 Newer, Older, and direct page navigation without creating an unbounded GTK list.
-Filters are applied by the backend before the page is returned, so a search
-looks through the available history instead of only the rows currently shown on
-screen. The status text shows the current page, matching package row count, and
-matching transaction count. The feature is intentionally read-only. It does not
-offer rollback, replay, or undo actions.
+The page control does not show a total page count, because that would require
+scanning the full matching history before the window can be used. Filters are
+applied by the backend before the page is returned, so a search looks through
+the available history instead of only the rows currently shown on screen. Filter
+changes are applied when the user presses Search or presses Enter in a filter
+entry. This avoids starting a backend history scan for every typed character.
+The feature is intentionally read-only. It does not offer rollback, replay, or
+undo actions.
 
 ### Pending transaction controller
 
