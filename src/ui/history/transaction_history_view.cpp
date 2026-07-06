@@ -499,18 +499,16 @@ history_reload_from_controls(const std::shared_ptr<TransactionHistoryWindowState
 }
 
 // -----------------------------------------------------------------------------
-// Load one requested page using the filters currently shown in the window.
+// Load one requested page using the filter that is already applied.
 // -----------------------------------------------------------------------------
 void
-history_load_page_from_controls(const std::shared_ptr<TransactionHistoryWindowState> &state, size_t page)
+history_load_applied_filter_page(const std::shared_ptr<TransactionHistoryWindowState> &state, size_t page)
 {
-  HistoryFilters filters = history_current_filters(state);
-  if (!filters.error.empty()) {
-    history_show_filter_error(state, filters.error);
+  if (!state || state->destroyed) {
     return;
   }
 
-  history_start_load(state, history_cursor_for_page(page), filters.backend);
+  history_start_load(state, history_cursor_for_page(page), state->current_filter);
 }
 
 // -----------------------------------------------------------------------------
@@ -834,7 +832,7 @@ transaction_history_show_window(GtkWindow *parent)
                      if (page < 1) {
                        page = 1;
                      }
-                     history_load_page_from_controls(*state_holder, static_cast<size_t>(page));
+                     history_load_applied_filter_page(*state_holder, static_cast<size_t>(page));
                    }),
                    state_holder);
 
