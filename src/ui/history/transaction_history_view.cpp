@@ -31,6 +31,7 @@ struct TransactionHistoryWindowState {
   GtkDropDown *result_dropdown = nullptr;
   GtkListBox *list_box = nullptr;
   GtkLabel *status_label = nullptr;
+  GtkLabel *duration_label = nullptr;
   GtkSpinner *spinner = nullptr;
   GtkButton *search_button = nullptr;
   GtkButton *newer_button = nullptr;
@@ -58,11 +59,14 @@ struct HistoryTaskUserData {
   uint64_t load_id = 0;
   TransactionHistoryCursor cursor;
   TransactionHistoryFilter filter;
+  gint64 started_at_us = 0;
+  std::string duration_title;
 };
 
 void history_start_load(const std::shared_ptr<TransactionHistoryWindowState> &state,
                         TransactionHistoryCursor cursor,
-                        const TransactionHistoryFilter &filter);
+                        const TransactionHistoryFilter &filter,
+                        const char *duration_title = nullptr);
 
 // -----------------------------------------------------------------------------
 // Return true when the selected action row enables an action filter.
@@ -305,6 +309,44 @@ history_action_css_class(TransactionHistoryAction action)
 }
 
 // -----------------------------------------------------------------------------
+// Hide the history duration label while new work is running.
+// -----------------------------------------------------------------------------
+void
+history_clear_duration_label(const std::shared_ptr<TransactionHistoryWindowState> &state)
+{
+  if (!state || !state->duration_label) {
+    return;
+  }
+
+  gtk_label_set_text(state->duration_label, "");
+  gtk_widget_set_visible(GTK_WIDGET(state->duration_label), FALSE);
+}
+
+// -----------------------------------------------------------------------------
+// Show how long one history load took.
+// -----------------------------------------------------------------------------
+void
+history_show_duration_label(const std::shared_ptr<TransactionHistoryWindowState> &state,
+                            const std::string &title,
+                            gint64 started_at_us)
+{
+  if (!state || !state->duration_label || started_at_us <= 0) {
+    return;
+  }
+
+  gint64 elapsed_us = g_get_monotonic_time() - started_at_us;
+  if (elapsed_us < 0) {
+    elapsed_us = 0;
+  }
+
+  const double elapsed_seconds = static_cast<double>(elapsed_us) / 1000000.0;
+  const char *display_title = title.empty() ? _("Page") : title.c_str();
+  std::string text = dnfui_i18n_format(_("%s: %.1f s"), display_title, elapsed_seconds);
+  gtk_label_set_text(state->duration_label, text.c_str());
+  gtk_widget_set_visible(GTK_WIDGET(state->duration_label), TRUE);
+}
+
+// -----------------------------------------------------------------------------
 // Remove all rows from one GTK list box.
 // -----------------------------------------------------------------------------
 void
@@ -478,6 +520,7 @@ history_show_filter_error(const std::shared_ptr<TransactionHistoryWindowState> &
   if (state->page_spin_button) {
     gtk_spin_button_set_value(state->page_spin_button, 1);
   }
+  history_clear_duration_label(state);
   history_list_clear(state->list_box);
   history_set_loading(state, false);
   gtk_label_set_text(GTK_LABEL(state->status_label), error.c_str());
@@ -495,7 +538,7 @@ history_reload_from_controls(const std::shared_ptr<TransactionHistoryWindowState
     return;
   }
 
-  history_start_load(state, TransactionHistoryCursor {}, filters.backend);
+  history_start_load(state, TransactionHistoryCursor {}, filters.backend, _("Search"));
 }
 
 // -----------------------------------------------------------------------------
@@ -508,7 +551,7 @@ history_load_applied_filter_page(const std::shared_ptr<TransactionHistoryWindowS
     return;
   }
 
-  history_start_load(state, history_cursor_for_page(page), state->current_filter);
+  history_start_load(state, history_cursor_for_page(page), state->current_filter, _("Page"));
 }
 
 // -----------------------------------------------------------------------------
@@ -561,6 +604,8 @@ on_history_load_finished(GObject *, GAsyncResult *result, gpointer user_data)
   uint64_t load_id = task_user_data ? task_user_data->load_id : 0;
   TransactionHistoryCursor requested_cursor = task_user_data ? task_user_data->cursor : TransactionHistoryCursor {};
   TransactionHistoryFilter requested_filter = task_user_data ? task_user_data->filter : TransactionHistoryFilter {};
+  gint64 started_at_us = task_user_data ? task_user_data->started_at_us : 0;
+  std::string duration_title = task_user_data ? task_user_data->duration_title : "";
   delete task_user_data;
 
   if (!state || state->destroyed || load_id != state->load_id) {
@@ -568,6 +613,7 @@ on_history_load_finished(GObject *, GAsyncResult *result, gpointer user_data)
   }
 
   history_set_loading(state, false);
+  history_show_duration_label(state, duration_title, started_at_us);
 
   GTask *task = G_TASK(result);
   GError *error = nullptr;
@@ -612,7 +658,8 @@ on_history_load_finished(GObject *, GAsyncResult *result, gpointer user_data)
 void
 history_start_load(const std::shared_ptr<TransactionHistoryWindowState> &state,
                    TransactionHistoryCursor cursor,
-                   const TransactionHistoryFilter &filter)
+                   const TransactionHistoryFilter &filter,
+                   const char *duration_title)
 {
   if (!state || state->destroyed) {
     return;
@@ -629,10 +676,13 @@ history_start_load(const std::shared_ptr<TransactionHistoryWindowState> &state,
   state->rows.clear();
   history_list_clear(state->list_box);
 
+  history_clear_duration_label(state);
   history_set_loading(state, true);
   gtk_label_set_text(state->status_label, _("Loading transaction history..."));
 
-  auto *task_user_data = new HistoryTaskUserData { state, state->load_id, cursor, filter };
+  auto *task_user_data = new HistoryTaskUserData {
+    state, state->load_id, cursor, filter, g_get_monotonic_time(), duration_title ? duration_title : _("Page"),
+  };
   GTask *task = g_task_new(state->window, state->cancellable, on_history_load_finished, task_user_data);
   g_task_set_task_data(task, task_user_data, nullptr);
   g_task_run_in_thread(task, on_history_load_task);
@@ -773,6 +823,14 @@ transaction_history_show_window(GtkWindow *parent)
   GtkWidget *goto_button = ui_helpers_create_icon_button("go-jump-symbolic", _("Go"));
   gtk_box_append(GTK_BOX(navigation_row), goto_button);
   state->goto_button = GTK_BUTTON(goto_button);
+
+  GtkWidget *duration_label = gtk_label_new("");
+  gtk_label_set_xalign(GTK_LABEL(duration_label), 0.0);
+  gtk_label_set_ellipsize(GTK_LABEL(duration_label), PANGO_ELLIPSIZE_END);
+  gtk_label_set_max_width_chars(GTK_LABEL(duration_label), 40);
+  gtk_widget_set_visible(duration_label, FALSE);
+  gtk_box_append(GTK_BOX(navigation_row), duration_label);
+  state->duration_label = GTK_LABEL(duration_label);
 
   GtkWidget *navigation_spacer = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
   gtk_widget_set_hexpand(navigation_spacer, TRUE);
