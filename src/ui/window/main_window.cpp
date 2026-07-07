@@ -7,6 +7,7 @@
 
 #include "config.hpp"
 #include "i18n.hpp"
+#include "ui/history/transaction_history_view.hpp"
 #include "ui/window/main_menu.hpp"
 #include "ui/window/main_window_layout.hpp"
 #include "ui/details/package_details_controller.hpp"
@@ -617,6 +618,7 @@ connect_cleanup(GtkWidget *window, std::shared_ptr<MainWindowUiState> widgets, G
                        return;
                      }
                      widgets->window_state.destroyed = true;
+                     transaction_history_close_window();
                      if (widgets->window_state.backend_warmup_cancellable) {
                        g_cancellable_cancel(widgets->window_state.backend_warmup_cancellable);
                        g_object_unref(widgets->window_state.backend_warmup_cancellable);

@@ -874,6 +874,17 @@ on_history_window_destroy(GtkWidget *, gpointer user_data)
 }
 
 // -----------------------------------------------------------------------------
+// Close the transaction history window if it is open.
+// -----------------------------------------------------------------------------
+void
+transaction_history_close_window()
+{
+  if (g_transaction_history_window) {
+    gtk_window_close(g_transaction_history_window);
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Open the read-only transaction history window.
 // -----------------------------------------------------------------------------
 void
