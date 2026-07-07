@@ -748,7 +748,10 @@ transaction_history_show_window(GtkWindow *parent)
   state->window = window;
   gtk_window_set_title(window, _("Transaction History"));
   gtk_window_set_default_size(window, 820, 560);
-  gtk_window_set_transient_for(window, parent);
+  if (parent) {
+    // Keep the history browser with the same application without making it a transient dialog.
+    gtk_window_set_application(window, gtk_window_get_application(parent));
+  }
 
   auto *state_holder = new std::shared_ptr<TransactionHistoryWindowState>(state);
   g_object_set_data_full(G_OBJECT(window), "dnfui-transaction-history-state", state_holder, [](gpointer p) {
