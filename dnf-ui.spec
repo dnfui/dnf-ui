@@ -1,5 +1,5 @@
 Name:           dnf-ui
-Version:        0.3.2
+Version:        0.3.3
 Release:        1%{?dist}
 Summary:        GTK frontend for DNF5
 
@@ -57,6 +57,13 @@ appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/com.fedora.dnfui
 %{_datadir}/metainfo/com.fedora.dnfui.metainfo.xml
 
 %changelog
+* Tue Jul 07 2026 ErikMN <erik@example.invalid> - 0.3.3-1
+- Add read-only transaction history browser
+- Add transaction history filtering, paging, and keyboard shortcuts
+- Improve responsiveness when jumping to pending package actions
+- Improve translations for package details and status text
+- Polish main window styling
+
 * Thu Jul 02 2026 ErikMN <erik@example.invalid> - 0.3.2-1
 - Load package changelogs only when the Changelog tab is opened
 - Add package table CSV export from the File menu and Ctrl+E
