@@ -37,6 +37,8 @@ const std::array<TransactionHistoryAction, kHistoryActionFilterCount> kHistoryAc
 };
 // clang-format on
 
+GtkWindow *g_transaction_history_window = nullptr;
+
 struct TransactionHistoryWindowState {
   GtkWindow *window = nullptr;
   GtkEntry *package_entry = nullptr;
@@ -820,6 +822,9 @@ on_history_window_destroy(GtkWidget *, gpointer user_data)
 
   auto state = *state_holder;
   state->destroyed = true;
+  if (g_transaction_history_window == state->window) {
+    g_transaction_history_window = nullptr;
+  }
   if (state->cancellable) {
     g_cancellable_cancel(state->cancellable);
     g_object_unref(state->cancellable);
@@ -835,10 +840,16 @@ on_history_window_destroy(GtkWidget *, gpointer user_data)
 void
 transaction_history_show_window(GtkWindow *parent)
 {
+  if (g_transaction_history_window) {
+    gtk_window_present(g_transaction_history_window);
+    return;
+  }
+
   auto state = std::make_shared<TransactionHistoryWindowState>();
 
   GtkWindow *window = GTK_WINDOW(gtk_window_new());
   state->window = window;
+  g_transaction_history_window = window;
   gtk_window_set_title(window, _("Transaction History"));
   gtk_window_set_default_size(window, 820, 560);
   if (parent) {
