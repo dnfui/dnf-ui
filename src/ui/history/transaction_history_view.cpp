@@ -89,6 +89,45 @@ void history_start_load(const std::shared_ptr<TransactionHistoryWindowState> &st
                         const TransactionHistoryFilter &filter,
                         const char *duration_title = nullptr);
 
+// -----------------------------------------------------------------------------
+// Setup shortcuts that are local to the transaction history window.
+// -----------------------------------------------------------------------------
+void
+history_setup_shortcuts(GtkWidget *window, GtkWidget *package_entry)
+{
+  GtkEventController *key_controller = GTK_EVENT_CONTROLLER(gtk_event_controller_key_new());
+  gtk_event_controller_set_propagation_phase(key_controller, GTK_PHASE_CAPTURE);
+  g_signal_connect(
+      key_controller,
+      "key-pressed",
+      G_CALLBACK(
+          +[](GtkEventControllerKey *, guint keyval, guint, GdkModifierType state, gpointer user_data) -> gboolean {
+            GdkModifierType modifiers = static_cast<GdkModifierType>(state & gtk_accelerator_get_default_mod_mask());
+            if (modifiers == GDK_CONTROL_MASK && gdk_keyval_to_lower(keyval) == GDK_KEY_f) {
+              GtkWidget *entry = GTK_WIDGET(user_data);
+              gtk_widget_grab_focus(entry);
+              return TRUE;
+            }
+            return FALSE;
+          }),
+      package_entry);
+  gtk_widget_add_controller(window, key_controller);
+
+  GtkEventController *shortcuts = GTK_EVENT_CONTROLLER(gtk_shortcut_controller_new());
+  gtk_shortcut_controller_set_scope(GTK_SHORTCUT_CONTROLLER(shortcuts), GTK_SHORTCUT_SCOPE_GLOBAL);
+  gtk_widget_add_controller(window, shortcuts);
+
+  GtkShortcut *close_window = gtk_shortcut_new(gtk_keyval_trigger_new(GDK_KEY_w, GDK_CONTROL_MASK),
+                                               gtk_callback_action_new(
+                                                   +[](GtkWidget *widget, GVariant *, gpointer) -> gboolean {
+                                                     gtk_window_close(GTK_WINDOW(widget));
+                                                     return TRUE;
+                                                   },
+                                                   NULL,
+                                                   NULL));
+  gtk_shortcut_controller_add_shortcut(GTK_SHORTCUT_CONTROLLER(shortcuts), close_window);
+}
+
 const char *
 history_action_filter_label(TransactionHistoryAction action)
 {
@@ -878,6 +917,7 @@ transaction_history_show_window(GtkWindow *parent)
   gtk_widget_set_hexpand(package_entry, TRUE);
   gtk_box_append(GTK_BOX(top_row), package_entry);
   state->package_entry = GTK_ENTRY(package_entry);
+  history_setup_shortcuts(GTK_WIDGET(window), package_entry);
 
   GtkWidget *text_entry = gtk_entry_new();
   gtk_entry_set_placeholder_text(GTK_ENTRY(text_entry), _("Command, repository, or architecture..."));

@@ -184,6 +184,7 @@ changes are applied when the user presses Search or presses Enter in a filter
 entry. This avoids starting a backend history scan for every typed character.
 The action filter uses checkboxes so the user can include one action, several
 actions, or all actions in the same history search.
+When the history window is focused, Ctrl+F focuses the package filter and Ctrl+W closes the window.
 The navigation row shows how long the last completed history search or page load took.
 The feature is intentionally read-only. It does not offer rollback, replay, or
 undo actions.
