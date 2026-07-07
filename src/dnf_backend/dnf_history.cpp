@@ -155,7 +155,7 @@ history_package_matches_filter(libdnf5::transaction::Package &package,
                                TransactionHistoryAction action,
                                const std::string &description)
 {
-  if (filter.action_enabled && action != filter.action) {
+  if (filter.action_filter_enabled && filter.actions.count(action) == 0) {
     return false;
   }
 

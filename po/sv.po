@@ -313,6 +313,12 @@ msgstr "Kommando, förråd eller arkitektur..."
 msgid "All actions"
 msgstr "Alla åtgärder"
 
+msgid "No actions"
+msgstr "Inga åtgärder"
+
+msgid "%zu actions"
+msgstr "%zu åtgärder"
+
 msgid "All results"
 msgstr "Alla resultat"
 

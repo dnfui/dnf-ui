@@ -8,6 +8,7 @@
 #include "i18n.hpp"
 #include "ui/common/ui_helpers.hpp"
 
+#include <array>
 #include <cctype>
 #include <cstdio>
 #include <ctime>
@@ -21,6 +22,20 @@ namespace {
 
 constexpr size_t kHistoryPackageRowsPerPage = 100;
 constexpr int kHistoryMaxSelectablePage = 1000000;
+constexpr size_t kHistoryActionFilterCount = 8;
+
+// clang-format off
+const std::array<TransactionHistoryAction, kHistoryActionFilterCount> kHistoryActionFilterValues = {
+  TransactionHistoryAction::INSTALL,
+  TransactionHistoryAction::UPGRADE,
+  TransactionHistoryAction::DOWNGRADE,
+  TransactionHistoryAction::REINSTALL,
+  TransactionHistoryAction::REMOVE,
+  TransactionHistoryAction::REPLACED,
+  TransactionHistoryAction::REASON_CHANGE,
+  TransactionHistoryAction::OTHER,
+};
+// clang-format on
 
 struct TransactionHistoryWindowState {
   GtkWindow *window = nullptr;
@@ -28,7 +43,9 @@ struct TransactionHistoryWindowState {
   GtkEntry *text_entry = nullptr;
   GtkEntry *from_entry = nullptr;
   GtkEntry *to_entry = nullptr;
-  GtkDropDown *action_dropdown = nullptr;
+  GtkMenuButton *action_menu_button = nullptr;
+  GtkCheckButton *all_actions_check_button = nullptr;
+  std::array<GtkCheckButton *, kHistoryActionFilterCount> action_check_buttons {};
   GtkDropDown *result_dropdown = nullptr;
   GtkListBox *list_box = nullptr;
   GtkLabel *status_label = nullptr;
@@ -47,6 +64,7 @@ struct TransactionHistoryWindowState {
   size_t current_page = 1;
   bool has_older_history = false;
   uint64_t load_id = 0;
+  bool updating_action_checks = false;
   bool destroyed = false;
 };
 
@@ -69,42 +87,117 @@ void history_start_load(const std::shared_ptr<TransactionHistoryWindowState> &st
                         const TransactionHistoryFilter &filter,
                         const char *duration_title = nullptr);
 
-// -----------------------------------------------------------------------------
-// Return true when the selected action row enables an action filter.
-// -----------------------------------------------------------------------------
-bool
-history_filter_action_from_index(guint action_index, TransactionHistoryAction &action)
+const char *
+history_action_filter_label(TransactionHistoryAction action)
 {
-  switch (action_index) {
-  case 1:
-    action = TransactionHistoryAction::INSTALL;
-    return true;
-  case 2:
-    action = TransactionHistoryAction::UPGRADE;
-    return true;
-  case 3:
-    action = TransactionHistoryAction::DOWNGRADE;
-    return true;
-  case 4:
-    action = TransactionHistoryAction::REINSTALL;
-    return true;
-  case 5:
-    action = TransactionHistoryAction::REMOVE;
-    return true;
-  case 6:
-    action = TransactionHistoryAction::REPLACED;
-    return true;
-  case 7:
-    action = TransactionHistoryAction::REASON_CHANGE;
-    return true;
-  case 8:
-    action = TransactionHistoryAction::OTHER;
-    return true;
-  case 0:
-  default:
-    action = TransactionHistoryAction::OTHER;
-    return false;
+  switch (action) {
+  case TransactionHistoryAction::INSTALL:
+    return _("Install");
+  case TransactionHistoryAction::UPGRADE:
+    return _("Upgrade");
+  case TransactionHistoryAction::DOWNGRADE:
+    return _("Downgrade");
+  case TransactionHistoryAction::REINSTALL:
+    return _("Reinstall");
+  case TransactionHistoryAction::REMOVE:
+    return _("Remove");
+  case TransactionHistoryAction::REPLACED:
+    return _("Replaced");
+  case TransactionHistoryAction::REASON_CHANGE:
+    return _("Reason changed");
+  case TransactionHistoryAction::OTHER:
+    return _("Other");
   }
+
+  return _("Other");
+}
+
+// -----------------------------------------------------------------------------
+// Return the selected action filters from the checkbox menu.
+// When every action is checked, the backend can treat it as All actions.
+// -----------------------------------------------------------------------------
+std::set<TransactionHistoryAction>
+history_selected_actions(const std::shared_ptr<TransactionHistoryWindowState> &state)
+{
+  std::set<TransactionHistoryAction> actions;
+  if (!state) {
+    return actions;
+  }
+
+  for (size_t i = 0; i < kHistoryActionFilterValues.size(); ++i) {
+    if (state->action_check_buttons[i] &&
+        gtk_check_button_get_active(GTK_CHECK_BUTTON(state->action_check_buttons[i]))) {
+      actions.insert(kHistoryActionFilterValues[i]);
+    }
+  }
+  return actions;
+}
+
+// -----------------------------------------------------------------------------
+// Show the current action filter choice on the compact menu button.
+// -----------------------------------------------------------------------------
+void
+history_update_action_menu_label(const std::shared_ptr<TransactionHistoryWindowState> &state)
+{
+  if (!state || !state->action_menu_button) {
+    return;
+  }
+
+  std::set<TransactionHistoryAction> actions = history_selected_actions(state);
+  if (actions.size() == kHistoryActionFilterValues.size()) {
+    gtk_menu_button_set_label(state->action_menu_button, _("All actions"));
+  } else if (actions.empty()) {
+    gtk_menu_button_set_label(state->action_menu_button, _("No actions"));
+  } else if (actions.size() == 1) {
+    gtk_menu_button_set_label(state->action_menu_button, history_action_filter_label(*actions.begin()));
+  } else {
+    std::string label = dnfui_i18n_format(_("%zu actions"), actions.size());
+    gtk_menu_button_set_label(state->action_menu_button, label.c_str());
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Keep the All actions checkbox in sync with the individual action boxes.
+// -----------------------------------------------------------------------------
+void
+history_sync_all_actions_check(const std::shared_ptr<TransactionHistoryWindowState> &state)
+{
+  if (!state || !state->all_actions_check_button || state->updating_action_checks) {
+    return;
+  }
+
+  bool all_selected = true;
+  for (GtkCheckButton *check_button : state->action_check_buttons) {
+    if (!check_button || !gtk_check_button_get_active(check_button)) {
+      all_selected = false;
+      break;
+    }
+  }
+
+  state->updating_action_checks = true;
+  gtk_check_button_set_active(state->all_actions_check_button, all_selected);
+  state->updating_action_checks = false;
+  history_update_action_menu_label(state);
+}
+
+// -----------------------------------------------------------------------------
+// Select or clear every action checkbox from the All actions row.
+// -----------------------------------------------------------------------------
+void
+history_set_all_action_checks(const std::shared_ptr<TransactionHistoryWindowState> &state, bool active)
+{
+  if (!state || state->updating_action_checks) {
+    return;
+  }
+
+  state->updating_action_checks = true;
+  for (GtkCheckButton *check_button : state->action_check_buttons) {
+    if (check_button) {
+      gtk_check_button_set_active(check_button, active);
+    }
+  }
+  state->updating_action_checks = false;
+  history_sync_all_actions_check(state);
 }
 
 // -----------------------------------------------------------------------------
@@ -131,7 +224,7 @@ bool
 history_filter_is_active(const TransactionHistoryFilter &filter)
 {
   return !filter.package_text.empty() || !filter.detail_text.empty() || filter.from != 0 ||
-      filter.to != std::numeric_limits<int64_t>::max() || filter.action_enabled ||
+      filter.to != std::numeric_limits<int64_t>::max() || filter.action_filter_enabled ||
       filter.result != TransactionHistoryResultFilter::ALL;
 }
 
@@ -258,8 +351,8 @@ history_current_filters(const std::shared_ptr<TransactionHistoryWindowState> &st
       history_trim_filter_text(state->package_entry ? gtk_editable_get_text(GTK_EDITABLE(state->package_entry)) : "");
   filters.backend.detail_text =
       history_trim_filter_text(state->text_entry ? gtk_editable_get_text(GTK_EDITABLE(state->text_entry)) : "");
-  filters.backend.action_enabled = history_filter_action_from_index(
-      state->action_dropdown ? gtk_drop_down_get_selected(state->action_dropdown) : 0, filters.backend.action);
+  filters.backend.actions = history_selected_actions(state);
+  filters.backend.action_filter_enabled = filters.backend.actions.size() != kHistoryActionFilterValues.size();
   filters.backend.result =
       history_result_filter_from_index(state->result_dropdown ? gtk_drop_down_get_selected(state->result_dropdown) : 0);
 
@@ -781,13 +874,32 @@ transaction_history_show_window(GtkWindow *parent)
   gtk_box_append(GTK_BOX(top_row), text_entry);
   state->text_entry = GTK_ENTRY(text_entry);
 
-  const char *action_labels[] = {
-    _("All actions"), _("Install"),  _("Upgrade"),        _("Downgrade"), _("Reinstall"),
-    _("Remove"),      _("Replaced"), _("Reason changed"), _("Other"),     nullptr,
-  };
-  GtkWidget *action_dropdown = gtk_drop_down_new_from_strings(action_labels);
-  gtk_box_append(GTK_BOX(top_row), action_dropdown);
-  state->action_dropdown = GTK_DROP_DOWN(action_dropdown);
+  GtkWidget *action_menu_button = gtk_menu_button_new();
+  gtk_menu_button_set_label(GTK_MENU_BUTTON(action_menu_button), _("All actions"));
+  gtk_box_append(GTK_BOX(top_row), action_menu_button);
+  state->action_menu_button = GTK_MENU_BUTTON(action_menu_button);
+
+  GtkWidget *action_popover = gtk_popover_new();
+  GtkWidget *action_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
+  gtk_widget_set_margin_start(action_box, 8);
+  gtk_widget_set_margin_end(action_box, 8);
+  gtk_widget_set_margin_top(action_box, 8);
+  gtk_widget_set_margin_bottom(action_box, 8);
+  gtk_popover_set_child(GTK_POPOVER(action_popover), action_box);
+  gtk_menu_button_set_popover(GTK_MENU_BUTTON(action_menu_button), action_popover);
+
+  GtkWidget *all_actions_check_button = gtk_check_button_new_with_label(_("All actions"));
+  gtk_check_button_set_active(GTK_CHECK_BUTTON(all_actions_check_button), TRUE);
+  gtk_box_append(GTK_BOX(action_box), all_actions_check_button);
+  state->all_actions_check_button = GTK_CHECK_BUTTON(all_actions_check_button);
+
+  for (size_t i = 0; i < kHistoryActionFilterValues.size(); ++i) {
+    GtkWidget *check_button =
+        gtk_check_button_new_with_label(history_action_filter_label(kHistoryActionFilterValues[i]));
+    gtk_check_button_set_active(GTK_CHECK_BUTTON(check_button), TRUE);
+    gtk_box_append(GTK_BOX(action_box), check_button);
+    state->action_check_buttons[i] = GTK_CHECK_BUTTON(check_button);
+  }
 
   const char *result_labels[] = {
     _("All results"),
@@ -905,6 +1017,28 @@ transaction_history_show_window(GtkWindow *parent)
                      }
                    }),
                    state_holder);
+
+  g_signal_connect(all_actions_check_button,
+                   "toggled",
+                   G_CALLBACK(+[](GtkCheckButton *check_button, gpointer user_data) {
+                     auto *state_holder = static_cast<std::shared_ptr<TransactionHistoryWindowState> *>(user_data);
+                     if (state_holder && *state_holder) {
+                       history_set_all_action_checks(*state_holder, gtk_check_button_get_active(check_button));
+                     }
+                   }),
+                   state_holder);
+
+  for (GtkCheckButton *check_button : state->action_check_buttons) {
+    g_signal_connect(check_button,
+                     "toggled",
+                     G_CALLBACK(+[](GtkCheckButton *, gpointer user_data) {
+                       auto *state_holder = static_cast<std::shared_ptr<TransactionHistoryWindowState> *>(user_data);
+                       if (state_holder && *state_holder) {
+                         history_sync_all_actions_check(*state_holder);
+                       }
+                     }),
+                     state_holder);
+  }
 
   g_signal_connect(goto_button,
                    "clicked",

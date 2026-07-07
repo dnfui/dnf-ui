@@ -239,8 +239,8 @@ struct TransactionHistoryFilter {
   std::string detail_text;
   int64_t from = 0;
   int64_t to = std::numeric_limits<int64_t>::max();
-  bool action_enabled = false;
-  TransactionHistoryAction action = TransactionHistoryAction::OTHER;
+  bool action_filter_enabled = false;
+  std::set<TransactionHistoryAction> actions;
   TransactionHistoryResultFilter result = TransactionHistoryResultFilter::ALL;
 };
 
