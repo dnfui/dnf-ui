@@ -20,6 +20,7 @@
 namespace {
 
 constexpr size_t kHistoryPackageRowsPerPage = 100;
+constexpr int kHistoryMaxSelectablePage = 1000000;
 
 struct TransactionHistoryWindowState {
   GtkWindow *window = nullptr;
@@ -150,6 +151,30 @@ size_t
 history_page_for_cursor(TransactionHistoryCursor cursor)
 {
   return cursor.page(kHistoryPackageRowsPerPage);
+}
+
+// -----------------------------------------------------------------------------
+// Read the requested page without using GTK's int conversion path.
+// Very large typed values are clamped instead of rolling over.
+// -----------------------------------------------------------------------------
+size_t
+history_requested_page_from_spin_button(GtkSpinButton *spin_button)
+{
+  if (!spin_button) {
+    return 1;
+  }
+
+  gtk_spin_button_update(spin_button);
+
+  double requested_page = gtk_spin_button_get_value(spin_button);
+  if (requested_page < 1.0) {
+    requested_page = 1.0;
+  } else if (requested_page > kHistoryMaxSelectablePage) {
+    requested_page = kHistoryMaxSelectablePage;
+  }
+  gtk_spin_button_set_value(spin_button, requested_page);
+
+  return static_cast<size_t>(requested_page);
 }
 
 // -----------------------------------------------------------------------------
@@ -813,7 +838,7 @@ transaction_history_show_window(GtkWindow *parent)
   GtkWidget *page_label = gtk_label_new(_("Page"));
   gtk_box_append(GTK_BOX(navigation_row), page_label);
 
-  GtkAdjustment *page_adjustment = gtk_adjustment_new(1, 1, G_MAXINT, 1, 10, 0);
+  GtkAdjustment *page_adjustment = gtk_adjustment_new(1, 1, kHistoryMaxSelectablePage, 1, 10, 0);
   GtkWidget *page_spin_button = gtk_spin_button_new(page_adjustment, 1, 0);
   gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(page_spin_button), TRUE);
   gtk_widget_set_size_request(page_spin_button, 80, -1);
@@ -886,11 +911,8 @@ transaction_history_show_window(GtkWindow *parent)
                        return;
                      }
 
-                     int page = gtk_spin_button_get_value_as_int((*state_holder)->page_spin_button);
-                     if (page < 1) {
-                       page = 1;
-                     }
-                     history_load_applied_filter_page(*state_holder, static_cast<size_t>(page));
+                     size_t page = history_requested_page_from_spin_button((*state_holder)->page_spin_button);
+                     history_load_applied_filter_page(*state_holder, page);
                    }),
                    state_holder);
 
