@@ -67,6 +67,8 @@ There are other applications for this like [GNOME Software](https://apps.gnome.o
 - Apply transactions through DNF5 dnf5daemon with Polkit authorization
 - Cancel long-running package queries
 - Search history
+- Export the visible package list as CSV
+- Browse read-only DNF transaction history
 
 The main browse and search views keep one visible row per package name and
 architecture. Repo candidates stay visible as usual, and locally installed RPMs
