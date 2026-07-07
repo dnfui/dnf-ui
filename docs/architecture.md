@@ -62,7 +62,8 @@ DNF UI deliberately uses two package-management paths.
 
 libdnf5 is used for package views. It is fast, runs in the unprivileged GUI
 process, and gives the app the package details needed for the table, search,
-installed packages, files, dependencies, and changelog text.
+installed packages, files, dependencies, changelog text, and read-only
+transaction history.
 
 dnf5daemon is used for transaction decisions and package changes. It is the
 service that resolves previews, applies transactions, handles Polkit
@@ -114,6 +115,7 @@ The `src/ui` directory is split by UI concern: `window`, `package_query`,
 - [src/ui/common/widgets.cpp](../src/ui/common/widgets.cpp) handles task helpers shared by controllers.
 - [src/ui/refresh/repository_refresh_controller.cpp](../src/ui/refresh/repository_refresh_controller.cpp) handles manual repository refresh.
 - [src/ui/window/main_menu.cpp](../src/ui/window/main_menu.cpp) handles top menu actions.
+- [src/ui/history/transaction_history_view.cpp](../src/ui/history/transaction_history_view.cpp) shows read-only transaction history.
 - [src/ui/package_query/package_query_controller.cpp](../src/ui/package_query/package_query_controller.cpp) handles the public search, list, history, clear, and reload callbacks.
 - [src/ui/package_query/package_query_controls.cpp](../src/ui/package_query/package_query_controls.cpp) handles active package-query request state, Stop button handling, cancellation, and refresh completion.
 - [src/ui/package_query/package_query_tasks.cpp](../src/ui/package_query/package_query_tasks.cpp) contains package-query worker tasks and completion handlers.
@@ -152,6 +154,7 @@ The backend implementation is split by responsibility:
 - [src/dnf_backend/base_manager.cpp](../src/dnf_backend/base_manager.cpp) manages the shared libdnf5 `Base`.
 - [src/dnf_backend/dnf_query.cpp](../src/dnf_backend/dnf_query.cpp) builds package rows for search, browse, and installed-list views.
 - [src/dnf_backend/dnf_details.cpp](../src/dnf_backend/dnf_details.cpp) formats package details, files, dependencies, and changelog text.
+- [src/dnf_backend/dnf_history.cpp](../src/dnf_backend/dnf_history.cpp) reads read-only transaction history.
 - [src/dnf_backend/dnf_state.cpp](../src/dnf_backend/dnf_state.cpp) keeps installed-package snapshot state and package status classification.
 
 Most query and details calls take serialized read access to the shared Base.

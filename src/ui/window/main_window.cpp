@@ -7,6 +7,7 @@
 
 #include "config.hpp"
 #include "i18n.hpp"
+#include "ui/history/transaction_history_view.hpp"
 #include "ui/window/main_menu.hpp"
 #include "ui/window/main_window_layout.hpp"
 #include "ui/details/package_details_controller.hpp"
@@ -157,6 +158,17 @@ setup_shortcuts(GtkWidget *window, GtkWidget *entry)
                                                      NULL,
                                                      NULL));
   gtk_shortcut_controller_add_shortcut(GTK_SHORTCUT_CONTROLLER(shortcuts), toggle_history);
+
+  // Open Transaction History with Ctrl+Shift+H.
+  GtkShortcut *transaction_history = gtk_shortcut_new(
+      gtk_keyval_trigger_new(GDK_KEY_H, static_cast<GdkModifierType>(GDK_CONTROL_MASK | GDK_SHIFT_MASK)),
+      gtk_callback_action_new(
+          +[](GtkWidget *widget, GVariant *, gpointer) -> gboolean {
+            return gtk_widget_activate_action(widget, "win.transaction-history", NULL);
+          },
+          NULL,
+          NULL));
+  gtk_shortcut_controller_add_shortcut(GTK_SHORTCUT_CONTROLLER(shortcuts), transaction_history);
 }
 
 // -----------------------------------------------------------------------------
@@ -240,6 +252,37 @@ setup_css(MainWindowUiState *widgets)
                                     "} "
                                     ".history-list { "
                                     "  background: transparent; "
+                                    "} "
+                                    ".transaction-history-row { "
+                                    "  padding-left: 8px; "
+                                    "  border-left: 3px solid transparent; "
+                                    "} "
+                                    ".transaction-history-install { "
+                                    "  border-left-color: #2a7b43; "
+                                    "} "
+                                    ".transaction-history-upgrade { "
+                                    "  border-left-color: #1c71d8; "
+                                    "} "
+                                    ".transaction-history-downgrade { "
+                                    "  border-left-color: #986a00; "
+                                    "} "
+                                    ".transaction-history-reinstall { "
+                                    "  border-left-color: #8f6500; "
+                                    "} "
+                                    ".transaction-history-remove { "
+                                    "  border-left-color: #c01c28; "
+                                    "} "
+                                    ".transaction-history-replaced { "
+                                    "  border-left-color: #6f8396; "
+                                    "} "
+                                    ".transaction-history-reason { "
+                                    "  border-left-color: #7a5fa5; "
+                                    "} "
+                                    ".transaction-history-other { "
+                                    "  border-left-color: #7d7d7d; "
+                                    "} "
+                                    ".transaction-history-failed { "
+                                    "  background-color: rgba(192, 28, 40, 0.06); "
                                     "} "
                                     ".bottom-bar { "
                                     "  padding: 6px; "
@@ -575,6 +618,7 @@ connect_cleanup(GtkWidget *window, std::shared_ptr<MainWindowUiState> widgets, G
                        return;
                      }
                      widgets->window_state.destroyed = true;
+                     transaction_history_close_window();
                      if (widgets->window_state.backend_warmup_cancellable) {
                        g_cancellable_cancel(widgets->window_state.backend_warmup_cancellable);
                        g_object_unref(widgets->window_state.backend_warmup_cancellable);

@@ -6,6 +6,7 @@
 #include "ui/window/main_menu.hpp"
 
 #include "i18n.hpp"
+#include "ui/history/transaction_history_view.hpp"
 #include "ui/package_query/package_query_controller.hpp"
 #include "ui/package_table/package_table_columns.hpp"
 #include "ui/package_table/package_table_export.hpp"
@@ -133,6 +134,20 @@ on_menu_quit(GSimpleAction *, GVariant *, gpointer user_data)
   }
 
   gtk_window_close(GTK_WINDOW(data->window));
+}
+
+// -----------------------------------------------------------------------------
+// Show the read-only transaction history window.
+// -----------------------------------------------------------------------------
+static void
+on_menu_transaction_history(GSimpleAction *, GVariant *, gpointer user_data)
+{
+  MainMenuActionData *data = static_cast<MainMenuActionData *>(user_data);
+  if (!data || !data->window) {
+    return;
+  }
+
+  transaction_history_show_window(GTK_WINDOW(data->window));
 }
 
 // -----------------------------------------------------------------------------
@@ -278,6 +293,7 @@ main_menu_create()
   GMenu *package_menu = g_menu_new();
   g_menu_append(package_menu, _("Clear List"), "win.clear-list");
   g_menu_append(package_menu, _("Clear Search Cache"), "win.clear-cache");
+  g_menu_append(package_menu, _("Transaction History..."), "win.transaction-history");
   g_menu_append_submenu(menu_bar, _("Package"), G_MENU_MODEL(package_menu));
   g_object_unref(package_menu);
 
@@ -308,7 +324,7 @@ main_menu_connect_actions(const MainMenuWidgets &menu_widgets, MainWindowUiState
         delete static_cast<MainMenuActionData *>(p);
       });
 
-  GActionEntry entries[8] = {};
+  GActionEntry entries[9] = {};
   entries[0].name = "quit";
   entries[0].activate = on_menu_quit;
   entries[1].name = "clear-list";
@@ -327,6 +343,8 @@ main_menu_connect_actions(const MainMenuWidgets &menu_widgets, MainWindowUiState
   entries[6].activate = on_menu_restore_default_columns;
   entries[7].name = "export-package-list";
   entries[7].activate = on_menu_export_package_list;
+  entries[8].name = "transaction-history";
+  entries[8].activate = on_menu_transaction_history;
 
   GSimpleActionGroup *actions = g_simple_action_group_new();
   g_action_map_add_action_entries(G_ACTION_MAP(actions), entries, G_N_ELEMENTS(entries), data);

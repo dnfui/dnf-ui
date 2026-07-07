@@ -99,6 +99,7 @@ msgid ""
 "Ctrl+L: Clear package list\n"
 "Ctrl+E: Export package list\n"
 "Ctrl+H: Toggle history panel\n"
+"Ctrl+Shift+H: Open transaction history\n"
 "Ctrl+I: Toggle package info panel\n"
 "Ctrl+Q or Ctrl+W: Quit"
 msgstr ""
@@ -107,6 +108,7 @@ msgstr ""
 "Ctrl+L: Rensa paketlista\n"
 "Ctrl+E: Exportera paketlista\n"
 "Ctrl+H: Växla historikpanel\n"
+"Ctrl+Skift+H: Öppna transaktionshistorik\n"
 "Ctrl+I: Växla paketinfopanel\n"
 "Ctrl+Q eller Ctrl+W: Avsluta"
 
@@ -295,6 +297,127 @@ msgstr "Rensa lista"
 
 msgid "Clear Search Cache"
 msgstr "Rensa sökcache"
+
+msgid "Transaction History..."
+msgstr "Transaktionshistorik..."
+
+msgid "Transaction History"
+msgstr "Transaktionshistorik"
+
+msgid "Package name..."
+msgstr "Paketnamn..."
+
+msgid "Command, repository, or architecture..."
+msgstr "Kommando, förråd eller arkitektur..."
+
+msgid "All actions"
+msgstr "Alla åtgärder"
+
+msgid "No actions"
+msgstr "Inga åtgärder"
+
+msgid "%zu actions"
+msgstr "%zu åtgärder"
+
+msgid "All results"
+msgstr "Alla resultat"
+
+msgid "From date YYYY-MM-DD"
+msgstr "Från datum ÅÅÅÅ-MM-DD"
+
+msgid "To date YYYY-MM-DD"
+msgstr "Till datum ÅÅÅÅ-MM-DD"
+
+msgid "Loading transaction history..."
+msgstr "Läser in transaktionshistorik..."
+
+msgid "Page"
+msgstr "Sida"
+
+msgid "Go"
+msgstr "Gå"
+
+msgid "Newer"
+msgstr "Nyare"
+
+msgid "Older"
+msgstr "Äldre"
+
+msgid "Use Older to show more history."
+msgstr "Använd Äldre för att visa mer historik."
+
+msgid "No transaction history rows match the filter."
+msgstr "Inga transaktionshistorikrader matchar filtret."
+
+msgid "No transaction history rows were found on this page."
+msgstr "Inga transaktionshistorikrader hittades på den här sidan."
+
+msgid "No transaction history was found."
+msgstr "Ingen transaktionshistorik hittades."
+
+#, c-format
+msgid "Showing %zu package change."
+msgid_plural "Showing %zu package changes."
+msgstr[0] "Visar %zu paketändring."
+msgstr[1] "Visar %zu paketändringar."
+
+#, c-format
+msgid "Page %zu."
+msgstr "Sida %zu."
+
+msgid "Dates must use YYYY-MM-DD."
+msgstr "Datum måste använda ÅÅÅÅ-MM-DD."
+
+msgid "The start date must be before the end date."
+msgstr "Startdatum måste vara före slutdatum."
+
+msgid "History load was cancelled."
+msgstr "Historikinläsningen avbröts."
+
+msgid "Failed to load transaction history."
+msgstr "Kunde inte läsa in transaktionshistorik."
+
+msgid "Unknown time"
+msgstr "Okänd tid"
+
+msgid "Transaction"
+msgstr "Transaktion"
+
+msgid "Result"
+msgstr "Resultat"
+
+msgid "OK"
+msgstr "OK"
+
+msgid "Failed"
+msgstr "Misslyckades"
+
+msgid "Command"
+msgstr "Kommando"
+
+msgid "Install"
+msgstr "Installera"
+
+msgid "Upgrade"
+msgstr "Uppgradera"
+
+msgid "Downgrade"
+msgstr "Nedgradera"
+
+msgid "Reinstall"
+msgstr "Installera om"
+
+msgid "Remove"
+msgstr "Ta bort"
+
+msgid "Replaced"
+msgstr "Ersattes"
+
+msgid "Reason changed"
+msgstr "Orsak ändrades"
+
+msgid "Other"
+msgstr "Annat"
 
 msgid "Stop"
 msgstr "Stoppa"

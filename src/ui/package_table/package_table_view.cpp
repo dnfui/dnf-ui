@@ -117,6 +117,7 @@ create_empty_package_view(PackageTableEmptyState state)
                                          "Ctrl+L: Clear package list\n"
                                          "Ctrl+E: Export package list\n"
                                          "Ctrl+H: Toggle history panel\n"
+                                         "Ctrl+Shift+H: Open transaction history\n"
                                          "Ctrl+I: Toggle package info panel\n"
                                          "Ctrl+Q or Ctrl+W: Quit"));
   gtk_label_set_xalign(GTK_LABEL(shortcuts), 0.0f);

@@ -11,6 +11,8 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
+#include <limits>
 #include <set>
 #include <string>
 #include <vector>
@@ -152,6 +154,116 @@ struct TransactionPreview {
         replaced.empty();
   }
 };
+
+// -----------------------------------------------------------------------------
+// Read-only transaction history model.
+// The UI uses this to inspect past package changes without depending on
+// libdnf5 transaction classes.
+// -----------------------------------------------------------------------------
+enum class TransactionHistoryAction {
+  INSTALL,
+  UPGRADE,
+  DOWNGRADE,
+  REINSTALL,
+  REMOVE,
+  REPLACED,
+  REASON_CHANGE,
+  OTHER,
+};
+
+struct TransactionHistoryPackageRow {
+  int64_t transaction_id = 0;
+  int64_t started_at = 0;
+  int64_t ended_at = 0;
+  bool succeeded = false;
+  TransactionHistoryAction action = TransactionHistoryAction::OTHER;
+  std::string package_id;
+  std::string name;
+  std::string epoch;
+  std::string version;
+  std::string release;
+  std::string arch;
+  std::string repo;
+  std::string description;
+
+  // -----------------------------------------------------------------------------
+  // Return the user-visible version and release string.
+  // -----------------------------------------------------------------------------
+  std::string display_version() const
+  {
+    if (version.empty()) {
+      return release;
+    }
+    if (release.empty()) {
+      return version;
+    }
+    return version + "-" + release;
+  }
+};
+
+struct TransactionHistoryCursor {
+  size_t row_offset = 0;
+
+  // -----------------------------------------------------------------------------
+  // Return the cursor for one one-based page number.
+  // -----------------------------------------------------------------------------
+  static TransactionHistoryCursor for_page(size_t page, size_t rows_per_page)
+  {
+    TransactionHistoryCursor cursor;
+    if (page > 1 && rows_per_page > 0) {
+      cursor.row_offset = (page - 1) * rows_per_page;
+    }
+    return cursor;
+  }
+
+  // -----------------------------------------------------------------------------
+  // Return the one-based page number for this cursor.
+  // -----------------------------------------------------------------------------
+  size_t page(size_t rows_per_page) const
+  {
+    if (rows_per_page == 0) {
+      return 1;
+    }
+    return (row_offset / rows_per_page) + 1;
+  }
+};
+
+enum class TransactionHistoryResultFilter {
+  ALL,
+  OK,
+  FAILED,
+};
+
+struct TransactionHistoryFilter {
+  std::string package_text;
+  std::string detail_text;
+  int64_t from = 0;
+  int64_t to = std::numeric_limits<int64_t>::max();
+  bool action_filter_enabled = false;
+  std::set<TransactionHistoryAction> actions;
+  TransactionHistoryResultFilter result = TransactionHistoryResultFilter::ALL;
+};
+
+struct TransactionHistoryPage {
+  std::vector<TransactionHistoryPackageRow> rows;
+  TransactionHistoryCursor next_cursor;
+  bool has_more = false;
+};
+
+// -----------------------------------------------------------------------------
+// Convert one transaction history action to user-facing text.
+// -----------------------------------------------------------------------------
+std::string dnf_backend_transaction_history_action_to_string(TransactionHistoryAction action);
+
+// -----------------------------------------------------------------------------
+// Return one page of package changes from the libdnf5 transaction history database.
+// The cursor stores the first matching row offset for the requested page.
+// The backend stops after the requested page and one extra matching row.
+// -----------------------------------------------------------------------------
+TransactionHistoryPage dnf_backend_list_transaction_history_page(TransactionHistoryCursor cursor,
+                                                                 const TransactionHistoryFilter &filter,
+                                                                 size_t max_package_rows,
+                                                                 GCancellable *cancellable);
 
 // -----------------------------------------------------------------------------
 // Search flags used by backend search queries.

@@ -165,6 +165,30 @@ status text, tooltip text, and CSS classes separate from table construction.
 [src/ui/package_table/package_table_context_menu.cpp](../src/ui/package_table/package_table_context_menu.cpp)
 builds right-click actions for package rows.
 
+### Transaction history
+
+`Package -> Transaction History...` or Ctrl+Shift+H opens a read-only window
+backed by libdnf5 transaction history. It lists recent package changes and lets
+the user filter them by package, action, result, date range, repository,
+architecture, or command text.
+
+The history window lives in [src/ui/history/transaction_history_view.cpp](../src/ui/history/transaction_history_view.cpp).
+It loads history on a worker thread and displays value objects from the backend
+instead of libdnf5 objects. It shows 100 package changes per page and supports
+Newer, Older, and direct page navigation without creating an unbounded GTK list.
+The page control does not show a total page count, because that would require
+scanning the full matching history before the window can be used. Filters are
+applied by the backend before the page is returned, so a search looks through
+the available history instead of only the rows currently shown on screen. Filter
+changes are applied when the user presses Search or presses Enter in a filter
+entry. This avoids starting a backend history scan for every typed character.
+The action filter uses checkboxes so the user can include one action, several
+actions, or all actions in the same history search.
+When the history window is focused, Ctrl+F focuses the package filter and Ctrl+W closes the window.
+The navigation row shows how long the last completed history search or page load took.
+The feature is intentionally read-only. It does not offer rollback, replay, or
+undo actions.
+
 ### Pending transaction controller
 
 [src/ui/transaction/pending_transaction_controller.cpp](../src/ui/transaction/pending_transaction_controller.cpp)
