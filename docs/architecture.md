@@ -161,6 +161,8 @@ Most query and details calls take serialized read access to the shared Base.
 That access is exclusive inside `BaseManager` because read-only `PackageQuery`
 work can still touch shared libdnf5 `Base` internals. Transaction preview and
 apply work goes through dnf5daemon instead of a local libdnf transaction path.
+Transaction history uses a private system-only Base so long history scans do not
+hold the shared BaseManager lock while package searches are running.
 
 The shared Base does not request changelog `other` metadata. Changelog details
 read installed packages from the shared Base because rpmdb changelog metadata

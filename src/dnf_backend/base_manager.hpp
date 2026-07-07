@@ -122,6 +122,10 @@ class BaseManager {
   // Return serialized access to a temporary Base that reads only the local rpmdb.
   // -----------------------------------------------------------------------------
   TemporaryBaseRead acquire_system_only_read();
+  // -----------------------------------------------------------------------------
+  // Build a private Base for long read-only history scans.
+  // -----------------------------------------------------------------------------
+  std::shared_ptr<libdnf5::Base> build_transaction_history_base();
 
   // -----------------------------------------------------------------------------
   // Return the current Base generation counter.

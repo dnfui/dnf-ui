@@ -579,6 +579,28 @@ BaseManager::acquire_system_only_read()
 }
 
 // -----------------------------------------------------------------------------
+// Build a private Base for long read-only history scans.
+// The shared lock protects Base construction and destruction, but not the scan.
+// This keeps normal package queries from waiting behind a long history search.
+// -----------------------------------------------------------------------------
+std::shared_ptr<libdnf5::Base>
+BaseManager::build_transaction_history_base()
+{
+  std::unique_lock<std::shared_mutex> lock(base_mutex);
+  auto built_base = build_initialized_system_only_base();
+  if (!built_base) {
+    throw std::runtime_error("Transaction history backend initialization failed (Base is null).");
+  }
+
+  libdnf5::Base *raw_base = built_base.get();
+  return std::shared_ptr<libdnf5::Base>(raw_base, [this, base = std::move(built_base)](libdnf5::Base *) mutable {
+    std::unique_lock<std::shared_mutex> lock(base_mutex);
+    base.reset();
+    trim_free_heap();
+  });
+}
+
+// -----------------------------------------------------------------------------
 // Build a temporary Base that includes repository changelog metadata.
 // -----------------------------------------------------------------------------
 std::shared_ptr<libdnf5::Base>

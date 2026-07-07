@@ -233,8 +233,8 @@ dnf_backend_list_transaction_history_page(TransactionHistoryCursor cursor,
 {
   throw_if_history_cancelled(cancellable);
 
-  auto read = BaseManager::instance().acquire_system_only_read();
-  auto history = read.base->get_transaction_history();
+  auto base = BaseManager::instance().build_transaction_history_base();
+  auto history = base->get_transaction_history();
   TransactionHistoryFilter normalized_filter = normalize_history_filter(filter);
 
   std::vector<int64_t> transaction_ids = history->list_transaction_ids();
