@@ -1,5 +1,5 @@
 Name:           dnf-ui
-Version:        0.3.3
+Version:        0.3.4
 Release:        1%{?dist}
 Summary:        GTK frontend for DNF5
 
@@ -57,6 +57,11 @@ appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/com.fedora.dnfui
 %{_datadir}/metainfo/com.fedora.dnfui.metainfo.xml
 
 %changelog
+* Wed Jul 08 2026 ErikMN <erik@example.invalid> - 0.3.4-1
+- Keep transaction history scans from blocking normal package searches
+- Fix closing the transaction history browser while history is still loading
+- Keep the final transaction progress status visible after late progress updates
+
 * Tue Jul 07 2026 ErikMN <erik@example.invalid> - 0.3.3-1
 - Add read-only transaction history browser
 - Add transaction history filtering, paging, and keyboard shortcuts
