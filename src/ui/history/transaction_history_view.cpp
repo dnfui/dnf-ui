@@ -758,14 +758,16 @@ on_history_load_task(GTask *task, gpointer, gpointer, GCancellable *cancellable)
 void
 on_history_load_finished(GObject *, GAsyncResult *result, gpointer user_data)
 {
-  auto *task_user_data = static_cast<HistoryTaskUserData *>(user_data);
+  (void)user_data;
+
+  GTask *task = G_TASK(result);
+  auto *task_user_data = static_cast<HistoryTaskUserData *>(g_task_get_task_data(task));
   std::shared_ptr<TransactionHistoryWindowState> state = task_user_data ? task_user_data->state : nullptr;
   uint64_t load_id = task_user_data ? task_user_data->load_id : 0;
   TransactionHistoryCursor requested_cursor = task_user_data ? task_user_data->cursor : TransactionHistoryCursor {};
   TransactionHistoryFilter requested_filter = task_user_data ? task_user_data->filter : TransactionHistoryFilter {};
   gint64 started_at_us = task_user_data ? task_user_data->started_at_us : 0;
   std::string duration_title = task_user_data ? task_user_data->duration_title : "";
-  delete task_user_data;
 
   if (!state || state->destroyed || load_id != state->load_id) {
     return;
@@ -774,7 +776,6 @@ on_history_load_finished(GObject *, GAsyncResult *result, gpointer user_data)
   history_set_loading(state, false);
   history_show_duration_label(state, duration_title, started_at_us);
 
-  GTask *task = G_TASK(result);
   GError *error = nullptr;
   auto *page = static_cast<TransactionHistoryPage *>(g_task_propagate_pointer(task, &error));
 
@@ -842,8 +843,10 @@ history_start_load(const std::shared_ptr<TransactionHistoryWindowState> &state,
   auto *task_user_data = new HistoryTaskUserData {
     state, state->load_id, cursor, filter, g_get_monotonic_time(), duration_title ? duration_title : _("Page"),
   };
-  GTask *task = g_task_new(state->window, state->cancellable, on_history_load_finished, task_user_data);
-  g_task_set_task_data(task, task_user_data, nullptr);
+  // The task state already keeps the data needed by the worker.
+  // Do not keep the window alive while a cancelled history load finishes.
+  GTask *task = g_task_new(nullptr, state->cancellable, on_history_load_finished, nullptr);
+  g_task_set_task_data(task, task_user_data, [](gpointer p) { delete static_cast<HistoryTaskUserData *>(p); });
   g_task_run_in_thread(task, on_history_load_task);
   g_object_unref(task);
 }
