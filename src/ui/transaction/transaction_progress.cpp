@@ -68,7 +68,9 @@ append_progress_line_on_main(TransactionProgressWindow *progress, const char *me
     return;
   }
 
-  gtk_label_set_text(progress->stage_label, message);
+  if (!progress->finished) {
+    gtk_label_set_text(progress->stage_label, message);
+  }
 
   GtkTextIter end;
   gtk_text_buffer_get_end_iter(progress->buffer, &end);
