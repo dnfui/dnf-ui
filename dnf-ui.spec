@@ -22,10 +22,9 @@ BuildRequires:  pkgconfig(libdnf5)
 Requires:       dnf5daemon-server
 
 %description
-DNF UI is a graphical frontend for Fedora package management built with GTK 4
+DNF UI is a graphical frontend for DNF5 package management built with GTK 4
 and libdnf5. It supports browsing available and installed packages, reviewing
-transaction changes, and applying package transactions through Fedora
-dnf5daemon.
+transaction changes, and applying package transactions through dnf5daemon.
 
 %prep
 %autosetup -p1

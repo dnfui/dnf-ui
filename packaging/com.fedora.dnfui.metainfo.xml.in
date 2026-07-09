@@ -4,15 +4,15 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>MIT</project_license>
   <name>DNF UI</name>
-  <summary>Graphical package manager frontend for Fedora</summary>
-  <developer id="com.fedora">
+  <summary>Graphical package manager frontend for DNF5</summary>
+  <developer id="io.github.erikmn">
     <name>ErikMN</name>
   </developer>
   <url type="homepage">https://github.com/ErikMN/dnf-ui</url>
   <launchable type="desktop-id">com.fedora.dnfui.desktop</launchable>
   <description>
     <p>
-      DNF UI is a GTK frontend for Fedora package management built on libdnf5.
+      DNF UI is a GTK frontend for DNF5 package management built on libdnf5.
       It focuses on fast package browsing, clear transaction review, and a
       dependable native desktop workflow.
     </p>

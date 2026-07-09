@@ -15,8 +15,8 @@ msgstr ""
 msgid "Browse packages and apply DNF transactions"
 msgstr "Bläddra bland paket och verkställ DNF-transaktioner"
 
-msgid "Graphical package manager frontend for Fedora"
-msgstr "Grafiskt gränssnitt för Fedors pakethanterare"
+msgid "Graphical package manager frontend for DNF5"
+msgstr "Grafiskt gränssnitt för DNF5-pakethantering"
 
 msgid "Search"
 msgstr "Sök"
@@ -1063,8 +1063,8 @@ msgstr "Kunde inte stänga dnf5daemon-sessionen."
 msgid "Search cache cleared."
 msgstr "Sökcache rensades."
 
-msgid "Graphical package manager frontend for Fedora."
-msgstr "Grafiskt gränssnitt för Fedors pakethanterare."
+msgid "Graphical package manager frontend for DNF5."
+msgstr "Grafiskt gränssnitt för DNF5-pakethantering."
 
 msgid "GitHub repository"
 msgstr "GitHub-förråd"

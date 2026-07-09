@@ -8,4 +8,4 @@ Terminal=false
 StartupNotify=true
 StartupWMClass=com.fedora.dnfui
 Categories=Settings;PackageManager;GTK;
-Keywords=dnf;packages;rpm;fedora;updates;
+Keywords=dnf;dnf5;packages;rpm;fedora;updates;

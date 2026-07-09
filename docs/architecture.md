@@ -13,7 +13,7 @@ Use it as the first map when reading the code. The deeper documents are:
 
 ## Purpose
 
-DNF UI is a GTK 4 package manager frontend for Fedora.
+DNF UI is a GTK 4 package manager frontend for DNF5 systems.
 
 The main application stays unprivileged. It searches packages, shows package
 details, lets the user mark package actions, and shows a review step. Package
@@ -23,7 +23,7 @@ and Polkit behavior.
 ## Key terms
 
 - GTK is the user interface toolkit used to build the window.
-- libdnf5 is the Fedora package management library used for package queries and details.
+- libdnf5 is the DNF5 package management library used for package queries and details.
 - Base is the libdnf5 object that holds loaded repository and installed package
   state.
 - rpmdb is the local database of packages installed on the system.

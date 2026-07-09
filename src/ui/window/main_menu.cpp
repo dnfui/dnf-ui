@@ -172,7 +172,7 @@ on_menu_about(GSimpleAction *, GVariant *, gpointer user_data)
                         "version",
                         DNFUI_VERSION,
                         "comments",
-                        _("Graphical package manager frontend for Fedora."),
+                        _("Graphical package manager frontend for DNF5."),
                         "website",
                         "https://github.com/ErikMN/dnf-ui",
                         "website-label",
