@@ -5,10 +5,10 @@
   <project_license>MIT</project_license>
   <name>DNF UI</name>
   <summary>Graphical package manager frontend for DNF5</summary>
-  <developer id="io.github.erikmn">
-    <name>ErikMN</name>
+  <developer id="io.github.dnfui">
+    <name>DNF UI contributors</name>
   </developer>
-  <url type="homepage">https://github.com/ErikMN/dnf-ui</url>
+  <url type="homepage">https://github.com/dnfui/dnf-ui</url>
   <launchable type="desktop-id">com.fedora.dnfui.desktop</launchable>
   <description>
     <p>

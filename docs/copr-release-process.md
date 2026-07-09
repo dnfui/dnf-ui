@@ -308,7 +308,7 @@ Add a new changelog entry at the top of the changelog:
 
 ```spec
 %changelog
-* <rpm-date> ErikMN <erik@example.invalid> - <new-version>-1
+* <rpm-date> ErikMN <dnfui@proton.me> - <new-version>-1
 - Short description of what changed
 ```
 
@@ -356,7 +356,7 @@ Add a changelog entry:
 
 ```spec
 %changelog
-* <rpm-date> ErikMN <erik@example.invalid> - <current-version>-2
+* <rpm-date> ErikMN <dnfui@proton.me> - <current-version>-2
 - Fix packaging issue
 ```
 

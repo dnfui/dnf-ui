@@ -162,7 +162,7 @@ on_menu_about(GSimpleAction *, GVariant *, gpointer user_data)
   }
 
   const char *authors[] = {
-    "ErikMN",
+    "DNF UI contributors",
     nullptr,
   };
 
@@ -174,7 +174,7 @@ on_menu_about(GSimpleAction *, GVariant *, gpointer user_data)
                         "comments",
                         _("Graphical package manager frontend for DNF5."),
                         "website",
-                        "https://github.com/ErikMN/dnf-ui",
+                        "https://github.com/dnfui/dnf-ui",
                         "website-label",
                         _("GitHub repository"),
                         "authors",
