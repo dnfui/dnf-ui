@@ -1,5 +1,5 @@
 Name:           dnf-ui
-Version:        0.3.4
+Version:        0.3.5
 Release:        1%{?dist}
 Summary:        GTK frontend for DNF5
 
@@ -56,6 +56,11 @@ appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/io.github.dnfui.
 %{_datadir}/metainfo/io.github.dnfui.dnfui.metainfo.xml
 
 %changelog
+* Thu Jul 09 2026 ErikMN <dnfui@proton.me> - 0.3.5-1
+- Change the desktop application ID to io.github.dnfui.dnfui
+- Update desktop, AppStream, icon, RPM, and CI packaging paths for the new ID
+- Serialize temporary changelog Base lifetime through BaseManager
+
 * Wed Jul 08 2026 ErikMN <dnfui@proton.me> - 0.3.4-1
 - Keep transaction history scans from blocking normal package searches
 - Fix closing the transaction history browser while history is still loading
