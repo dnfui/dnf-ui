@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>com.fedora.dnfui</id>
+  <id>io.github.dnfui.dnfui</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>MIT</project_license>
   <name>DNF UI</name>
@@ -9,7 +9,7 @@
     <name>DNF UI contributors</name>
   </developer>
   <url type="homepage">https://github.com/dnfui/dnf-ui</url>
-  <launchable type="desktop-id">com.fedora.dnfui.desktop</launchable>
+  <launchable type="desktop-id">io.github.dnfui.dnfui.desktop</launchable>
   <description>
     <p>
       DNF UI is a GTK frontend for DNF5 package management built on libdnf5.

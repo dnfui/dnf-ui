@@ -38,22 +38,22 @@ transaction changes, and applying package transactions through dnf5daemon.
 %find_lang %{name}
 
 %check
-desktop-file-validate %{buildroot}%{_datadir}/applications/com.fedora.dnfui.desktop
-appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/com.fedora.dnfui.metainfo.xml
+desktop-file-validate %{buildroot}%{_datadir}/applications/io.github.dnfui.dnfui.desktop
+appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/io.github.dnfui.dnfui.metainfo.xml
 %meson_test
 
 %files -f %{name}.lang
 %license LICENSE
 %doc README.md
 %{_bindir}/dnfui
-%{_datadir}/applications/com.fedora.dnfui.desktop
-%{_datadir}/icons/hicolor/48x48/apps/com.fedora.dnfui.png
-%{_datadir}/icons/hicolor/64x64/apps/com.fedora.dnfui.png
-%{_datadir}/icons/hicolor/128x128/apps/com.fedora.dnfui.png
-%{_datadir}/icons/hicolor/256x256/apps/com.fedora.dnfui.png
-%{_datadir}/icons/hicolor/512x512/apps/com.fedora.dnfui.png
-%{_datadir}/icons/hicolor/1024x1024/apps/com.fedora.dnfui.png
-%{_datadir}/metainfo/com.fedora.dnfui.metainfo.xml
+%{_datadir}/applications/io.github.dnfui.dnfui.desktop
+%{_datadir}/icons/hicolor/48x48/apps/io.github.dnfui.dnfui.png
+%{_datadir}/icons/hicolor/64x64/apps/io.github.dnfui.dnfui.png
+%{_datadir}/icons/hicolor/128x128/apps/io.github.dnfui.dnfui.png
+%{_datadir}/icons/hicolor/256x256/apps/io.github.dnfui.dnfui.png
+%{_datadir}/icons/hicolor/512x512/apps/io.github.dnfui.dnfui.png
+%{_datadir}/icons/hicolor/1024x1024/apps/io.github.dnfui.dnfui.png
+%{_datadir}/metainfo/io.github.dnfui.dnfui.metainfo.xml
 
 %changelog
 * Wed Jul 08 2026 ErikMN <dnfui@proton.me> - 0.3.4-1

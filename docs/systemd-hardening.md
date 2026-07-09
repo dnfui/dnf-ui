@@ -30,12 +30,12 @@ DNF UI does not install:
 When reviewing the package, verify that the RPM requires `dnf5daemon-server` and
 does not install old DNF UI service files.
 
-The files that should not be installed are:
+The package should not install any old DNF UI transaction service files, such as:
 
 - `dnfui-service`
-- `com.fedora.Dnfui.Transaction1.service`
-- `com.fedora.Dnfui.Transaction1.conf`
-- `com.fedora.dnfui.policy`
+- custom D-Bus service files
+- custom D-Bus policy files
+- custom Polkit policy files
 - `dnfui-service.service`
 
 System hardening for package apply work should be reviewed in DNF5's

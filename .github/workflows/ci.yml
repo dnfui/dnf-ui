@@ -52,8 +52,8 @@ jobs:
                 --libexecdir libexec \
                 -Dbuild_tests=true
               meson compile -C build/ci
-              desktop-file-validate build/ci/packaging/com.fedora.dnfui.desktop
-              appstreamcli validate --no-net build/ci/packaging/com.fedora.dnfui.metainfo.xml
+              desktop-file-validate build/ci/packaging/io.github.dnfui.dnfui.desktop
+              appstreamcli validate --no-net build/ci/packaging/io.github.dnfui.dnfui.metainfo.xml
               meson test -C build/ci --print-errorlogs
 
               meson setup build/final \

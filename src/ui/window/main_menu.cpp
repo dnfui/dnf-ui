@@ -180,7 +180,7 @@ on_menu_about(GSimpleAction *, GVariant *, gpointer user_data)
                         "authors",
                         authors,
                         "logo-icon-name",
-                        "com.fedora.dnfui",
+                        "io.github.dnfui.dnfui",
                         "license-type",
                         GTK_LICENSE_MIT_X11,
                         nullptr);

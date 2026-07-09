@@ -1,5 +1,5 @@
-packaging/com.fedora.dnfui.desktop.in
-packaging/com.fedora.dnfui.metainfo.xml.in
+packaging/io.github.dnfui.dnfui.desktop.in
+packaging/io.github.dnfui.dnfui.metainfo.xml.in
 src/app.cpp
 src/i18n.cpp
 src/main.cpp

@@ -1,8 +1,8 @@
 i18n = import('i18n')
 
 i18n.merge_file(
-  input: 'com.fedora.dnfui.desktop.in',
-  output: 'com.fedora.dnfui.desktop',
+  input: 'io.github.dnfui.dnfui.desktop.in',
+  output: 'io.github.dnfui.dnfui.desktop',
   type: 'desktop',
   po_dir: '../po',
   install: true,
@@ -11,8 +11,8 @@ i18n.merge_file(
 )
 
 i18n.merge_file(
-  input: 'com.fedora.dnfui.metainfo.xml.in',
-  output: 'com.fedora.dnfui.metainfo.xml',
+  input: 'io.github.dnfui.dnfui.metainfo.xml.in',
+  output: 'io.github.dnfui.dnfui.metainfo.xml',
   type: 'xml',
   po_dir: '../po',
   install: true,
@@ -26,7 +26,7 @@ foreach app_icon_size : app_icon_sizes
   app_icon_size_dir = app_icon_size + 'x' + app_icon_size
 
   install_data(
-    join_paths('icons', 'hicolor', app_icon_size_dir, 'apps', 'com.fedora.dnfui.png'),
+    join_paths('icons', 'hicolor', app_icon_size_dir, 'apps', 'io.github.dnfui.dnfui.png'),
     install_dir: join_paths(app_icon_root_dir, app_icon_size_dir, 'apps'),
     install_tag: 'runtime',
   )
