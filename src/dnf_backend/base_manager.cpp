@@ -602,16 +602,23 @@ BaseManager::build_transaction_history_base()
 
 // -----------------------------------------------------------------------------
 // Build a temporary Base that includes repository changelog metadata.
+// Base construction and destruction stay serialized with other Base work.
 // -----------------------------------------------------------------------------
 std::shared_ptr<libdnf5::Base>
 BaseManager::build_changelog_base()
 {
+  std::unique_lock<std::shared_mutex> lock(base_mutex);
   BuiltBase built = build_base_with_offline_fallback(BaseRefreshMode::NORMAL, nullptr, {}, true);
   if (!built.base) {
     throw std::runtime_error("Changelog backend initialization failed (Base is null).");
   }
 
-  return built.base;
+  libdnf5::Base *raw_base = built.base.get();
+  return std::shared_ptr<libdnf5::Base>(raw_base, [this, built = std::move(built)](libdnf5::Base *) mutable {
+    std::unique_lock<std::shared_mutex> lock(base_mutex);
+    built.base.reset();
+    trim_free_heap();
+  });
 }
 
 // -----------------------------------------------------------------------------
