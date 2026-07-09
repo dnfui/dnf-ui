@@ -221,8 +221,6 @@ DNF UI requires Fedora `dnf5daemon-server` for package changes. It does not
 install its own transaction service, Polkit policy, D-Bus policy, or systemd
 unit for package apply work.
 
-The security boundary is described in [docs/systemd-hardening.md](systemd-hardening.md).
-
 Meson owns the real build and install rules. The `Makefile` is a task runner for
 common developer commands.
 
