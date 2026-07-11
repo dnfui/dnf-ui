@@ -125,7 +125,6 @@ transaction_progress_create_window(MainWindowUiState *widgets, size_t pending_co
   progress->window = GTK_WINDOW(gtk_window_new());
   gtk_window_set_title(progress->window, _("Transaction Progress"));
   gtk_window_set_default_size(progress->window, 760, 420);
-  gtk_window_set_modal(progress->window, TRUE);
 
   GtkRoot *root = gtk_widget_get_root(GTK_WIDGET(widgets->query.entry));
   if (root && GTK_IS_WINDOW(root)) {

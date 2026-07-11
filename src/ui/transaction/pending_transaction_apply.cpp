@@ -11,6 +11,7 @@
 #include "dnf_backend/dnf_backend.hpp"
 #include "i18n.hpp"
 #include "ui/details/package_details_controller.hpp"
+#include "ui/history/transaction_history_view.hpp"
 #include "ui/package_query/package_query_controller.hpp"
 #include "ui/transaction/pending_transaction_controller.hpp"
 #include "ui/transaction/pending_transaction_request.hpp"
@@ -62,6 +63,23 @@ apply_task_data_free(gpointer p)
   // separately until their GTK update has run.
   transaction_progress_release(d->progress_window);
   delete d;
+}
+
+// -----------------------------------------------------------------------------
+// Disable the main window while the daemon applies a transaction.
+// The progress window is not modal, so the history browser can still be closed.
+// -----------------------------------------------------------------------------
+static void
+set_main_window_sensitive_for_apply(MainWindowUiState *widgets, bool sensitive)
+{
+  if (!widgets || !widgets->query.entry) {
+    return;
+  }
+
+  GtkRoot *root = gtk_widget_get_root(GTK_WIDGET(widgets->query.entry));
+  if (root && GTK_IS_WINDOW(root)) {
+    gtk_widget_set_sensitive(GTK_WIDGET(root), sensitive);
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -275,6 +293,8 @@ start_apply_transaction(MainWindowUiState *widgets)
   }
 
   package_details_cancel_active_load(widgets);
+  transaction_history_set_transaction_busy(true);
+  set_main_window_sensitive_for_apply(widgets, false);
 
   widgets->transaction.apply_in_progress = true;
   pending_transaction_set_preview_controls_sensitive(widgets, false);
@@ -314,6 +334,8 @@ start_apply_transaction(MainWindowUiState *widgets)
         // Release this task's spinner slot.
         widgets_spinner_release(widgets->query.spinner);
         widgets->transaction.apply_in_progress = false;
+        transaction_history_set_transaction_busy(false);
+        set_main_window_sensitive_for_apply(widgets, true);
 
         transaction_progress_finish(td ? td->progress_window : nullptr, success, "");
 

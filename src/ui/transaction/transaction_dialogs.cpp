@@ -47,6 +47,23 @@ summary_dialog_apply_data_free(gpointer p)
 }
 
 // -----------------------------------------------------------------------------
+// Disable the main window while the summary dialog owns the prepared preview.
+// Other windows, such as transaction history, should still be usable.
+// -----------------------------------------------------------------------------
+static void
+set_main_window_sensitive_for_summary(MainWindowUiState *widgets, bool sensitive)
+{
+  if (!widgets || !widgets->query.entry) {
+    return;
+  }
+
+  GtkRoot *root = gtk_widget_get_root(GTK_WIDGET(widgets->query.entry));
+  if (root && GTK_IS_WINDOW(root)) {
+    gtk_widget_set_sensitive(GTK_WIDGET(root), sensitive);
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Return repository key identities as text for the key import dialog.
 // -----------------------------------------------------------------------------
 static std::string
@@ -307,7 +324,6 @@ transaction_dialogs_show_summary_dialog(MainWindowUiState *widgets,
   GtkWindow *dialog = GTK_WINDOW(gtk_window_new());
   gtk_window_set_title(dialog, _("Summary"));
   gtk_window_set_default_size(dialog, 760, 520);
-  gtk_window_set_modal(dialog, TRUE);
 
   GtkRoot *root = gtk_widget_get_root(GTK_WIDGET(widgets->query.entry));
   if (root && GTK_IS_WINDOW(root)) {
@@ -409,6 +425,7 @@ transaction_dialogs_show_summary_dialog(MainWindowUiState *widgets,
   auto *apply_data = new SummaryDialogApplyData { widgets->shared_from_this(), on_apply, on_cancel, false };
 
   g_object_set_data_full(G_OBJECT(dialog), "summary-dialog-apply-data", apply_data, summary_dialog_apply_data_free);
+  set_main_window_sensitive_for_summary(widgets, false);
 
   g_signal_connect(cancel_button,
                    "clicked",
@@ -425,6 +442,9 @@ transaction_dialogs_show_summary_dialog(MainWindowUiState *widgets,
                    G_CALLBACK(+[](GtkWidget *widget, gpointer) {
                      SummaryDialogApplyData *data = static_cast<SummaryDialogApplyData *>(
                          g_object_get_data(G_OBJECT(widget), "summary-dialog-apply-data"));
+                     if (data && data->widgets && !data->widgets->window_state.destroyed) {
+                       set_main_window_sensitive_for_summary(data->widgets.get(), true);
+                     }
                      if (!data || data->apply_requested || !data->widgets || data->widgets->window_state.destroyed ||
                          !data->on_cancel) {
                        return;

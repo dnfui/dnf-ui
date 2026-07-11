@@ -66,6 +66,8 @@ struct TransactionHistoryWindowState {
   size_t current_page = 1;
   bool has_older_history = false;
   uint64_t load_id = 0;
+  bool loading = false;
+  bool transaction_busy = false;
   bool updating_action_checks = false;
   bool destroyed = false;
 };
@@ -88,6 +90,8 @@ void history_start_load(const std::shared_ptr<TransactionHistoryWindowState> &st
                         TransactionHistoryCursor cursor,
                         const TransactionHistoryFilter &filter,
                         const char *duration_title = nullptr);
+
+std::shared_ptr<TransactionHistoryWindowState> history_open_window_state();
 
 // -----------------------------------------------------------------------------
 // Setup shortcuts that are local to the transaction history window.
@@ -529,11 +533,20 @@ history_set_loading(const std::shared_ptr<TransactionHistoryWindowState> &state,
     return;
   }
 
-  gtk_widget_set_sensitive(GTK_WIDGET(state->search_button), !loading);
-  gtk_widget_set_sensitive(GTK_WIDGET(state->newer_button), !loading && state->current_page > 1);
-  gtk_widget_set_sensitive(GTK_WIDGET(state->older_button), !loading && state->has_older_history);
-  gtk_widget_set_sensitive(GTK_WIDGET(state->page_spin_button), !loading);
-  gtk_widget_set_sensitive(GTK_WIDGET(state->goto_button), !loading);
+  state->loading = loading;
+  bool controls_sensitive = !state->loading && !state->transaction_busy;
+
+  gtk_widget_set_sensitive(GTK_WIDGET(state->package_entry), controls_sensitive);
+  gtk_widget_set_sensitive(GTK_WIDGET(state->text_entry), controls_sensitive);
+  gtk_widget_set_sensitive(GTK_WIDGET(state->from_entry), controls_sensitive);
+  gtk_widget_set_sensitive(GTK_WIDGET(state->to_entry), controls_sensitive);
+  gtk_widget_set_sensitive(GTK_WIDGET(state->action_menu_button), controls_sensitive);
+  gtk_widget_set_sensitive(GTK_WIDGET(state->result_dropdown), controls_sensitive);
+  gtk_widget_set_sensitive(GTK_WIDGET(state->search_button), controls_sensitive);
+  gtk_widget_set_sensitive(GTK_WIDGET(state->newer_button), controls_sensitive && state->current_page > 1);
+  gtk_widget_set_sensitive(GTK_WIDGET(state->older_button), controls_sensitive && state->has_older_history);
+  gtk_widget_set_sensitive(GTK_WIDGET(state->page_spin_button), controls_sensitive);
+  gtk_widget_set_sensitive(GTK_WIDGET(state->goto_button), controls_sensitive);
 
   if (loading) {
     gtk_spinner_start(state->spinner);
@@ -874,6 +887,54 @@ on_history_window_destroy(GtkWidget *, gpointer user_data)
   }
 }
 
+// -----------------------------------------------------------------------------
+// Return the open history window state, if the history browser is open.
+// -----------------------------------------------------------------------------
+std::shared_ptr<TransactionHistoryWindowState>
+history_open_window_state()
+{
+  if (!g_transaction_history_window) {
+    return nullptr;
+  }
+
+  auto *state_holder = static_cast<std::shared_ptr<TransactionHistoryWindowState> *>(
+      g_object_get_data(G_OBJECT(g_transaction_history_window), "dnfui-transaction-history-state"));
+  if (!state_holder) {
+    return nullptr;
+  }
+
+  return *state_holder;
+}
+
+}
+
+// -----------------------------------------------------------------------------
+// Disable or restore the transaction history window while a package transaction runs.
+// -----------------------------------------------------------------------------
+void
+transaction_history_set_transaction_busy(bool busy)
+{
+  std::shared_ptr<TransactionHistoryWindowState> state = history_open_window_state();
+  if (!state || state->destroyed) {
+    return;
+  }
+
+  state->transaction_busy = busy;
+
+  if (busy) {
+    history_cancel_active_load(state);
+    ++state->load_id;
+    history_set_loading(state, false);
+    gtk_label_set_text(state->status_label, _("Transaction is running. History controls are disabled."));
+    return;
+  }
+
+  history_set_loading(state, false);
+  if (state->rows.empty()) {
+    gtk_label_set_text(state->status_label, _("Transaction finished. Press Search to refresh transaction history."));
+  } else {
+    history_render_rows(state);
+  }
 }
 
 // -----------------------------------------------------------------------------

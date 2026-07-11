@@ -17,5 +17,10 @@ void transaction_history_show_window(GtkWindow *parent);
 void transaction_history_close_window();
 
 // -----------------------------------------------------------------------------
+// Disable or restore the transaction history window while a package transaction runs.
+// -----------------------------------------------------------------------------
+void transaction_history_set_transaction_busy(bool busy);
+
+// -----------------------------------------------------------------------------
 // EOF
 // -----------------------------------------------------------------------------

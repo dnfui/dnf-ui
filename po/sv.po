@@ -377,6 +377,12 @@ msgstr "Historikinläsningen avbröts."
 msgid "Failed to load transaction history."
 msgstr "Kunde inte läsa in transaktionshistorik."
 
+msgid "Transaction is running. History controls are disabled."
+msgstr "En transaktion körs. Historikkontrollerna är inaktiverade."
+
+msgid "Transaction finished. Press Search to refresh transaction history."
+msgstr "Transaktionen är klar. Tryck på Sök för att uppdatera transaktionshistoriken."
+
 msgid "Unknown time"
 msgstr "Okänd tid"
 
