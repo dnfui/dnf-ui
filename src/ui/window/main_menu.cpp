@@ -162,28 +162,40 @@ on_menu_about(GSimpleAction *, GVariant *, gpointer user_data)
   }
 
   const char *authors[] = {
-    "DNF UI contributors",
+    "ErikMN",
     nullptr,
   };
 
-  gtk_show_about_dialog(GTK_WINDOW(data->window),
-                        "program-name",
-                        _("DNF UI"),
-                        "version",
-                        DNFUI_VERSION,
-                        "comments",
-                        _("Graphical package manager frontend for DNF5."),
-                        "website",
-                        "https://github.com/dnfui/dnf-ui",
-                        "website-label",
-                        _("GitHub repository"),
-                        "authors",
-                        authors,
-                        "logo-icon-name",
-                        "io.github.dnfui.dnfui",
-                        "license-type",
-                        GTK_LICENSE_MIT_X11,
-                        nullptr);
+  std::string issue_link = std::string(_("Report issues")) + " https://github.com/dnfui/dnf-ui/issues";
+  const char *support_links[] = {
+    issue_link.c_str(),
+    nullptr,
+  };
+
+  GtkWidget *dialog = gtk_about_dialog_new();
+  g_object_set(dialog,
+               "program-name",
+               _("DNF UI"),
+               "version",
+               DNFUI_VERSION,
+               "comments",
+               _("Graphical package manager frontend for DNF5."),
+               "website",
+               "https://github.com/dnfui/dnf-ui",
+               "website-label",
+               _("GitHub repository"),
+               "authors",
+               authors,
+               "logo-icon-name",
+               "io.github.dnfui.dnfui",
+               "license-type",
+               GTK_LICENSE_MIT_X11,
+               nullptr);
+  gtk_about_dialog_add_credit_section(GTK_ABOUT_DIALOG(dialog), _("Support"), support_links);
+  gtk_window_set_modal(GTK_WINDOW(dialog), TRUE);
+  gtk_window_set_transient_for(GTK_WINDOW(dialog), GTK_WINDOW(data->window));
+  gtk_window_set_destroy_with_parent(GTK_WINDOW(dialog), TRUE);
+  gtk_window_present(GTK_WINDOW(dialog));
 }
 
 // -----------------------------------------------------------------------------

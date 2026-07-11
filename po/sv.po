@@ -1075,5 +1075,11 @@ msgstr "Grafiskt gränssnitt för DNF5-pakethantering."
 msgid "GitHub repository"
 msgstr "GitHub-förråd"
 
+msgid "Report issues"
+msgstr "Rapportera problem"
+
+msgid "Support"
+msgstr "Support"
+
 msgid "Loading package data..."
 msgstr "Läser in paketdata..."
