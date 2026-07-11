@@ -557,6 +557,24 @@ msgstr "Paketinfo lästes in."
 msgid "Open the Changelog tab to load the changelog."
 msgstr "Öppna fliken Ändringslogg för att läsa in ändringsloggen."
 
+msgid "Open the Files tab to load the file list."
+msgstr "Öppna fliken Filer för att läsa in fillistan."
+
+msgid "Open the Dependencies tab to load dependencies."
+msgstr "Öppna fliken Beroenden för att läsa in beroenden."
+
+msgid "Fetching file list..."
+msgstr "Hämtar fillista..."
+
+msgid "Fetching dependencies..."
+msgstr "Hämtar beroenden..."
+
+msgid "Error loading file list."
+msgstr "Fel vid inläsning av fillista."
+
+msgid "Error loading dependencies."
+msgstr "Fel vid inläsning av beroenden."
+
 msgid "Fetching changelog..."
 msgstr "Hämtar ändringslogg..."
 
@@ -566,8 +584,8 @@ msgstr "Fel vid inläsning av ändringslogg."
 msgid "Error refreshing package."
 msgstr "Fel vid uppdatering av paket."
 
-msgid "Package info load was cancelled."
-msgstr "Inläsning av paketinfo avbröts."
+msgid "Package details load was cancelled."
+msgstr "Inläsning av paketdetaljer avbröts."
 
 msgid "No package selected."
 msgstr "Inget paket valt."

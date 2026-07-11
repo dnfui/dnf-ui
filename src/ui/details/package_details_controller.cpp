@@ -1,8 +1,8 @@
 // -----------------------------------------------------------------------------
 // src/ui/details/package_details_controller.cpp
 // Package selection and details panel controller
-// Handles package selection state, action-button sensitivity, and the async
-// package details load that updates the details panel.
+// Handles package selection, action-button sensitivity, and background loading
+// for the package details tabs.
 // -----------------------------------------------------------------------------
 #include "ui/details/package_details_controller.hpp"
 
@@ -16,7 +16,6 @@
 #include "ui/package_table/package_table_view.hpp"
 #include "ui/package_table/package_table_status.hpp"
 
-#include <cstring>
 #include <string>
 
 // Task data for one package details load.
@@ -28,19 +27,31 @@ struct InfoTaskData {
   uint64_t generation;
 };
 
-// Text payload returned by the background package details task.
-struct InfoTaskResult {
-  char *info;
-  char *files;
-  char *deps;
+// Details tabs that load only after the user opens them.
+enum class DeferredDetailsPage {
+  FILES,
+  DEPENDENCIES,
+  CHANGELOG,
 };
 
-// Task data for one changelog load.
+// Task data for one deferred details load.
 // The selected NEVRA and generation are checked before the result is shown.
-struct ChangelogTaskData {
+struct DeferredDetailsTaskData {
   char *nevra;
   uint64_t generation;
+  DeferredDetailsPage page;
 };
+
+// Widgets and request state used by one deferred details tab.
+struct DeferredDetailsUiState {
+  GtkTextBuffer *buffer = nullptr;
+  std::string *loaded_nevra = nullptr;
+  GCancellable **cancellable = nullptr;
+  const char *loading_text = nullptr;
+  const char *error_text = nullptr;
+};
+
+static void load_visible_package_details_page(MainWindowUiState *widgets, GtkStack *stack);
 
 // -----------------------------------------------------------------------------
 // Free data owned by one package details task.
@@ -58,29 +69,12 @@ info_task_data_free(gpointer p)
 }
 
 // -----------------------------------------------------------------------------
-// Release the text payload returned by the background package details task.
+// Free data owned by one deferred details task.
 // -----------------------------------------------------------------------------
 static void
-info_task_result_free(gpointer p)
+deferred_details_task_data_free(gpointer p)
 {
-  InfoTaskResult *r = static_cast<InfoTaskResult *>(p);
-  if (!r) {
-    return;
-  }
-
-  g_free(r->info);
-  g_free(r->files);
-  g_free(r->deps);
-  g_free(r);
-}
-
-// -----------------------------------------------------------------------------
-// Free data owned by one changelog task.
-// -----------------------------------------------------------------------------
-static void
-changelog_task_data_free(gpointer p)
-{
-  ChangelogTaskData *d = static_cast<ChangelogTaskData *>(p);
+  DeferredDetailsTaskData *d = static_cast<DeferredDetailsTaskData *>(p);
   if (!d) {
     return;
   }
@@ -90,12 +84,46 @@ changelog_task_data_free(gpointer p)
 }
 
 // -----------------------------------------------------------------------------
+// Return the widgets and state owned by one deferred details tab.
+// -----------------------------------------------------------------------------
+static DeferredDetailsUiState
+deferred_details_ui_state(MainWindowUiState *widgets, DeferredDetailsPage page)
+{
+  if (!widgets) {
+    return {};
+  }
+
+  switch (page) {
+  case DeferredDetailsPage::FILES:
+    return { widgets->results.files_buffer,
+             &widgets->results.files_loaded_nevra,
+             &widgets->results.package_files_cancellable,
+             _("Fetching file list..."),
+             _("Error loading file list.") };
+  case DeferredDetailsPage::DEPENDENCIES:
+    return { widgets->results.deps_buffer,
+             &widgets->results.deps_loaded_nevra,
+             &widgets->results.package_deps_cancellable,
+             _("Fetching dependencies..."),
+             _("Error loading dependencies.") };
+  case DeferredDetailsPage::CHANGELOG:
+    return { widgets->results.changelog_buffer,
+             &widgets->results.changelog_loaded_nevra,
+             &widgets->results.package_changelog_cancellable,
+             _("Fetching changelog..."),
+             _("Error loading changelog.") };
+  }
+
+  return {};
+}
+
+// -----------------------------------------------------------------------------
 // Complete the package details task when the user cancels the current request.
 // -----------------------------------------------------------------------------
 static void
 return_package_details_task_cancelled(GTask *task)
 {
-  g_task_return_new_error(task, G_IO_ERROR, G_IO_ERROR_CANCELLED, "%s", _("Package info load was cancelled."));
+  g_task_return_new_error(task, G_IO_ERROR, G_IO_ERROR_CANCELLED, "%s", _("Package details load was cancelled."));
 }
 
 // -----------------------------------------------------------------------------
@@ -147,6 +175,8 @@ package_details_reset_details_view(MainWindowUiState *widgets)
     return;
   }
 
+  widgets->results.files_loaded_nevra.clear();
+  widgets->results.deps_loaded_nevra.clear();
   widgets->results.changelog_loaded_nevra.clear();
   set_details_text(widgets->results.details_buffer, _("Select a package for details."));
   set_details_text(widgets->results.files_buffer, _("Select an installed package to view its file list."));
@@ -165,6 +195,8 @@ package_details_clear_selected_package_state(MainWindowUiState *widgets)
   }
 
   widgets->results.selected_nevra.clear();
+  widgets->results.files_loaded_nevra.clear();
+  widgets->results.deps_loaded_nevra.clear();
   widgets->results.changelog_loaded_nevra.clear();
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.install_button), FALSE);
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.remove_button), FALSE);
@@ -186,6 +218,18 @@ package_details_cancel_active_load(MainWindowUiState *widgets)
     g_cancellable_cancel(widgets->results.package_details_cancellable);
     g_object_unref(widgets->results.package_details_cancellable);
     widgets->results.package_details_cancellable = nullptr;
+  }
+
+  if (widgets->results.package_files_cancellable) {
+    g_cancellable_cancel(widgets->results.package_files_cancellable);
+    g_object_unref(widgets->results.package_files_cancellable);
+    widgets->results.package_files_cancellable = nullptr;
+  }
+
+  if (widgets->results.package_deps_cancellable) {
+    g_cancellable_cancel(widgets->results.package_deps_cancellable);
+    g_object_unref(widgets->results.package_deps_cancellable);
+    widgets->results.package_deps_cancellable = nullptr;
   }
 
   if (widgets->results.package_changelog_cancellable) {
@@ -237,56 +281,16 @@ on_package_details_task(GTask *task, gpointer, gpointer task_data, GCancellable 
   InfoTaskData *td = static_cast<InfoTaskData *>(task_data);
   try {
     DNFUI_TRACE("Package info task start nevra=%s", td ? td->nevra : "");
-    InfoTaskResult *result = static_cast<InfoTaskResult *>(g_malloc0(sizeof *result));
-
-    result->info = g_strdup(dnf_backend_get_package_info(td->nevra).c_str());
-    DNFUI_TRACE("Package info details loaded nevra=%s bytes=%zu",
-                td ? td->nevra : "",
-                result->info ? std::strlen(result->info) : 0);
+    std::string info = dnf_backend_get_package_info(td->nevra);
+    DNFUI_TRACE("Package info details loaded nevra=%s bytes=%zu", td ? td->nevra : "", info.size());
 
     if (cancellable && g_cancellable_is_cancelled(cancellable)) {
-      info_task_result_free(result);
-      return_package_details_task_cancelled(task);
-      return;
-    }
-
-    try {
-      DNFUI_TRACE("Package info files load start nevra=%s", td ? td->nevra : "");
-      // NOTE: Limit displayed files so very large file lists can still be copied.
-      result->files = g_strdup(dnf_backend_get_installed_package_files(td->nevra, 1500).c_str());
-      DNFUI_TRACE("Package info files loaded nevra=%s bytes=%zu",
-                  td ? td->nevra : "",
-                  result->files ? std::strlen(result->files) : 0);
-    } catch (const std::exception &e) {
-      result->files = g_strdup(e.what());
-      DNFUI_TRACE("Package info files failed nevra=%s error=%s", td ? td->nevra : "", e.what());
-    }
-
-    if (cancellable && g_cancellable_is_cancelled(cancellable)) {
-      info_task_result_free(result);
-      return_package_details_task_cancelled(task);
-      return;
-    }
-
-    try {
-      DNFUI_TRACE("Package info dependencies load start nevra=%s", td ? td->nevra : "");
-      result->deps = g_strdup(dnf_backend_get_package_deps(td->nevra).c_str());
-      DNFUI_TRACE("Package info dependencies loaded nevra=%s bytes=%zu",
-                  td ? td->nevra : "",
-                  result->deps ? std::strlen(result->deps) : 0);
-    } catch (const std::exception &e) {
-      result->deps = g_strdup(e.what());
-      DNFUI_TRACE("Package info dependencies failed nevra=%s error=%s", td ? td->nevra : "", e.what());
-    }
-
-    if (cancellable && g_cancellable_is_cancelled(cancellable)) {
-      info_task_result_free(result);
       return_package_details_task_cancelled(task);
       return;
     }
 
     DNFUI_TRACE("Package info task done nevra=%s", td ? td->nevra : "");
-    g_task_return_pointer(task, result, info_task_result_free);
+    g_task_return_pointer(task, g_strdup(info.c_str()), g_free);
   } catch (const std::exception &e) {
     DNFUI_TRACE("Package info task failed nevra=%s error=%s", td ? td->nevra : "", e.what());
     g_task_return_error(task, g_error_new_literal(G_IO_ERROR, G_IO_ERROR_FAILED, e.what()));
@@ -307,12 +311,10 @@ on_package_details_task_finished(GObject *, GAsyncResult *res, gpointer user_dat
 
   const InfoTaskData *td = static_cast<const InfoTaskData *>(g_task_get_task_data(task));
   GError *error = nullptr;
-  InfoTaskResult *result = static_cast<InfoTaskResult *>(g_task_propagate_pointer(task, &error));
+  char *info = static_cast<char *>(g_task_propagate_pointer(task, &error));
 
   if (!td) {
-    if (result) {
-      info_task_result_free(result);
-    }
+    g_free(info);
     if (error) {
       g_error_free(error);
     }
@@ -326,16 +328,14 @@ on_package_details_task_finished(GObject *, GAsyncResult *res, gpointer user_dat
   }
 
   if (td->generation != BaseManager::instance().current_generation() || widgets->results.selected_nevra != td->nevra) {
-    if (result) {
-      info_task_result_free(result);
-    }
+    g_free(info);
     if (error) {
       g_error_free(error);
     }
     return;
   }
 
-  if (!result) {
+  if (!info) {
     ui_helpers_set_status(widgets->query.status_label, error ? error->message : _("Error loading info."), "red");
     if (error) {
       g_error_free(error);
@@ -344,56 +344,69 @@ on_package_details_task_finished(GObject *, GAsyncResult *res, gpointer user_dat
   }
 
   // Show the row status even when the Status column is hidden.
-  std::string info_text = package_info_text_with_status(result->info, td->status_text);
+  std::string info_text = package_info_text_with_status(info, td->status_text);
 
   // Display general package information.
   set_details_text(widgets->results.details_buffer, info_text.c_str());
 
-  // Display the file list fetched by the background task.
-  set_details_text(widgets->results.files_buffer,
-                   result->files ? result->files : _("Select an installed package to view its file list."));
-
-  // Display dependencies fetched by the background task.
-  set_details_text(widgets->results.deps_buffer,
-                   result->deps ? result->deps : _("Select a package to view dependencies."));
-
-  if (!widgets->results.package_changelog_cancellable &&
-      widgets->results.changelog_loaded_nevra != widgets->results.selected_nevra) {
-    set_details_text(widgets->results.changelog_buffer, _("Open the Changelog tab to load the changelog."));
-  }
-
   ui_helpers_set_status(widgets->query.status_label, _("Package info loaded."), "green");
-  info_task_result_free(result);
+  g_free(info);
+
+  if (widgets->results.details_stack) {
+    load_visible_package_details_page(widgets, widgets->results.details_stack);
+  }
 }
 
 // -----------------------------------------------------------------------------
-// Load changelog text only when the user opens the Changelog tab.
+// Load text for one deferred details tab on a worker thread.
 // -----------------------------------------------------------------------------
 static void
-on_changelog_task(GTask *task, gpointer, gpointer task_data, GCancellable *cancellable)
+on_deferred_details_task(GTask *task, gpointer, gpointer task_data, GCancellable *cancellable)
 {
   if (cancellable && g_cancellable_is_cancelled(cancellable)) {
     return_package_details_task_cancelled(task);
     return;
   }
 
-  ChangelogTaskData *td = static_cast<ChangelogTaskData *>(task_data);
+  DeferredDetailsTaskData *td = static_cast<DeferredDetailsTaskData *>(task_data);
   try {
-    DNFUI_TRACE("Package changelog load start nevra=%s", td ? td->nevra : "");
-    std::string changelog = dnf_backend_get_package_changelog(td->nevra);
-    DNFUI_TRACE("Package changelog loaded nevra=%s bytes=%zu", td ? td->nevra : "", changelog.size());
-    g_task_return_pointer(task, g_strdup(changelog.c_str()), g_free);
+    std::string text;
+    switch (td->page) {
+    case DeferredDetailsPage::FILES:
+      DNFUI_TRACE("Package file list load start nevra=%s", td->nevra);
+      // NOTE: Limit displayed files so very large file lists can still be copied.
+      text = dnf_backend_get_installed_package_files(td->nevra, 1500);
+      DNFUI_TRACE("Package file list loaded nevra=%s bytes=%zu", td->nevra, text.size());
+      break;
+    case DeferredDetailsPage::DEPENDENCIES:
+      DNFUI_TRACE("Package dependencies load start nevra=%s", td->nevra);
+      text = dnf_backend_get_package_deps(td->nevra);
+      DNFUI_TRACE("Package dependencies loaded nevra=%s bytes=%zu", td->nevra, text.size());
+      break;
+    case DeferredDetailsPage::CHANGELOG:
+      DNFUI_TRACE("Package changelog load start nevra=%s", td->nevra);
+      text = dnf_backend_get_package_changelog(td->nevra);
+      DNFUI_TRACE("Package changelog loaded nevra=%s bytes=%zu", td->nevra, text.size());
+      break;
+    }
+
+    if (cancellable && g_cancellable_is_cancelled(cancellable)) {
+      return_package_details_task_cancelled(task);
+      return;
+    }
+
+    g_task_return_pointer(task, g_strdup(text.c_str()), g_free);
   } catch (const std::exception &e) {
-    DNFUI_TRACE("Package changelog failed nevra=%s error=%s", td ? td->nevra : "", e.what());
+    DNFUI_TRACE("Deferred package details load failed nevra=%s error=%s", td ? td->nevra : "", e.what());
     g_task_return_pointer(task, g_strdup(e.what()), g_free);
   }
 }
 
 // -----------------------------------------------------------------------------
-// Show changelog text if it still belongs to the selected package.
+// Show deferred text if it still belongs to the selected package.
 // -----------------------------------------------------------------------------
 static void
-on_changelog_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
+on_deferred_details_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
 {
   GTask *task = G_TASK(res);
   MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
@@ -401,71 +414,99 @@ on_changelog_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
     return;
   }
 
-  const ChangelogTaskData *td = static_cast<const ChangelogTaskData *>(g_task_get_task_data(task));
+  const DeferredDetailsTaskData *td = static_cast<const DeferredDetailsTaskData *>(g_task_get_task_data(task));
   GError *error = nullptr;
-  char *changelog = static_cast<char *>(g_task_propagate_pointer(task, &error));
+  char *text = static_cast<char *>(g_task_propagate_pointer(task, &error));
+
+  if (!td) {
+    g_free(text);
+    if (error) {
+      g_error_free(error);
+    }
+    return;
+  }
+
+  DeferredDetailsUiState ui = deferred_details_ui_state(widgets, td->page);
 
   GCancellable *c = g_task_get_cancellable(task);
-  if (c && widgets->results.package_changelog_cancellable == c) {
-    g_object_unref(widgets->results.package_changelog_cancellable);
-    widgets->results.package_changelog_cancellable = nullptr;
+  if (c && ui.cancellable && *ui.cancellable == c) {
+    g_object_unref(*ui.cancellable);
+    *ui.cancellable = nullptr;
   }
 
-  if (!td || td->generation != BaseManager::instance().current_generation() ||
-      widgets->results.selected_nevra != td->nevra) {
-    g_free(changelog);
+  if (td->generation != BaseManager::instance().current_generation() || widgets->results.selected_nevra != td->nevra) {
+    g_free(text);
     if (error) {
       g_error_free(error);
     }
     return;
   }
 
-  if (!changelog) {
-    set_details_text(widgets->results.changelog_buffer, error ? error->message : _("Error loading changelog."));
+  if (!text) {
+    set_details_text(ui.buffer, error ? error->message : ui.error_text);
     if (error) {
       g_error_free(error);
     }
     return;
   }
 
-  widgets->results.changelog_loaded_nevra = td->nevra;
-  set_details_text(widgets->results.changelog_buffer, changelog);
-  g_free(changelog);
+  *ui.loaded_nevra = td->nevra;
+  set_details_text(ui.buffer, text);
+  g_free(text);
 }
 
 // -----------------------------------------------------------------------------
-// Start changelog loading for the selected package if the tab needs it.
+// Start loading one deferred tab for the selected package if it needs data.
 // -----------------------------------------------------------------------------
 static void
-load_selected_package_changelog(MainWindowUiState *widgets)
+load_selected_package_details_page(MainWindowUiState *widgets, DeferredDetailsPage page)
 {
-  if (!widgets || widgets->results.selected_nevra.empty()) {
+  if (!widgets || widgets->results.selected_nevra.empty() || widgets->results.package_details_cancellable) {
     return;
   }
   PackageRow selected;
   if (!package_table_get_selected_package_row(widgets, selected) || selected.nevra != widgets->results.selected_nevra) {
     return;
   }
-  if (widgets->results.package_changelog_cancellable ||
-      widgets->results.changelog_loaded_nevra == widgets->results.selected_nevra) {
+
+  DeferredDetailsUiState ui = deferred_details_ui_state(widgets, page);
+  if (!ui.buffer || !ui.loaded_nevra || !ui.cancellable || *ui.cancellable ||
+      *ui.loaded_nevra == widgets->results.selected_nevra) {
     return;
   }
 
-  set_details_text(widgets->results.changelog_buffer, _("Fetching changelog..."));
+  set_details_text(ui.buffer, ui.loading_text);
 
   GCancellable *c = widgets_make_task_cancellable_for(GTK_WIDGET(widgets->query.entry));
-  GTask *task = widgets_task_new_for_main_window_ui_state(widgets, c, on_changelog_task_finished);
-  widgets->results.package_changelog_cancellable = G_CANCELLABLE(g_object_ref(c));
+  GTask *task = widgets_task_new_for_main_window_ui_state(widgets, c, on_deferred_details_task_finished);
+  *ui.cancellable = G_CANCELLABLE(g_object_ref(c));
 
-  ChangelogTaskData *td = static_cast<ChangelogTaskData *>(g_malloc0(sizeof *td));
+  DeferredDetailsTaskData *td = static_cast<DeferredDetailsTaskData *>(g_malloc0(sizeof *td));
   td->nevra = g_strdup(widgets->results.selected_nevra.c_str());
   td->generation = BaseManager::instance().current_generation();
-  g_task_set_task_data(task, td, changelog_task_data_free);
+  td->page = page;
+  g_task_set_task_data(task, td, deferred_details_task_data_free);
 
-  g_task_run_in_thread(task, on_changelog_task);
+  g_task_run_in_thread(task, on_deferred_details_task);
 
   g_object_unref(task);
   g_object_unref(c);
+}
+
+// -----------------------------------------------------------------------------
+// Load deferred content for the currently visible details tab.
+// -----------------------------------------------------------------------------
+static void
+load_visible_package_details_page(MainWindowUiState *widgets, GtkStack *stack)
+{
+  const char *page = stack ? gtk_stack_get_visible_child_name(stack) : nullptr;
+  if (g_strcmp0(page, "files") == 0) {
+    load_selected_package_details_page(widgets, DeferredDetailsPage::FILES);
+  } else if (g_strcmp0(page, "dependencies") == 0) {
+    load_selected_package_details_page(widgets, DeferredDetailsPage::DEPENDENCIES);
+  } else if (g_strcmp0(page, "changelog") == 0) {
+    load_selected_package_details_page(widgets, DeferredDetailsPage::CHANGELOG);
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -481,7 +522,12 @@ package_details_load_selected_package_info(MainWindowUiState *widgets, const Pac
   package_details_cancel_active_load(widgets);
 
   widgets->results.selected_nevra = selected.nevra;
+  widgets->results.files_loaded_nevra.clear();
+  widgets->results.deps_loaded_nevra.clear();
   widgets->results.changelog_loaded_nevra.clear();
+  set_details_text(widgets->results.files_buffer, _("Open the Files tab to load the file list."));
+  set_details_text(widgets->results.deps_buffer, _("Open the Dependencies tab to load dependencies."));
+  set_details_text(widgets->results.changelog_buffer, _("Open the Changelog tab to load the changelog."));
   ui_helpers_set_status(widgets->query.status_label, _("Fetching package info..."), "blue");
   update_selected_package_actions(widgets, selected);
 
@@ -501,11 +547,6 @@ package_details_load_selected_package_info(MainWindowUiState *widgets, const Pac
 
   g_object_unref(task);
   g_object_unref(c);
-
-  if (widgets->results.details_stack &&
-      g_strcmp0(gtk_stack_get_visible_child_name(widgets->results.details_stack), "changelog") == 0) {
-    load_selected_package_changelog(widgets);
-  }
 }
 
 // -----------------------------------------------------------------------------
@@ -519,9 +560,7 @@ package_details_on_details_page_changed(GtkStack *stack, GParamSpec *, gpointer 
     return;
   }
 
-  if (g_strcmp0(gtk_stack_get_visible_child_name(stack), "changelog") == 0) {
-    load_selected_package_changelog(widgets);
-  }
+  load_visible_package_details_page(widgets, stack);
 }
 
 // -----------------------------------------------------------------------------

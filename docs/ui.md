@@ -118,16 +118,17 @@ updates the details pane for the selected package.
 It updates:
 
 - package details text
-- installed file list
-- dependencies
+- installed file list, loaded only when the Files tab is opened
+- dependencies, loaded only when the Dependencies tab is opened
 - changelog, loaded only when the Changelog tab is opened
 - install, remove, and reinstall button sensitivity
 
-Details are loaded in the background. The controller records the selected NEVRA
-and backend generation when each task starts. If the selected package changes or
-the backend generation changes, the old result is ignored. Changelog loading is
-kept separate because available-package changelog data can require extra
-repository metadata.
+Details are loaded in the background. Selecting a package loads the Info tab.
+Files, dependencies, and changelog data are loaded when their tabs are opened.
+The controller records the selected NEVRA and backend generation when each task
+starts. If the selected package changes or the backend generation changes, the
+old result is ignored. Changelog loading can require extra repository metadata
+for available packages, so it remains separate from the normal Info load.
 
 ### Package table view
 
