@@ -19,10 +19,9 @@ DNF UI targets systems using modern **DNF5** and **dnf5daemon**. It is developed
 
 ## Status
 
-DNF UI is in **active** early development.
-The project is **usable for testing** and is becoming more mature with each release.
-Some interfaces, behavior, and features may still change while the application
-continues to evolve.
+DNF UI is under active development and is stable enough for regular use. \
+New features and improvements are still being added, so some interfaces and
+behavior may change between releases.
 
 ## Install from COPR
 
