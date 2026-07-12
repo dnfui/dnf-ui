@@ -1,8 +1,7 @@
 // -----------------------------------------------------------------------------
 // src/ui/common/ui_helpers.cpp
 // Shared UI helpers
-// Creates icon buttons, updates status text, and keeps transaction action labels
-// in sync with pending actions.
+// Creates icon buttons, updates status text, and keeps transaction action labels in sync with pending actions.
 // -----------------------------------------------------------------------------
 #include "ui/common/ui_helpers.hpp"
 

@@ -23,8 +23,7 @@ std::string package_query_cache_key_for(const std::string &term);
 void package_query_cache_clear();
 // -----------------------------------------------------------------------------
 // Return the current search-cache invalidation epoch.
-// The epoch advances when UI actions explicitly invalidate cached search rows
-// without requiring a backend Base rebuild.
+// The epoch advances when UI actions explicitly invalidate cached search rows without requiring a backend Base rebuild.
 // -----------------------------------------------------------------------------
 uint64_t package_query_cache_current_epoch();
 // -----------------------------------------------------------------------------

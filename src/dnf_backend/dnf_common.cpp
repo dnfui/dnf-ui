@@ -72,8 +72,7 @@ make_package_row(const libdnf5::rpm::Package &pkg, PackageRepoCandidateRelation 
 }
 
 // -----------------------------------------------------------------------------
-// Return true when a package query task has been cancelled by the UI worker
-// that owns the provided cancellable.
+// Return true when a package query task has been cancelled by the UI worker that owns the provided cancellable.
 // -----------------------------------------------------------------------------
 bool
 package_query_cancelled(GCancellable *cancellable)

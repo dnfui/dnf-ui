@@ -268,8 +268,7 @@ repository_refresh_on_rebuild_task_finished(GObject *, GAsyncResult *res, gpoint
   // This handler receives that pointer and deletes it after use.
   BaseRepoState *refresh_state = static_cast<BaseRepoState *>(g_task_propagate_pointer(task, &error));
 
-  // Re-enable the shared controls before status updates and view reload so the
-  // window returns to its normal interaction state after refresh.
+  // Re-enable shared controls before status updates and view reload so the window returns to normal after refresh.
   package_query_set_idle_controls_sensitive(widgets, true);
   if (widgets->results.list_scroller) {
     gtk_widget_set_sensitive(GTK_WIDGET(widgets->results.list_scroller), TRUE);
@@ -428,8 +427,8 @@ repository_refresh_on_button_clicked(GtkButton *, gpointer user_data)
     return;
   }
 
-  // Preview preparation also uses the backend and should finish before a
-  // repository rebuild starts changing the cached Base generation.
+  // Preview preparation also uses the backend.
+  // It should finish before repository rebuild changes the cached Base generation.
   if (pending_transaction_preview_is_busy(widgets)) {
     ui_helpers_set_status(widgets->query.status_label, pending_transaction_preview_busy_message(), "blue");
     return;
@@ -453,8 +452,8 @@ repository_refresh_on_button_clicked(GtkButton *, gpointer user_data)
       gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.refresh_button), FALSE);
       ui_helpers_set_status(widgets->query.status_label, _("Stopping repository refresh..."), "gray");
     } else {
-      // The user already pressed Stop. Keep rejecting new refreshes until the
-      // background repo load returns and clears repository_refresh_running.
+      // The user already pressed Stop.
+      // Reject new refreshes until the background repo load clears repository_refresh_running.
       DNFUI_TRACE("Repository refresh stop requested again");
       ui_helpers_set_status(widgets->query.status_label, _("Repository refresh is stopping."), "gray");
     }

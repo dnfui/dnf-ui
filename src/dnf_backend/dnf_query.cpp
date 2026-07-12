@@ -67,8 +67,7 @@ class BaseCancelToken {
   }
 
   private:
-  // Runs on the thread that cancels the task and wakes BaseManager checks that
-  // are waiting for a package list operation to stop.
+  // Runs on the thread that cancels the task and wakes BaseManager checks waiting for a package list operation to stop.
   static void on_cancelled(GCancellable *, gpointer user_data)
   {
     auto *cancelled = static_cast<std::atomic<bool> *>(user_data);
@@ -380,8 +379,7 @@ annotate_installed_rows_with_repo_candidates_best_effort(std::vector<PackageRow>
 
 // -----------------------------------------------------------------------------
 // Build the merged package view used by search and browse.
-// Start with the visible repo-backed candidates, then add installed-only rows for
-// name and architecture tuples that are missing from enabled repositories.
+// Start with visible repo-backed candidates, then add installed-only rows for missing name and architecture tuples.
 // If an installed package is newer than the repo candidate,
 // keep the installed row so the UI can show that state directly.
 //
@@ -616,9 +614,8 @@ dnf_backend_get_upgradeable_package_rows_interruptible(GCancellable *cancellable
                   elapsed_ms_since(started_at_us));
 #endif
 
-      // Even though the visible rows are available update candidates, the UI still
-      // needs the installed snapshot to resolve remove and reinstall actions back
-      // to the currently installed package.
+      // Even though visible rows are available update candidates, the UI still needs the installed snapshot.
+      // That snapshot resolves remove and reinstall actions back to the currently installed package.
 #ifdef DNFUI_DEBUG_TRACE
       const gint64 installed_started_at_us = g_get_monotonic_time();
 #endif

@@ -1,8 +1,7 @@
 // -----------------------------------------------------------------------------
 // package_table_model.cpp
 // Package row storage for the GTK package table.
-// Wraps PackageRow values in GObjects so the ColumnView can sort and select
-// rows without owning backend data directly.
+// Wraps PackageRow values in GObjects so the ColumnView can sort and select rows without owning backend data directly.
 // -----------------------------------------------------------------------------
 #include "ui/package_table/package_table_view_internal.hpp"
 

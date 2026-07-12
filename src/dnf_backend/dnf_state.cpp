@@ -3,8 +3,7 @@
 // Installed package cache and UI install-state helpers
 //
 // Owns backend global state used by the UI to mark exact installed packages,
-// classify visible package rows, and prevent modifying the running application
-// package from inside the app itself.
+// classify visible package rows, and prevent modifying the running application package from inside the app itself.
 // -----------------------------------------------------------------------------
 #include "dnf_backend/dnf_internal.hpp"
 
@@ -244,8 +243,7 @@ dnf_backend_refresh_installed_nevras()
 }
 
 // -----------------------------------------------------------------------------
-// Return true only when the queried row exactly matches an installed NEVRA in
-// the cached installed snapshot.
+// Return true only when the queried row exactly matches an installed NEVRA in the cached installed snapshot.
 // -----------------------------------------------------------------------------
 bool
 dnf_backend_is_package_installed_exact(const PackageRow &row)
@@ -254,8 +252,7 @@ dnf_backend_is_package_installed_exact(const PackageRow &row)
 }
 
 // -----------------------------------------------------------------------------
-// Return the installed package row for the same name and architecture as one
-// visible row.
+// Return the installed package row for the same name and architecture as one visible row.
 // -----------------------------------------------------------------------------
 bool
 dnf_backend_get_installed_package_row_by_name_arch(const PackageRow &row, PackageRow &installed_out)
@@ -284,10 +281,8 @@ dnf_backend_get_package_install_state(const PackageRow &row)
   if (g_installed_nevras.count(row.nevra) > 0) {
     switch (row.repo_candidate_relation) {
     case PackageRepoCandidateRelation::UNKNOWN:
-      // Annotation was not run or failed. The package is
-      // known-installed but we cannot distinguish LOCAL_ONLY from INSTALLED
-      // without a successful repo query. Fall back to INSTALLED so the UI
-      // does not misrepresent the package state.
+      // Annotation was not run or failed. The package is known-installed, but the repo relation is unknown.
+      // Without a successful repo query, use INSTALLED so the UI does not misrepresent the package state.
     case PackageRepoCandidateRelation::SAME:
       return PackageInstallState::INSTALLED;
     case PackageRepoCandidateRelation::NONE:
@@ -415,8 +410,7 @@ dnf_backend_is_self_protected_transaction_spec(const std::string &spec)
 
 #ifdef DNFUI_BUILD_TESTS
 // -----------------------------------------------------------------------------
-// Clear the installed-package snapshot for tests that seed exact NEVRA state
-// without querying the host rpmdb.
+// Clear the installed-package snapshot for tests that seed exact NEVRA state without querying the host rpmdb.
 // -----------------------------------------------------------------------------
 void
 dnf_backend_testonly_clear_installed_snapshot()

@@ -481,8 +481,7 @@ TEST_CASE("File list query is safe and returns valid state")
 }
 
 // -----------------------------------------------------------------------------
-// Verify that the Files tab can use an available update row to show the files
-// from the currently installed package.
+// Verify that the Files tab can use an available update row to show the files from the currently installed package.
 // -----------------------------------------------------------------------------
 TEST_CASE("File list query uses installed package for update rows")
 {

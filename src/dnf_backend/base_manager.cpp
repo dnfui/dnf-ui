@@ -541,8 +541,8 @@ BaseManager::acquire_read(std::shared_ptr<std::atomic<bool>> cancel_requested)
   // Keep the lock exclusive for the whole libdnf Base operation.
   // PackageQuery work can touch shared Base internals even when the caller only reads data.
   //
-  // lock() would wait here without checking Stop. Use short try_lock waits so a
-  // package list worker can stop while another Base operation is still running.
+  // lock() would wait here without checking Stop.
+  // Use short try_lock waits so a package list worker can stop while another Base operation is still running.
   std::unique_lock<std::shared_mutex> lock(base_mutex, std::defer_lock);
   while (!lock.try_lock()) {
     throw_if_base_operation_cancelled(cancel_requested, "Package query was cancelled.");

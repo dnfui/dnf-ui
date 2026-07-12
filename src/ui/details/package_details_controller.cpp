@@ -1,8 +1,7 @@
 // -----------------------------------------------------------------------------
 // src/ui/details/package_details_controller.cpp
 // Package selection and details panel controller
-// Handles package selection, action-button sensitivity, and background loading
-// for the package details tabs.
+// Handles package selection, action-button sensitivity, and background loading for the package details tabs.
 // -----------------------------------------------------------------------------
 #include "ui/details/package_details_controller.hpp"
 

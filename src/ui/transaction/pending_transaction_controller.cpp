@@ -17,8 +17,7 @@
 #include "ui/common/ui_helpers.hpp"
 
 // -----------------------------------------------------------------------------
-// Explain why the running application package can be viewed but not modified
-// from inside the same process.
+// Explain why the running application package can be viewed but not modified from inside the same process.
 // -----------------------------------------------------------------------------
 static std::string
 self_protected_transaction_message(const PackageRow &pkg)

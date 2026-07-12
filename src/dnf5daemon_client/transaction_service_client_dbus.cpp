@@ -316,9 +316,9 @@ package_label_from_daemon_object(GVariant *object, std::string &label_out, std::
 }
 
 // -----------------------------------------------------------------------------
-// Build the package key used when comparing dnf5daemon upgrade candidates with
-// UI table rows. The exact NEVRA can differ between daemon list output and UI
-// candidate rows, but name and architecture identify the package row.
+// Build the package key used when comparing dnf5daemon upgrade candidates with UI table rows.
+// The exact NEVRA can differ between daemon list output and UI candidate rows.
+// Name and architecture identify the package row.
 // -----------------------------------------------------------------------------
 bool
 package_upgrade_key_from_daemon_object(GVariant *object, std::string &key_out, std::string &error_out)

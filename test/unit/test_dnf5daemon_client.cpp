@@ -84,8 +84,7 @@ require_dnf5daemon_test_enabled()
 } // namespace
 
 // -----------------------------------------------------------------------------
-// Verify that the daemon preview parser represents replaced packages instead of
-// counting them only as disk space changes.
+// Verify that replaced packages are listed as actions instead of only as disk space changes.
 // -----------------------------------------------------------------------------
 TEST_CASE("dnf5daemon preview parser represents replaced package actions")
 {
@@ -115,8 +114,7 @@ TEST_CASE("dnf5daemon preview warnings do not count as package actions")
 }
 
 // -----------------------------------------------------------------------------
-// Verify that the daemon preview parser rejects replacing the daemon server that
-// applies transactions for DNF UI.
+// Verify that the daemon preview parser rejects replacing the daemon server that applies transactions for DNF UI.
 // -----------------------------------------------------------------------------
 TEST_CASE("dnf5daemon preview parser rejects replacing dnf5daemon-server")
 {
@@ -190,8 +188,7 @@ TEST_CASE("dnf5daemon client previews install requests", "[dnf5daemon]")
 
 // -----------------------------------------------------------------------------
 // Verify that the client can ask dnf5daemon for an upgrade-all preview.
-// A fully updated test container may return an empty preview, which is still a
-// successful preview result.
+// A fully updated test container may return an empty preview, which is still a successful preview result.
 // -----------------------------------------------------------------------------
 TEST_CASE("dnf5daemon client previews upgrade-all requests", "[dnf5daemon]")
 {

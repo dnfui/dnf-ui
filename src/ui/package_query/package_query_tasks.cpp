@@ -128,8 +128,8 @@ package_row_upgrade_key(const PackageRow &row)
 // -----------------------------------------------------------------------------
 // Keep only rows that dnf5daemon lists as real upgrade candidates.
 // The first query uses local libdnf metadata so the table can show package details.
-// This second check resolves the same daemon Upgrade All preview used by the
-// Upgrade All button, then keeps only rows the transaction service would accept.
+// This second check resolves the same daemon Upgrade All preview used by the Upgrade All button.
+// It keeps only rows the transaction service would accept.
 // If libdnf sees no upgrades but the daemon does, fail clearly instead of showing a false empty list.
 // -----------------------------------------------------------------------------
 static std::vector<PackageRow>

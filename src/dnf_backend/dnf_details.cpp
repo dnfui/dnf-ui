@@ -2,9 +2,8 @@
 // src/dnf_backend/dnf_details.cpp
 // Package detail text queries
 //
-// Formats info, file lists, dependencies, and changelog entries for the GTK
-// details pane. These helpers are read-only libdnf5 queries and do not mutate
-// the installed-package UI cache.
+// Formats info, file lists, dependencies, and changelog entries for the GTK details pane.
+// These helpers are read-only libdnf5 queries and do not mutate the installed-package UI cache.
 // -----------------------------------------------------------------------------
 #include "dnf_backend/dnf_internal.hpp"
 
