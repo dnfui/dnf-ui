@@ -370,6 +370,10 @@ transaction_dialogs_show_summary_dialog(MainWindowUiState *widgets,
   gtk_widget_set_margin_bottom(contents, 6);
   gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scroller), contents);
 
+  if (!preview.resolve_warnings.empty()) {
+    append_transaction_summary_section(GTK_BOX(contents), _("Warnings"), { preview.resolve_warnings });
+  }
+
   // Show the resolved backend changes, not only the packages marked manually.
   append_transaction_summary_section(GTK_BOX(contents), _("To be installed"), preview.install);
   append_transaction_summary_section(GTK_BOX(contents), _("To be upgraded"), preview.upgrade);

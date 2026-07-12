@@ -103,6 +103,18 @@ TEST_CASE("dnf5daemon preview parser represents replaced package actions")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that successful resolve warnings do not count as package actions.
+// -----------------------------------------------------------------------------
+TEST_CASE("dnf5daemon preview warnings do not count as package actions")
+{
+  TransactionPreview preview;
+  preview.resolve_warnings = "Package test-package is already installed.";
+
+  REQUIRE_FALSE(preview.resolve_warnings.empty());
+  REQUIRE(preview.empty());
+}
+
+// -----------------------------------------------------------------------------
 // Verify that the daemon preview parser rejects replacing the daemon server that
 // applies transactions for DNF UI.
 // -----------------------------------------------------------------------------

@@ -1052,13 +1052,14 @@ transaction_service_client_get_transaction_preview(GDBusConnection *connection,
               items ? static_cast<size_t>(g_variant_n_children(items)) : 0,
               elapsed_ms_since(started_at_us));
 
+  std::string resolve_warnings;
   switch (result) {
   case 0:
     break;
   case 1: {
-    std::string warning = daemon_transaction_problems(connection, transaction_path);
-    if (!warning.empty()) {
-      DNFUI_TRACE("dnf5daemon resolve warning path=%s warning=%s", transaction_path.c_str(), warning.c_str());
+    resolve_warnings = daemon_transaction_problems(connection, transaction_path);
+    if (!resolve_warnings.empty()) {
+      DNFUI_TRACE("dnf5daemon resolve warning path=%s warning=%s", transaction_path.c_str(), resolve_warnings.c_str());
     }
     break;
   }
@@ -1080,6 +1081,7 @@ transaction_service_client_get_transaction_preview(GDBusConnection *connection,
   }
 
   TransactionPreview built_preview;
+  built_preview.resolve_warnings = std::move(resolve_warnings);
   GVariantIter iter;
   g_variant_iter_init(&iter, items);
 

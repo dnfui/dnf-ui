@@ -137,6 +137,8 @@ enum class PackageInstallState {
 // Callers must never receive a partial preview when the backend cannot represent the whole
 // resolved transaction.
 struct TransactionPreview {
+  // Human-readable warnings returned with a successful daemon resolve.
+  std::string resolve_warnings;
   std::vector<std::string> install;
   std::vector<std::string> upgrade;
   std::vector<std::string> downgrade;

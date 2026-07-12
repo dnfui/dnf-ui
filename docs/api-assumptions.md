@@ -235,7 +235,7 @@ Assumptions:
 - Preview is resolved through `org.rpm.dnf.v0.Goal.resolve(a{sv}) -> (a(sssa{sv}a{sv})u)`.
 - Resolver result `0` means success, `1` means success with warnings, and `2`
   means resolve failure.
-- Resolve failures are read through `org.rpm.dnf.v0.Goal.get_transaction_problems_string() -> (as)`.
+- Resolve warnings and failures are read through `org.rpm.dnf.v0.Goal.get_transaction_problems_string() -> (as)`.
 - Resolve uses `interactive=true` because dnf5daemon may need to request
   repository signing key approval while loading repositories.
 - Apply is started through `org.rpm.dnf.v0.Goal.do_transaction(a{sv}) -> ()`.

@@ -115,6 +115,9 @@ The preview dialog only shows actions the app understands:
 - remove
 - replaced
 
+If dnf5daemon resolves successfully with warnings, the preview shows its
+human-readable warning text without treating the transaction as failed.
+
 If dnf5daemon returns an unsupported transaction item or action, preview fails
 instead of hiding part of the transaction from the user.
 

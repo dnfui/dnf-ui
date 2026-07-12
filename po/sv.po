@@ -1099,5 +1099,8 @@ msgstr "Rapportera problem"
 msgid "Support"
 msgstr "Support"
 
+msgid "Warnings"
+msgstr "Varningar"
+
 msgid "Loading package data..."
 msgstr "Läser in paketdata..."
