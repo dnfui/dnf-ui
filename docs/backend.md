@@ -18,6 +18,12 @@ controller layer by exposing small value types:
 - `PackageRepoCandidateRelation`
 - `DnfBackendSearchOptions`
 - `TransactionPreview`
+- `TransactionHistoryAction`
+- `TransactionHistoryPackageRow`
+- `TransactionHistoryCursor`
+- `TransactionHistoryResultFilter`
+- `TransactionHistoryFilter`
+- `TransactionHistoryPage`
 
 Controller code should use this public API instead of calling libdnf5 directly.
 

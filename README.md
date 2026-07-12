@@ -60,7 +60,7 @@ There are other applications for this like [GNOME Software](https://apps.gnome.o
 - Search repo packages together with installed-only local RPMs
 - List available, installed and upgradable packages
 - View package details, files, dependencies, and changelog information
-- Mark packages for install, reinstall, and removal
+- Mark packages for install, upgrade, reinstall, and removal
 - Upgrade all installed packages with available updates
 - Review a transaction summary before applying changes
 - Apply transactions through DNF5 dnf5daemon with Polkit authorization

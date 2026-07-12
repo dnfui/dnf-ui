@@ -89,7 +89,8 @@ Startup follows a short path:
 - [src/ui/window/main_window.cpp](../src/ui/window/main_window.cpp) creates the main window and wires signals
 - [src/ui/window/main_window_layout.cpp](../src/ui/window/main_window_layout.cpp) builds the main window widget tree
 
-After the window is created, `app.cpp` also starts two background tasks:
+After the window is created, `app.cpp` starts backend warm up and schedules
+the periodic installed-package snapshot refresh:
 
 - backend warm up, so the first package query is faster
 - periodic installed-package snapshot refresh
