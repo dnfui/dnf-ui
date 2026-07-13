@@ -1,7 +1,7 @@
 Name:           dnf-ui
 Version:        0.3.6
 Release:        1%{?dist}
-Summary:        GTK frontend for DNF5
+Summary:        GTK interface for DNF5
 
 License:        MIT
 URL:            https://github.com/dnfui/dnf-ui
@@ -22,7 +22,7 @@ BuildRequires:  pkgconfig(libdnf5)
 Requires:       dnf5daemon-server
 
 %description
-DNF UI is a graphical frontend for DNF5 package management built with GTK 4
+DNF UI is a graphical interface for DNF5 package management built with GTK 4
 and libdnf5. It supports browsing available and installed packages, reviewing
 transaction changes, and applying package transactions through dnf5daemon.
 
