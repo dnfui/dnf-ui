@@ -5,7 +5,7 @@ Summary:        GTK frontend for DNF5
 
 License:        MIT
 URL:            https://github.com/dnfui/dnf-ui
-Source0:        %{name}-%{version}.tar.gz
+Source0:        %{url}/archive/refs/tags/%{version}.tar.gz#/%{name}-%{version}.tar.gz
 
 BuildRequires:  appstream
 BuildRequires:  dbus-daemon
