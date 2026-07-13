@@ -6,6 +6,7 @@ dnfui-tests
 .history
 build/
 rpmbuild/
+rpmbuild-review/
 external/dnf5/
 *.rpm
 *.exe

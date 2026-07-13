@@ -5,7 +5,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SPEC_FILE="${SPEC_FILE:-$PROJECT_ROOT/dnf-ui.spec}"
 MOCK_CONFIG="${MOCK_CONFIG:-fedora-rawhide-x86_64}"
-DOWNLOAD_DIR="${DOWNLOAD_DIR:-$PROJECT_ROOT/rpmbuild/SOURCES}"
+REVIEW_TOPDIR="${REVIEW_TOPDIR:-$PROJECT_ROOT/rpmbuild-review}"
+REVIEW_TMPDIR="$REVIEW_TOPDIR/TMP"
+MOCK_RESULTDIR="$REVIEW_TOPDIR/mock-results"
 
 require_command() {
   local command_name="$1"
@@ -24,38 +26,62 @@ run_step() {
   "$@"
 }
 
-require_command make
 require_command mock
+require_command rpmbuild
 require_command rpmlint
 require_command rpmspec
 require_command spectool
 
-mkdir -p "$DOWNLOAD_DIR"
+rm -rf "$REVIEW_TOPDIR"
+mkdir -p \
+  "$REVIEW_TOPDIR/BUILD" \
+  "$REVIEW_TOPDIR/BUILDROOT" \
+  "$REVIEW_TOPDIR/RPMS" \
+  "$REVIEW_TOPDIR/SOURCES" \
+  "$REVIEW_TOPDIR/SPECS" \
+  "$REVIEW_TOPDIR/SRPMS" \
+  "$REVIEW_TMPDIR" \
+  "$MOCK_RESULTDIR"
 
-run_step "Download upstream sources from spec" spectool -g -C "$DOWNLOAD_DIR" "$SPEC_FILE"
-run_step "Build source and binary RPMs" make -C "$PROJECT_ROOT" rpm
+run_step "Download upstream sources from spec" spectool -g -C "$REVIEW_TOPDIR/SOURCES" "$SPEC_FILE"
+cp "$SPEC_FILE" "$REVIEW_TOPDIR/SPECS/"
 
-SRPM="$PROJECT_ROOT/dnf-ui-latest.src.rpm"
-if [ ! -e "$SRPM" ]; then
-  echo "*** Missing source RPM: $SRPM ***" >&2
+run_step "Build source RPM from downloaded source" \
+  rpmbuild -bs \
+  --define "_topdir $REVIEW_TOPDIR" \
+  --define "_tmppath $REVIEW_TMPDIR" \
+  "$REVIEW_TOPDIR/SPECS/$(basename "$SPEC_FILE")"
+
+mapfile -t SRPM_FILES < <(
+  find "$REVIEW_TOPDIR/SRPMS" -type f -name "*.src.rpm" |
+    sort
+)
+
+if [ "${#SRPM_FILES[@]}" -ne 1 ]; then
+  echo "*** Expected one source RPM under $REVIEW_TOPDIR/SRPMS, found ${#SRPM_FILES[@]} ***" >&2
   exit 1
 fi
-SRPM="$(readlink -f "$SRPM")"
+
+SRPM="${SRPM_FILES[0]}"
+
+run_step "Rebuild source RPM in mock" mock -r "$MOCK_CONFIG" --resultdir "$MOCK_RESULTDIR" --rebuild "$SRPM"
 
 mapfile -t RPM_FILES < <(
-  find "$PROJECT_ROOT/rpmbuild/RPMS" -type f \
+  find "$MOCK_RESULTDIR" -type f \
     -name "*.rpm" \
+    ! -name "*.src.rpm" \
     ! -name "*-debuginfo-*.rpm" \
     ! -name "*-debugsource-*.rpm" |
     sort
 )
 
 if [ "${#RPM_FILES[@]}" -eq 0 ]; then
-  echo "*** No binary RPMs found under $PROJECT_ROOT/rpmbuild/RPMS ***" >&2
+  echo "*** No binary RPMs found under $MOCK_RESULTDIR ***" >&2
   exit 1
 fi
 
 run_step "Run rpmlint" rpmlint "$SRPM" "${RPM_FILES[@]}"
-run_step "Rebuild source RPM in mock" mock -r "$MOCK_CONFIG" --rebuild "$SRPM"
 
 printf '\n*** Package review checks completed ***\n'
+printf 'Source RPM: %s\n' "$SRPM"
+printf 'Mock result directory: %s\n' "$MOCK_RESULTDIR"
