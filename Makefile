@@ -87,6 +87,7 @@ help:
 	@printf '%-36s %s\n' 'dnf5daemonapplytest' 'Run native dnf5daemon tests including apply.'
 	@printf '%-36s %s\n' 'srpm' 'Build the source tarball and source RPM.'
 	@printf '%-36s %s\n' 'rpm' 'Build binary and source RPMs.'
+	@printf '%-36s %s\n' 'fedora-review-check' 'Run local Fedora package review checks.'
 	@printf '%-36s %s\n' 'nativeinstalltest' 'Build the RPM and reinstall it on the native system.'
 	@printf '\n%s\n' 'Docker'
 	@printf '%s\n' '----------------------------------------'
@@ -181,6 +182,12 @@ srpm:
 .PHONY: rpm
 rpm:
 	@./packaging/build_rpm.sh
+
+# Run local Fedora package review checks:
+.PHONY: fedora-review-check
+fedora-review-check:
+	$(call require_non_root,Fedora review checks)
+	@./utils/package_review_check.sh
 
 # Build and reinstall the RPM on the native system:
 .PHONY: nativeinstalltest
