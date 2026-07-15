@@ -67,6 +67,23 @@ TEST_CASE("Pending transaction action rows resolve upgrade from installed packag
 }
 
 // -----------------------------------------------------------------------------
+// Verify that self-protection blocks installs but still allows normal upgrades.
+// -----------------------------------------------------------------------------
+TEST_CASE("Pending transaction action rows allow protected upgrade action")
+{
+  PendingTransactionActionRows install_rows;
+  install_rows.install_is_upgrade = false;
+
+  REQUIRE(pending_transaction_install_action_blocked_by_self_protection(install_rows, true));
+
+  PendingTransactionActionRows upgrade_rows;
+  upgrade_rows.install_is_upgrade = true;
+
+  REQUIRE_FALSE(pending_transaction_install_action_blocked_by_self_protection(upgrade_rows, true));
+  REQUIRE_FALSE(pending_transaction_install_action_blocked_by_self_protection(upgrade_rows, false));
+}
+
+// -----------------------------------------------------------------------------
 // Verify that an update candidate upgrades itself but removes the installed row.
 // -----------------------------------------------------------------------------
 TEST_CASE("Pending transaction action rows resolve upgrade from available update row")

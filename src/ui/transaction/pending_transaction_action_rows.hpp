@@ -31,6 +31,12 @@ struct PendingTransactionActionRows {
 // This is used from GTK selection and context-menu code.
 // -----------------------------------------------------------------------------
 PendingTransactionActionRows pending_transaction_action_rows_for_selection(const PackageRow &selected);
+// -----------------------------------------------------------------------------
+// Return true when self-protection should block the install button path.
+// A normal upgrade is allowed because dnf5daemon still resolves the final preview.
+// -----------------------------------------------------------------------------
+bool pending_transaction_install_action_blocked_by_self_protection(const PendingTransactionActionRows &rows,
+                                                                   bool self_protected);
 
 // -----------------------------------------------------------------------------
 // EOF

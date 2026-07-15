@@ -70,7 +70,9 @@ pending_transaction_on_install_button_clicked(GtkButton *, gpointer user_data)
     return;
   }
 
-  if (action_rows.has_installed_row && dnf_backend_is_package_self_protected(action_rows.installed_row)) {
+  bool self_protected =
+      action_rows.has_installed_row && dnf_backend_is_package_self_protected(action_rows.installed_row);
+  if (pending_transaction_install_action_blocked_by_self_protection(action_rows, self_protected)) {
     ui_helpers_set_status(
         widgets->query.status_label, self_protected_transaction_message(action_rows.installed_row).c_str(), "red");
     return;
