@@ -940,6 +940,12 @@ msgstr "Transaktionsförhandsgranskning misslyckades"
 msgid "The transaction could not be prepared. Review the details below."
 msgstr "Transaktionen kunde inte förberedas. Granska detaljerna nedan."
 
+msgid "Transaction Preview Warning"
+msgstr "Varning i transaktionsförhandsgranskning"
+
+msgid "No package changes were returned, but dnf5daemon reported a warning."
+msgstr "Inga paketändringar returnerades, men dnf5daemon rapporterade en varning."
+
 msgid "Clear pending package actions before upgrading all packages."
 msgstr "Rensa väntande paketåtgärder innan alla paket uppgraderas."
 

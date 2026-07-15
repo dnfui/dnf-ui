@@ -462,6 +462,13 @@ start_preview_request(MainWindowUiState *widgets, TransactionRequest request)
           }
           widgets->transaction.preview_transaction_path.clear();
           widgets->transaction.preview_upgrade_all = false;
+          if (!td->preview.resolve_warnings.empty()) {
+            transaction_dialogs_show_error_dialog(
+                widgets,
+                _("Transaction Preview Warning"),
+                _("No package changes were returned, but dnf5daemon reported a warning."),
+                td->preview.resolve_warnings);
+          }
           ui_helpers_set_status(widgets->query.status_label, empty_preview_status_message(td->request), "green");
           return;
         }
