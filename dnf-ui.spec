@@ -1,5 +1,5 @@
 Name:           dnf-ui
-Version:        0.3.6
+Version:        0.3.7
 Release:        1%{?dist}
 Summary:        GTK interface for DNF5
 
@@ -56,6 +56,12 @@ appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/io.github.dnfui.
 %{_datadir}/metainfo/io.github.dnfui.dnfui.metainfo.xml
 
 %changelog
+* Wed Jul 15 2026 ErikMN <dnfui@proton.me> - 0.3.7-1
+- Allow DNF UI to mark its own package for upgrade
+- Show dnf5daemon warnings when a preview returns no package changes
+- Improve Fedora package review helper and source RPM packaging checks
+- Update documentation for current transaction, backend, and test behavior
+
 * Sun Jul 12 2026 ErikMN <dnfui@proton.me> - 0.3.6-1
 - Load package files and dependencies only when their tabs are opened
 - Keep the transaction history browser usable around transaction previews
