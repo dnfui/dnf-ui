@@ -6,6 +6,7 @@
 // -----------------------------------------------------------------------------
 #pragma once
 
+#include <cstddef>
 #include <string>
 #include <vector>
 
@@ -20,7 +21,31 @@ struct PendingAction {
   std::string nevra;
   // Package spec sent to the transaction client. Empty means use nevra.
   std::string transaction_spec;
+  // Package identity used to keep one pending action per name and architecture.
+  std::string package_key;
 };
+
+// -----------------------------------------------------------------------------
+// Remove all pending actions for one package name and architecture.
+// -----------------------------------------------------------------------------
+inline bool
+pending_actions_remove_package_key(std::vector<PendingAction> &actions, const std::string &package_key)
+{
+  if (package_key.empty()) {
+    return false;
+  }
+
+  bool removed = false;
+  for (std::size_t i = 0; i < actions.size();) {
+    if (actions[i].package_key == package_key) {
+      actions.erase(actions.begin() + i);
+      removed = true;
+      continue;
+    }
+    ++i;
+  }
+  return removed;
+}
 
 // -----------------------------------------------------------------------------
 // Pending transaction widgets and marked package actions

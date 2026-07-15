@@ -22,6 +22,10 @@ void pending_transaction_refresh_pending_tab(MainWindowUiState *widgets);
 // -----------------------------------------------------------------------------
 bool pending_transaction_remove_action(MainWindowUiState *widgets, const std::string &nevra);
 // -----------------------------------------------------------------------------
+// Remove all pending actions for one package name and architecture.
+// -----------------------------------------------------------------------------
+bool pending_transaction_remove_package_key(MainWindowUiState *widgets, const std::string &package_key);
+// -----------------------------------------------------------------------------
 // Return the pending action type for one package ID.
 // -----------------------------------------------------------------------------
 bool pending_transaction_get_action_type(MainWindowUiState *widgets,

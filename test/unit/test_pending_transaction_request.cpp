@@ -8,9 +8,20 @@
 #include "test_utils.hpp"
 #include "transaction_request.hpp"
 #include "ui/transaction/pending_transaction_request.hpp"
+#include "ui/common/widgets.hpp"
 
 #include <string>
 #include <vector>
+
+// -----------------------------------------------------------------------------
+// Replace the existing pending action for one package identity, like the UI controller does.
+// -----------------------------------------------------------------------------
+static void
+replace_pending_action_for_package(MainWindowUiState &widgets, const PendingAction &action)
+{
+  pending_actions_remove_package_key(widgets.transaction.actions, action.package_key);
+  widgets.transaction.actions.push_back(action);
+}
 
 // -----------------------------------------------------------------------------
 // Verify that marked UI actions are copied into the matching request lists.
@@ -18,12 +29,12 @@
 TEST_CASE("Pending transaction request builder splits actions by operation type")
 {
   std::vector<PendingAction> actions = {
-    { PendingAction::INSTALL, "demo-install-1-1.x86_64", "" },
-    { PendingAction::UPGRADE, "demo-upgrade-2-1.x86_64", "demo.x86_64" },
-    { PendingAction::DOWNGRADE, "demo-downgrade-1-1.x86_64", "" },
-    { PendingAction::REMOVE, "demo-remove-1-1.x86_64", "" },
-    { PendingAction::REINSTALL, "demo-reinstall-1-1.x86_64", "" },
-    { PendingAction::INSTALL, "demo-install-libs-1-1.x86_64", "" },
+    { PendingAction::INSTALL, "demo-install-1-1.x86_64", "", "demo-install\nx86_64" },
+    { PendingAction::UPGRADE, "demo-upgrade-2-1.x86_64", "demo.x86_64", "demo-upgrade\nx86_64" },
+    { PendingAction::DOWNGRADE, "demo-downgrade-1-1.x86_64", "", "demo-downgrade\nx86_64" },
+    { PendingAction::REMOVE, "demo-remove-1-1.x86_64", "", "demo-remove\nx86_64" },
+    { PendingAction::REINSTALL, "demo-reinstall-1-1.x86_64", "", "demo-reinstall\nx86_64" },
+    { PendingAction::INSTALL, "demo-install-libs-1-1.x86_64", "", "demo-install-libs\nx86_64" },
   };
 
   TransactionRequest request;
@@ -70,7 +81,7 @@ TEST_CASE("Pending transaction request builder clears stale request data")
   std::string error;
 
   std::vector<PendingAction> actions = {
-    { PendingAction::REMOVE, "demo-remove-1-1.x86_64", "" },
+    { PendingAction::REMOVE, "demo-remove-1-1.x86_64", "", "demo-remove\nx86_64" },
   };
 
   REQUIRE(pending_transaction_build_request(actions, request, error));
@@ -93,8 +104,8 @@ TEST_CASE("Pending transaction request builder clears stale request data")
 TEST_CASE("Pending transaction request builder rejects unknown action types")
 {
   std::vector<PendingAction> actions = {
-    { PendingAction::INSTALL, "demo-install-1-1.x86_64", "" },
-    { static_cast<PendingAction::Type>(999), "demo-unknown-1-1.x86_64", "" },
+    { PendingAction::INSTALL, "demo-install-1-1.x86_64", "", "demo-install\nx86_64" },
+    { static_cast<PendingAction::Type>(999), "demo-unknown-1-1.x86_64", "", "demo-unknown\nx86_64" },
   };
 
   TransactionRequest request;
@@ -107,6 +118,60 @@ TEST_CASE("Pending transaction request builder rejects unknown action types")
   REQUIRE(request.downgrade.empty());
   REQUIRE(request.remove.empty());
   REQUIRE(request.reinstall.empty());
+}
+
+// -----------------------------------------------------------------------------
+// Verify that changing from upgrade to downgrade keeps one action for the package.
+// -----------------------------------------------------------------------------
+TEST_CASE("Pending transaction package identity replaces upgrade with downgrade")
+{
+  MainWindowUiState widgets;
+  const std::string package_key = "demo\nx86_64";
+
+  replace_pending_action_for_package(widgets,
+                                     { PendingAction::UPGRADE, "demo-2.0-1.fc44.x86_64", "demo.x86_64", package_key });
+  replace_pending_action_for_package(
+      widgets, { PendingAction::DOWNGRADE, "demo-1.0-1.fc44.x86_64", "demo-1.0-1.fc44.x86_64", package_key });
+
+  REQUIRE(widgets.transaction.actions.size() == 1);
+  REQUIRE(widgets.transaction.actions[0].type == PendingAction::DOWNGRADE);
+  REQUIRE(widgets.transaction.actions[0].nevra == "demo-1.0-1.fc44.x86_64");
+}
+
+// -----------------------------------------------------------------------------
+// Verify that selecting another older version replaces the previous downgrade.
+// -----------------------------------------------------------------------------
+TEST_CASE("Pending transaction package identity replaces downgrade version")
+{
+  MainWindowUiState widgets;
+  const std::string package_key = "demo\nx86_64";
+
+  replace_pending_action_for_package(
+      widgets, { PendingAction::DOWNGRADE, "demo-1.0-1.fc44.x86_64", "demo-1.0-1.fc44.x86_64", package_key });
+  replace_pending_action_for_package(
+      widgets, { PendingAction::DOWNGRADE, "demo-1.1-1.fc44.x86_64", "demo-1.1-1.fc44.x86_64", package_key });
+
+  REQUIRE(widgets.transaction.actions.size() == 1);
+  REQUIRE(widgets.transaction.actions[0].type == PendingAction::DOWNGRADE);
+  REQUIRE(widgets.transaction.actions[0].nevra == "demo-1.1-1.fc44.x86_64");
+}
+
+// -----------------------------------------------------------------------------
+// Verify that selecting another available version replaces the previous install.
+// -----------------------------------------------------------------------------
+TEST_CASE("Pending transaction package identity replaces install version")
+{
+  MainWindowUiState widgets;
+  const std::string package_key = "demo\nx86_64";
+
+  replace_pending_action_for_package(
+      widgets, { PendingAction::INSTALL, "demo-1.0-1.fc44.x86_64", "demo-1.0-1.fc44.x86_64", package_key });
+  replace_pending_action_for_package(
+      widgets, { PendingAction::INSTALL, "demo-2.0-1.fc44.x86_64", "demo-2.0-1.fc44.x86_64", package_key });
+
+  REQUIRE(widgets.transaction.actions.size() == 1);
+  REQUIRE(widgets.transaction.actions[0].type == PendingAction::INSTALL);
+  REQUIRE(widgets.transaction.actions[0].nevra == "demo-2.0-1.fc44.x86_64");
 }
 
 // -----------------------------------------------------------------------------

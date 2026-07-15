@@ -356,8 +356,11 @@ std::vector<PackageRow> dnf_backend_get_installed_package_rows_interruptible(GCa
 
 // -----------------------------------------------------------------------------
 // Query the merged browse view shown by "List Packages".
+// The caller passes the option snapshot used for this worker.
 // -----------------------------------------------------------------------------
-std::vector<PackageRow> dnf_backend_get_browse_package_rows_interruptible(GCancellable *cancellable);
+std::vector<PackageRow>
+dnf_backend_get_browse_package_rows_interruptible(GCancellable *cancellable,
+                                                  const DnfBackendSearchOptions &search_options);
 
 // -----------------------------------------------------------------------------
 // Query available repo packages that are upgrades to installed packages.

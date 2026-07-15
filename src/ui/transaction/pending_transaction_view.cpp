@@ -142,6 +142,15 @@ pending_transaction_remove_action(MainWindowUiState *widgets, const std::string 
 }
 
 // -----------------------------------------------------------------------------
+// Remove all pending actions for one package name and architecture.
+// -----------------------------------------------------------------------------
+bool
+pending_transaction_remove_package_key(MainWindowUiState *widgets, const std::string &package_key)
+{
+  return pending_actions_remove_package_key(widgets->transaction.actions, package_key);
+}
+
+// -----------------------------------------------------------------------------
 // Return the pending action type for one package ID.
 // -----------------------------------------------------------------------------
 bool

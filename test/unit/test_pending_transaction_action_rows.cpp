@@ -175,7 +175,7 @@ TEST_CASE("Pending transaction bulk upgrade marking replaces existing package ac
   dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
 
   std::vector<PendingAction> actions = {
-    { PendingAction::REMOVE, installed.nevra, installed.nevra },
+    { PendingAction::REMOVE, installed.nevra, installed.nevra, installed.name_arch_key() },
   };
 
   REQUIRE(pending_transaction_mark_upgrade_action_for_row(actions, update));
@@ -200,7 +200,7 @@ TEST_CASE("Pending transaction upgrade marking replaces stale upgrade candidate"
   dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
 
   std::vector<PendingAction> actions = {
-    { PendingAction::UPGRADE, old_update.nevra, "demo.x86_64" },
+    { PendingAction::UPGRADE, old_update.nevra, "demo.x86_64", old_update.name_arch_key() },
   };
 
   REQUIRE(pending_transaction_mark_upgrade_action_for_row(actions, new_update));

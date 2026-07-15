@@ -69,6 +69,7 @@ pending_transaction_action_rows_for_selection(const PackageRow &selected)
   rows.state = dnf_backend_get_package_install_state(selected);
   rows.install_is_upgrade = rows.state == PackageInstallState::UPGRADEABLE;
   rows.install_is_downgrade = rows.state == PackageInstallState::DOWNGRADEABLE;
+  rows.package_key = selected.name_arch_key();
   rows.install_row = selected;
   rows.installed_row = selected;
 
@@ -124,6 +125,7 @@ pending_transaction_mark_upgrade_action_for_row(std::vector<PendingAction> &acti
     return false;
   }
 
+  pending_actions_remove_package_key(actions, action_rows.package_key);
   remove_pending_upgrade_by_transaction_spec(actions, action_rows.upgrade_spec);
   remove_pending_action_by_nevra(actions, row.nevra);
   if (action_rows.has_installed_row) {
@@ -131,7 +133,8 @@ pending_transaction_mark_upgrade_action_for_row(std::vector<PendingAction> &acti
   }
   remove_pending_action_by_nevra(actions, action_rows.install_row.nevra);
 
-  actions.push_back({ PendingAction::UPGRADE, action_rows.install_row.nevra, action_rows.upgrade_spec });
+  actions.push_back(
+      { PendingAction::UPGRADE, action_rows.install_row.nevra, action_rows.upgrade_spec, action_rows.package_key });
   return true;
 }
 

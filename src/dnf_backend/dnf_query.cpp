@@ -616,10 +616,9 @@ dnf_backend_get_installed_package_rows_interruptible(GCancellable *cancellable)
 // Installed RPMs missing from enabled repositories are included as local-only rows.
 // -----------------------------------------------------------------------------
 std::vector<PackageRow>
-dnf_backend_get_browse_package_rows_interruptible(GCancellable *cancellable)
+dnf_backend_get_browse_package_rows_interruptible(GCancellable *cancellable,
+                                                  const DnfBackendSearchOptions &search_options)
 {
-  const DnfBackendSearchOptions search_options = dnf_backend_get_search_options();
-
   std::vector<PackageRow> rows;
   InstalledQueryResult installed;
   std::set<std::string> protected_names;

@@ -100,13 +100,14 @@ pending_transaction_on_install_button_clicked(GtkButton *, gpointer user_data)
       pending_transaction_mark_upgrade_action_for_row(widgets->transaction.actions, pkg);
     } else {
       // Replace any related pending action with install or downgrade.
+      pending_transaction_remove_package_key(widgets, action_rows.package_key);
       pending_transaction_remove_action(widgets, pkg.nevra);
       if (action_rows.has_installed_row) {
         pending_transaction_remove_action(widgets, action_rows.installed_row.nevra);
       }
       pending_transaction_remove_action(widgets, action_rows.install_row.nevra);
       widgets->transaction.actions.push_back(
-          { action_type, action_rows.install_row.nevra, action_rows.install_row.nevra });
+          { action_type, action_rows.install_row.nevra, action_rows.install_row.nevra, action_rows.package_key });
     }
     pending_transaction_refresh_pending_tab(widgets);
     const char *message = _("Marked for install: ");
@@ -174,13 +175,16 @@ pending_transaction_on_remove_button_clicked(GtkButton *, gpointer user_data)
     ui_helpers_set_status(widgets->query.status_label, (std::string(_("Unmarked: ")) + pkg.name).c_str(), "gray");
   } else {
     // Replace any other pending action with remove.
+    pending_transaction_remove_package_key(widgets, action_rows.package_key);
     pending_transaction_remove_action(widgets, pkg.nevra);
     if (action_rows.has_install_row) {
       pending_transaction_remove_action(widgets, action_rows.install_row.nevra);
     }
     pending_transaction_remove_action(widgets, action_rows.installed_row.nevra);
-    widgets->transaction.actions.push_back(
-        { PendingAction::REMOVE, action_rows.installed_row.nevra, action_rows.installed_row.nevra });
+    widgets->transaction.actions.push_back({ PendingAction::REMOVE,
+                                             action_rows.installed_row.nevra,
+                                             action_rows.installed_row.nevra,
+                                             action_rows.package_key });
     pending_transaction_refresh_pending_tab(widgets);
     ui_helpers_set_status(
         widgets->query.status_label, (std::string(_("Marked for removal: ")) + pkg.name).c_str(), "blue");
@@ -244,13 +248,16 @@ pending_transaction_on_reinstall_button_clicked(GtkButton *, gpointer user_data)
     pending_transaction_refresh_pending_tab(widgets);
     ui_helpers_set_status(widgets->query.status_label, (std::string(_("Unmarked: ")) + pkg.name).c_str(), "gray");
   } else {
+    pending_transaction_remove_package_key(widgets, action_rows.package_key);
     pending_transaction_remove_action(widgets, pkg.nevra);
     if (action_rows.has_install_row) {
       pending_transaction_remove_action(widgets, action_rows.install_row.nevra);
     }
     pending_transaction_remove_action(widgets, action_rows.installed_row.nevra);
-    widgets->transaction.actions.push_back(
-        { PendingAction::REINSTALL, action_rows.installed_row.nevra, action_rows.installed_row.nevra });
+    widgets->transaction.actions.push_back({ PendingAction::REINSTALL,
+                                             action_rows.installed_row.nevra,
+                                             action_rows.installed_row.nevra,
+                                             action_rows.package_key });
     pending_transaction_refresh_pending_tab(widgets);
     ui_helpers_set_status(
         widgets->query.status_label, (std::string(_("Marked for reinstall: ")) + pkg.name).c_str(), "blue");
