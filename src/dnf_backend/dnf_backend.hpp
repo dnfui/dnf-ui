@@ -126,6 +126,7 @@ struct PackageRow {
 enum class PackageInstallState {
   AVAILABLE,
   UPGRADEABLE,
+  DOWNGRADEABLE,
   INSTALLED,
   LOCAL_ONLY,
   INSTALLED_NEWER_THAN_REPO,
@@ -267,13 +268,14 @@ TransactionHistoryPage dnf_backend_list_transaction_history_page(TransactionHist
                                                                  GCancellable *cancellable);
 
 // -----------------------------------------------------------------------------
-// Search flags used by backend search queries.
-// The UI can update them from the search controls.
+// Package query flags used by backend browse and search queries.
+// The UI can update them from the query controls.
 // Each backend worker copies a snapshot before scanning so one query remains internally consistent.
 // -----------------------------------------------------------------------------
 struct DnfBackendSearchOptions {
   bool search_in_description = false;
   bool exact_match = false;
+  bool latest_only = true;
 };
 
 // -----------------------------------------------------------------------------

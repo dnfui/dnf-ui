@@ -84,6 +84,9 @@ pending_transaction_refresh_pending_tab(MainWindowUiState *widgets)
     case PendingAction::UPGRADE:
       prefix = _("Upgrade: ");
       break;
+    case PendingAction::DOWNGRADE:
+      prefix = _("Downgrade: ");
+      break;
     case PendingAction::REINSTALL:
       prefix = _("Reinstall: ");
       break;

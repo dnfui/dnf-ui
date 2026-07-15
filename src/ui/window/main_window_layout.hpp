@@ -27,6 +27,7 @@ struct AppWidgets {
   GtkWidget *search_button = NULL;
   GtkWidget *desc_checkbox = NULL;
   GtkWidget *exact_checkbox = NULL;
+  GtkWidget *latest_checkbox = NULL;
   GtkWidget *spinner = NULL;
 
   GtkWidget *list_button = NULL;

@@ -25,11 +25,12 @@ TEST_CASE("Transaction request empty state and item count reflect queued actions
 
   request.install.push_back("example-install-spec");
   request.upgrade.push_back("example-upgrade-spec");
+  request.downgrade.push_back("example-downgrade-spec");
   request.remove.push_back("example-remove-spec");
   request.reinstall.push_back("example-reinstall-spec");
 
   REQUIRE_FALSE(request.empty());
-  REQUIRE(request.item_count() == 4);
+  REQUIRE(request.item_count() == 5);
 
   TransactionRequest upgrade_all_request;
   upgrade_all_request.upgrade_all = true;
@@ -94,6 +95,20 @@ TEST_CASE("Transaction request validation rejects an empty remove package spec")
 
   REQUIRE_FALSE(request.validate(error));
   REQUIRE(error == "Transaction request contains an empty remove package spec.");
+}
+
+// -----------------------------------------------------------------------------
+// Verify that validation rejects empty downgrade specs before service work starts.
+// -----------------------------------------------------------------------------
+TEST_CASE("Transaction request validation rejects an empty downgrade package spec")
+{
+  TransactionRequest request;
+  std::string error;
+
+  request.downgrade.push_back("");
+
+  REQUIRE_FALSE(request.validate(error));
+  REQUIRE(error == "Transaction request contains an empty downgrade package spec.");
 }
 
 // -----------------------------------------------------------------------------
@@ -193,7 +208,7 @@ TEST_CASE("Transaction request validation rejects conflicting package actions")
   std::string error;
 
   request.install.push_back("example-package-spec");
-  request.upgrade.push_back("example-package-spec");
+  request.downgrade.push_back("example-package-spec");
 
   REQUIRE_FALSE(request.validate(error));
   REQUIRE(error == "Transaction request contains conflicting package actions.");
@@ -209,6 +224,7 @@ TEST_CASE("Transaction request validation accepts mixed non empty package specs"
 
   request.install.push_back("example-install-spec");
   request.upgrade.push_back("example-upgrade-spec");
+  request.downgrade.push_back("example-downgrade-spec");
   request.remove.push_back("example-remove-spec");
   request.reinstall.push_back("example-reinstall-spec");
 

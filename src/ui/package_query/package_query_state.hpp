@@ -31,6 +31,7 @@ struct DisplayedPackageQueryState {
   std::string search_term;
   bool search_in_description = false;
   bool exact_match = false;
+  bool latest_only = true;
 };
 
 // -----------------------------------------------------------------------------

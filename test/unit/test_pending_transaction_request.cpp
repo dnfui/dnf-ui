@@ -20,6 +20,7 @@ TEST_CASE("Pending transaction request builder splits actions by operation type"
   std::vector<PendingAction> actions = {
     { PendingAction::INSTALL, "demo-install-1-1.x86_64", "" },
     { PendingAction::UPGRADE, "demo-upgrade-2-1.x86_64", "demo.x86_64" },
+    { PendingAction::DOWNGRADE, "demo-downgrade-1-1.x86_64", "" },
     { PendingAction::REMOVE, "demo-remove-1-1.x86_64", "" },
     { PendingAction::REINSTALL, "demo-reinstall-1-1.x86_64", "" },
     { PendingAction::INSTALL, "demo-install-libs-1-1.x86_64", "" },
@@ -40,6 +41,10 @@ TEST_CASE("Pending transaction request builder splits actions by operation type"
           std::vector<std::string> {
               "demo.x86_64",
           });
+  REQUIRE(request.downgrade ==
+          std::vector<std::string> {
+              "demo-downgrade-1-1.x86_64",
+          });
   REQUIRE(request.remove ==
           std::vector<std::string> {
               "demo-remove-1-1.x86_64",
@@ -59,6 +64,7 @@ TEST_CASE("Pending transaction request builder clears stale request data")
   request.upgrade_all = true;
   request.install.push_back("old-install");
   request.upgrade.push_back("old-upgrade");
+  request.downgrade.push_back("old-downgrade");
   request.remove.push_back("old-remove");
   request.reinstall.push_back("old-reinstall");
   std::string error;
@@ -73,6 +79,7 @@ TEST_CASE("Pending transaction request builder clears stale request data")
   REQUIRE_FALSE(request.upgrade_all);
   REQUIRE(request.install.empty());
   REQUIRE(request.upgrade.empty());
+  REQUIRE(request.downgrade.empty());
   REQUIRE(request.remove ==
           std::vector<std::string> {
               "demo-remove-1-1.x86_64",
@@ -97,6 +104,7 @@ TEST_CASE("Pending transaction request builder rejects unknown action types")
   REQUIRE_FALSE(error.empty());
   REQUIRE(request.install.empty());
   REQUIRE(request.upgrade.empty());
+  REQUIRE(request.downgrade.empty());
   REQUIRE(request.remove.empty());
   REQUIRE(request.reinstall.empty());
 }
@@ -109,6 +117,7 @@ TEST_CASE("Pending transaction request validation accepts non protected requests
   TransactionRequest request;
   request.install.push_back("demo-install-1-1.x86_64");
   request.upgrade.push_back("demo-upgrade-1-1.x86_64");
+  request.downgrade.push_back("demo-downgrade-1-1.x86_64");
   request.remove.push_back("demo-remove-1-1.x86_64");
   request.reinstall.push_back("demo-reinstall-1-1.x86_64");
   std::string error;
@@ -157,6 +166,13 @@ TEST_CASE("Pending transaction request validation rejects protected remove and r
 
   REQUIRE_FALSE(pending_transaction_validate_request(reinstall_request, reinstall_error));
   REQUIRE_FALSE(reinstall_error.empty());
+
+  TransactionRequest downgrade_request;
+  downgrade_request.downgrade.push_back("dnf-ui");
+  std::string downgrade_error;
+
+  REQUIRE_FALSE(pending_transaction_validate_request(downgrade_request, downgrade_error));
+  REQUIRE_FALSE(downgrade_error.empty());
 
   reset_backend_globals();
 }

@@ -23,11 +23,12 @@ reset_backend_globals()
 // Set backend search options for a test case.
 // -----------------------------------------------------------------------------
 inline void
-set_backend_search_options(bool search_in_description, bool exact_match)
+set_backend_search_options(bool search_in_description, bool exact_match, bool latest_only = true)
 {
   dnf_backend_set_search_options({
       .search_in_description = search_in_description,
       .exact_match = exact_match,
+      .latest_only = latest_only,
   });
 }
 

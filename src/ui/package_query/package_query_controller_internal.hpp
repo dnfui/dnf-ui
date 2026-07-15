@@ -32,7 +32,8 @@ bool package_query_displayed_view_is_upgradeable(const MainWindowUiState *widget
 void package_query_set_displayed_search_query(MainWindowUiState *widgets,
                                               const std::string &term,
                                               bool search_in_description,
-                                              bool exact_match);
+                                              bool exact_match,
+                                              bool latest_only);
 // -----------------------------------------------------------------------------
 // Finish one refresh of the package table and update the details pane.
 // -----------------------------------------------------------------------------

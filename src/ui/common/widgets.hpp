@@ -32,6 +32,7 @@ struct PackageQueryWidgets {
   GtkLabel *status_label = nullptr;
   GtkCheckButton *desc_checkbox = nullptr;
   GtkCheckButton *exact_checkbox = nullptr;
+  GtkCheckButton *latest_checkbox = nullptr;
 };
 
 // -----------------------------------------------------------------------------

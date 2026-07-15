@@ -43,6 +43,9 @@ package_table_fill_item_status(MainWindowUiState *widgets, PackageItem &item)
       case PendingAction::UPGRADE:
         item.status_text = _("Pending Upgrade");
         break;
+      case PendingAction::DOWNGRADE:
+        item.status_text = _("Pending Downgrade");
+        break;
       case PendingAction::REINSTALL:
         item.status_text = _("Pending Reinstall");
         break;

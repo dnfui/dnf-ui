@@ -44,6 +44,30 @@ TEST_CASE("Pending transaction action rows resolve plain available package")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that an older available row resolves to a downgrade action.
+// -----------------------------------------------------------------------------
+TEST_CASE("Pending transaction action rows resolve downgrade from older available row")
+{
+  reset_backend_globals();
+
+  PackageRow installed = make_test_package_row("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64");
+  PackageRow older = make_test_package_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
+
+  dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
+
+  PendingTransactionActionRows rows = pending_transaction_action_rows_for_selection(older);
+
+  REQUIRE(rows.state == PackageInstallState::DOWNGRADEABLE);
+  REQUIRE_FALSE(rows.install_is_upgrade);
+  REQUIRE(rows.install_is_downgrade);
+  REQUIRE(rows.has_install_row);
+  REQUIRE(rows.install_row.nevra == older.nevra);
+  REQUIRE(rows.has_installed_row);
+  REQUIRE(rows.installed_row.nevra == installed.nevra);
+  REQUIRE(rows.can_try_reinstall);
+}
+
+// -----------------------------------------------------------------------------
 // Verify that an installed row with a stored repo candidate upgrades that candidate.
 // -----------------------------------------------------------------------------
 TEST_CASE("Pending transaction action rows resolve upgrade from installed package row")
@@ -83,6 +107,11 @@ TEST_CASE("Pending transaction action rows allow protected upgrade action")
 
   REQUIRE_FALSE(pending_transaction_install_action_blocked_by_self_protection(upgrade_rows, true));
   REQUIRE_FALSE(pending_transaction_install_action_blocked_by_self_protection(upgrade_rows, false));
+
+  PendingTransactionActionRows downgrade_rows;
+  downgrade_rows.install_is_downgrade = true;
+
+  REQUIRE(pending_transaction_install_action_blocked_by_self_protection(downgrade_rows, true));
 }
 
 // -----------------------------------------------------------------------------

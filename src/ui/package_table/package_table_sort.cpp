@@ -18,7 +18,8 @@ package_table_column_text(const PackageItem &item, PackageColumnKind kind)
     return item.row.name;
   case PackageColumnKind::VERSION: {
     PackageRow installed_row;
-    if (dnf_backend_get_installed_package_row_by_name_arch(item.row, installed_row) &&
+    if (dnf_backend_get_package_install_state(item.row) == PackageInstallState::UPGRADEABLE &&
+        dnf_backend_get_installed_package_row_by_name_arch(item.row, installed_row) &&
         installed_row.nevra != item.row.nevra) {
       // The table column is named Version, so keep it aligned with the Info tab Version field.
       return installed_row.version;
@@ -35,7 +36,8 @@ package_table_column_text(const PackageItem &item, PackageColumnKind kind)
     return {};
   case PackageColumnKind::RELEASE: {
     PackageRow installed_row;
-    if (dnf_backend_get_installed_package_row_by_name_arch(item.row, installed_row) &&
+    if (dnf_backend_get_package_install_state(item.row) == PackageInstallState::UPGRADEABLE &&
+        dnf_backend_get_installed_package_row_by_name_arch(item.row, installed_row) &&
         installed_row.nevra != item.row.nevra) {
       return installed_row.release;
     }
@@ -62,7 +64,8 @@ package_table_column_text(const PackageItem &item, PackageColumnKind kind)
       }
       return item.row.repo;
     }
-    if (dnf_backend_get_installed_package_row_by_name_arch(item.row, installed_row)) {
+    if (dnf_backend_get_installed_package_row_by_name_arch(item.row, installed_row) &&
+        installed_row.nevra == item.row.nevra) {
       return installed_row.repo;
     }
     return item.row.repo;

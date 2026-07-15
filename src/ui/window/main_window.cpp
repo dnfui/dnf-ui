@@ -190,6 +190,7 @@ create_main_window_ui_state(const AppWidgets *ui)
   widgets->query.status_label = GTK_LABEL(ui->status_label);
   widgets->query.desc_checkbox = GTK_CHECK_BUTTON(ui->desc_checkbox);
   widgets->query.exact_checkbox = GTK_CHECK_BUTTON(ui->exact_checkbox);
+  widgets->query.latest_checkbox = GTK_CHECK_BUTTON(ui->latest_checkbox);
 
   widgets->results.listbox = GTK_LIST_BOX(ui->listbox);
   widgets->results.list_scroller = GTK_SCROLLED_WINDOW(ui->scrolled_list);

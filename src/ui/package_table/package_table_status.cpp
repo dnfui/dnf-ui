@@ -25,6 +25,8 @@ package_table_status_text(PackageInstallState state)
     return _("Installed (local only)");
   case PackageInstallState::INSTALLED_NEWER_THAN_REPO:
     return _("Installed (newer than repo)");
+  case PackageInstallState::DOWNGRADEABLE:
+    return _("Older in repository");
   case PackageInstallState::UPGRADEABLE:
     return _("Newer in repository");
   case PackageInstallState::AVAILABLE:
@@ -94,6 +96,7 @@ pending_css_class(MainWindowUiState *widgets, const std::string &nevra, const st
       switch (a.type) {
       case PendingAction::INSTALL:
       case PendingAction::UPGRADE:
+      case PendingAction::DOWNGRADE:
         return "package-status-pending-install";
       case PendingAction::REINSTALL:
         return "package-status-pending-reinstall";
@@ -114,7 +117,7 @@ package_table_pending_action_css_class(MainWindowUiState *widgets, const Package
 {
   PackageInstallState install_state = dnf_backend_get_package_install_state(row);
   PendingTransactionActionRows action_rows;
-  if (install_state == PackageInstallState::UPGRADEABLE) {
+  if (install_state == PackageInstallState::UPGRADEABLE || install_state == PackageInstallState::DOWNGRADEABLE) {
     action_rows = pending_transaction_action_rows_for_selection(row);
   }
 
@@ -137,7 +140,10 @@ pending_icon_name(PendingAction::Type action_type, PackageInstallState install_s
   switch (action_type) {
   case PendingAction::INSTALL:
   case PendingAction::UPGRADE:
-    return install_state == PackageInstallState::UPGRADEABLE ? "view-refresh-symbolic" : "list-add-symbolic";
+  case PendingAction::DOWNGRADE:
+    return install_state == PackageInstallState::UPGRADEABLE || install_state == PackageInstallState::DOWNGRADEABLE
+        ? "view-refresh-symbolic"
+        : "list-add-symbolic";
   case PendingAction::REINSTALL:
     return "view-refresh-symbolic";
   case PendingAction::REMOVE:
@@ -159,6 +165,7 @@ status_icon_name(PackageInstallState state)
   case PackageInstallState::INSTALLED_NEWER_THAN_REPO:
     return "object-select-symbolic";
   case PackageInstallState::UPGRADEABLE:
+  case PackageInstallState::DOWNGRADEABLE:
     return "view-refresh-symbolic";
   case PackageInstallState::AVAILABLE:
   default:
@@ -217,7 +224,11 @@ package_table_update_status_label(GtkWidget *cell, MainWindowUiState *widgets, c
       switch (a.type) {
       case PendingAction::INSTALL:
       case PendingAction::UPGRADE:
+      case PendingAction::DOWNGRADE:
         text = install_state == PackageInstallState::UPGRADEABLE ? _("Pending Upgrade") : _("Pending Install");
+        if (install_state == PackageInstallState::DOWNGRADEABLE) {
+          text = _("Pending Downgrade");
+        }
         break;
       case PendingAction::REINSTALL:
         text = _("Pending Reinstall");
@@ -250,7 +261,8 @@ package_table_update_status_label(GtkWidget *cell, MainWindowUiState *widgets, c
       gtk_widget_add_css_class(cell, "package-status-installed");
     } else if (install_state == PackageInstallState::INSTALLED_NEWER_THAN_REPO) {
       gtk_widget_add_css_class(cell, "package-status-installed-newer");
-    } else if (install_state == PackageInstallState::UPGRADEABLE) {
+    } else if (install_state == PackageInstallState::UPGRADEABLE ||
+               install_state == PackageInstallState::DOWNGRADEABLE) {
       gtk_widget_add_css_class(cell, "package-status-upgradeable");
     } else {
       gtk_widget_add_css_class(cell, "package-status-available");

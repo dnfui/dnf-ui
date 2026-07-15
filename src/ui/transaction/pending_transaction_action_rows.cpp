@@ -68,6 +68,7 @@ pending_transaction_action_rows_for_selection(const PackageRow &selected)
   PendingTransactionActionRows rows;
   rows.state = dnf_backend_get_package_install_state(selected);
   rows.install_is_upgrade = rows.state == PackageInstallState::UPGRADEABLE;
+  rows.install_is_downgrade = rows.state == PackageInstallState::DOWNGRADEABLE;
   rows.install_row = selected;
   rows.installed_row = selected;
 
@@ -87,6 +88,15 @@ pending_transaction_action_rows_for_selection(const PackageRow &selected)
       rows.has_installed_row = dnf_backend_get_installed_package_row_by_name_arch(selected, rows.installed_row);
     }
     rows.upgrade_spec = upgrade_transaction_spec(rows.has_installed_row ? rows.installed_row : selected);
+    rows.can_try_reinstall = rows.has_installed_row;
+    return rows;
+  }
+
+  // Older available rows can be selected when Latest only is disabled.
+  // They must be sent as downgrades, not plain installs.
+  if (rows.install_is_downgrade) {
+    rows.has_install_row = true;
+    rows.has_installed_row = dnf_backend_get_installed_package_row_by_name_arch(selected, rows.installed_row);
     rows.can_try_reinstall = rows.has_installed_row;
     return rows;
   }

@@ -116,6 +116,11 @@ main_window_build_layout(AppWidgets *ui)
   gtk_box_append(GTK_BOX(hbox_search), exact_checkbox);
   ui->exact_checkbox = exact_checkbox;
 
+  GtkWidget *latest_checkbox = gtk_check_button_new_with_label(_("Latest only"));
+  gtk_check_button_set_active(GTK_CHECK_BUTTON(latest_checkbox), TRUE);
+  gtk_box_append(GTK_BOX(hbox_search), latest_checkbox);
+  ui->latest_checkbox = latest_checkbox;
+
   GtkWidget *spinner = gtk_spinner_new();
   gtk_widget_set_visible(spinner, FALSE);
   gtk_box_append(GTK_BOX(hbox_search), spinner);

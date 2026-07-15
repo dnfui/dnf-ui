@@ -20,6 +20,7 @@
 struct PendingTransactionActionRows {
   PackageInstallState state = PackageInstallState::AVAILABLE;
   bool install_is_upgrade = false;
+  bool install_is_downgrade = false;
   bool has_install_row = false;
   bool has_installed_row = false;
   // Fast UI check only. This does not prove that reinstall is available from repositories.

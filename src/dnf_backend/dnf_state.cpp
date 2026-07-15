@@ -31,11 +31,12 @@ namespace {
 std::set<std::string> g_installed_nevras;
 // Mutex for thread-safe access to the installed-package cache and derived state.
 std::mutex g_installed_mutex;
-// Packed search flags read by query workers when they start a search. Keeping
-// both options in one atomic makes dnf_backend_get_search_options a single
-// coherent snapshot.
+// Packed search flags read by query workers when they start a search.
+// Keeping the options in one atomic makes dnf_backend_get_search_options a
+// single coherent snapshot.
 constexpr unsigned kSearchInDescriptionBit = 1U << 0;
 constexpr unsigned kExactMatchBit = 1U << 1;
+constexpr unsigned kShowOlderVersionsBit = 1U << 2;
 std::atomic<unsigned> g_search_option_bits { 0 };
 // Cached installed rows keyed by name and arch for upgrade-state classification.
 std::map<std::string, PackageRow> g_installed_rows_by_name_arch;
@@ -180,6 +181,9 @@ dnf_backend_set_search_options(const DnfBackendSearchOptions &options)
   if (options.exact_match) {
     bits |= kExactMatchBit;
   }
+  if (!options.latest_only) {
+    bits |= kShowOlderVersionsBit;
+  }
   g_search_option_bits.store(bits, std::memory_order_relaxed);
 }
 
@@ -193,6 +197,7 @@ dnf_backend_get_search_options()
   return {
     .search_in_description = (bits & kSearchInDescriptionBit) != 0,
     .exact_match = (bits & kExactMatchBit) != 0,
+    .latest_only = (bits & kShowOlderVersionsBit) == 0,
   };
 }
 
@@ -305,6 +310,10 @@ dnf_backend_get_package_install_state(const PackageRow &row)
     return PackageInstallState::UPGRADEABLE;
   }
 
+  if (libdnf5::rpm::evrcmp(row, it->second) < 0) {
+    return PackageInstallState::DOWNGRADEABLE;
+  }
+
   return PackageInstallState::INSTALLED_NEWER_THAN_REPO;
 }
 
@@ -322,11 +331,13 @@ dnf_backend_get_install_state_sort_rank(PackageInstallState state)
     return 1;
   case PackageInstallState::LOCAL_ONLY:
     return 2;
-  case PackageInstallState::UPGRADEABLE:
+  case PackageInstallState::DOWNGRADEABLE:
     return 3;
+  case PackageInstallState::UPGRADEABLE:
+    return 4;
   case PackageInstallState::AVAILABLE:
   default:
-    return 4;
+    return 5;
   }
 }
 

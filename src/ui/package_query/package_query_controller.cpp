@@ -55,6 +55,20 @@ add_to_history(MainWindowUiState *widgets, const std::string &term)
 }
 
 // -----------------------------------------------------------------------------
+// Read the package query options from the current controls.
+// -----------------------------------------------------------------------------
+static DnfBackendSearchOptions
+package_query_options_from_controls(MainWindowUiState *widgets)
+{
+  return {
+    .search_in_description =
+        static_cast<bool>(gtk_check_button_get_active(GTK_CHECK_BUTTON(widgets->query.desc_checkbox))),
+    .exact_match = static_cast<bool>(gtk_check_button_get_active(GTK_CHECK_BUTTON(widgets->query.exact_checkbox))),
+    .latest_only = static_cast<bool>(gtk_check_button_get_active(GTK_CHECK_BUTTON(widgets->query.latest_checkbox))),
+  };
+}
+
+// -----------------------------------------------------------------------------
 // Run a search from cache or start a background search task.
 // -----------------------------------------------------------------------------
 static void
@@ -65,11 +79,7 @@ perform_search(MainWindowUiState *widgets, const std::string &term)
   }
 
   // Include the current checkboxes in the cache key even for history searches.
-  dnf_backend_set_search_options({
-      .search_in_description =
-          static_cast<bool>(gtk_check_button_get_active(GTK_CHECK_BUTTON(widgets->query.desc_checkbox))),
-      .exact_match = static_cast<bool>(gtk_check_button_get_active(GTK_CHECK_BUTTON(widgets->query.exact_checkbox))),
-  });
+  dnf_backend_set_search_options(package_query_options_from_controls(widgets));
   const DnfBackendSearchOptions search_options = dnf_backend_get_search_options();
 
   gtk_editable_set_text(GTK_EDITABLE(widgets->query.entry), term.c_str());
@@ -91,7 +101,7 @@ perform_search(MainWindowUiState *widgets, const std::string &term)
   if (package_query_cache_lookup(key, generation, cache_epoch, cached_packages)) {
     // Show saved rows and skip the worker thread.
     package_query_set_displayed_search_query(
-        widgets, term, search_options.search_in_description, search_options.exact_match);
+        widgets, term, search_options.search_in_description, search_options.exact_match, search_options.latest_only);
 
     package_table_fill_package_view(widgets,
                                     cached_packages,
@@ -147,6 +157,7 @@ package_query_on_list_available_button_clicked(GtkButton *, gpointer user_data)
   }
 
   ui_helpers_set_status(widgets->query.status_label, _("Listing packages..."), "blue");
+  dnf_backend_set_search_options(package_query_options_from_controls(widgets));
   package_query_start_list_available_task(widgets);
 }
 
@@ -267,12 +278,14 @@ package_query_reload_current_view(MainWindowUiState *widgets)
 
     gtk_check_button_set_active(GTK_CHECK_BUTTON(widgets->query.desc_checkbox), view_state.search_in_description);
     gtk_check_button_set_active(GTK_CHECK_BUTTON(widgets->query.exact_checkbox), view_state.exact_match);
+    gtk_check_button_set_active(GTK_CHECK_BUTTON(widgets->query.latest_checkbox), view_state.latest_only);
     perform_search(widgets, view_state.search_term);
     return;
   case DisplayedPackageQueryKind::LIST_INSTALLED:
     package_query_on_list_button_clicked(nullptr, widgets);
     return;
   case DisplayedPackageQueryKind::LIST_AVAILABLE:
+    gtk_check_button_set_active(GTK_CHECK_BUTTON(widgets->query.latest_checkbox), view_state.latest_only);
     package_query_on_list_available_button_clicked(nullptr, widgets);
     return;
   case DisplayedPackageQueryKind::LIST_UPGRADEABLE:

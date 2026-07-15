@@ -35,18 +35,21 @@ static bool
 build_pending_transaction_specs(const std::vector<PendingAction> &actions,
                                 std::vector<std::string> &install,
                                 std::vector<std::string> &upgrade,
+                                std::vector<std::string> &downgrade,
                                 std::vector<std::string> &remove,
                                 std::vector<std::string> &reinstall,
                                 std::string &error_out)
 {
   install.clear();
   upgrade.clear();
+  downgrade.clear();
   remove.clear();
   reinstall.clear();
   error_out.clear();
 
   install.reserve(actions.size());
   upgrade.reserve(actions.size());
+  downgrade.reserve(actions.size());
   remove.reserve(actions.size());
   reinstall.reserve(actions.size());
 
@@ -58,6 +61,9 @@ build_pending_transaction_specs(const std::vector<PendingAction> &actions,
     case PendingAction::UPGRADE:
       upgrade.push_back(pending_transaction_spec(action));
       break;
+    case PendingAction::DOWNGRADE:
+      downgrade.push_back(pending_transaction_spec(action));
+      break;
     case PendingAction::REMOVE:
       remove.push_back(pending_transaction_spec(action));
       break;
@@ -67,6 +73,7 @@ build_pending_transaction_specs(const std::vector<PendingAction> &actions,
     default:
       install.clear();
       upgrade.clear();
+      downgrade.clear();
       remove.clear();
       reinstall.clear();
       error_out = _("Unknown pending package action.");
@@ -87,11 +94,11 @@ pending_transaction_build_request(const std::vector<PendingAction> &actions,
 {
   request.upgrade_all = false;
   return build_pending_transaction_specs(
-      actions, request.install, request.upgrade, request.remove, request.reinstall, error_out);
+      actions, request.install, request.upgrade, request.downgrade, request.remove, request.reinstall, error_out);
 }
 
 // -----------------------------------------------------------------------------
-// Reject direct remove or reinstall requests for the package owning the running GUI.
+// Reject direct remove, reinstall, or downgrade requests for the package owning the running GUI.
 // Selected upgrades are allowed here and checked again after dnf5daemon resolves the preview.
 // -----------------------------------------------------------------------------
 bool
@@ -105,6 +112,15 @@ pending_transaction_validate_request(const TransactionRequest &request, std::str
       if (dnf_backend_is_self_protected_transaction_spec(spec)) {
         error_out = _("DNF UI cannot remove the package that owns the running application. Close DNF UI and remove it "
                       "from another tool.");
+        return false;
+      }
+    }
+
+    for (const auto &spec : request.downgrade) {
+      // Re-check downgrade specs so stale UI state or bypassed button sensitivity
+      // cannot replace the running app.
+      if (dnf_backend_is_self_protected_transaction_spec(spec)) {
+        error_out = _("DNF UI cannot downgrade the package that owns the running application while it is running.");
         return false;
       }
     }

@@ -100,10 +100,21 @@ package_table_show_context_menu(GtkWidget *anchor,
   // Keep context menu actions aligned with the normal package action buttons.
   const char *install_label = nullptr;
   if (has_pending_install &&
-      (pending_install_type == PendingAction::INSTALL || pending_install_type == PendingAction::UPGRADE)) {
-    install_label = action_rows.install_is_upgrade ? _("Unmark Upgrade") : _("Unmark Install");
+      (pending_install_type == PendingAction::INSTALL || pending_install_type == PendingAction::UPGRADE ||
+       pending_install_type == PendingAction::DOWNGRADE)) {
+    install_label = _("Unmark Install");
+    if (action_rows.install_is_upgrade) {
+      install_label = _("Unmark Upgrade");
+    } else if (action_rows.install_is_downgrade) {
+      install_label = _("Unmark Downgrade");
+    }
   } else {
-    install_label = action_rows.install_is_upgrade ? _("Mark for Upgrade") : _("Mark for Install");
+    install_label = _("Mark for Install");
+    if (action_rows.install_is_upgrade) {
+      install_label = _("Mark for Upgrade");
+    } else if (action_rows.install_is_downgrade) {
+      install_label = _("Mark for Downgrade");
+    }
   }
   const char *remove_label = has_pending_destructive && pending_destructive_type == PendingAction::REMOVE
       ? _("Unmark Removal")

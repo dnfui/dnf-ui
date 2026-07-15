@@ -15,6 +15,7 @@
 #include <atomic>
 #include <map>
 #include <memory>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -103,6 +104,12 @@ remember_newest_row(std::map<std::string, PackageRow> &rows_by_name_arch, const 
     it->second = row;
   }
 }
+
+struct AvailableViewRows {
+  std::vector<PackageRow> rows;
+  std::map<std::string, PackageRow> newest_by_name_arch;
+  std::set<std::string> available_nevras;
+};
 
 // -----------------------------------------------------------------------------
 // Return each installed package name once.
@@ -230,6 +237,59 @@ collect_available_rows_by_name_arch(libdnf5::Base &base,
   }
 
   return rows_by_name_arch;
+}
+
+// -----------------------------------------------------------------------------
+// Collect available rows for the browse and search table.
+// With Latest only enabled, keep the same one-row-per-name-and-architecture view
+// used by the default package table. With it disabled, keep every available NEVRA so an
+// older package version can be selected explicitly.
+// -----------------------------------------------------------------------------
+static AvailableViewRows
+collect_available_rows_for_view(libdnf5::Base &base,
+                                GCancellable *cancellable,
+                                const DnfBackendSearchOptions &search_options,
+                                const std::string *pattern)
+{
+  libdnf5::rpm::PackageQuery query(base);
+  query.filter_available();
+  if (search_options.latest_only) {
+    query.filter_latest_evr();
+  }
+
+  const std::string pattern_lower = pattern ? utf8_casefold_copy(*pattern) : "";
+  AvailableViewRows result;
+
+  for (auto pkg : query) {
+    if (package_query_cancelled(cancellable)) {
+      result.rows.clear();
+      result.newest_by_name_arch.clear();
+      result.available_nevras.clear();
+      return result;
+    }
+
+    if (pattern && !package_matches_search(pkg, pattern_lower, search_options)) {
+      continue;
+    }
+
+    PackageRow row = make_package_row(pkg, PackageRepoCandidateRelation::UNKNOWN);
+    remember_newest_row(result.newest_by_name_arch, row);
+    result.available_nevras.insert(row.nevra);
+    if (search_options.latest_only) {
+      continue;
+    }
+
+    result.rows.push_back(row);
+  }
+
+  if (search_options.latest_only) {
+    result.rows.reserve(result.newest_by_name_arch.size());
+    for (const auto &entry : result.newest_by_name_arch) {
+      result.rows.push_back(entry.second);
+    }
+  }
+
+  return result;
 }
 
 // -----------------------------------------------------------------------------
@@ -422,6 +482,31 @@ visible_rows_from_maps(std::map<std::string, PackageRow> available_rows,
   return rows;
 }
 
+// -----------------------------------------------------------------------------
+// Build the all-versions browse view.
+// This keeps every available row and adds installed rows only when the installed
+// NEVRA is not already visible from a repository.
+// -----------------------------------------------------------------------------
+static std::vector<PackageRow>
+visible_rows_from_available_view(AvailableViewRows available_rows,
+                                 const std::map<std::string, PackageRow> &installed_rows)
+{
+  std::vector<PackageRow> rows = std::move(available_rows.rows);
+
+  for (const auto &entry : installed_rows) {
+    const PackageRow &stored_installed_row = entry.second;
+    if (available_rows.available_nevras.count(stored_installed_row.nevra) > 0) {
+      continue;
+    }
+
+    PackageRow installed_row = stored_installed_row;
+    annotate_installed_row_with_repo_candidate(installed_row, available_rows.newest_by_name_arch);
+    rows.push_back(installed_row);
+  }
+
+  return rows;
+}
+
 } // namespace dnf_backend_internal
 
 using namespace dnf_backend_internal;
@@ -440,7 +525,7 @@ dnf_backend_search_package_rows_interruptible(const std::string &pattern, GCance
   {
     try {
       auto [base, guard, generation] = acquire_interruptible_base_read(cancellable);
-      auto available_rows = collect_available_rows_by_name_arch(base, cancellable, search_options, &pattern);
+      auto available_rows = collect_available_rows_for_view(base, cancellable, search_options, &pattern);
       if (package_query_cancelled(cancellable)) {
         return {};
       }
@@ -463,7 +548,12 @@ dnf_backend_search_package_rows_interruptible(const std::string &pattern, GCance
       }
 
       protected_names = collect_self_protected_package_names(base);
-      rows = visible_rows_from_maps(std::move(available_rows), filtered_installed.rows_by_name_arch);
+      if (search_options.latest_only) {
+        rows =
+            visible_rows_from_maps(std::move(available_rows.newest_by_name_arch), filtered_installed.rows_by_name_arch);
+      } else {
+        rows = visible_rows_from_available_view(std::move(available_rows), filtered_installed.rows_by_name_arch);
+      }
     } catch (const BaseOperationCancelled &) {
       return {};
     }
@@ -528,7 +618,7 @@ dnf_backend_get_installed_package_rows_interruptible(GCancellable *cancellable)
 std::vector<PackageRow>
 dnf_backend_get_browse_package_rows_interruptible(GCancellable *cancellable)
 {
-  const DnfBackendSearchOptions search_options {};
+  const DnfBackendSearchOptions search_options = dnf_backend_get_search_options();
 
   std::vector<PackageRow> rows;
   InstalledQueryResult installed;
@@ -536,7 +626,7 @@ dnf_backend_get_browse_package_rows_interruptible(GCancellable *cancellable)
   {
     try {
       auto [base, guard, generation] = acquire_interruptible_base_read(cancellable);
-      auto available_rows = collect_available_rows_by_name_arch(base, cancellable, search_options);
+      auto available_rows = collect_available_rows_for_view(base, cancellable, search_options, nullptr);
       if (package_query_cancelled(cancellable)) {
         return {};
       }
@@ -549,7 +639,11 @@ dnf_backend_get_browse_package_rows_interruptible(GCancellable *cancellable)
       }
 
       protected_names = collect_self_protected_package_names(base);
-      rows = visible_rows_from_maps(std::move(available_rows), installed.rows_by_name_arch);
+      if (search_options.latest_only) {
+        rows = visible_rows_from_maps(std::move(available_rows.newest_by_name_arch), installed.rows_by_name_arch);
+      } else {
+        rows = visible_rows_from_available_view(std::move(available_rows), installed.rows_by_name_arch);
+      }
     } catch (const BaseOperationCancelled &) {
       return {};
     }

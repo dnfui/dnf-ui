@@ -47,6 +47,7 @@ struct SearchTaskData {
   uint64_t cache_epoch;
   bool search_in_description;
   bool exact_match;
+  bool latest_only;
 };
 
 // -----------------------------------------------------------------------------
@@ -71,6 +72,7 @@ struct PackageListTaskData {
   uint64_t request_id;
   uint64_t generation;
   gint64 started_at_us;
+  bool latest_only = true;
 };
 
 // Data passed to one exact selected-package reload task.
@@ -330,6 +332,9 @@ on_list_available_task_finished(GObject *, GAsyncResult *res, gpointer user_data
 
   if (packages) {
     package_query_set_displayed_query_kind(widgets, DisplayedPackageQueryKind::LIST_AVAILABLE);
+    if (td) {
+      widgets->query_state.displayed_query.latest_only = td->latest_only;
+    }
 
     if (widgets->query_state.preserve_selection_on_reload) {
       widgets->results.selected_nevra = widgets->query_state.reload_selected_nevra;
@@ -527,7 +532,7 @@ on_search_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
 
     if (td) {
       package_query_set_displayed_search_query(
-          widgets, td->term ? td->term : "", td->search_in_description, td->exact_match);
+          widgets, td->term ? td->term : "", td->search_in_description, td->exact_match, td->latest_only);
     }
 
     // Fill the package table and display the result count.
@@ -739,6 +744,7 @@ package_query_start_search_task(MainWindowUiState *widgets,
   td->cache_epoch = cache_epoch;
   td->search_in_description = search_options.search_in_description;
   td->exact_match = search_options.exact_match;
+  td->latest_only = search_options.latest_only;
 
   GCancellable *c = widgets_make_task_cancellable_for(GTK_WIDGET(widgets->query.entry));
   package_query_begin_package_list_request(widgets, c, td->request_id, PackageListRequestKind::SEARCH);
