@@ -12,6 +12,7 @@
 #include "ui/package_table/package_table_status.hpp"
 #include "ui/package_table/package_table_view.hpp"
 #include "ui/package_table/package_table_view_internal.hpp"
+#include "ui/transaction/pending_transaction_action_rows.hpp"
 #include "ui/transaction/pending_transaction_controller.hpp"
 #include "ui/common/widgets.hpp"
 
@@ -876,16 +877,14 @@ package_table_fill_package_view(MainWindowUiState *widgets,
                        return;
                      }
 
-                     // Double-click toggles install vs remove based on whether
-                     // this exact row already exists in the installed snapshot.
-                     bool installed_exact = dnf_backend_is_package_installed_exact(*row);
+                     PendingTransactionActionRows action_rows = pending_transaction_action_rows_for_selection(*row);
                      gtk_single_selection_set_selected(sel, position);
                      g_object_unref(obj);
 
-                     if (installed_exact) {
-                       pending_transaction_on_remove_button_clicked(nullptr, widgets);
-                     } else {
+                     if (action_rows.has_install_row) {
                        pending_transaction_on_install_button_clicked(nullptr, widgets);
+                     } else if (action_rows.has_installed_row) {
+                       pending_transaction_on_remove_button_clicked(nullptr, widgets);
                      }
                    }),
                    widgets);
