@@ -66,8 +66,8 @@ collect_installed_reverse_dependency_nevras(libdnf5::Base &base, const libdnf5::
 // -----------------------------------------------------------------------------
 // Fetch and format details for one exact NEVRA.
 //
-// Upgradable packages can be opened from either the installed package row or the available update row.
-// The details pane should describe the installed package first, then add the available update version when one exists.
+// The Info tab describes the selected package row.
+// If an installed counterpart exists, the text can still include installed and upgradable version context.
 // -----------------------------------------------------------------------------
 std::string
 dnf_backend_get_package_info(const std::string &pkg_nevra)
@@ -78,8 +78,6 @@ dnf_backend_get_package_info(const std::string &pkg_nevra)
 
   PackageRow installed_row;
   bool have_installed_counterpart = false;
-  unsigned long long installed_install_size = 0;
-  std::string installed_summary, installed_description;
 
   PackageRow upgrade_row;
   bool have_upgrade = false;
@@ -95,6 +93,7 @@ dnf_backend_get_package_info(const std::string &pkg_nevra)
 
   libdnf5::rpm::PackageQuery installed_q(query);
   installed_q.filter_installed();
+  const bool selected_is_installed = !installed_q.empty();
   libdnf5::rpm::PackageQuery best_candidate = installed_q.empty() ? query : installed_q;
   best_candidate.filter_latest_evr();
   auto pkg = *best_candidate.begin();
@@ -116,9 +115,6 @@ dnf_backend_get_package_info(const std::string &pkg_nevra)
     PackageRow row = make_package_row(installed_pkg);
     if (!have_installed_counterpart || libdnf5::rpm::evrcmp(row, installed_row) > 0) {
       installed_row = row;
-      installed_install_size = static_cast<unsigned long long>(installed_pkg.get_install_size());
-      installed_summary = installed_pkg.get_summary();
-      installed_description = installed_pkg.get_description();
       have_installed_counterpart = true;
     }
   }
@@ -147,25 +143,16 @@ dnf_backend_get_package_info(const std::string &pkg_nevra)
     }
   }
 
-  // Use installed metadata for the header when the package is installed.
-  // This keeps version, repo, install size, and install reason consistent
-  // when the user opens the package from different lists.
-  const PackageRow &display_row = have_installed_counterpart ? installed_row : selected_row;
-  const unsigned long long display_install_size =
-      have_installed_counterpart ? installed_install_size : selected_install_size;
-  const std::string &display_summary = have_installed_counterpart ? installed_summary : selected_summary;
-  const std::string &display_description = have_installed_counterpart ? installed_description : selected_description;
-
   std::ostringstream oss;
-  oss << _("Name") << ": " << display_row.name << "\n"
-      << _("Package ID") << ": " << display_row.nevra << "\n"
-      << _("Version") << ": " << display_row.version << "\n"
-      << _("Release") << ": " << display_row.release << "\n"
-      << _("Arch") << ": " << display_row.arch << "\n"
-      << _("Repo") << ": " << display_row.repo << "\n"
-      << _("Install Size") << ": " << format_package_size(display_install_size) << "\n";
+  oss << _("Name") << ": " << selected_row.name << "\n"
+      << _("Package ID") << ": " << selected_row.nevra << "\n"
+      << _("Version") << ": " << selected_row.version << "\n"
+      << _("Release") << ": " << selected_row.release << "\n"
+      << _("Arch") << ": " << selected_row.arch << "\n"
+      << _("Repo") << ": " << selected_row.repo << "\n"
+      << _("Install Size") << ": " << format_package_size(selected_install_size) << "\n";
 
-  if (have_installed_counterpart) {
+  if (selected_is_installed) {
     oss << _("Install Reason") << ": " << dnf_backend_install_reason_to_string(installed_row.install_reason) << "\n";
   }
 
@@ -178,14 +165,18 @@ dnf_backend_get_package_info(const std::string &pkg_nevra)
     oss << _("Upgradable Version") << ": " << upgrade_row.display_version() << "\n";
   }
 
-  oss << "\n" << _("Summary") << ":\n" << display_summary << "\n\n" << _("Description") << ":\n" << display_description;
+  oss << "\n"
+      << _("Summary") << ":\n"
+      << selected_summary << "\n\n"
+      << _("Description") << ":\n"
+      << selected_description;
 
   return oss.str();
 }
 
 // -----------------------------------------------------------------------------
-// Return newline-separated file paths for the installed package behind one selected NEVRA.
-// Available update rows use the currently installed package with the same name and architecture.
+// Return newline-separated file paths for one installed package.
+// Available package rows do not have an installed file list.
 //
 // Large file lists can overwhelm GTK clipboard transfer.
 // Callers can pass a positive max_files_for_display to append a truncation notice after that many visible entries.
@@ -204,66 +195,16 @@ dnf_backend_get_installed_package_files(const std::string &pkg_nevra, size_t max
     return _("File list available only for installed packages.");
   }
 
-  std::string installed_nevra;
-
-  // If the selected NEVRA is already installed, use it directly.
   libdnf5::rpm::PackageQuery exact_installed(query);
   exact_installed.filter_installed();
 
-  if (!exact_installed.empty()) {
-    exact_installed.filter_latest_evr();
-    auto installed_pkg = *exact_installed.begin();
-    installed_nevra = installed_pkg.get_nevra();
-  } else {
-    libdnf5::rpm::PackageQuery selected_query(query);
-    selected_query.filter_latest_evr();
-    auto selected_pkg = *selected_query.begin();
-
-    // Available update packages do not own the installed file list.
-    // Look up the installed package with the same name and architecture instead.
-    libdnf5::rpm::PackageQuery installed_by_name(base);
-    installed_by_name.filter_name(selected_pkg.get_name(), libdnf5::sack::QueryCmp::EQ);
-    installed_by_name.filter_installed();
-
-    // Match the selected package architecture and keep the newest installed package
-    // if more than one installed row exists.
-    PackageRow installed_row;
-    bool have_installed_row = false;
-
-    for (auto installed_pkg : installed_by_name) {
-      if (installed_pkg.get_arch() != selected_pkg.get_arch()) {
-        continue;
-      }
-
-      PackageRow row = make_package_row(installed_pkg);
-      if (!have_installed_row || libdnf5::rpm::evrcmp(row, installed_row) > 0) {
-        installed_row = row;
-        installed_nevra = row.nevra;
-        have_installed_row = true;
-      }
-    }
-  }
-
-  if (installed_nevra.empty()) {
+  if (exact_installed.empty()) {
     DNFUI_TRACE("Backend file list not installed nevra=%s", pkg_nevra.c_str());
     return _("File list available only for installed packages.");
   }
 
-  // Load the resolved installed package before reading its recorded file list.
-  libdnf5::rpm::PackageQuery installed_files_query(base);
-  installed_files_query.filter_nevra(installed_nevra);
-  installed_files_query.filter_installed();
-
-  // If the installed package cannot be found here, use the same message as for packages without an installed file list.
-  if (installed_files_query.empty()) {
-    DNFUI_TRACE("Backend file list installed package not found nevra=%s installed_nevra=%s",
-                pkg_nevra.c_str(),
-                installed_nevra.c_str());
-    return _("File list available only for installed packages.");
-  }
-
-  installed_files_query.filter_latest_evr();
-  auto pkg = *installed_files_query.begin();
+  exact_installed.filter_latest_evr();
+  auto pkg = *exact_installed.begin();
 
   std::ostringstream files;
   size_t file_count = 0;
@@ -298,11 +239,8 @@ dnf_backend_get_installed_package_files(const std::string &pkg_nevra, size_t max
 }
 
 // -----------------------------------------------------------------------------
-// Retrieve dependency information for the installed package behind one selected
-// NEVRA and format it for the package details Dependencies tab.
-//
-// If the selected NEVRA is an available update, use the currently installed
-// package with the same name and architecture.
+// Retrieve dependency information for one selected NEVRA and format it for the package details Dependencies tab.
+// Reverse dependency reporting is limited to installed packages because it describes the current system.
 // -----------------------------------------------------------------------------
 std::string
 dnf_backend_get_package_deps(const std::string &pkg_nevra)
@@ -316,60 +254,12 @@ dnf_backend_get_package_deps(const std::string &pkg_nevra)
     return "No dependency information found for this package.";
   }
 
-  std::string dependency_nevra;
-  bool dependency_nevra_is_installed = false;
-
-  // If the selected NEVRA is already installed, use it directly.
   libdnf5::rpm::PackageQuery exact_installed(query);
   exact_installed.filter_installed();
-  if (!exact_installed.empty()) {
-    exact_installed.filter_latest_evr();
-    auto installed_pkg = *exact_installed.begin();
-    dependency_nevra = installed_pkg.get_nevra();
-    dependency_nevra_is_installed = true;
-  } else {
-    libdnf5::rpm::PackageQuery selected_query(query);
-    selected_query.filter_latest_evr();
-    auto selected_pkg = *selected_query.begin();
-    dependency_nevra = selected_pkg.get_nevra();
 
-    // Available update packages do not describe the current system state.
-    // Look up the installed package with the same name and architecture instead.
-    libdnf5::rpm::PackageQuery installed_by_name(base);
-    installed_by_name.filter_name(selected_pkg.get_name(), libdnf5::sack::QueryCmp::EQ);
-    installed_by_name.filter_installed();
-
-    // Match the selected package architecture and keep the newest installed
-    // package if more than one installed row exists.
-    PackageRow installed_row;
-    bool have_installed_row = false;
-    for (auto installed_pkg : installed_by_name) {
-      if (installed_pkg.get_arch() != selected_pkg.get_arch()) {
-        continue;
-      }
-
-      PackageRow row = make_package_row(installed_pkg);
-      if (!have_installed_row || libdnf5::rpm::evrcmp(row, installed_row) > 0) {
-        installed_row = row;
-        dependency_nevra = row.nevra;
-        dependency_nevra_is_installed = true;
-        have_installed_row = true;
-      }
-    }
-  }
-
-  libdnf5::rpm::PackageQuery dependency_query(base);
-  dependency_query.filter_nevra(dependency_nevra);
-  if (dependency_nevra_is_installed) {
-    dependency_query.filter_installed();
-  }
-
-  if (dependency_query.empty()) {
-    return "No dependency information found for this package.";
-  }
-
-  dependency_query.filter_latest_evr();
-  auto pkg = *dependency_query.begin();
+  const bool selected_is_installed = !exact_installed.empty();
+  query.filter_latest_evr();
+  auto pkg = *query.begin();
   std::set<std::string> required_by_nevras = collect_installed_reverse_dependency_nevras(base, pkg);
 
   std::ostringstream out;
@@ -388,7 +278,7 @@ dnf_backend_get_package_deps(const std::string &pkg_nevra)
 
   list_field("Requires", pkg.get_requires());
   out << "Required By:\n";
-  if (!pkg.is_installed()) {
+  if (!selected_is_installed) {
     out << "  (installed packages only)\n\n";
   } else if (required_by_nevras.empty()) {
     out << "  (none)\n\n";
