@@ -91,15 +91,18 @@ pending_transaction_on_install_button_clicked(GtkButton *, gpointer user_data)
     pending_transaction_refresh_pending_tab(widgets);
     ui_helpers_set_status(widgets->query.status_label, (std::string(_("Unmarked: ")) + pkg.name).c_str(), "gray");
   } else {
-    // Replace any related pending action with install or upgrade.
-    pending_transaction_remove_action(widgets, pkg.nevra);
-    if (action_rows.has_installed_row) {
-      pending_transaction_remove_action(widgets, action_rows.installed_row.nevra);
+    if (action_type == PendingAction::UPGRADE) {
+      pending_transaction_mark_upgrade_action_for_row(widgets->transaction.actions, pkg);
+    } else {
+      // Replace any related pending action with install.
+      pending_transaction_remove_action(widgets, pkg.nevra);
+      if (action_rows.has_installed_row) {
+        pending_transaction_remove_action(widgets, action_rows.installed_row.nevra);
+      }
+      pending_transaction_remove_action(widgets, action_rows.install_row.nevra);
+      widgets->transaction.actions.push_back(
+          { action_type, action_rows.install_row.nevra, action_rows.install_row.nevra });
     }
-    pending_transaction_remove_action(widgets, action_rows.install_row.nevra);
-    const std::string transaction_spec =
-        action_type == PendingAction::UPGRADE ? action_rows.upgrade_spec : action_rows.install_row.nevra;
-    widgets->transaction.actions.push_back({ action_type, action_rows.install_row.nevra, transaction_spec });
     pending_transaction_refresh_pending_tab(widgets);
     const char *message = action_rows.install_is_upgrade ? _("Marked for upgrade: ") : _("Marked for install: ");
     ui_helpers_set_status(widgets->query.status_label, (std::string(message) + pkg.name).c_str(), "blue");

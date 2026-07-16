@@ -158,9 +158,9 @@ TEST_CASE("Pending transaction bulk upgrade marking replaces existing package ac
 }
 
 // -----------------------------------------------------------------------------
-// Verify that bulk marking replaces an older upgrade candidate after metadata changes.
+// Verify that upgrade marking replaces an older upgrade candidate after metadata changes.
 // -----------------------------------------------------------------------------
-TEST_CASE("Pending transaction bulk upgrade marking replaces stale upgrade candidate")
+TEST_CASE("Pending transaction upgrade marking replaces stale upgrade candidate")
 {
   reset_backend_globals();
 
