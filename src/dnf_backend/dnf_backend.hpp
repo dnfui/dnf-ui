@@ -72,6 +72,8 @@ struct PackageRow {
   std::string repo_candidate_version;
   std::string repo_candidate_release;
   std::string repo_candidate_repo;
+  // True when this available row has the newest EVR seen for its package name and architecture.
+  bool newest_available_candidate = true;
 
   // -----------------------------------------------------------------------------
   // Return the package epoch field.

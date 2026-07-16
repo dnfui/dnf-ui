@@ -139,6 +139,29 @@ TEST_CASE("Pending transaction action rows resolve upgrade from available update
 }
 
 // -----------------------------------------------------------------------------
+// Verify that a newer row below the newest repo candidate is display-only.
+// dnf5daemon upgrade requests use name and architecture, so they cannot target this exact NEVRA.
+// -----------------------------------------------------------------------------
+TEST_CASE("Pending transaction action rows reject non latest upgrade candidate")
+{
+  reset_backend_globals();
+
+  PackageRow installed = make_test_package_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
+  PackageRow non_latest_update = make_test_package_row("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64");
+  non_latest_update.newest_available_candidate = false;
+
+  dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
+
+  PendingTransactionActionRows rows = pending_transaction_action_rows_for_selection(non_latest_update);
+
+  REQUIRE(rows.state == PackageInstallState::UPGRADEABLE);
+  REQUIRE_FALSE(rows.install_is_upgrade);
+  REQUIRE_FALSE(rows.has_install_row);
+  REQUIRE_FALSE(rows.has_installed_row);
+  REQUIRE_FALSE(rows.can_try_reinstall);
+}
+
+// -----------------------------------------------------------------------------
 // Verify that bulk marking only queues visible upgrade candidates.
 // -----------------------------------------------------------------------------
 TEST_CASE("Pending transaction bulk upgrade marking ignores non upgrade rows")
@@ -160,6 +183,26 @@ TEST_CASE("Pending transaction bulk upgrade marking ignores non upgrade rows")
   REQUIRE(actions[0].type == PendingAction::UPGRADE);
   REQUIRE(actions[0].nevra == update.nevra);
   REQUIRE(actions[0].transaction_spec == "demo.x86_64");
+}
+
+// -----------------------------------------------------------------------------
+// Verify that bulk marking ignores newer rows that are not the newest repo candidate.
+// -----------------------------------------------------------------------------
+TEST_CASE("Pending transaction bulk upgrade marking ignores non latest upgrade candidate")
+{
+  reset_backend_globals();
+
+  PackageRow installed = make_test_package_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
+  PackageRow non_latest_update = make_test_package_row("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64");
+  non_latest_update.newest_available_candidate = false;
+
+  dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
+
+  std::vector<PendingAction> actions;
+
+  REQUIRE_FALSE(pending_transaction_mark_upgrade_action_for_row(actions, non_latest_update));
+
+  REQUIRE(actions.empty());
 }
 
 // -----------------------------------------------------------------------------

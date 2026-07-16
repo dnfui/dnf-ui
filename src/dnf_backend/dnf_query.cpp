@@ -108,8 +108,23 @@ remember_newest_row(std::map<std::string, PackageRow> &rows_by_name_arch, const 
 struct AvailableViewRows {
   std::vector<PackageRow> rows;
   std::map<std::string, PackageRow> newest_by_name_arch;
+  std::map<std::string, PackageRow> newest_available_by_name_arch;
   std::set<std::string> available_nevras;
 };
+
+// -----------------------------------------------------------------------------
+// Mark which visible available rows match the newest repo EVR for their name and architecture.
+// Older visible updates are useful to display, but they cannot be used as exact upgrade targets.
+// -----------------------------------------------------------------------------
+static void
+annotate_newest_available_candidates(AvailableViewRows &available_rows)
+{
+  for (auto &row : available_rows.rows) {
+    auto it = available_rows.newest_available_by_name_arch.find(row.name_arch_key());
+    row.newest_available_candidate =
+        it == available_rows.newest_available_by_name_arch.end() || libdnf5::rpm::evrcmp(row, it->second) == 0;
+  }
+}
 
 // -----------------------------------------------------------------------------
 // Return each installed package name once.
@@ -264,15 +279,18 @@ collect_available_rows_for_view(libdnf5::Base &base,
     if (package_query_cancelled(cancellable)) {
       result.rows.clear();
       result.newest_by_name_arch.clear();
+      result.newest_available_by_name_arch.clear();
       result.available_nevras.clear();
       return result;
     }
+
+    PackageRow row = make_package_row(pkg, PackageRepoCandidateRelation::UNKNOWN);
+    remember_newest_row(result.newest_available_by_name_arch, row);
 
     if (pattern && !package_matches_search(pkg, pattern_lower, search_options)) {
       continue;
     }
 
-    PackageRow row = make_package_row(pkg, PackageRepoCandidateRelation::UNKNOWN);
     remember_newest_row(result.newest_by_name_arch, row);
     result.available_nevras.insert(row.nevra);
     if (search_options.latest_only) {
@@ -287,6 +305,8 @@ collect_available_rows_for_view(libdnf5::Base &base,
     for (const auto &entry : result.newest_by_name_arch) {
       result.rows.push_back(entry.second);
     }
+  } else {
+    annotate_newest_available_candidates(result);
   }
 
   return result;

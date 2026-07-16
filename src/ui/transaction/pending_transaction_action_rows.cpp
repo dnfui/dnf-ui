@@ -67,13 +67,14 @@ pending_transaction_action_rows_for_selection(const PackageRow &selected)
 {
   PendingTransactionActionRows rows;
   rows.state = dnf_backend_get_package_install_state(selected);
-  rows.install_is_upgrade = rows.state == PackageInstallState::UPGRADEABLE;
   rows.install_is_downgrade = rows.state == PackageInstallState::DOWNGRADEABLE;
   rows.package_key = selected.name_arch_key();
   rows.install_row = selected;
   rows.installed_row = selected;
 
   const bool selected_is_installed = dnf_backend_is_package_installed_exact(selected);
+  rows.install_is_upgrade =
+      rows.state == PackageInstallState::UPGRADEABLE && (selected_is_installed || selected.newest_available_candidate);
   rows.has_installed_row = selected_is_installed;
 
   // Upgrade actions need the available package ID, not always the visible row ID.
