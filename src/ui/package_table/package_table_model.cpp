@@ -7,6 +7,7 @@
 
 #include "i18n.hpp"
 #include "ui/package_table/package_table_status.hpp"
+#include "ui/transaction/pending_transaction_action_rows.hpp"
 #include "ui/common/widgets.hpp"
 
 // -----------------------------------------------------------------------------
@@ -33,9 +34,16 @@ package_table_fill_item_status(MainWindowUiState *widgets, PackageItem &item)
   // action does not move the row away from the user in the current view.
   PackageInstallState install_state = dnf_backend_get_package_install_state(item.row);
   item.status_rank = package_table_status_rank(install_state);
+  PendingTransactionActionRows action_rows;
+  if (install_state == PackageInstallState::UPGRADEABLE || install_state == PackageInstallState::DOWNGRADEABLE) {
+    action_rows = pending_transaction_action_rows_for_selection(item.row);
+  }
 
   for (const auto &a : widgets->transaction.actions) {
-    if (a.nevra == item.row.nevra) {
+    bool action_matches_visible_row = a.nevra == item.row.nevra;
+    bool action_matches_install_row = action_rows.has_install_row && a.nevra == action_rows.install_row.nevra;
+    bool action_matches_installed_row = action_rows.has_installed_row && a.nevra == action_rows.installed_row.nevra;
+    if (action_matches_visible_row || action_matches_install_row || action_matches_installed_row) {
       switch (a.type) {
       case PendingAction::INSTALL:
         item.status_text = _("Pending Install");

@@ -210,7 +210,7 @@ package_table_update_status_label(GtkWidget *cell, MainWindowUiState *widgets, c
 {
   PackageInstallState install_state = dnf_backend_get_package_install_state(row);
   PendingTransactionActionRows action_rows;
-  if (install_state == PackageInstallState::UPGRADEABLE) {
+  if (install_state == PackageInstallState::UPGRADEABLE || install_state == PackageInstallState::DOWNGRADEABLE) {
     action_rows = pending_transaction_action_rows_for_selection(row);
   }
 

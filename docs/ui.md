@@ -237,6 +237,22 @@ in the Version column and shows the candidate version in the Update column. The
 Repo column shows the repository that provides the update. Remove and reinstall
 act on the currently installed NEVRA for the same package name and architecture.
 
+The Latest only checkbox controls how many available versions the package table
+shows. When it is enabled, the table keeps the newest available version for each
+package name and architecture. When it is disabled, the table can show older
+available versions too, but still shows only one row for each exact NEVRA.
+
+Older available versions than the installed package are treated as downgrade
+candidates and are sent to dnf5daemon as exact NEVRAs. Newer available versions
+that are not the newest repo candidate are shown for inspection only. They are
+not marked as upgrades because the daemon upgrade call does not target an exact
+selected NEVRA.
+
+Pending package actions use one package identity key based on name and
+architecture. Marking another action for the same package replaces the old one,
+so the pending list cannot contain both an upgrade and a downgrade for the same
+package.
+
 [src/ui/transaction/pending_transaction_action_rows.cpp](../src/ui/transaction/pending_transaction_action_rows.cpp) keeps those
 row-selection rules in one place. This is needed because an update can be shown
 from either the installed package list or the upgradable package list. The helper

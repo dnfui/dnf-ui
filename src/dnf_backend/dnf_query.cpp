@@ -257,8 +257,8 @@ collect_available_rows_by_name_arch(libdnf5::Base &base,
 // -----------------------------------------------------------------------------
 // Collect available rows for the browse and search table.
 // With Latest only enabled, keep the same one-row-per-name-and-architecture view
-// used by the default package table. With it disabled, keep every available NEVRA so an
-// older package version can be selected explicitly.
+// used by the default package table. With it disabled, keep one row per available NEVRA
+// so older package versions can be selected explicitly without showing duplicate repo copies.
 // -----------------------------------------------------------------------------
 static AvailableViewRows
 collect_available_rows_for_view(libdnf5::Base &base,
@@ -292,12 +292,14 @@ collect_available_rows_for_view(libdnf5::Base &base,
     }
 
     remember_newest_row(result.newest_by_name_arch, row);
-    result.available_nevras.insert(row.nevra);
+    const bool first_visible_nevra = result.available_nevras.insert(row.nevra).second;
     if (search_options.latest_only) {
       continue;
     }
 
-    result.rows.push_back(row);
+    if (first_visible_nevra) {
+      result.rows.push_back(row);
+    }
   }
 
   if (search_options.latest_only) {

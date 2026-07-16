@@ -33,6 +33,19 @@ dnf5daemon_test_install_spec()
 }
 
 // -----------------------------------------------------------------------------
+// Return the package used for optional daemon downgrade preview tests.
+// -----------------------------------------------------------------------------
+std::string
+dnf5daemon_test_downgrade_spec()
+{
+  const char *spec = g_getenv("DNFUI_TEST_DNF5DAEMON_DOWNGRADE_SPEC");
+  if (spec && *spec) {
+    return spec;
+  }
+  return {};
+}
+
+// -----------------------------------------------------------------------------
 // Return true when a preview section contains a package label by name.
 // -----------------------------------------------------------------------------
 bool
@@ -184,6 +197,35 @@ TEST_CASE("dnf5daemon client previews install requests", "[dnf5daemon]")
   transaction_service_client_reset_for_tests();
 
   REQUIRE(preview_contains_package);
+}
+
+// -----------------------------------------------------------------------------
+// Verify that the client can ask dnf5daemon for a downgrade preview when the test system provides one.
+// -----------------------------------------------------------------------------
+TEST_CASE("dnf5daemon client previews downgrade requests", "[dnf5daemon]")
+{
+  require_dnf5daemon_test_enabled();
+  const std::string downgrade_spec = dnf5daemon_test_downgrade_spec();
+  if (downgrade_spec.empty()) {
+    SKIP("Set DNFUI_TEST_DNF5DAEMON_DOWNGRADE_SPEC to run the downgrade preview test.");
+  }
+
+  transaction_service_client_reset_for_tests();
+
+  TransactionRequest request;
+  request.downgrade.push_back(downgrade_spec);
+
+  TransactionPreview preview;
+  std::string transaction_path;
+  std::string error;
+
+  REQUIRE(transaction_service_client_preview_request(request, preview, transaction_path, error));
+  REQUIRE_FALSE(transaction_path.empty());
+
+  transaction_service_client_release_request(transaction_path);
+  transaction_service_client_reset_for_tests();
+
+  REQUIRE_FALSE(preview.downgrade.empty());
 }
 
 // -----------------------------------------------------------------------------
