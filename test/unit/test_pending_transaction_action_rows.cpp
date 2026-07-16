@@ -157,8 +157,9 @@ TEST_CASE("Pending transaction action rows reject non latest upgrade candidate")
   REQUIRE(rows.state == PackageInstallState::UPGRADEABLE);
   REQUIRE_FALSE(rows.install_is_upgrade);
   REQUIRE_FALSE(rows.has_install_row);
-  REQUIRE_FALSE(rows.has_installed_row);
-  REQUIRE_FALSE(rows.can_try_reinstall);
+  REQUIRE(rows.has_installed_row);
+  REQUIRE(rows.installed_row.nevra == installed.nevra);
+  REQUIRE(rows.can_try_reinstall);
 }
 
 // -----------------------------------------------------------------------------

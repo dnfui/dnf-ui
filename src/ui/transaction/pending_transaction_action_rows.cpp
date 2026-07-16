@@ -76,6 +76,9 @@ pending_transaction_action_rows_for_selection(const PackageRow &selected)
   rows.install_is_upgrade =
       rows.state == PackageInstallState::UPGRADEABLE && (selected_is_installed || selected.newest_available_candidate);
   rows.has_installed_row = selected_is_installed;
+  if (!selected_is_installed && rows.state == PackageInstallState::UPGRADEABLE && !rows.install_is_upgrade) {
+    rows.has_installed_row = dnf_backend_get_installed_package_row_by_name_arch(selected, rows.installed_row);
+  }
 
   // Upgrade actions need the available package ID, not always the visible row ID.
   if (rows.install_is_upgrade) {

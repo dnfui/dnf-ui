@@ -74,6 +74,7 @@ dnf_backend_get_package_info(const std::string &pkg_nevra)
 {
   PackageRow selected_row;
   unsigned long long selected_install_size = 0;
+  unsigned long long selected_download_size = 0;
   std::string selected_summary, selected_description;
 
   PackageRow installed_row;
@@ -81,7 +82,6 @@ dnf_backend_get_package_info(const std::string &pkg_nevra)
 
   PackageRow upgrade_row;
   bool have_upgrade = false;
-  unsigned long long upgrade_download_size = 0;
 
   auto [base, guard, generation] = BaseManager::instance().acquire_read();
   libdnf5::rpm::PackageQuery query(base);
@@ -100,6 +100,7 @@ dnf_backend_get_package_info(const std::string &pkg_nevra)
 
   selected_row = make_package_row(pkg);
   selected_install_size = static_cast<unsigned long long>(pkg.get_install_size());
+  selected_download_size = static_cast<unsigned long long>(pkg.get_download_size());
   selected_summary = pkg.get_summary();
   selected_description = pkg.get_description();
 
@@ -137,7 +138,6 @@ dnf_backend_get_package_info(const std::string &pkg_nevra)
       }
       if (!have_upgrade || libdnf5::rpm::evrcmp(row, upgrade_row) > 0) {
         upgrade_row = row;
-        upgrade_download_size = static_cast<unsigned long long>(available_pkg.get_download_size());
         have_upgrade = true;
       }
     }
@@ -156,8 +156,8 @@ dnf_backend_get_package_info(const std::string &pkg_nevra)
     oss << _("Install Reason") << ": " << dnf_backend_install_reason_to_string(installed_row.install_reason) << "\n";
   }
 
-  if (upgrade_download_size > 0) {
-    oss << _("Download Size") << ": " << format_package_size(upgrade_download_size) << "\n";
+  if (!selected_is_installed && selected_download_size > 0) {
+    oss << _("Download Size") << ": " << format_package_size(selected_download_size) << "\n";
   }
 
   if (have_upgrade) {
@@ -258,8 +258,9 @@ dnf_backend_get_package_deps(const std::string &pkg_nevra)
   exact_installed.filter_installed();
 
   const bool selected_is_installed = !exact_installed.empty();
-  query.filter_latest_evr();
-  auto pkg = *query.begin();
+  libdnf5::rpm::PackageQuery selected_query = exact_installed.empty() ? query : exact_installed;
+  selected_query.filter_latest_evr();
+  auto pkg = *selected_query.begin();
   std::set<std::string> required_by_nevras = collect_installed_reverse_dependency_nevras(base, pkg);
 
   std::ostringstream out;

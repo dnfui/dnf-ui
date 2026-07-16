@@ -309,7 +309,7 @@ TEST_CASE("Package info formatting shows upgrade details consistently")
   REQUIRE(installed_info.find("Package ID: " + installed_row.nevra) != std::string::npos);
   REQUIRE(installed_info.find(installed_line) != std::string::npos);
   REQUIRE(installed_info.find(upgrade_line) != std::string::npos);
-  REQUIRE(installed_info.find("Download Size: ") != std::string::npos);
+  REQUIRE(installed_info.find("Download Size: ") == std::string::npos);
   REQUIRE(installed_info.find("Install Reason: ") != std::string::npos);
 
   REQUIRE(upgrade_info.find("Package ID: " + upgrade_row.nevra) != std::string::npos);
