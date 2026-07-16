@@ -111,17 +111,19 @@ TEST_CASE("Transaction request validation rejects an empty reinstall package spe
 }
 
 // -----------------------------------------------------------------------------
-// Verify that validation enforces the request item limit.
+// Verify that validation does not reject large requests by item count alone.
 // -----------------------------------------------------------------------------
-TEST_CASE("Transaction request validation rejects too many package actions")
+TEST_CASE("Transaction request validation accepts many package actions")
 {
   TransactionRequest request;
   std::string error;
 
-  request.install.assign(kTransactionRequestMaxItems + 1, "example-install-spec");
+  for (size_t i = 0; i < 300; ++i) {
+    request.install.push_back("example-install-spec-" + std::to_string(i));
+  }
 
-  REQUIRE_FALSE(request.validate(error));
-  REQUIRE(error == "Transaction request contains too many package actions.");
+  REQUIRE(request.validate(error));
+  REQUIRE(error.empty());
 }
 
 // -----------------------------------------------------------------------------

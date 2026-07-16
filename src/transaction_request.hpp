@@ -11,7 +11,6 @@
 #include <string>
 #include <vector>
 
-constexpr size_t kTransactionRequestMaxItems = 256;
 constexpr size_t kTransactionRequestMaxSpecLength = 4096;
 
 // -----------------------------------------------------------------------------
@@ -46,7 +45,7 @@ struct TransactionRequest {
   }
 
   // -----------------------------------------------------------------------------
-  // Reject empty, oversized, duplicate, or conflicting requests before they reach the service.
+  // Reject empty, invalid, duplicate, or conflicting requests before they reach the transaction client.
   // -----------------------------------------------------------------------------
   bool validate(std::string &error_out) const
   {
@@ -60,12 +59,6 @@ struct TransactionRequest {
     // Upgrade all is a separate request type and must not include selected packages.
     if (upgrade_all && (!install.empty() || !upgrade.empty() || !remove.empty() || !reinstall.empty())) {
       error_out = "Upgrade all cannot be combined with other package actions.";
-      return false;
-    }
-
-    // Keep request size limited before passing it to DNF.
-    if (item_count() > kTransactionRequestMaxItems) {
-      error_out = "Transaction request contains too many package actions.";
       return false;
     }
 
