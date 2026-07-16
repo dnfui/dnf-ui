@@ -1,5 +1,5 @@
 Name:           dnf-ui
-Version:        0.3.7
+Version:        0.3.8
 Release:        1%{?dist}
 Summary:        GTK interface for DNF5
 
@@ -56,6 +56,12 @@ appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/io.github.dnfui.
 %{_datadir}/metainfo/io.github.dnfui.dnfui.metainfo.xml
 
 %changelog
+* Thu Jul 16 2026 ErikMN <dnfui@proton.me> - 0.3.8-1
+- Add bulk marking of listed upgrades for selective system updates
+- Keep bulk and individual upgrade actions consistent after metadata changes
+- Prevent marking outdated package rows while a query is running
+- Make package double-click follow the normal pending action rules
+
 * Wed Jul 15 2026 ErikMN <dnfui@proton.me> - 0.3.7-1
 - Allow DNF UI to mark its own package for upgrade
 - Show dnf5daemon warnings when a preview returns no package changes
