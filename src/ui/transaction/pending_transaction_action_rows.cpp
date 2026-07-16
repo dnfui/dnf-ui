@@ -38,6 +38,25 @@ remove_pending_action_by_nevra(std::vector<PendingAction> &actions, const std::s
   }
 }
 
+// -----------------------------------------------------------------------------
+// Remove stale pending upgrades that target the same daemon upgrade spec.
+// -----------------------------------------------------------------------------
+void
+remove_pending_upgrade_by_transaction_spec(std::vector<PendingAction> &actions, const std::string &transaction_spec)
+{
+  if (transaction_spec.empty()) {
+    return;
+  }
+
+  for (size_t i = 0; i < actions.size();) {
+    if (actions[i].type == PendingAction::UPGRADE && actions[i].transaction_spec == transaction_spec) {
+      actions.erase(actions.begin() + i);
+      continue;
+    }
+    ++i;
+  }
+}
+
 } // namespace
 
 // -----------------------------------------------------------------------------
@@ -95,6 +114,7 @@ pending_transaction_mark_upgrade_action_for_row(std::vector<PendingAction> &acti
     return false;
   }
 
+  remove_pending_upgrade_by_transaction_spec(actions, action_rows.upgrade_spec);
   remove_pending_action_by_nevra(actions, row.nevra);
   if (action_rows.has_installed_row) {
     remove_pending_action_by_nevra(actions, action_rows.installed_row.nevra);

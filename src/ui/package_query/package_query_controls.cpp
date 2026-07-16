@@ -251,6 +251,9 @@ package_query_begin_package_list_request(MainWindowUiState *widgets,
   ui_helpers_set_icon_button(widgets->query.list_upgradeable_button, "view-list-symbolic", _("List Upgradable"));
   ui_helpers_set_icon_button(stop_button, "process-stop-symbolic", _("Stop"));
   package_query_set_idle_controls_sensitive(widgets, false);
+  if (widgets->transaction.mark_listed_upgrades_button) {
+    gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.mark_listed_upgrades_button), FALSE);
+  }
   gtk_widget_set_sensitive(GTK_WIDGET(stop_button), TRUE);
 }
 
@@ -269,6 +272,10 @@ restore_package_list_controls(MainWindowUiState *widgets)
   ui_helpers_set_icon_button(widgets->query.list_available_button, "view-list-symbolic", _("List Packages"));
   ui_helpers_set_icon_button(widgets->query.list_upgradeable_button, "view-list-symbolic", _("List Upgradable"));
   package_query_set_idle_controls_sensitive(widgets, true);
+  if (widgets->transaction.mark_listed_upgrades_button) {
+    bool transaction_busy = widgets->transaction.preview_request_in_progress || widgets->transaction.apply_in_progress;
+    gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.mark_listed_upgrades_button), !transaction_busy);
+  }
 }
 
 // -----------------------------------------------------------------------------

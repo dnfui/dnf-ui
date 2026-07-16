@@ -158,6 +158,31 @@ TEST_CASE("Pending transaction bulk upgrade marking replaces existing package ac
 }
 
 // -----------------------------------------------------------------------------
+// Verify that bulk marking replaces an older upgrade candidate after metadata changes.
+// -----------------------------------------------------------------------------
+TEST_CASE("Pending transaction bulk upgrade marking replaces stale upgrade candidate")
+{
+  reset_backend_globals();
+
+  PackageRow installed = make_test_package_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
+  PackageRow old_update = make_test_package_row("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64");
+  PackageRow new_update = make_test_package_row("demo-2.1-1.x86_64", "demo", "2.1", "1", "x86_64");
+
+  dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
+
+  std::vector<PendingAction> actions = {
+    { PendingAction::UPGRADE, old_update.nevra, "demo.x86_64" },
+  };
+
+  REQUIRE(pending_transaction_mark_upgrade_action_for_row(actions, new_update));
+
+  REQUIRE(actions.size() == 1);
+  REQUIRE(actions[0].type == PendingAction::UPGRADE);
+  REQUIRE(actions[0].nevra == new_update.nevra);
+  REQUIRE(actions[0].transaction_spec == "demo.x86_64");
+}
+
+// -----------------------------------------------------------------------------
 // Verify that local-only installed packages cannot be reinstalled from repositories.
 // -----------------------------------------------------------------------------
 TEST_CASE("Pending transaction action rows reject reinstall for local only installed package")

@@ -9,6 +9,7 @@
 
 #include "dnf_backend/dnf_backend.hpp"
 #include "i18n.hpp"
+#include "ui/package_query/package_query_controller_internal.hpp"
 #include "ui/transaction/pending_transaction_action_rows.hpp"
 #include "ui/package_table/package_table_view.hpp"
 #include "ui/transaction/pending_transaction_apply.hpp"
@@ -256,6 +257,10 @@ pending_transaction_on_mark_listed_upgrades_button_clicked(GtkButton *, gpointer
 {
   MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
   if (pending_transaction_action_is_busy(widgets)) {
+    return;
+  }
+  if (package_query_has_active_package_list_request(widgets)) {
+    ui_helpers_set_status(widgets->query.status_label, _("Wait for the current package query to finish."), "blue");
     return;
   }
 
