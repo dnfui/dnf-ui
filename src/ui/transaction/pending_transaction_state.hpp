@@ -30,6 +30,7 @@ struct PendingTransactionWidgets {
   GtkButton *remove_button = nullptr;
   GtkButton *reinstall_button = nullptr;
   GtkButton *upgrade_all_button = nullptr;
+  GtkButton *mark_listed_upgrades_button = nullptr;
   GtkButton *apply_button = nullptr;
   GtkButton *clear_pending_button = nullptr;
   GtkListBox *pending_list = nullptr;

@@ -38,6 +38,7 @@ struct AppWidgets {
   GtkWidget *reinstall_button = NULL;
   GtkWidget *remove_button = NULL;
   GtkWidget *upgrade_all_button = NULL;
+  GtkWidget *mark_listed_upgrades_button = NULL;
   GtkWidget *apply_button = NULL;
   GtkWidget *clear_pending_button = NULL;
 

@@ -22,6 +22,10 @@ void pending_transaction_on_remove_button_clicked(GtkButton *, gpointer user_dat
 // -----------------------------------------------------------------------------
 void pending_transaction_on_reinstall_button_clicked(GtkButton *, gpointer user_data);
 // -----------------------------------------------------------------------------
+// Mark all listed upgrade candidates as pending upgrades.
+// -----------------------------------------------------------------------------
+void pending_transaction_on_mark_listed_upgrades_button_clicked(GtkButton *, gpointer user_data);
+// -----------------------------------------------------------------------------
 // Start previewing and applying all available package upgrades.
 // -----------------------------------------------------------------------------
 void pending_transaction_on_upgrade_all_button_clicked(GtkButton *, gpointer user_data);

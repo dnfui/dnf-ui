@@ -160,6 +160,11 @@ main_window_build_layout(AppWidgets *ui)
   gtk_box_append(GTK_BOX(hbox_tx_buttons), remove_button);
   ui->remove_button = remove_button;
 
+  GtkWidget *mark_listed_upgrades_button =
+      ui_helpers_create_icon_button("object-select-symbolic", _("Mark Listed Upgrades"));
+  gtk_box_append(GTK_BOX(hbox_tx_buttons), mark_listed_upgrades_button);
+  ui->mark_listed_upgrades_button = mark_listed_upgrades_button;
+
   GtkWidget *upgrade_all_button = ui_helpers_create_icon_button("view-refresh-symbolic", _("Upgrade All"));
   gtk_box_append(GTK_BOX(hbox_tx_buttons), upgrade_all_button);
   ui->upgrade_all_button = upgrade_all_button;

@@ -7,6 +7,8 @@
 #include "test_utils.hpp"
 #include "ui/transaction/pending_transaction_action_rows.hpp"
 
+#include <vector>
+
 // -----------------------------------------------------------------------------
 // Build one small package row for resolver tests.
 // -----------------------------------------------------------------------------
@@ -105,6 +107,54 @@ TEST_CASE("Pending transaction action rows resolve upgrade from available update
   REQUIRE(rows.has_installed_row);
   REQUIRE(rows.installed_row.nevra == installed.nevra);
   REQUIRE(rows.can_try_reinstall);
+}
+
+// -----------------------------------------------------------------------------
+// Verify that bulk marking only queues visible upgrade candidates.
+// -----------------------------------------------------------------------------
+TEST_CASE("Pending transaction bulk upgrade marking ignores non upgrade rows")
+{
+  reset_backend_globals();
+
+  PackageRow installed = make_test_package_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
+  PackageRow update = make_test_package_row("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64");
+  PackageRow available = make_test_package_row("other-1.0-1.x86_64", "other", "1.0", "1", "x86_64");
+
+  dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
+
+  std::vector<PendingAction> actions;
+
+  REQUIRE(pending_transaction_mark_upgrade_action_for_row(actions, update));
+  REQUIRE_FALSE(pending_transaction_mark_upgrade_action_for_row(actions, available));
+
+  REQUIRE(actions.size() == 1);
+  REQUIRE(actions[0].type == PendingAction::UPGRADE);
+  REQUIRE(actions[0].nevra == update.nevra);
+  REQUIRE(actions[0].transaction_spec == "demo.x86_64");
+}
+
+// -----------------------------------------------------------------------------
+// Verify that bulk marking replaces stale pending actions for the same package.
+// -----------------------------------------------------------------------------
+TEST_CASE("Pending transaction bulk upgrade marking replaces existing package action")
+{
+  reset_backend_globals();
+
+  PackageRow installed = make_test_package_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
+  PackageRow update = make_test_package_row("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64");
+
+  dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
+
+  std::vector<PendingAction> actions = {
+    { PendingAction::REMOVE, installed.nevra, installed.nevra },
+  };
+
+  REQUIRE(pending_transaction_mark_upgrade_action_for_row(actions, update));
+
+  REQUIRE(actions.size() == 1);
+  REQUIRE(actions[0].type == PendingAction::UPGRADE);
+  REQUIRE(actions[0].nevra == update.nevra);
+  REQUIRE(actions[0].transaction_spec == "demo.x86_64");
 }
 
 // -----------------------------------------------------------------------------

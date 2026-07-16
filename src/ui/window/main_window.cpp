@@ -205,6 +205,7 @@ create_main_window_ui_state(const AppWidgets *ui)
   widgets->transaction.remove_button = GTK_BUTTON(ui->remove_button);
   widgets->transaction.reinstall_button = GTK_BUTTON(ui->reinstall_button);
   widgets->transaction.upgrade_all_button = GTK_BUTTON(ui->upgrade_all_button);
+  widgets->transaction.mark_listed_upgrades_button = GTK_BUTTON(ui->mark_listed_upgrades_button);
   widgets->transaction.apply_button = GTK_BUTTON(ui->apply_button);
   widgets->transaction.clear_pending_button = GTK_BUTTON(ui->clear_pending_button);
   widgets->transaction.pending_list = GTK_LIST_BOX(ui->pending_list);
@@ -338,20 +339,35 @@ setup_css(MainWindowUiState *widgets)
                                     "  border-color: #8f141d; "
                                     "  color: #ffffff; "
                                     "} "
+                                    ".package-table-view row:selected { "
+                                    "  background-color: #62a0ea; "
+                                    "} "
                                     ".package-row-pending-install { "
                                     "  background-color: #1c71d8; "
                                     "  box-shadow: -1px 0 0 #1c71d8, 1px 0 0 #1c71d8; "
                                     "  color: #ffffff; "
+                                    "} "
+                                    ".package-table-view row:selected .package-row-pending-install { "
+                                    "  background-color: #15539e; "
+                                    "  box-shadow: -1px 0 0 #15539e, 1px 0 0 #15539e; "
                                     "} "
                                     ".package-row-pending-reinstall { "
                                     "  background-color: #e5a50a; "
                                     "  box-shadow: -1px 0 0 #e5a50a, 1px 0 0 #e5a50a; "
                                     "  color: #2e2100; "
                                     "} "
+                                    ".package-table-view row:selected .package-row-pending-reinstall { "
+                                    "  background-color: #b58300; "
+                                    "  box-shadow: -1px 0 0 #b58300, 1px 0 0 #b58300; "
+                                    "} "
                                     ".package-row-pending-remove { "
                                     "  background-color: #c01c28; "
                                     "  box-shadow: -1px 0 0 #c01c28, 1px 0 0 #c01c28; "
                                     "  color: #ffffff; "
+                                    "} "
+                                    ".package-table-view row:selected .package-row-pending-remove { "
+                                    "  background-color: #8f141d; "
+                                    "  box-shadow: -1px 0 0 #8f141d, 1px 0 0 #8f141d; "
                                     "} "
                                     ".package-meta { "
                                     "  opacity: 0.78; "
@@ -431,6 +447,11 @@ connect_signals(const AppWidgets *ui, MainWindowUiState *widgets)
 
   g_signal_connect(
       ui->upgrade_all_button, "clicked", G_CALLBACK(pending_transaction_on_upgrade_all_button_clicked), widgets);
+
+  g_signal_connect(ui->mark_listed_upgrades_button,
+                   "clicked",
+                   G_CALLBACK(pending_transaction_on_mark_listed_upgrades_button_clicked),
+                   widgets);
 
   g_signal_connect(ui->search_button, "clicked", G_CALLBACK(package_query_on_search_button_clicked), widgets);
 

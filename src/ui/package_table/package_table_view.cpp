@@ -663,6 +663,47 @@ package_table_get_selected_package_row(MainWindowUiState *widgets, PackageRow &o
 }
 
 // -----------------------------------------------------------------------------
+// Return all package rows currently displayed in the package table.
+// -----------------------------------------------------------------------------
+std::vector<PackageRow>
+package_table_get_displayed_package_rows(MainWindowUiState *widgets)
+{
+  std::vector<PackageRow> rows;
+  if (!widgets || !widgets->results.list_scroller) {
+    return rows;
+  }
+
+  GtkWidget *child = gtk_scrolled_window_get_child(widgets->results.list_scroller);
+  if (!child || !GTK_IS_COLUMN_VIEW(child)) {
+    return rows;
+  }
+
+  GtkSelectionModel *model = gtk_column_view_get_model(GTK_COLUMN_VIEW(child));
+  if (!model || !GTK_IS_SINGLE_SELECTION(model)) {
+    return rows;
+  }
+
+  GtkSingleSelection *sel = GTK_SINGLE_SELECTION(model);
+  GListModel *items_model = gtk_single_selection_get_model(sel);
+  if (!items_model) {
+    return rows;
+  }
+
+  guint n_items = g_list_model_get_n_items(items_model);
+  rows.reserve(n_items);
+  for (guint i = 0; i < n_items; ++i) {
+    GObject *obj = G_OBJECT(g_list_model_get_item(items_model, i));
+    const PackageRow *row = package_row_from_object(obj);
+    if (row) {
+      rows.push_back(*row);
+    }
+    g_object_unref(obj);
+  }
+
+  return rows;
+}
+
+// -----------------------------------------------------------------------------
 // Refresh package status text and colors without rebuilding the package table.
 // -----------------------------------------------------------------------------
 void
@@ -754,6 +795,7 @@ package_table_fill_package_view(MainWindowUiState *widgets,
   }
 
   GtkColumnView *view = GTK_COLUMN_VIEW(gtk_column_view_new(nullptr));
+  gtk_widget_add_css_class(GTK_WIDGET(view), "package-table-view");
   gtk_widget_set_hexpand(GTK_WIDGET(view), TRUE);
   gtk_widget_set_vexpand(GTK_WIDGET(view), TRUE);
   gtk_column_view_set_single_click_activate(view, FALSE);

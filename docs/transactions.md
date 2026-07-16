@@ -64,6 +64,12 @@ the transaction client to prepare a daemon-side Upgrade All session. If the
 resolved preview is empty, the session is closed and the GUI reports that all
 packages are already up to date.
 
+When the user clicks Mark Listed Upgrades, the GUI marks the upgrade candidates
+currently shown in the package table as normal pending upgrade actions. The user
+can then remove individual actions before clicking Apply. This path sends
+explicit upgrade specs to dnf5daemon instead of using the daemon-side Upgrade
+All shortcut.
+
 ```mermaid
 flowchart TD
     Marked[Marked actions] --> Request[TransactionRequest]

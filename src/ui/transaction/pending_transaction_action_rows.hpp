@@ -13,6 +13,9 @@
 #pragma once
 
 #include "dnf_backend/dnf_backend.hpp"
+#include "ui/transaction/pending_transaction_state.hpp"
+
+#include <vector>
 
 struct PendingTransactionActionRows {
   PackageInstallState state = PackageInstallState::AVAILABLE;
@@ -31,6 +34,11 @@ struct PendingTransactionActionRows {
 // This is used from GTK selection and context-menu code.
 // -----------------------------------------------------------------------------
 PendingTransactionActionRows pending_transaction_action_rows_for_selection(const PackageRow &selected);
+// -----------------------------------------------------------------------------
+// Add or replace one pending upgrade action from a package table row.
+// Returns false when the row is not an upgrade candidate.
+// -----------------------------------------------------------------------------
+bool pending_transaction_mark_upgrade_action_for_row(std::vector<PendingAction> &actions, const PackageRow &row);
 // -----------------------------------------------------------------------------
 // Return true when self-protection should block the install button path.
 // A normal upgrade is allowed because dnf5daemon still resolves the final preview.

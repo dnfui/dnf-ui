@@ -286,6 +286,9 @@ msgstr "Uppdatera förråd"
 msgid "Upgrade All"
 msgstr "Uppgradera alla"
 
+msgid "Mark Listed Upgrades"
+msgstr "Markera listade uppgraderingar"
+
 msgid "Apply Transactions"
 msgstr "Verkställ transaktioner"
 
@@ -617,6 +620,9 @@ msgstr "Markerat för ominstallation: "
 msgid "No pending actions to clear."
 msgstr "Det finns inga väntande åtgärder att rensa."
 
+msgid "No listed upgrades to mark."
+msgstr "Det finns inga listade uppgraderingar att markera."
+
 msgid "Apply authorization is already in progress."
 msgstr "Behörighetskontroll för verkställning pågår redan."
 
@@ -806,6 +812,12 @@ msgid "Cleared %zu pending action."
 msgid_plural "Cleared %zu pending actions."
 msgstr[0] "Rensade %zu väntande åtgärd."
 msgstr[1] "Rensade %zu väntande åtgärder."
+
+#, c-format
+msgid "Marked %zu listed upgrade."
+msgid_plural "Marked %zu listed upgrades."
+msgstr[0] "Markerade %zu listad uppgradering."
+msgstr[1] "Markerade %zu listade uppgraderingar."
 
 #, c-format
 msgid "%zu package will be installed."

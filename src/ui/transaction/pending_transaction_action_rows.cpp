@@ -23,6 +23,21 @@ upgrade_transaction_spec(const PackageRow &row)
   return row.name + "." + row.arch;
 }
 
+// -----------------------------------------------------------------------------
+// Remove one pending action by package ID.
+// -----------------------------------------------------------------------------
+void
+remove_pending_action_by_nevra(std::vector<PendingAction> &actions, const std::string &nevra)
+{
+  for (size_t i = 0; i < actions.size();) {
+    if (actions[i].nevra == nevra) {
+      actions.erase(actions.begin() + i);
+      continue;
+    }
+    ++i;
+  }
+}
+
 } // namespace
 
 // -----------------------------------------------------------------------------
@@ -67,6 +82,27 @@ pending_transaction_action_rows_for_selection(const PackageRow &selected)
       rows.state != PackageInstallState::INSTALLED_NEWER_THAN_REPO;
 
   return rows;
+}
+
+// -----------------------------------------------------------------------------
+// Add or replace one pending upgrade action from a package table row.
+// -----------------------------------------------------------------------------
+bool
+pending_transaction_mark_upgrade_action_for_row(std::vector<PendingAction> &actions, const PackageRow &row)
+{
+  PendingTransactionActionRows action_rows = pending_transaction_action_rows_for_selection(row);
+  if (!action_rows.install_is_upgrade || !action_rows.has_install_row) {
+    return false;
+  }
+
+  remove_pending_action_by_nevra(actions, row.nevra);
+  if (action_rows.has_installed_row) {
+    remove_pending_action_by_nevra(actions, action_rows.installed_row.nevra);
+  }
+  remove_pending_action_by_nevra(actions, action_rows.install_row.nevra);
+
+  actions.push_back({ PendingAction::UPGRADE, action_rows.install_row.nevra, action_rows.upgrade_spec });
+  return true;
 }
 
 // -----------------------------------------------------------------------------

@@ -16,6 +16,8 @@
 #include "ui/transaction/pending_transaction_view.hpp"
 #include "ui/common/ui_helpers.hpp"
 
+#include <vector>
+
 // -----------------------------------------------------------------------------
 // Explain why the running application package can be viewed but not modified from inside the same process.
 // -----------------------------------------------------------------------------
@@ -244,6 +246,38 @@ pending_transaction_on_reinstall_button_clicked(GtkButton *, gpointer user_data)
   pending_transaction_invalidate_service_preview(widgets);
 
   package_table_refresh_statuses(widgets);
+}
+
+// -----------------------------------------------------------------------------
+// Mark all listed upgrade candidates as pending upgrades.
+// -----------------------------------------------------------------------------
+void
+pending_transaction_on_mark_listed_upgrades_button_clicked(GtkButton *, gpointer user_data)
+{
+  MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
+  if (pending_transaction_action_is_busy(widgets)) {
+    return;
+  }
+
+  std::vector<PackageRow> rows = package_table_get_displayed_package_rows(widgets);
+  size_t marked_count = 0;
+  for (const auto &row : rows) {
+    if (pending_transaction_mark_upgrade_action_for_row(widgets->transaction.actions, row)) {
+      ++marked_count;
+    }
+  }
+
+  if (marked_count == 0) {
+    ui_helpers_set_status(widgets->query.status_label, _("No listed upgrades to mark."), "gray");
+    return;
+  }
+
+  pending_transaction_invalidate_service_preview(widgets);
+  pending_transaction_refresh_pending_tab(widgets);
+  package_table_refresh_statuses(widgets);
+
+  std::string msg = dnfui_i18n_format_count(marked_count, "Marked %zu listed upgrade.", "Marked %zu listed upgrades.");
+  ui_helpers_set_status(widgets->query.status_label, msg, "blue");
 }
 
 // -----------------------------------------------------------------------------

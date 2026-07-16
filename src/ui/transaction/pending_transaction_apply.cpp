@@ -191,6 +191,9 @@ pending_transaction_set_preview_controls_sensitive(MainWindowUiState *widgets, b
   if (widgets->transaction.upgrade_all_button) {
     gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.upgrade_all_button), sensitive);
   }
+  if (widgets->transaction.mark_listed_upgrades_button) {
+    gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.mark_listed_upgrades_button), sensitive);
+  }
 
   if (!sensitive) {
     if (widgets->transaction.apply_button) {

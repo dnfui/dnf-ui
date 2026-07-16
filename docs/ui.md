@@ -200,6 +200,7 @@ handles the package action buttons.
 It is responsible for:
 
 - marking packages for install, upgrade, remove, or reinstall
+- marking all listed upgrade candidates as pending upgrade actions
 - validating self-protected package rules
 - clearing pending actions
 

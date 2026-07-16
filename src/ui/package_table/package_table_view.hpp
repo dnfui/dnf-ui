@@ -23,6 +23,10 @@ enum class PackageTableEmptyState {
 // -----------------------------------------------------------------------------
 bool package_table_get_selected_package_row(MainWindowUiState *widgets, PackageRow &out_pkg);
 // -----------------------------------------------------------------------------
+// Return all package rows currently displayed in the package table.
+// -----------------------------------------------------------------------------
+std::vector<PackageRow> package_table_get_displayed_package_rows(MainWindowUiState *widgets);
+// -----------------------------------------------------------------------------
 // Replace the package table contents with the provided rows.
 // -----------------------------------------------------------------------------
 void package_table_fill_package_view(MainWindowUiState *widgets,
