@@ -841,6 +841,7 @@ std::vector<PackageRow>
 dnf_backend_get_available_package_rows_by_nevra(const std::string &pkg_nevra)
 {
   std::vector<PackageRow> packages;
+  std::set<std::string> seen_nevras;
 
   auto [base, guard, generation] = BaseManager::instance().acquire_read();
   libdnf5::rpm::PackageQuery query(base);
@@ -848,7 +849,10 @@ dnf_backend_get_available_package_rows_by_nevra(const std::string &pkg_nevra)
   query.filter_available();
 
   for (auto pkg : query) {
-    packages.push_back(make_package_row(pkg));
+    PackageRow row = make_package_row(pkg);
+    if (seen_nevras.insert(row.nevra).second) {
+      packages.push_back(row);
+    }
   }
 
   return packages;
