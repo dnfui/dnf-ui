@@ -609,3 +609,28 @@ TEST_CASE("Annotation fallback keeps installed rows usable when repo lookup fail
   REQUIRE(rows.size() == 1);
   REQUIRE(dnf_backend_get_package_install_state(rows.front()) == PackageInstallState::INSTALLED);
 }
+
+// -----------------------------------------------------------------------------
+// Verify that exact available lookups can mark stale upgrade candidates as non-newest.
+// -----------------------------------------------------------------------------
+TEST_CASE("Newest available annotation marks stale exact candidates")
+{
+  reset_backend_globals();
+
+  PackageRow exact_row;
+  exact_row.nevra = "demo-2.0-1.x86_64";
+  exact_row.name = "demo";
+  exact_row.version = "2.0";
+  exact_row.release = "1";
+  exact_row.arch = "x86_64";
+
+  PackageRow newest_row = exact_row;
+  newest_row.nevra = "demo-3.0-1.x86_64";
+  newest_row.version = "3.0";
+
+  std::vector<PackageRow> rows { exact_row };
+  dnf_backend_testonly_annotate_newest_available_candidates(rows, { newest_row });
+
+  REQUIRE(rows.size() == 1);
+  REQUIRE_FALSE(rows.front().newest_available_candidate);
+}

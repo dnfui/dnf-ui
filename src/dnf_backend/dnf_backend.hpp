@@ -420,6 +420,11 @@ void dnf_backend_testonly_replace_installed_snapshot_rows(const std::vector<Pack
 // whether all rows kept UNKNOWN repo-candidate relation afterwards.
 // -----------------------------------------------------------------------------
 bool dnf_backend_testonly_annotation_fallback_leaves_rows_unknown(std::vector<PackageRow> &rows);
+// -----------------------------------------------------------------------------
+// Test-only hook: annotate rows with the newest available candidate flag.
+// -----------------------------------------------------------------------------
+void dnf_backend_testonly_annotate_newest_available_candidates(std::vector<PackageRow> &rows,
+                                                               const std::vector<PackageRow> &newest_rows);
 #endif
 
 // -----------------------------------------------------------------------------

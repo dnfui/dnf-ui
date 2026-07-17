@@ -127,6 +127,19 @@ annotate_newest_available_candidates(AvailableViewRows &available_rows)
 }
 
 // -----------------------------------------------------------------------------
+// Mark whether each row matches the newest available EVR for its package name and architecture.
+// -----------------------------------------------------------------------------
+static void
+annotate_newest_available_candidates(std::vector<PackageRow> &rows,
+                                     const std::map<std::string, PackageRow> &newest_by_name_arch)
+{
+  for (auto &row : rows) {
+    auto it = newest_by_name_arch.find(row.name_arch_key());
+    row.newest_available_candidate = it == newest_by_name_arch.end() || libdnf5::rpm::evrcmp(row, it->second) == 0;
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Return each installed package name once.
 // Repo annotation only needs candidates for names that are already installed.
 // -----------------------------------------------------------------------------
@@ -831,6 +844,20 @@ dnf_backend_testonly_annotation_fallback_leaves_rows_unknown(std::vector<Package
     return row.repo_candidate_relation == PackageRepoCandidateRelation::UNKNOWN;
   });
 }
+
+// -----------------------------------------------------------------------------
+// Test-only hook for newest available candidate annotation.
+// -----------------------------------------------------------------------------
+void
+dnf_backend_testonly_annotate_newest_available_candidates(std::vector<PackageRow> &rows,
+                                                          const std::vector<PackageRow> &newest_rows)
+{
+  std::map<std::string, PackageRow> newest_by_name_arch;
+  for (const auto &row : newest_rows) {
+    remember_newest_row(newest_by_name_arch, row);
+  }
+  annotate_newest_available_candidates(rows, newest_by_name_arch);
+}
 #endif
 
 // -----------------------------------------------------------------------------
@@ -842,6 +869,8 @@ dnf_backend_get_available_package_rows_by_nevra(const std::string &pkg_nevra)
 {
   std::vector<PackageRow> packages;
   std::set<std::string> seen_nevras;
+  std::set<std::string> names;
+  std::map<std::string, PackageRow> newest_by_name_arch;
 
   auto [base, guard, generation] = BaseManager::instance().acquire_read();
   libdnf5::rpm::PackageQuery query(base);
@@ -851,10 +880,24 @@ dnf_backend_get_available_package_rows_by_nevra(const std::string &pkg_nevra)
   for (auto pkg : query) {
     PackageRow row = make_package_row(pkg);
     if (seen_nevras.insert(row.nevra).second) {
+      names.insert(row.name);
       packages.push_back(row);
     }
   }
 
+  if (!names.empty()) {
+    libdnf5::rpm::PackageQuery newest_query(base);
+    newest_query.filter_available();
+    std::vector<std::string> package_names { names.begin(), names.end() };
+    newest_query.filter_name(package_names, libdnf5::sack::QueryCmp::EQ);
+
+    for (auto pkg : newest_query) {
+      PackageRow row = make_package_row(pkg);
+      remember_newest_row(newest_by_name_arch, row);
+    }
+  }
+
+  annotate_newest_available_candidates(packages, newest_by_name_arch);
   return packages;
 }
 
