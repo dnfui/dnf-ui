@@ -231,7 +231,8 @@ Assumptions:
   and `load_system_repo=false`, then explicitly expires and reloads repositories.
 - Session cleanup uses `org.rpm.dnf.v0.SessionManager.close_session(o) -> (b)`.
 - Package specs are marked on the session through these rpm interface methods:
-  `install(as, a{sv})`, `remove(as, a{sv})`, `reinstall(as, a{sv})`, and `upgrade(as, a{sv})`.
+  `install(as, a{sv})`, `remove(as, a{sv})`, `reinstall(as, a{sv})`,
+  `upgrade(as, a{sv})`, and `downgrade(as, a{sv})`.
 - Preview is resolved through `org.rpm.dnf.v0.Goal.resolve(a{sv}) -> (a(sssa{sv}a{sv})u)`.
 - Resolver result `0` means success, `1` means success with warnings, and `2`
   means resolve failure.

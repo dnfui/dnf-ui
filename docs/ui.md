@@ -121,7 +121,7 @@ It updates:
 - installed file list, loaded only when the Files tab is opened
 - dependencies, loaded only when the Dependencies tab is opened
 - changelog, loaded only when the Changelog tab is opened
-- install, remove, and reinstall button sensitivity
+- install, upgrade, downgrade, remove, and reinstall button sensitivity
 
 Details are loaded in the background. Selecting a package loads the Info tab.
 Files, dependencies, and changelog data are loaded when their tabs are opened.
@@ -199,7 +199,7 @@ handles the package action buttons.
 
 It is responsible for:
 
-- marking packages for install, upgrade, remove, or reinstall
+- marking packages for install, upgrade, downgrade, remove, or reinstall
 - marking all listed upgrade candidates as pending upgrade actions
 - validating self-protected package rules
 - clearing pending actions
