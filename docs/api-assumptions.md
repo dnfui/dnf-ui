@@ -49,7 +49,6 @@ Code:
 Assumptions:
 
 - `PackageQuery::filter_available()` removes installed packages from the query.
-- `PackageQuery::filter_upgrades()` keeps available packages that are upgrades to installed packages.
 - `PackageQuery::filter_latest_evr()` limits visible candidates to the latest EVR.
 
 Current local source:
@@ -58,7 +57,6 @@ Current local source:
 
 Why this matters:
 
-- The older libdnf5 upgrade query remains covered by backend tests, but it is no longer the authority for the List Upgradable view.
 - List Upgradable uses dnf5daemon's upgrade target list first. libdnf5 is then used only to enrich those exact daemon-selected NEVRAs with package metadata.
 - Missing libdnf5 metadata must not hide a daemon-reported upgrade. The UI should keep a basic daemon row rather than showing a false empty list.
 - Upgradable rows are available package candidates. UI actions that remove or reinstall such a row
