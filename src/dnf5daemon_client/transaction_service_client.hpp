@@ -64,13 +64,6 @@ transaction_service_client_preview_upgrade_all_request(TransactionPreview &previ
                                                        GCancellable *cancellable = nullptr);
 
 // -----------------------------------------------------------------------------
-// Ask dnf5daemon for package keys from the resolved Upgrade All preview.
-// -----------------------------------------------------------------------------
-bool transaction_service_client_list_upgrade_keys(std::vector<std::string> &keys_out,
-                                                  std::string &error_out,
-                                                  GCancellable *cancellable = nullptr);
-
-// -----------------------------------------------------------------------------
 // List upgrade targets directly from dnf5daemon's package-list API.
 // This is a read-only snapshot of daemon upgrade state, not a transaction preview.
 // -----------------------------------------------------------------------------

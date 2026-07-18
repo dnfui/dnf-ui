@@ -67,13 +67,13 @@ Why this matters:
 
 Tests:
 
-- `Upgradeable package rows are classified as upgradeable`
-- `Cancelled upgradeable package list returns no results`
+- `Installed rows can resolve matching repo candidates for action state`
+- `Daemon upgrade metadata lookup does not publish installed state`
 
 Maintenance check:
 
-- If the upgradable list changes, verify `package_query.hpp` in the build image
-  and rerun the backend tests.
+- If installed-row annotation or daemon-target metadata enrichment changes,
+  verify `package_query.hpp` in the build image and rerun the backend tests.
 
 ## dnf5daemon upgrade requests
 

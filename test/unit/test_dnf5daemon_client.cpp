@@ -313,30 +313,6 @@ TEST_CASE("dnf5daemon client previews upgrade-all requests", "[dnf5daemon]")
 }
 
 // -----------------------------------------------------------------------------
-// Verify that the client can list upgrade keys from the resolved Upgrade All preview.
-// A fully updated test container may return an empty list.
-// -----------------------------------------------------------------------------
-TEST_CASE("dnf5daemon client lists upgrade keys", "[dnf5daemon]")
-{
-  require_dnf5daemon_test_enabled();
-  transaction_service_client_reset_for_tests();
-
-  std::vector<std::string> keys;
-  std::string error;
-
-  bool listed = transaction_service_client_list_upgrade_keys(keys, error);
-
-  transaction_service_client_reset_for_tests();
-
-  INFO(error);
-  REQUIRE(listed);
-  for (const auto &key : keys) {
-    REQUIRE_FALSE(key.empty());
-    REQUIRE(key.find('.') != std::string::npos);
-  }
-}
-
-// -----------------------------------------------------------------------------
 // Verify that the client can list daemon upgrade targets without resolving an Upgrade All preview.
 // A fully updated test system may return an empty list.
 // -----------------------------------------------------------------------------

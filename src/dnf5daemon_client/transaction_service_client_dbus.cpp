@@ -333,28 +333,6 @@ package_label_from_daemon_object(GVariant *object, std::string &label_out, std::
 }
 
 // -----------------------------------------------------------------------------
-// Build the package key used when comparing dnf5daemon upgrade candidates with UI table rows.
-// The exact NEVRA can differ between daemon list output and UI candidate rows.
-// Name and architecture identify the package row.
-// -----------------------------------------------------------------------------
-bool
-package_upgrade_key_from_daemon_object(GVariant *object, std::string &key_out, std::string &error_out)
-{
-  key_out.clear();
-
-  const std::string name = map_lookup_string(object, "name");
-  const std::string arch = map_lookup_string(object, "arch");
-
-  if (name.empty() || arch.empty()) {
-    error_out = _("dnf5daemon returned an incomplete package item.");
-    return false;
-  }
-
-  key_out = name + "." + arch;
-  return true;
-}
-
-// -----------------------------------------------------------------------------
 // Build one upgrade target returned by dnf5daemon's package-list API.
 // -----------------------------------------------------------------------------
 bool
@@ -1121,14 +1099,10 @@ transaction_service_client_get_transaction_preview(GDBusConnection *connection,
                                                    TransactionServiceProgressForwarder *progress_forwarder,
                                                    GCancellable *cancellable,
                                                    TransactionPreview &preview_out,
-                                                   std::string &error_out,
-                                                   std::vector<std::string> *upgrade_keys_out)
+                                                   std::string &error_out)
 {
   preview_out = {};
   error_out.clear();
-  if (upgrade_keys_out) {
-    upgrade_keys_out->clear();
-  }
 
   if (!connection || transaction_path.empty()) {
     error_out = _("dnf5daemon transaction session is not available.");
@@ -1281,14 +1255,6 @@ transaction_service_client_get_transaction_preview(GDBusConnection *connection,
     g_variant_get(item, "(&s&s&s@a{sv}@a{sv})", &object_type, &action, &reason, &attributes, &object);
     bool ok = append_daemon_preview_item(
         built_preview, object_type ? object_type : "", action ? action : "", object, error_out);
-    if (ok && upgrade_keys_out && ascii_lower(object_type ? object_type : "") == "package" &&
-        ascii_lower(action ? action : "") == "upgrade") {
-      std::string key;
-      ok = package_upgrade_key_from_daemon_object(object, key, error_out);
-      if (ok) {
-        upgrade_keys_out->push_back(std::move(key));
-      }
-    }
 
     g_variant_unref(attributes);
     g_variant_unref(object);
