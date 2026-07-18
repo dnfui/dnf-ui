@@ -4,6 +4,54 @@
 // -----------------------------------------------------------------------------
 #include "upgrade/daemon_upgrade_state.hpp"
 
+DaemonUpgradeRefreshOwner::DaemonUpgradeRefreshOwner(DaemonUpgradeRefreshId refresh_id)
+    : refresh_id(refresh_id)
+    , closed(refresh_id == 0)
+{
+}
+
+DaemonUpgradeRefreshOwner::~DaemonUpgradeRefreshOwner()
+{
+  if (refresh_id != 0 && !closed) {
+    DaemonUpgradeState::instance().abandon_refresh(refresh_id);
+  }
+}
+
+DaemonUpgradeRefreshOwner::DaemonUpgradeRefreshOwner(DaemonUpgradeRefreshOwner &&other) noexcept
+    : refresh_id(other.refresh_id)
+    , closed(other.closed)
+{
+  other.refresh_id = 0;
+  other.closed = true;
+}
+
+DaemonUpgradeRefreshOwner &
+DaemonUpgradeRefreshOwner::operator=(DaemonUpgradeRefreshOwner &&other) noexcept
+{
+  if (this != &other) {
+    if (refresh_id != 0 && !closed) {
+      DaemonUpgradeState::instance().abandon_refresh(refresh_id);
+    }
+    refresh_id = other.refresh_id;
+    closed = other.closed;
+    other.refresh_id = 0;
+    other.closed = true;
+  }
+  return *this;
+}
+
+DaemonUpgradeRefreshId
+DaemonUpgradeRefreshOwner::id() const
+{
+  return refresh_id;
+}
+
+void
+DaemonUpgradeRefreshOwner::close()
+{
+  closed = true;
+}
+
 // -----------------------------------------------------------------------------
 // Return the process-wide daemon upgrade state.
 // -----------------------------------------------------------------------------

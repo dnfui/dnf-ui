@@ -31,6 +31,27 @@ struct DaemonUpgradeSnapshot {
 
 using DaemonUpgradeRefreshId = uint64_t;
 
+// Own one active daemon refresh until the GTK completion either publishes it or
+// rejects it. Destruction abandons an unclosed refresh so stale worker results
+// cannot keep the shared state locked in REFRESHING.
+class DaemonUpgradeRefreshOwner {
+  public:
+  explicit DaemonUpgradeRefreshOwner(DaemonUpgradeRefreshId refresh_id = 0);
+  ~DaemonUpgradeRefreshOwner();
+
+  DaemonUpgradeRefreshOwner(const DaemonUpgradeRefreshOwner &) = delete;
+  DaemonUpgradeRefreshOwner &operator=(const DaemonUpgradeRefreshOwner &) = delete;
+  DaemonUpgradeRefreshOwner(DaemonUpgradeRefreshOwner &&other) noexcept;
+  DaemonUpgradeRefreshOwner &operator=(DaemonUpgradeRefreshOwner &&other) noexcept;
+
+  DaemonUpgradeRefreshId id() const;
+  void close();
+
+  private:
+  DaemonUpgradeRefreshId refresh_id = 0;
+  bool closed = true;
+};
+
 class DaemonUpgradeState {
   public:
   static DaemonUpgradeState &instance();

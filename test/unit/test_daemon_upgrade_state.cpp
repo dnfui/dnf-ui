@@ -461,5 +461,48 @@ TEST_CASE("daemon upgrade state rejects publication without refresh")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that a discarded refresh owner abandons the active daemon refresh.
+// -----------------------------------------------------------------------------
+TEST_CASE("daemon upgrade refresh owner abandons discarded results")
+{
+  DaemonUpgradeState &state = reset_state();
+
+  std::optional<DaemonUpgradeRefreshId> refresh_id = state.begin_refresh();
+  REQUIRE(refresh_id.has_value());
+  {
+    DaemonUpgradeRefreshOwner owner(refresh_id.value());
+  }
+
+  DaemonUpgradeSnapshot snapshot = state.snapshot();
+  REQUIRE(snapshot.status == DaemonUpgradeSnapshotStatus::NOT_LOADED);
+  REQUIRE(state.begin_refresh().has_value());
+}
+
+// -----------------------------------------------------------------------------
+// Verify that a published refresh owner does not abandon the ready snapshot.
+// -----------------------------------------------------------------------------
+TEST_CASE("daemon upgrade refresh owner keeps accepted results")
+{
+  DaemonUpgradeState &state = reset_state();
+  std::string error;
+  std::vector<TransactionServiceUpgradeTarget> targets {
+    make_target("demo", "x86_64", "2.0", "demo-0:2.0-1.fc44.x86_64"),
+  };
+
+  std::optional<DaemonUpgradeRefreshId> refresh_id = state.begin_refresh();
+  REQUIRE(refresh_id.has_value());
+  {
+    DaemonUpgradeRefreshOwner owner(refresh_id.value());
+    REQUIRE(state.publish_success(owner.id(), targets, error));
+    owner.close();
+  }
+
+  DaemonUpgradeSnapshot snapshot = state.snapshot();
+  REQUIRE(snapshot.status == DaemonUpgradeSnapshotStatus::READY);
+  REQUIRE(snapshot.generation == 1);
+  REQUIRE(snapshot.targets_by_name_arch.size() == 1);
+}
+
+// -----------------------------------------------------------------------------
 // EOF
 // -----------------------------------------------------------------------------

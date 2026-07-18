@@ -77,18 +77,9 @@ struct PackageListTaskData {
 };
 
 struct UpgradeablePackageListResult {
-  DaemonUpgradeRefreshId refresh_id = 0;
+  DaemonUpgradeRefreshOwner refresh_owner;
   std::vector<TransactionServiceUpgradeTarget> targets;
   std::vector<PackageRow> metadata_rows;
-  uint64_t daemon_generation = 0;
-  bool refresh_closed = false;
-
-  ~UpgradeablePackageListResult()
-  {
-    if (refresh_id != 0 && !refresh_closed) {
-      DaemonUpgradeState::instance().abandon_refresh(refresh_id);
-    }
-  }
 };
 
 // Data passed to one exact selected-package reload task.
@@ -427,7 +418,7 @@ on_list_upgradeable_task(GTask *task, gpointer, gpointer, GCancellable *cancella
 #endif
 
     auto *results = new UpgradeablePackageListResult;
-    results->refresh_id = refresh_id.value();
+    results->refresh_owner = DaemonUpgradeRefreshOwner(refresh_id.value());
     results->targets = std::move(targets);
     results->metadata_rows = std::move(metadata_rows);
     refresh_state_closed = true;
@@ -491,11 +482,15 @@ on_list_upgradeable_task_finished(GObject *, GAsyncResult *res, gpointer user_da
 
   if (result) {
     std::string publish_error;
-    if (!DaemonUpgradeState::instance().publish_success(result->refresh_id, result->targets, publish_error)) {
-      result->refresh_closed = true;
+    if (!DaemonUpgradeState::instance().publish_success(result->refresh_owner.id(), result->targets, publish_error)) {
+      result->refresh_owner.close();
       const bool refresh_no_longer_active = publish_error == "dnf5daemon upgrade refresh is no longer active.";
       delete result;
-      if (!refresh_no_longer_active) {
+      if (refresh_no_longer_active) {
+        ui_helpers_set_status(widgets->query.status_label,
+                              _("Package state changed while loading upgrades. Press List Upgradable to try again."),
+                              "blue");
+      } else {
         ui_helpers_set_status(widgets->query.status_label,
                               publish_error.empty() ? _("Unable to publish dnf5daemon upgrade information.")
                                                     : publish_error.c_str(),
@@ -503,7 +498,7 @@ on_list_upgradeable_task_finished(GObject *, GAsyncResult *res, gpointer user_da
       }
       return;
     }
-    result->refresh_closed = true;
+    result->refresh_owner.close();
 
     DaemonUpgradeSnapshot snapshot = DaemonUpgradeState::instance().snapshot();
     if (snapshot.status != DaemonUpgradeSnapshotStatus::READY) {

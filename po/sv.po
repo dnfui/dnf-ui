@@ -530,6 +530,9 @@ msgstr "Förråd uppdaterade. Tryck på Lista uppgraderbara för att läsa in up
 msgid "Installed package state changed. Press List Upgradable to reload upgrades."
 msgstr "Installerat paketläge ändrades. Tryck på Lista uppgraderbara för att läsa in uppgraderingar igen."
 
+msgid "Package state changed while loading upgrades. Press List Upgradable to try again."
+msgstr "Paketläget ändrades medan uppgraderingar lästes in. Tryck på Lista uppgraderbara för att försöka igen."
+
 msgid "Refreshing repositories..."
 msgstr "Uppdaterar förråd..."
 
