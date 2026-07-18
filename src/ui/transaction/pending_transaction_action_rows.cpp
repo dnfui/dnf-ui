@@ -67,12 +67,18 @@ pending_transaction_action_rows_for_selection(const PackageRow &selected)
 {
   PendingTransactionActionRows rows;
   rows.state = dnf_backend_get_package_install_state(selected);
-  rows.install_is_upgrade = rows.state == PackageInstallState::UPGRADEABLE;
+  rows.install_is_downgrade = rows.state == PackageInstallState::DOWNGRADEABLE;
+  rows.package_key = selected.name_arch_key();
   rows.install_row = selected;
   rows.installed_row = selected;
 
   const bool selected_is_installed = dnf_backend_is_package_installed_exact(selected);
+  rows.install_is_upgrade =
+      rows.state == PackageInstallState::UPGRADEABLE && (selected_is_installed || selected.newest_available_candidate);
   rows.has_installed_row = selected_is_installed;
+  if (!selected_is_installed && rows.state == PackageInstallState::UPGRADEABLE && !rows.install_is_upgrade) {
+    rows.has_installed_row = dnf_backend_get_installed_package_row_by_name_arch(selected, rows.installed_row);
+  }
 
   // Upgrade actions need the available package ID, not always the visible row ID.
   if (rows.install_is_upgrade) {
@@ -87,6 +93,15 @@ pending_transaction_action_rows_for_selection(const PackageRow &selected)
       rows.has_installed_row = dnf_backend_get_installed_package_row_by_name_arch(selected, rows.installed_row);
     }
     rows.upgrade_spec = upgrade_transaction_spec(rows.has_installed_row ? rows.installed_row : selected);
+    rows.can_try_reinstall = rows.has_installed_row;
+    return rows;
+  }
+
+  // Older available rows can be selected when Latest only is disabled.
+  // They must be sent as downgrades, not plain installs.
+  if (rows.install_is_downgrade) {
+    rows.has_install_row = true;
+    rows.has_installed_row = dnf_backend_get_installed_package_row_by_name_arch(selected, rows.installed_row);
     rows.can_try_reinstall = rows.has_installed_row;
     return rows;
   }
@@ -114,6 +129,14 @@ pending_transaction_mark_upgrade_action_for_row(std::vector<PendingAction> &acti
     return false;
   }
 
+  for (const auto &action : actions) {
+    if (action.type == PendingAction::UPGRADE && action.nevra == action_rows.install_row.nevra &&
+        action.transaction_spec == action_rows.upgrade_spec && action.package_key == action_rows.package_key) {
+      return false;
+    }
+  }
+
+  pending_actions_remove_package_key(actions, action_rows.package_key);
   remove_pending_upgrade_by_transaction_spec(actions, action_rows.upgrade_spec);
   remove_pending_action_by_nevra(actions, row.nevra);
   if (action_rows.has_installed_row) {
@@ -121,7 +144,8 @@ pending_transaction_mark_upgrade_action_for_row(std::vector<PendingAction> &acti
   }
   remove_pending_action_by_nevra(actions, action_rows.install_row.nevra);
 
-  actions.push_back({ PendingAction::UPGRADE, action_rows.install_row.nevra, action_rows.upgrade_spec });
+  actions.push_back(
+      { PendingAction::UPGRADE, action_rows.install_row.nevra, action_rows.upgrade_spec, action_rows.package_key });
   return true;
 }
 

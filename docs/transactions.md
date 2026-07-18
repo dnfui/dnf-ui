@@ -33,6 +33,7 @@ the GUI:
 - upgrade all
 - install
 - upgrade
+- downgrade
 - remove
 - reinstall
 
@@ -41,7 +42,13 @@ changes when the preview is built.
 
 Upgrade-all requests are separate from explicit package action lists. DNF UI
 asks dnf5daemon to prepare its native Upgrade All transaction. Selected package
-upgrades are sent as explicit upgrade specs.
+upgrades are sent as explicit upgrade specs. Selected downgrades are sent as
+exact NEVRAs so the daemon targets the version the user selected.
+
+The pending action list keeps one action per package name and architecture. If
+the user marks another version of the same package, the old action is replaced.
+That prevents conflicting install, upgrade, downgrade, remove, and reinstall
+requests for the same package identity.
 
 ## GUI flow
 
@@ -50,7 +57,7 @@ When the user clicks Apply:
 1. The pending controller validates the pending actions.
 2. The controller builds a `TransactionRequest`.
 3. The transaction client opens a dnf5daemon session.
-4. The client marks install, upgrade, remove, or reinstall specs on that session.
+4. The client marks install, upgrade, downgrade, remove, or reinstall specs on that session.
 5. The client asks dnf5daemon to resolve the transaction with user interaction enabled.
 6. If dnf5daemon requests a repository signing key during resolve, DNF UI asks before showing the summary.
 7. The GUI shows the resolved preview.
@@ -69,6 +76,12 @@ currently shown in the package table as normal pending upgrade actions. The user
 can then remove individual actions before clicking Apply. This path sends
 explicit upgrade specs to dnf5daemon instead of using the daemon-side Upgrade
 All shortcut.
+
+When Latest only is disabled, the package table can show older available
+versions. Older versions than the installed package can be marked as explicit
+downgrades. Newer versions that are not the newest repo candidate are shown for
+inspection only. They are not marked as upgrades because the daemon upgrade call
+uses a package name and architecture spec, not an exact selected NEVRA.
 
 ```mermaid
 flowchart TD

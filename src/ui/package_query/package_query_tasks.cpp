@@ -47,6 +47,7 @@ struct SearchTaskData {
   uint64_t cache_epoch;
   bool search_in_description;
   bool exact_match;
+  bool latest_only;
 };
 
 // -----------------------------------------------------------------------------
@@ -67,10 +68,12 @@ search_task_data_free(gpointer p)
 // Data passed to one background package list task.
 // The generation lets completion ignore results from an older backend Base.
 // The request id keeps the Stop button matched to the task that controls it.
+// List Packages stores the search option snapshot used by its worker.
 struct PackageListTaskData {
   uint64_t request_id;
   uint64_t generation;
   gint64 started_at_us;
+  DnfBackendSearchOptions search_options;
 };
 
 // Data passed to one exact selected-package reload task.
@@ -280,9 +283,12 @@ static void
 on_list_available_task(GTask *task, gpointer, gpointer, GCancellable *cancellable)
 {
   QueryBackendBaseDropGuard base_drop_guard(cancellable);
+  const PackageListTaskData *td = static_cast<const PackageListTaskData *>(g_task_get_task_data(task));
+  const DnfBackendSearchOptions search_options = td ? td->search_options : DnfBackendSearchOptions {};
 
   try {
-    auto *results = new std::vector<PackageRow>(dnf_backend_get_browse_package_rows_interruptible(cancellable));
+    auto *results =
+        new std::vector<PackageRow>(dnf_backend_get_browse_package_rows_interruptible(cancellable, search_options));
     g_task_return_pointer(task, results, [](gpointer p) { delete static_cast<std::vector<PackageRow> *>(p); });
   } catch (const std::exception &e) {
     g_task_return_error(task, g_error_new_literal(G_IO_ERROR, G_IO_ERROR_FAILED, e.what()));
@@ -330,6 +336,9 @@ on_list_available_task_finished(GObject *, GAsyncResult *res, gpointer user_data
 
   if (packages) {
     package_query_set_displayed_query_kind(widgets, DisplayedPackageQueryKind::LIST_AVAILABLE);
+    if (td) {
+      widgets->query_state.displayed_query.latest_only = td->search_options.latest_only;
+    }
 
     if (widgets->query_state.preserve_selection_on_reload) {
       widgets->results.selected_nevra = widgets->query_state.reload_selected_nevra;
@@ -527,7 +536,7 @@ on_search_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
 
     if (td) {
       package_query_set_displayed_search_query(
-          widgets, td->term ? td->term : "", td->search_in_description, td->exact_match);
+          widgets, td->term ? td->term : "", td->search_in_description, td->exact_match, td->latest_only);
     }
 
     // Fill the package table and display the result count.
@@ -684,6 +693,7 @@ package_query_start_list_available_task(MainWindowUiState *widgets)
   td->request_id = widgets->query_state.next_package_list_request_id++;
   td->generation = BaseManager::instance().current_generation();
   td->started_at_us = g_get_monotonic_time();
+  td->search_options = dnf_backend_get_search_options();
 
   package_query_begin_package_list_request(widgets, c, td->request_id, PackageListRequestKind::LIST_AVAILABLE);
   GTask *task = widgets_task_new_for_main_window_ui_state(widgets, c, on_list_available_task_finished);
@@ -739,6 +749,7 @@ package_query_start_search_task(MainWindowUiState *widgets,
   td->cache_epoch = cache_epoch;
   td->search_in_description = search_options.search_in_description;
   td->exact_match = search_options.exact_match;
+  td->latest_only = search_options.latest_only;
 
   GCancellable *c = widgets_make_task_cancellable_for(GTK_WIDGET(widgets->query.entry));
   package_query_begin_package_list_request(widgets, c, td->request_id, PackageListRequestKind::SEARCH);

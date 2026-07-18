@@ -72,6 +72,8 @@ struct PackageRow {
   std::string repo_candidate_version;
   std::string repo_candidate_release;
   std::string repo_candidate_repo;
+  // True when this available row has the newest EVR seen for its package name and architecture.
+  bool newest_available_candidate = true;
 
   // -----------------------------------------------------------------------------
   // Return the package epoch field.
@@ -126,6 +128,7 @@ struct PackageRow {
 enum class PackageInstallState {
   AVAILABLE,
   UPGRADEABLE,
+  DOWNGRADEABLE,
   INSTALLED,
   LOCAL_ONLY,
   INSTALLED_NEWER_THAN_REPO,
@@ -267,13 +270,14 @@ TransactionHistoryPage dnf_backend_list_transaction_history_page(TransactionHist
                                                                  GCancellable *cancellable);
 
 // -----------------------------------------------------------------------------
-// Search flags used by backend search queries.
-// The UI can update them from the search controls.
+// Package query flags used by backend browse and search queries.
+// The UI can update them from the query controls.
 // Each backend worker copies a snapshot before scanning so one query remains internally consistent.
 // -----------------------------------------------------------------------------
 struct DnfBackendSearchOptions {
   bool search_in_description = false;
   bool exact_match = false;
+  bool latest_only = true;
 };
 
 // -----------------------------------------------------------------------------
@@ -354,8 +358,11 @@ std::vector<PackageRow> dnf_backend_get_installed_package_rows_interruptible(GCa
 
 // -----------------------------------------------------------------------------
 // Query the merged browse view shown by "List Packages".
+// The caller passes the option snapshot used for this worker.
 // -----------------------------------------------------------------------------
-std::vector<PackageRow> dnf_backend_get_browse_package_rows_interruptible(GCancellable *cancellable);
+std::vector<PackageRow>
+dnf_backend_get_browse_package_rows_interruptible(GCancellable *cancellable,
+                                                  const DnfBackendSearchOptions &search_options);
 
 // -----------------------------------------------------------------------------
 // Query available repo packages that are upgrades to installed packages.
@@ -413,6 +420,11 @@ void dnf_backend_testonly_replace_installed_snapshot_rows(const std::vector<Pack
 // whether all rows kept UNKNOWN repo-candidate relation afterwards.
 // -----------------------------------------------------------------------------
 bool dnf_backend_testonly_annotation_fallback_leaves_rows_unknown(std::vector<PackageRow> &rows);
+// -----------------------------------------------------------------------------
+// Test-only hook: annotate rows with the newest available candidate flag.
+// -----------------------------------------------------------------------------
+void dnf_backend_testonly_annotate_newest_available_candidates(std::vector<PackageRow> &rows,
+                                                               const std::vector<PackageRow> &newest_rows);
 #endif
 
 // -----------------------------------------------------------------------------

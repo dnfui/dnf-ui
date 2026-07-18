@@ -2,6 +2,7 @@
 
 #include "dnf_backend/dnf_backend.hpp"
 #include "test_utils.hpp"
+#include "ui/common/widgets.hpp"
 #include "ui/package_table/package_table_view_internal.hpp"
 
 static PackageRow
@@ -185,6 +186,29 @@ TEST_CASE("Package table Repo column uses candidate repo for update rows")
   item.row = update;
 
   REQUIRE(package_table_column_text(item, PackageColumnKind::REPO) == "updates");
+}
+
+// -----------------------------------------------------------------------------
+// Verify that downgrade rows show pending remove text for their installed counterpart.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package table Status column resolves pending remove for downgrade rows")
+{
+  reset_backend_globals();
+
+  PackageRow installed = make_table_test_row("demo-2.0-1.fc44.x86_64", "demo", "2.0", "1.fc44", "x86_64");
+  PackageRow downgrade = make_table_test_row("demo-1.0-1.fc44.x86_64", "demo", "1.0", "1.fc44", "x86_64");
+
+  dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
+
+  auto widgets = std::make_shared<MainWindowUiState>();
+  widgets->transaction.actions.push_back(
+      { PendingAction::REMOVE, installed.nevra, installed.nevra, installed.name_arch_key() });
+
+  PackageItem item {};
+  item.row = downgrade;
+  package_table_fill_item_status(widgets.get(), item);
+
+  REQUIRE(item.status_text == "Pending Removal");
 }
 
 // -----------------------------------------------------------------------------

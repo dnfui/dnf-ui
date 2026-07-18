@@ -121,7 +121,7 @@ It updates:
 - installed file list, loaded only when the Files tab is opened
 - dependencies, loaded only when the Dependencies tab is opened
 - changelog, loaded only when the Changelog tab is opened
-- install, remove, and reinstall button sensitivity
+- install, upgrade, downgrade, remove, and reinstall button sensitivity
 
 Details are loaded in the background. Selecting a package loads the Info tab.
 Files, dependencies, and changelog data are loaded when their tabs are opened.
@@ -199,7 +199,7 @@ handles the package action buttons.
 
 It is responsible for:
 
-- marking packages for install, upgrade, remove, or reinstall
+- marking packages for install, upgrade, downgrade, remove, or reinstall
 - marking all listed upgrade candidates as pending upgrade actions
 - validating self-protected package rules
 - clearing pending actions
@@ -236,6 +236,22 @@ name and architecture spec for dnf5daemon. The table keeps the installed version
 in the Version column and shows the candidate version in the Update column. The
 Repo column shows the repository that provides the update. Remove and reinstall
 act on the currently installed NEVRA for the same package name and architecture.
+
+The Latest only checkbox controls how many available versions the package table
+shows. When it is enabled, the table keeps the newest available version for each
+package name and architecture. When it is disabled, the table can show older
+available versions too, but still shows only one row for each exact NEVRA.
+
+Older available versions than the installed package are treated as downgrade
+candidates and are sent to dnf5daemon as exact NEVRAs. Newer available versions
+that are not the newest repo candidate are shown for inspection only. They are
+not marked as upgrades because the daemon upgrade call does not target an exact
+selected NEVRA.
+
+Pending package actions use one package identity key based on name and
+architecture. Marking another action for the same package replaces the old one,
+so the pending list cannot contain both an upgrade and a downgrade for the same
+package.
 
 [src/ui/transaction/pending_transaction_action_rows.cpp](../src/ui/transaction/pending_transaction_action_rows.cpp) keeps those
 row-selection rules in one place. This is needed because an update can be shown

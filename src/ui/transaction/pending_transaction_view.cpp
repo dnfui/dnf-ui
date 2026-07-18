@@ -84,6 +84,9 @@ pending_transaction_refresh_pending_tab(MainWindowUiState *widgets)
     case PendingAction::UPGRADE:
       prefix = _("Upgrade: ");
       break;
+    case PendingAction::DOWNGRADE:
+      prefix = _("Downgrade: ");
+      break;
     case PendingAction::REINSTALL:
       prefix = _("Reinstall: ");
       break;
@@ -136,6 +139,15 @@ pending_transaction_remove_action(MainWindowUiState *widgets, const std::string 
     }
   }
   return false;
+}
+
+// -----------------------------------------------------------------------------
+// Remove all pending actions for one package name and architecture.
+// -----------------------------------------------------------------------------
+bool
+pending_transaction_remove_package_key(MainWindowUiState *widgets, const std::string &package_key)
+{
+  return pending_actions_remove_package_key(widgets->transaction.actions, package_key);
 }
 
 // -----------------------------------------------------------------------------

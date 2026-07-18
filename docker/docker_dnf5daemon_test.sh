@@ -19,6 +19,7 @@ CONTAINER_NAME="dnfui-dnf5daemon-test"
 CACHE_VOLUME_NAME="${CACHE_VOLUME_NAME:-dnfui-dnf5daemon-test-cache}"
 INSTALL_SPEC="${DNFUI_TEST_DNF5DAEMON_INSTALL_SPEC:-cowsay}"
 INSTALL_NAME="${DNFUI_TEST_DNF5DAEMON_INSTALL_NAME:-$INSTALL_SPEC}"
+DOWNGRADE_SPEC="${DNFUI_TEST_DNF5DAEMON_DOWNGRADE_SPEC:-}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
@@ -50,6 +51,7 @@ color_print "$FMT_GREEN" "*** Running dnf5daemon transaction client tests... ***
   -e DNFUI_TEST_DNF5DAEMON=1 \
   -e DNFUI_TEST_DNF5DAEMON_INSTALL_SPEC="$INSTALL_SPEC" \
   -e DNFUI_TEST_DNF5DAEMON_INSTALL_NAME="$INSTALL_NAME" \
+  -e DNFUI_TEST_DNF5DAEMON_DOWNGRADE_SPEC="$DOWNGRADE_SPEC" \
   -v "$HOST_DIR:/workspace" \
   -v "$CACHE_VOLUME_NAME:/var/cache/libdnf5" \
   "$IMAGE_NAME" \

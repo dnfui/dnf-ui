@@ -44,6 +44,30 @@ TEST_CASE("Pending transaction action rows resolve plain available package")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that an older available row resolves to a downgrade action.
+// -----------------------------------------------------------------------------
+TEST_CASE("Pending transaction action rows resolve downgrade from older available row")
+{
+  reset_backend_globals();
+
+  PackageRow installed = make_test_package_row("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64");
+  PackageRow older = make_test_package_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
+
+  dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
+
+  PendingTransactionActionRows rows = pending_transaction_action_rows_for_selection(older);
+
+  REQUIRE(rows.state == PackageInstallState::DOWNGRADEABLE);
+  REQUIRE_FALSE(rows.install_is_upgrade);
+  REQUIRE(rows.install_is_downgrade);
+  REQUIRE(rows.has_install_row);
+  REQUIRE(rows.install_row.nevra == older.nevra);
+  REQUIRE(rows.has_installed_row);
+  REQUIRE(rows.installed_row.nevra == installed.nevra);
+  REQUIRE(rows.can_try_reinstall);
+}
+
+// -----------------------------------------------------------------------------
 // Verify that an installed row with a stored repo candidate upgrades that candidate.
 // -----------------------------------------------------------------------------
 TEST_CASE("Pending transaction action rows resolve upgrade from installed package row")
@@ -83,6 +107,11 @@ TEST_CASE("Pending transaction action rows allow protected upgrade action")
 
   REQUIRE_FALSE(pending_transaction_install_action_blocked_by_self_protection(upgrade_rows, true));
   REQUIRE_FALSE(pending_transaction_install_action_blocked_by_self_protection(upgrade_rows, false));
+
+  PendingTransactionActionRows downgrade_rows;
+  downgrade_rows.install_is_downgrade = true;
+
+  REQUIRE(pending_transaction_install_action_blocked_by_self_protection(downgrade_rows, true));
 }
 
 // -----------------------------------------------------------------------------
@@ -104,6 +133,30 @@ TEST_CASE("Pending transaction action rows resolve upgrade from available update
   REQUIRE(rows.has_install_row);
   REQUIRE(rows.install_row.nevra == update.nevra);
   REQUIRE(rows.upgrade_spec == "demo.x86_64");
+  REQUIRE(rows.has_installed_row);
+  REQUIRE(rows.installed_row.nevra == installed.nevra);
+  REQUIRE(rows.can_try_reinstall);
+}
+
+// -----------------------------------------------------------------------------
+// Verify that a newer row below the newest repo candidate is display-only.
+// dnf5daemon upgrade requests use name and architecture, so they cannot target this exact NEVRA.
+// -----------------------------------------------------------------------------
+TEST_CASE("Pending transaction action rows reject non latest upgrade candidate")
+{
+  reset_backend_globals();
+
+  PackageRow installed = make_test_package_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
+  PackageRow non_latest_update = make_test_package_row("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64");
+  non_latest_update.newest_available_candidate = false;
+
+  dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
+
+  PendingTransactionActionRows rows = pending_transaction_action_rows_for_selection(non_latest_update);
+
+  REQUIRE(rows.state == PackageInstallState::UPGRADEABLE);
+  REQUIRE_FALSE(rows.install_is_upgrade);
+  REQUIRE_FALSE(rows.has_install_row);
   REQUIRE(rows.has_installed_row);
   REQUIRE(rows.installed_row.nevra == installed.nevra);
   REQUIRE(rows.can_try_reinstall);
@@ -134,6 +187,75 @@ TEST_CASE("Pending transaction bulk upgrade marking ignores non upgrade rows")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that bulk marking ignores newer rows that are not the newest repo candidate.
+// -----------------------------------------------------------------------------
+TEST_CASE("Pending transaction bulk upgrade marking ignores non latest upgrade candidate")
+{
+  reset_backend_globals();
+
+  PackageRow installed = make_test_package_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
+  PackageRow non_latest_update = make_test_package_row("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64");
+  non_latest_update.newest_available_candidate = false;
+
+  dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
+
+  std::vector<PendingAction> actions;
+
+  REQUIRE_FALSE(pending_transaction_mark_upgrade_action_for_row(actions, non_latest_update));
+
+  REQUIRE(actions.empty());
+}
+
+// -----------------------------------------------------------------------------
+// Verify that an existing pending upgrade on a stale exact row can still be found for unmarking.
+// -----------------------------------------------------------------------------
+TEST_CASE("Pending transaction stale upgrade action remains individually removable")
+{
+  reset_backend_globals();
+
+  PackageRow installed = make_test_package_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
+  PackageRow non_latest_update = make_test_package_row("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64");
+  non_latest_update.newest_available_candidate = false;
+
+  dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
+
+  PendingTransactionActionRows rows = pending_transaction_action_rows_for_selection(non_latest_update);
+  std::vector<PendingAction> actions = {
+    { PendingAction::UPGRADE, non_latest_update.nevra, "demo.x86_64", non_latest_update.name_arch_key() },
+  };
+
+  PendingAction::Type pending_type;
+  REQUIRE_FALSE(rows.has_install_row);
+  REQUIRE(pending_actions_get_install_side_action_type(actions, non_latest_update.nevra, pending_type));
+  REQUIRE(pending_type == PendingAction::UPGRADE);
+}
+
+// -----------------------------------------------------------------------------
+// Verify that repeated visible rows for one upgrade do not count as new pending work.
+// -----------------------------------------------------------------------------
+TEST_CASE("Pending transaction bulk upgrade marking ignores duplicate upgrade action")
+{
+  reset_backend_globals();
+
+  PackageRow installed = make_test_package_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
+  installed.repo_candidate_relation = PackageRepoCandidateRelation::NEWER;
+  installed.repo_candidate_nevra = "demo-2.0-1.x86_64";
+  PackageRow update = make_test_package_row("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64");
+
+  dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
+
+  std::vector<PendingAction> actions;
+
+  REQUIRE(pending_transaction_mark_upgrade_action_for_row(actions, installed));
+  REQUIRE_FALSE(pending_transaction_mark_upgrade_action_for_row(actions, update));
+
+  REQUIRE(actions.size() == 1);
+  REQUIRE(actions[0].type == PendingAction::UPGRADE);
+  REQUIRE(actions[0].nevra == update.nevra);
+  REQUIRE(actions[0].transaction_spec == "demo.x86_64");
+}
+
+// -----------------------------------------------------------------------------
 // Verify that bulk marking replaces stale pending actions for the same package.
 // -----------------------------------------------------------------------------
 TEST_CASE("Pending transaction bulk upgrade marking replaces existing package action")
@@ -146,7 +268,7 @@ TEST_CASE("Pending transaction bulk upgrade marking replaces existing package ac
   dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
 
   std::vector<PendingAction> actions = {
-    { PendingAction::REMOVE, installed.nevra, installed.nevra },
+    { PendingAction::REMOVE, installed.nevra, installed.nevra, installed.name_arch_key() },
   };
 
   REQUIRE(pending_transaction_mark_upgrade_action_for_row(actions, update));
@@ -171,7 +293,7 @@ TEST_CASE("Pending transaction upgrade marking replaces stale upgrade candidate"
   dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
 
   std::vector<PendingAction> actions = {
-    { PendingAction::UPGRADE, old_update.nevra, "demo.x86_64" },
+    { PendingAction::UPGRADE, old_update.nevra, "demo.x86_64", old_update.name_arch_key() },
   };
 
   REQUIRE(pending_transaction_mark_upgrade_action_for_row(actions, new_update));

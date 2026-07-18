@@ -284,7 +284,7 @@ TEST_CASE("Package info formatting contains expected fields")
 }
 
 // -----------------------------------------------------------------------------
-// Verify that installed and available update rows show the same upgrade details.
+// Verify that installed and available update rows keep selected package details while sharing upgrade context.
 // -----------------------------------------------------------------------------
 TEST_CASE("Package info formatting shows upgrade details consistently")
 {
@@ -309,12 +309,14 @@ TEST_CASE("Package info formatting shows upgrade details consistently")
   REQUIRE(installed_info.find("Package ID: " + installed_row.nevra) != std::string::npos);
   REQUIRE(installed_info.find(installed_line) != std::string::npos);
   REQUIRE(installed_info.find(upgrade_line) != std::string::npos);
-  REQUIRE(installed_info.find("Download Size: ") != std::string::npos);
+  REQUIRE(installed_info.find("Download Size: ") == std::string::npos);
+  REQUIRE(installed_info.find("Install Reason: ") != std::string::npos);
 
-  REQUIRE(upgrade_info.find("Package ID: " + installed_row.nevra) != std::string::npos);
+  REQUIRE(upgrade_info.find("Package ID: " + upgrade_row.nevra) != std::string::npos);
   REQUIRE(upgrade_info.find(installed_line) != std::string::npos);
   REQUIRE(upgrade_info.find(upgrade_line) != std::string::npos);
   REQUIRE(upgrade_info.find("Download Size: ") != std::string::npos);
+  REQUIRE(upgrade_info.find("Install Reason: ") == std::string::npos);
 }
 
 // -----------------------------------------------------------------------------
@@ -435,9 +437,9 @@ TEST_CASE("Dependency info contains expected section headers")
 }
 
 // -----------------------------------------------------------------------------
-// Verify that dependency details for an update row describe the currently installed package.
+// Verify that dependency details for an available update row describe that selected package.
 // -----------------------------------------------------------------------------
-TEST_CASE("Dependency info uses installed package for update rows")
+TEST_CASE("Dependency info uses selected package for update rows")
 {
   reset_backend_globals();
 
@@ -454,8 +456,8 @@ TEST_CASE("Dependency info uses installed package for update rows")
   auto installed_deps = dnf_backend_get_package_deps(installed_row.nevra);
   auto upgrade_deps = dnf_backend_get_package_deps(upgrade_row.nevra);
 
-  REQUIRE(upgrade_deps == installed_deps);
-  REQUIRE(upgrade_deps.find("(installed packages only)") == std::string::npos);
+  REQUIRE(upgrade_deps != installed_deps);
+  REQUIRE(upgrade_deps.find("(installed packages only)") != std::string::npos);
 }
 
 // -----------------------------------------------------------------------------
@@ -481,9 +483,9 @@ TEST_CASE("File list query is safe and returns valid state")
 }
 
 // -----------------------------------------------------------------------------
-// Verify that the Files tab can use an available update row to show the files from the currently installed package.
+// Verify that the Files tab does not use an installed counterpart for available update rows.
 // -----------------------------------------------------------------------------
-TEST_CASE("File list query uses installed package for update rows")
+TEST_CASE("File list query rejects update rows")
 {
   reset_backend_globals();
 
@@ -494,14 +496,9 @@ TEST_CASE("File list query uses installed package for update rows")
   }
 
   const PackageRow &upgrade_row = upgrade_rows.front();
-  PackageRow installed_row;
-  REQUIRE(dnf_backend_get_installed_package_row_by_name_arch(upgrade_row, installed_row));
-
-  auto installed_files = dnf_backend_get_installed_package_files(installed_row.nevra, 1500);
   auto upgrade_files = dnf_backend_get_installed_package_files(upgrade_row.nevra, 1500);
 
-  REQUIRE(upgrade_files.find("File list available only for installed packages.") == std::string::npos);
-  REQUIRE(upgrade_files == installed_files);
+  REQUIRE(upgrade_files.find("File list available only for installed packages.") != std::string::npos);
 }
 
 // -----------------------------------------------------------------------------
@@ -611,4 +608,29 @@ TEST_CASE("Annotation fallback keeps installed rows usable when repo lookup fail
   REQUIRE(dnf_backend_testonly_annotation_fallback_leaves_rows_unknown(rows));
   REQUIRE(rows.size() == 1);
   REQUIRE(dnf_backend_get_package_install_state(rows.front()) == PackageInstallState::INSTALLED);
+}
+
+// -----------------------------------------------------------------------------
+// Verify that exact available lookups can mark stale upgrade candidates as non-newest.
+// -----------------------------------------------------------------------------
+TEST_CASE("Newest available annotation marks stale exact candidates")
+{
+  reset_backend_globals();
+
+  PackageRow exact_row;
+  exact_row.nevra = "demo-2.0-1.x86_64";
+  exact_row.name = "demo";
+  exact_row.version = "2.0";
+  exact_row.release = "1";
+  exact_row.arch = "x86_64";
+
+  PackageRow newest_row = exact_row;
+  newest_row.nevra = "demo-3.0-1.x86_64";
+  newest_row.version = "3.0";
+
+  std::vector<PackageRow> rows { exact_row };
+  dnf_backend_testonly_annotate_newest_available_candidates(rows, { newest_row });
+
+  REQUIRE(rows.size() == 1);
+  REQUIRE_FALSE(rows.front().newest_available_candidate);
 }

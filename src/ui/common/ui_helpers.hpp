@@ -35,7 +35,8 @@ void ui_helpers_update_action_button_labels_for_selection(MainWindowUiState *wid
                                                           const std::string &install_nevra,
                                                           const std::string &remove_nevra,
                                                           const std::string &reinstall_nevra,
-                                                          bool install_is_upgrade);
+                                                          bool install_is_upgrade,
+                                                          bool install_is_downgrade);
 
 // -----------------------------------------------------------------------------
 // EOF

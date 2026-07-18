@@ -36,16 +36,19 @@ TEST_CASE("Package query cache key includes search options")
   reset_backend_globals();
 
   set_backend_search_options(false, false);
-  REQUIRE(package_query_cache_key_for("bash") == "name:contains:bash");
+  REQUIRE(package_query_cache_key_for("bash") == "name:contains:latest:bash");
 
   set_backend_search_options(false, true);
-  REQUIRE(package_query_cache_key_for("bash") == "name:exact:bash");
+  REQUIRE(package_query_cache_key_for("bash") == "name:exact:latest:bash");
 
   set_backend_search_options(true, false);
-  REQUIRE(package_query_cache_key_for("bash") == "desc:contains:bash");
+  REQUIRE(package_query_cache_key_for("bash") == "desc:contains:latest:bash");
 
   set_backend_search_options(true, true);
-  REQUIRE(package_query_cache_key_for("bash") == "desc:exact:bash");
+  REQUIRE(package_query_cache_key_for("bash") == "desc:exact:latest:bash");
+
+  set_backend_search_options(false, false, false);
+  REQUIRE(package_query_cache_key_for("bash") == "name:contains:all-versions:bash");
 }
 
 // -----------------------------------------------------------------------------

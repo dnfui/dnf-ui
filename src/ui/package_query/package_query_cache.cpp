@@ -57,6 +57,7 @@ package_query_cache_key_for(const std::string &term)
   const DnfBackendSearchOptions options = dnf_backend_get_search_options();
   std::string key = (options.search_in_description ? "desc:" : "name:");
   key += (options.exact_match ? "exact:" : "contains:");
+  key += (options.latest_only ? "latest:" : "all-versions:");
   key += term;
 
   return key;

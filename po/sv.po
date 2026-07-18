@@ -33,6 +33,9 @@ msgstr "Sök i beskrivning"
 msgid "Exact match"
 msgstr "Exakt träff"
 
+msgid "Latest only"
+msgstr "Endast senaste"
+
 msgid "Search History"
 msgstr "Sökhistorik"
 
@@ -232,6 +235,9 @@ msgstr "Installerat (nyare än förrådet)"
 msgid "Newer in repository"
 msgstr "Nyare i förråd"
 
+msgid "Older in repository"
+msgstr "Äldre i förråd"
+
 msgid "Available"
 msgstr "Tillgängligt"
 
@@ -240,6 +246,9 @@ msgstr "Väntande installation"
 
 msgid "Pending Upgrade"
 msgstr "Väntande uppgradering"
+
+msgid "Pending Downgrade"
+msgstr "Väntande nedgradering"
 
 msgid "Pending Reinstall"
 msgstr "Väntande ominstallation"
@@ -253,6 +262,9 @@ msgstr "Markera för installation"
 msgid "Mark for Upgrade"
 msgstr "Markera för uppgradering"
 
+msgid "Mark for Downgrade"
+msgstr "Markera för nedgradering"
+
 msgid "Mark for Reinstall"
 msgstr "Markera för ominstallation"
 
@@ -264,6 +276,9 @@ msgstr "Avmarkera installation"
 
 msgid "Unmark Upgrade"
 msgstr "Avmarkera uppgradering"
+
+msgid "Unmark Downgrade"
+msgstr "Avmarkera nedgradering"
 
 msgid "Unmark Reinstall"
 msgstr "Avmarkera ominstallation"
@@ -611,6 +626,9 @@ msgstr "Markerat för installation: "
 msgid "Marked for upgrade: "
 msgstr "Markerat för uppgradering: "
 
+msgid "Marked for downgrade: "
+msgstr "Markerat för nedgradering: "
+
 msgid "Marked for removal: "
 msgstr "Markerat för borttagning: "
 
@@ -898,6 +916,9 @@ msgstr "Redo. Visar endast installerade paket."
 msgid "Cannot modify %s while DNF UI is running. Close the application and use another tool."
 msgstr "Kan inte ändra %s medan DNF UI körs. Stäng programmet och använd ett annat verktyg."
 
+msgid "DNF UI cannot downgrade the package that owns the running application while it is running."
+msgstr "DNF UI kan inte nedgradera paketet som äger det körande programmet medan det körs."
+
 msgid "Pending package could not be found in current package data."
 msgstr "Det väntande paketet hittades inte i aktuell paketdata."
 
@@ -906,6 +927,9 @@ msgstr "Installera: "
 
 msgid "Upgrade: "
 msgstr "Uppgradera: "
+
+msgid "Downgrade: "
+msgstr "Nedgradera: "
 
 msgid "Reinstall: "
 msgstr "Ominstallera: "

@@ -45,7 +45,7 @@ These tests protect:
 - package search and merge behavior
 - config file parsing and fallback behavior
 - installed snapshot behavior
-- pending transaction action row selection for install, upgrade, remove, and reinstall
+- pending transaction action row selection for install, upgrade, downgrade, remove, and reinstall
 - package table CSV export formatting
 - package table column text and sorting behavior
 - dnf5daemon transaction preview parsing and failure handling
@@ -78,6 +78,11 @@ Run the dnf5daemon transaction client tests in Docker:
 ```sh
 make dockerdnf5daemontest
 ```
+
+The daemon downgrade preview test is optional because the test system must have
+an installed package and an older available version. Set
+`DNFUI_TEST_DNF5DAEMON_DOWNGRADE_SPEC` to an exact downgrade NEVRA when such a
+test repo is available.
 
 Run the dnf5daemon transaction client tests on native Fedora:
 

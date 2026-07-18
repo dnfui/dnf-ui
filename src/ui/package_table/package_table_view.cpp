@@ -883,7 +883,7 @@ package_table_fill_package_view(MainWindowUiState *widgets,
 
                      if (action_rows.has_install_row) {
                        pending_transaction_on_install_button_clicked(nullptr, widgets);
-                     } else if (action_rows.has_installed_row) {
+                     } else if (dnf_backend_is_package_installed_exact(*row)) {
                        pending_transaction_on_remove_button_clicked(nullptr, widgets);
                      }
                    }),

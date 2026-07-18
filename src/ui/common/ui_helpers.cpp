@@ -112,17 +112,30 @@ ui_helpers_update_action_button_labels_for_selection(MainWindowUiState *widgets,
                                                      const std::string &install_nevra,
                                                      const std::string &remove_nevra,
                                                      const std::string &reinstall_nevra,
-                                                     bool install_is_upgrade)
+                                                     bool install_is_upgrade,
+                                                     bool install_is_downgrade)
 {
   bool pending_install = has_pending_action(widgets, install_nevra, PendingAction::INSTALL);
   bool pending_upgrade = has_pending_action(widgets, install_nevra, PendingAction::UPGRADE);
+  bool pending_downgrade = has_pending_action(widgets, install_nevra, PendingAction::DOWNGRADE);
   bool pending_remove = has_pending_action(widgets, remove_nevra, PendingAction::REMOVE);
   bool pending_reinstall = has_pending_action(widgets, reinstall_nevra, PendingAction::REINSTALL);
 
-  const char *mark_install = install_is_upgrade ? _("Mark for Upgrade") : _("Mark for Install");
-  const char *unmark_install = install_is_upgrade ? _("Unmark Upgrade") : _("Unmark Install");
+  const char *mark_install = _("Mark for Install");
+  if (install_is_upgrade) {
+    mark_install = _("Mark for Upgrade");
+  } else if (install_is_downgrade) {
+    mark_install = _("Mark for Downgrade");
+  }
 
-  if (pending_install || pending_upgrade) {
+  const char *unmark_install = _("Unmark Install");
+  if (pending_upgrade) {
+    unmark_install = _("Unmark Upgrade");
+  } else if (pending_downgrade) {
+    unmark_install = _("Unmark Downgrade");
+  }
+
+  if (pending_install || pending_upgrade || pending_downgrade) {
     ui_helpers_set_icon_button(widgets->transaction.install_button, "edit-clear-symbolic", unmark_install);
     ui_helpers_set_icon_button(widgets->transaction.remove_button, "list-remove-symbolic", _("Mark for Removal"));
     ui_helpers_set_icon_button(widgets->transaction.reinstall_button, "view-refresh-symbolic", _("Mark for Reinstall"));
@@ -147,7 +160,7 @@ ui_helpers_update_action_button_labels_for_selection(MainWindowUiState *widgets,
 void
 ui_helpers_update_action_button_labels(MainWindowUiState *widgets, const std::string &pkg)
 {
-  ui_helpers_update_action_button_labels_for_selection(widgets, pkg, pkg, pkg, false);
+  ui_helpers_update_action_button_labels_for_selection(widgets, pkg, pkg, pkg, false, false);
 }
 
 // -----------------------------------------------------------------------------
