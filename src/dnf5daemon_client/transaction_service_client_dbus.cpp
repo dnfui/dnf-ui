@@ -367,10 +367,8 @@ upgrade_target_from_daemon_object(GVariant *object, TransactionServiceUpgradeTar
   target.release = map_lookup_string(object, "release");
   target.arch = map_lookup_string(object, "arch");
   target.repo_id = map_lookup_string(object, "repo_id");
-  target.nevra = map_lookup_string(object, "full_nevra");
-  if (target.nevra.empty()) {
-    target.nevra = map_lookup_string(object, "nevra");
-  }
+  target.nevra = map_lookup_string(object, "nevra");
+  target.full_nevra = map_lookup_string(object, "full_nevra");
 
   if (target.name.empty() || target.version.empty() || target.release.empty() || target.arch.empty()) {
     error_out = _("dnf5daemon returned an incomplete upgrade item.");
@@ -385,6 +383,9 @@ upgrade_target_from_daemon_object(GVariant *object, TransactionServiceUpgradeTar
     }
     nevra << target.version << "-" << target.release << "." << target.arch;
     target.nevra = nevra.str();
+  }
+  if (target.full_nevra.empty()) {
+    target.full_nevra = target.nevra;
   }
 
   target_out = std::move(target);
@@ -780,6 +781,57 @@ transaction_service_client_testonly_build_preview_from_item(const std::string &o
 
   preview = std::move(built_preview);
   return true;
+}
+
+// -----------------------------------------------------------------------------
+// Test-only hook for daemon upgrade target parser coverage.
+// -----------------------------------------------------------------------------
+bool
+transaction_service_client_testonly_build_upgrade_target_from_fields(const std::string &name,
+                                                                     const std::string &epoch,
+                                                                     const std::string &version,
+                                                                     const std::string &release,
+                                                                     const std::string &arch,
+                                                                     const std::string &repo_id,
+                                                                     const std::string &nevra,
+                                                                     const std::string &full_nevra,
+                                                                     TransactionServiceUpgradeTarget &target_out,
+                                                                     std::string &error_out)
+{
+  target_out = {};
+  error_out.clear();
+
+  GVariantBuilder object_builder;
+  g_variant_builder_init(&object_builder, G_VARIANT_TYPE("a{sv}"));
+  if (!name.empty()) {
+    g_variant_builder_add(&object_builder, "{sv}", "name", g_variant_new_string(name.c_str()));
+  }
+  if (!epoch.empty()) {
+    g_variant_builder_add(&object_builder, "{sv}", "epoch", g_variant_new_string(epoch.c_str()));
+  }
+  if (!version.empty()) {
+    g_variant_builder_add(&object_builder, "{sv}", "version", g_variant_new_string(version.c_str()));
+  }
+  if (!release.empty()) {
+    g_variant_builder_add(&object_builder, "{sv}", "release", g_variant_new_string(release.c_str()));
+  }
+  if (!arch.empty()) {
+    g_variant_builder_add(&object_builder, "{sv}", "arch", g_variant_new_string(arch.c_str()));
+  }
+  if (!repo_id.empty()) {
+    g_variant_builder_add(&object_builder, "{sv}", "repo_id", g_variant_new_string(repo_id.c_str()));
+  }
+  if (!nevra.empty()) {
+    g_variant_builder_add(&object_builder, "{sv}", "nevra", g_variant_new_string(nevra.c_str()));
+  }
+  if (!full_nevra.empty()) {
+    g_variant_builder_add(&object_builder, "{sv}", "full_nevra", g_variant_new_string(full_nevra.c_str()));
+  }
+
+  GVariant *object = g_variant_ref_sink(g_variant_builder_end(&object_builder));
+  bool ok = upgrade_target_from_daemon_object(object, target_out, error_out);
+  g_variant_unref(object);
+  return ok;
 }
 #endif
 

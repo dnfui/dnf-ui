@@ -141,6 +141,8 @@ Source:
 Why this matters:
 
 - The daemon-owned upgrade refactor needs a read-only daemon snapshot of upgrade targets. This snapshot should come from dnf5daemon's package-list API, not from a resolved Upgrade All transaction preview.
+- DNF UI keeps daemon upgrade specs and internal package identity separate. `name.arch` is the daemon upgrade spec. The internal package identity uses package name and architecture as separate values.
+- Normal `nevra` is the application-facing package ID because it matches libdnf5 `PackageRow::nevra`. `full_nevra` is kept separately for callers that need the daemon's full epoch form.
 - A successful empty result means no daemon-reported upgrade targets. A failed request means upgrade information is unavailable. Those states must not be treated as the same thing.
 - The final transaction preview still comes from dnf5daemon resolve before apply. The package-list API is the upgrade-state snapshot, not permission to skip preview.
 

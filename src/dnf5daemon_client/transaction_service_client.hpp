@@ -21,9 +21,15 @@ struct TransactionServiceUpgradeTarget {
   std::string version;
   std::string release;
   std::string nevra;
+  std::string full_nevra;
   std::string repo_id;
 
-  std::string package_key() const
+  std::string name_arch_key() const
+  {
+    return name + "\n" + arch;
+  }
+
+  std::string upgrade_spec() const
   {
     return name + "." + arch;
   }
@@ -115,6 +121,19 @@ bool transaction_service_client_testonly_build_preview_from_item(const std::stri
                                                                  const std::string &name,
                                                                  TransactionPreview &preview,
                                                                  std::string &error_out);
+// -----------------------------------------------------------------------------
+// Feed one daemon upgrade target object through the package-list parser for tests.
+// -----------------------------------------------------------------------------
+bool transaction_service_client_testonly_build_upgrade_target_from_fields(const std::string &name,
+                                                                          const std::string &epoch,
+                                                                          const std::string &version,
+                                                                          const std::string &release,
+                                                                          const std::string &arch,
+                                                                          const std::string &repo_id,
+                                                                          const std::string &nevra,
+                                                                          const std::string &full_nevra,
+                                                                          TransactionServiceUpgradeTarget &target_out,
+                                                                          std::string &error_out);
 // -----------------------------------------------------------------------------
 // Check the resolved-preview self-protection rule used by daemon previews.
 // -----------------------------------------------------------------------------
