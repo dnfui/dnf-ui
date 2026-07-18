@@ -209,9 +209,42 @@ TEST_CASE("Package table update columns use daemon upgrade target")
 
   item.upgrade_target = target;
 
+  REQUIRE(package_table_column_text(item, PackageColumnKind::VERSION).empty());
   REQUIRE(package_table_column_text(item, PackageColumnKind::UPDATE_VERSION) == "1.2.5");
+  REQUIRE(package_table_column_text(item, PackageColumnKind::RELEASE).empty());
   REQUIRE(package_table_column_text(item, PackageColumnKind::UPDATE_RELEASE) == "2.fc44");
   REQUIRE(package_table_column_text(item, PackageColumnKind::REPO) == "daemon-repo");
+}
+
+// -----------------------------------------------------------------------------
+// Verify that daemon upgrade rows keep installed and target versions separate.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package table daemon upgrade rows use installed version when available")
+{
+  reset_backend_globals();
+
+  PackageRow installed = make_table_test_row("demo-1.2.4-1.fc44.x86_64", "demo", "1.2.4", "1.fc44", "x86_64");
+  installed.repo = "@System";
+  dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
+
+  PackageItem item {};
+  item.row = make_table_test_row("demo-1.2.5-2.fc44.x86_64", "demo", "1.2.5", "2.fc44", "x86_64");
+
+  TransactionServiceUpgradeTarget target;
+  target.name = "demo";
+  target.arch = "x86_64";
+  target.version = "1.2.5";
+  target.release = "2.fc44";
+  target.nevra = "demo-1.2.5-2.fc44.x86_64";
+  target.full_nevra = target.nevra;
+  target.repo_id = "daemon-repo";
+
+  item.upgrade_target = target;
+
+  REQUIRE(package_table_column_text(item, PackageColumnKind::VERSION) == "1.2.4");
+  REQUIRE(package_table_column_text(item, PackageColumnKind::UPDATE_VERSION) == "1.2.5");
+  REQUIRE(package_table_column_text(item, PackageColumnKind::RELEASE) == "1.fc44");
+  REQUIRE(package_table_column_text(item, PackageColumnKind::UPDATE_RELEASE) == "2.fc44");
 }
 
 // -----------------------------------------------------------------------------

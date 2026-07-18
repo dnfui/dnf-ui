@@ -135,13 +135,15 @@ pending_transaction_on_remove_button_clicked(GtkButton *, gpointer user_data)
   }
 
   // Read the selected package from the current package table.
-  PackageRow pkg;
-  if (!package_table_get_selected_package_row(widgets, pkg)) {
+  PackageTableRow selected;
+  if (!package_table_get_selected_package(widgets, selected)) {
     ui_helpers_set_status(widgets->query.status_label, _("No package selected."), "gray");
     return;
   }
+  PackageRow pkg = selected.row;
 
-  PendingTransactionActionRows action_rows = pending_transaction_action_rows_for_selection(pkg);
+  PendingTransactionActionRows action_rows = pending_transaction_action_rows_for_selection(
+      pkg, selected.upgrade_target ? &selected.upgrade_target.value() : nullptr, selected.upgrade_generation);
 
   // Removal checks the installed row.
   // Upgrade candidates use the currently installed NEVRA for removal.
@@ -201,13 +203,15 @@ pending_transaction_on_reinstall_button_clicked(GtkButton *, gpointer user_data)
     return;
   }
 
-  PackageRow pkg;
-  if (!package_table_get_selected_package_row(widgets, pkg)) {
+  PackageTableRow selected;
+  if (!package_table_get_selected_package(widgets, selected)) {
     ui_helpers_set_status(widgets->query.status_label, _("No package selected."), "gray");
     return;
   }
+  PackageRow pkg = selected.row;
 
-  PendingTransactionActionRows action_rows = pending_transaction_action_rows_for_selection(pkg);
+  PendingTransactionActionRows action_rows = pending_transaction_action_rows_for_selection(
+      pkg, selected.upgrade_target ? &selected.upgrade_target.value() : nullptr, selected.upgrade_generation);
 
   // Reinstall must check the installed package, not the visible update row.
   if (!action_rows.has_installed_row) {

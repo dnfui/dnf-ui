@@ -18,6 +18,12 @@ package_table_column_text(const PackageItem &item, PackageColumnKind kind)
     return item.row.name;
   case PackageColumnKind::VERSION: {
     PackageRow installed_row;
+    if (item.upgrade_target.has_value()) {
+      if (dnf_backend_get_installed_package_row_by_name_arch(item.row, installed_row)) {
+        return installed_row.version;
+      }
+      return {};
+    }
     if (dnf_backend_get_installed_package_row_by_name_arch(item.row, installed_row) &&
         installed_row.nevra != item.row.nevra) {
       // The table column is named Version, so keep it aligned with the Info tab Version field.
@@ -38,6 +44,12 @@ package_table_column_text(const PackageItem &item, PackageColumnKind kind)
     return {};
   case PackageColumnKind::RELEASE: {
     PackageRow installed_row;
+    if (item.upgrade_target.has_value()) {
+      if (dnf_backend_get_installed_package_row_by_name_arch(item.row, installed_row)) {
+        return installed_row.release;
+      }
+      return {};
+    }
     if (dnf_backend_get_installed_package_row_by_name_arch(item.row, installed_row) &&
         installed_row.nevra != item.row.nevra) {
       return installed_row.release;

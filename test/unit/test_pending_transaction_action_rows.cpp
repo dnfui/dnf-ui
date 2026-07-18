@@ -168,6 +168,37 @@ TEST_CASE("Pending transaction action rows resolve daemon upgrade target")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that daemon target context is enough to identify an upgrade row.
+// -----------------------------------------------------------------------------
+TEST_CASE("Pending transaction action rows resolve daemon target without installed metadata")
+{
+  reset_backend_globals();
+  DaemonUpgradeState &state = DaemonUpgradeState::instance();
+  state.reset_for_tests();
+
+  PackageRow update = make_test_package_row("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64");
+  TransactionServiceUpgradeTarget target = make_test_upgrade_target("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64");
+
+  std::optional<DaemonUpgradeRefreshId> refresh_id = state.begin_refresh();
+  REQUIRE(refresh_id.has_value());
+
+  std::string error;
+  REQUIRE(state.publish_success(refresh_id.value(), { target }, error));
+  DaemonUpgradeSnapshot snapshot = state.snapshot();
+
+  PendingTransactionActionRows rows =
+      pending_transaction_action_rows_for_selection(update, &target, snapshot.generation);
+
+  REQUIRE(rows.state == PackageInstallState::UPGRADEABLE);
+  REQUIRE(rows.install_is_upgrade);
+  REQUIRE(rows.uses_daemon_upgrade_target);
+  REQUIRE(rows.has_install_row);
+  REQUIRE(rows.install_row.nevra == target.nevra);
+  REQUIRE(rows.upgrade_spec == "demo.x86_64");
+  REQUIRE_FALSE(rows.has_installed_row);
+}
+
+// -----------------------------------------------------------------------------
 // Verify that stale daemon upgrade targets cannot create pending actions.
 // -----------------------------------------------------------------------------
 TEST_CASE("Pending transaction action rows reject stale daemon upgrade target")

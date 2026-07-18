@@ -154,13 +154,15 @@ self_protected_package_name_snapshot()
 // Publish installed-package state only after callers have finished all libdnf
 // Base reads. Do not hold the Base lock while taking g_installed_mutex.
 // -----------------------------------------------------------------------------
-void
+bool
 publish_installed_snapshot(InstalledQueryResult installed, std::set<std::string> protected_names)
 {
   std::lock_guard<std::mutex> lock(g_installed_mutex);
+  const bool changed = g_installed_nevras != installed.nevras || g_self_protected_package_names != protected_names;
   g_installed_nevras.swap(installed.nevras);
   g_installed_rows_by_name_arch.swap(installed.rows_by_name_arch);
   g_self_protected_package_names.swap(protected_names);
+  return changed;
 }
 
 } // namespace dnf_backend_internal
@@ -218,6 +220,7 @@ dnf_backend_installed_snapshot_size()
 
 // -----------------------------------------------------------------------------
 // Refresh the exact-installed and self-protection snapshots used by UI state classification.
+// Returns true when the published snapshot differs from the previous one.
 // This path uses only the local rpmdb.
 // The short-lived system-only Base prevents future queries from inheriting that mode.
 //
@@ -226,7 +229,7 @@ dnf_backend_installed_snapshot_size()
 //   Installed rows are collected into local containers while the Base lock is
 //   held, then published after that lock has been released.
 // -----------------------------------------------------------------------------
-void
+bool
 dnf_backend_refresh_installed_nevras()
 {
   InstalledQueryResult installed;
@@ -239,7 +242,7 @@ dnf_backend_refresh_installed_nevras()
     protected_names = collect_self_protected_package_names(base);
   } // Base read lock released before acquiring g_installed_mutex
 
-  publish_installed_snapshot(installed, protected_names);
+  return publish_installed_snapshot(installed, protected_names);
 }
 
 // -----------------------------------------------------------------------------

@@ -13,6 +13,7 @@
 #include "ui/details/package_details_controller.hpp"
 #include "ui/history/transaction_history_view.hpp"
 #include "ui/package_query/package_query_controller.hpp"
+#include "ui/package_query/package_query_controller_internal.hpp"
 #include "ui/transaction/pending_transaction_controller.hpp"
 #include "ui/transaction/pending_transaction_request.hpp"
 #include "ui/transaction/pending_transaction_view.hpp"
@@ -23,6 +24,7 @@
 #include "ui/common/ui_helpers.hpp"
 #include "ui/common/widgets.hpp"
 #include "ui/common/widgets_internal.hpp"
+#include "upgrade/daemon_upgrade_state.hpp"
 
 #include <utility>
 
@@ -343,6 +345,8 @@ start_apply_transaction(MainWindowUiState *widgets)
         transaction_progress_finish(td ? td->progress_window : nullptr, success, "");
 
         if (success) {
+          DaemonUpgradeState::instance().mark_stale();
+          package_query_clear_displayed_upgradeable_table(widgets);
           pending_transaction_invalidate_service_preview(widgets);
           // Clear pending actions and restore the transaction controls.
           widgets->transaction.actions.clear();

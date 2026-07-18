@@ -296,9 +296,9 @@ size_t dnf_backend_installed_snapshot_size();
 
 // -----------------------------------------------------------------------------
 // Refresh the installed-package snapshot used by the UI for exact-installed
-// checks and upgrade-state classification.
+// checks and upgrade-state classification. Returns true when the snapshot changed.
 // -----------------------------------------------------------------------------
-void dnf_backend_refresh_installed_nevras();
+bool dnf_backend_refresh_installed_nevras();
 
 // -----------------------------------------------------------------------------
 // Classify one visible package row for UI status badges and action gating.

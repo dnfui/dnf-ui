@@ -351,6 +351,7 @@ on_list_upgradeable_task(GTask *task, gpointer, gpointer, GCancellable *cancella
 {
   QueryBackendBaseDropGuard base_drop_guard(cancellable);
   std::optional<DaemonUpgradeRefreshId> refresh_id;
+  bool refresh_state_closed = false;
 
   try {
 #ifdef DNFUI_DEBUG_TRACE
@@ -365,6 +366,7 @@ on_list_upgradeable_task(GTask *task, gpointer, gpointer, GCancellable *cancella
 
     if (cancellable && g_cancellable_is_cancelled(cancellable)) {
       DaemonUpgradeState::instance().abandon_refresh(refresh_id.value());
+      refresh_state_closed = true;
       g_task_return_new_error(task, G_IO_ERROR, G_IO_ERROR_CANCELLED, "%s", _("List Upgradable was cancelled."));
       return;
     }
@@ -374,11 +376,13 @@ on_list_upgradeable_task(GTask *task, gpointer, gpointer, GCancellable *cancella
     if (!transaction_service_client_list_upgrade_targets(targets, error, cancellable)) {
       if (cancellable && g_cancellable_is_cancelled(cancellable)) {
         DaemonUpgradeState::instance().abandon_refresh(refresh_id.value());
+        refresh_state_closed = true;
         g_task_return_new_error(task, G_IO_ERROR, G_IO_ERROR_CANCELLED, "%s", _("List Upgradable was cancelled."));
         return;
       }
 
       DaemonUpgradeState::instance().publish_failure(refresh_id.value(), error);
+      refresh_state_closed = true;
       throw std::runtime_error(error.empty() ? _("Unable to load upgradable packages from dnf5daemon.") : error);
     }
 #ifdef DNFUI_DEBUG_TRACE
@@ -386,24 +390,9 @@ on_list_upgradeable_task(GTask *task, gpointer, gpointer, GCancellable *cancella
         "Upgradable list task daemon targets=%zu elapsed_ms=%lld", targets.size(), elapsed_ms_since(started_at_us));
 #endif
 
-    std::string publish_error;
-    if (!DaemonUpgradeState::instance().publish_success(refresh_id.value(), targets, publish_error)) {
-      if (publish_error == "dnf5daemon upgrade refresh is no longer active.") {
-        g_task_return_new_error(task, G_IO_ERROR, G_IO_ERROR_CANCELLED, "%s", _("List Upgradable was cancelled."));
-        return;
-      }
-      throw std::runtime_error(publish_error.empty() ? _("Unable to publish dnf5daemon upgrade information.")
-                                                     : publish_error);
-    }
-
-    DaemonUpgradeSnapshot snapshot = DaemonUpgradeState::instance().snapshot();
-    if (snapshot.status != DaemonUpgradeSnapshotStatus::READY) {
-      throw std::runtime_error(_("dnf5daemon upgrade information is not ready."));
-    }
-
     std::vector<std::string> target_nevras;
-    target_nevras.reserve(snapshot.targets_by_name_arch.size());
-    for (const auto &[key, target] : snapshot.targets_by_name_arch) {
+    target_nevras.reserve(targets.size());
+    for (const auto &target : targets) {
       target_nevras.push_back(target.nevra.empty() ? target.full_nevra : target.nevra);
     }
 
@@ -416,8 +405,27 @@ on_list_upgradeable_task(GTask *task, gpointer, gpointer, GCancellable *cancella
       metadata_rows.clear();
     }
     if (cancellable && g_cancellable_is_cancelled(cancellable)) {
+      DaemonUpgradeState::instance().abandon_refresh(refresh_id.value());
+      refresh_state_closed = true;
       g_task_return_new_error(task, G_IO_ERROR, G_IO_ERROR_CANCELLED, "%s", _("List Upgradable was cancelled."));
       return;
+    }
+
+    std::string publish_error;
+    if (!DaemonUpgradeState::instance().publish_success(refresh_id.value(), targets, publish_error)) {
+      refresh_state_closed = true;
+      if (publish_error == "dnf5daemon upgrade refresh is no longer active.") {
+        g_task_return_new_error(task, G_IO_ERROR, G_IO_ERROR_CANCELLED, "%s", _("List Upgradable was cancelled."));
+        return;
+      }
+      throw std::runtime_error(publish_error.empty() ? _("Unable to publish dnf5daemon upgrade information.")
+                                                     : publish_error);
+    }
+    refresh_state_closed = true;
+
+    DaemonUpgradeSnapshot snapshot = DaemonUpgradeState::instance().snapshot();
+    if (snapshot.status != DaemonUpgradeSnapshotStatus::READY) {
+      throw std::runtime_error(_("dnf5daemon upgrade information is not ready."));
     }
 
     auto rows = package_table_rows_from_daemon_targets(snapshot, metadata_rows);
@@ -430,8 +438,15 @@ on_list_upgradeable_task(GTask *task, gpointer, gpointer, GCancellable *cancella
     results->daemon_generation = snapshot.generation;
     g_task_return_pointer(task, results, [](gpointer p) { delete static_cast<UpgradeablePackageListResult *>(p); });
   } catch (const std::exception &e) {
+    if (refresh_id.has_value() && !refresh_state_closed) {
+      if (cancellable && g_cancellable_is_cancelled(cancellable)) {
+        DaemonUpgradeState::instance().abandon_refresh(refresh_id.value());
+      } else {
+        DaemonUpgradeState::instance().publish_failure(refresh_id.value(), e.what());
+      }
+      refresh_state_closed = true;
+    }
     if (refresh_id.has_value() && cancellable && g_cancellable_is_cancelled(cancellable)) {
-      DaemonUpgradeState::instance().abandon_refresh(refresh_id.value());
       g_task_return_new_error(task, G_IO_ERROR, G_IO_ERROR_CANCELLED, "%s", _("List Upgradable was cancelled."));
       return;
     }
