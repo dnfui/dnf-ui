@@ -28,6 +28,23 @@ get_context_menu_pending_action(MainWindowUiState *widgets, const std::string &n
 }
 
 // -----------------------------------------------------------------------------
+// Return the label for one pending action handled by the install button.
+// -----------------------------------------------------------------------------
+static const char *
+pending_install_action_label(PendingAction::Type type)
+{
+  if (type == PendingAction::UPGRADE) {
+    return _("Unmark Upgrade");
+  }
+
+  if (type == PendingAction::DOWNGRADE) {
+    return _("Unmark Downgrade");
+  }
+
+  return _("Unmark Install");
+}
+
+// -----------------------------------------------------------------------------
 // Add one transaction action to the package context menu.
 // -----------------------------------------------------------------------------
 static void
@@ -90,8 +107,9 @@ package_table_show_context_menu(GtkWidget *anchor,
   bool can_reinstall = action_rows.can_try_reinstall && !self_protected;
 
   PendingAction::Type pending_install_type;
-  bool has_pending_install = action_rows.has_install_row &&
-      get_context_menu_pending_action(widgets, action_rows.install_row.nevra, pending_install_type);
+  std::string install_action_nevra = action_rows.has_install_row ? action_rows.install_row.nevra : row.nevra;
+  bool has_pending_install = pending_actions_get_install_side_action_type(
+      widgets->transaction.actions, install_action_nevra, pending_install_type);
 
   PendingAction::Type pending_destructive_type;
   bool has_pending_destructive = action_rows.has_installed_row &&
@@ -99,15 +117,8 @@ package_table_show_context_menu(GtkWidget *anchor,
 
   // Keep context menu actions aligned with the normal package action buttons.
   const char *install_label = nullptr;
-  if (has_pending_install &&
-      (pending_install_type == PendingAction::INSTALL || pending_install_type == PendingAction::UPGRADE ||
-       pending_install_type == PendingAction::DOWNGRADE)) {
-    install_label = _("Unmark Install");
-    if (action_rows.install_is_upgrade) {
-      install_label = _("Unmark Upgrade");
-    } else if (action_rows.install_is_downgrade) {
-      install_label = _("Unmark Downgrade");
-    }
+  if (has_pending_install) {
+    install_label = pending_install_action_label(pending_install_type);
   } else {
     install_label = _("Mark for Install");
     if (action_rows.install_is_upgrade) {
@@ -125,7 +136,7 @@ package_table_show_context_menu(GtkWidget *anchor,
 
   append_context_menu_action(GTK_BOX(box),
                              install_label,
-                             action_rows.has_install_row && !install_blocked,
+                             has_pending_install || (action_rows.has_install_row && !install_blocked),
                              G_CALLBACK(+[](GtkButton *button, gpointer user_data) {
                                if (GtkWidget *popover = gtk_widget_get_ancestor(GTK_WIDGET(button), GTK_TYPE_POPOVER)) {
                                  gtk_popover_popdown(GTK_POPOVER(popover));

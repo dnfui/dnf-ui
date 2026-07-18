@@ -122,12 +122,16 @@ ui_helpers_update_action_button_labels_for_selection(MainWindowUiState *widgets,
   bool pending_reinstall = has_pending_action(widgets, reinstall_nevra, PendingAction::REINSTALL);
 
   const char *mark_install = _("Mark for Install");
-  const char *unmark_install = _("Unmark Install");
   if (install_is_upgrade) {
     mark_install = _("Mark for Upgrade");
-    unmark_install = _("Unmark Upgrade");
   } else if (install_is_downgrade) {
     mark_install = _("Mark for Downgrade");
+  }
+
+  const char *unmark_install = _("Unmark Install");
+  if (pending_upgrade) {
+    unmark_install = _("Unmark Upgrade");
+  } else if (pending_downgrade) {
     unmark_install = _("Unmark Downgrade");
   }
 

@@ -68,6 +68,32 @@ pending_transaction_on_install_button_clicked(GtkButton *, gpointer user_data)
 
   // Resolve the package ID to queue before adding an install or upgrade action.
   PendingTransactionActionRows action_rows = pending_transaction_action_rows_for_selection(pkg);
+
+  PendingAction::Type exact_pending_type;
+  bool has_exact_pending_install_action =
+      pending_actions_get_install_side_action_type(widgets->transaction.actions, pkg.nevra, exact_pending_type);
+  if (has_exact_pending_install_action) {
+    pending_transaction_remove_action(widgets, pkg.nevra);
+    pending_transaction_refresh_pending_tab(widgets);
+    ui_helpers_set_status(widgets->query.status_label, (std::string(_("Unmarked: ")) + pkg.name).c_str(), "gray");
+    pending_transaction_invalidate_service_preview(widgets);
+    package_table_refresh_statuses(widgets);
+    bool self_protected =
+        action_rows.has_installed_row && dnf_backend_is_package_self_protected(action_rows.installed_row);
+    bool install_blocked = pending_transaction_install_action_blocked_by_self_protection(action_rows, self_protected);
+    gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.install_button),
+                             action_rows.has_install_row && !install_blocked);
+    const std::string install_nevra = action_rows.has_install_row ? action_rows.install_row.nevra : pkg.nevra;
+    const std::string installed_nevra = action_rows.has_installed_row ? action_rows.installed_row.nevra : pkg.nevra;
+    ui_helpers_update_action_button_labels_for_selection(widgets,
+                                                         install_nevra,
+                                                         installed_nevra,
+                                                         installed_nevra,
+                                                         action_rows.install_is_upgrade,
+                                                         action_rows.install_is_downgrade);
+    return;
+  }
+
   if (!action_rows.has_install_row) {
     ui_helpers_set_status(widgets->query.status_label, _("No install or upgrade action is available."), "gray");
     return;

@@ -129,6 +129,13 @@ pending_transaction_mark_upgrade_action_for_row(std::vector<PendingAction> &acti
     return false;
   }
 
+  for (const auto &action : actions) {
+    if (action.type == PendingAction::UPGRADE && action.nevra == action_rows.install_row.nevra &&
+        action.transaction_spec == action_rows.upgrade_spec && action.package_key == action_rows.package_key) {
+      return false;
+    }
+  }
+
   pending_actions_remove_package_key(actions, action_rows.package_key);
   remove_pending_upgrade_by_transaction_spec(actions, action_rows.upgrade_spec);
   remove_pending_action_by_nevra(actions, row.nevra);

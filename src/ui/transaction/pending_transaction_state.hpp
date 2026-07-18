@@ -26,6 +26,33 @@ struct PendingAction {
 };
 
 // -----------------------------------------------------------------------------
+// Return true for actions controlled by the install button.
+// -----------------------------------------------------------------------------
+inline bool
+pending_action_type_is_install_side(PendingAction::Type type)
+{
+  return type == PendingAction::INSTALL || type == PendingAction::UPGRADE || type == PendingAction::DOWNGRADE;
+}
+
+// -----------------------------------------------------------------------------
+// Return the pending action type handled by the install button for one package ID.
+// -----------------------------------------------------------------------------
+inline bool
+pending_actions_get_install_side_action_type(const std::vector<PendingAction> &actions,
+                                             const std::string &nevra,
+                                             PendingAction::Type &out_type)
+{
+  for (const auto &action : actions) {
+    if (action.nevra == nevra && pending_action_type_is_install_side(action.type)) {
+      out_type = action.type;
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// -----------------------------------------------------------------------------
 // Remove all pending actions for one package name and architecture.
 // -----------------------------------------------------------------------------
 inline bool

@@ -207,6 +207,55 @@ TEST_CASE("Pending transaction bulk upgrade marking ignores non latest upgrade c
 }
 
 // -----------------------------------------------------------------------------
+// Verify that an existing pending upgrade on a stale exact row can still be found for unmarking.
+// -----------------------------------------------------------------------------
+TEST_CASE("Pending transaction stale upgrade action remains individually removable")
+{
+  reset_backend_globals();
+
+  PackageRow installed = make_test_package_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
+  PackageRow non_latest_update = make_test_package_row("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64");
+  non_latest_update.newest_available_candidate = false;
+
+  dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
+
+  PendingTransactionActionRows rows = pending_transaction_action_rows_for_selection(non_latest_update);
+  std::vector<PendingAction> actions = {
+    { PendingAction::UPGRADE, non_latest_update.nevra, "demo.x86_64", non_latest_update.name_arch_key() },
+  };
+
+  PendingAction::Type pending_type;
+  REQUIRE_FALSE(rows.has_install_row);
+  REQUIRE(pending_actions_get_install_side_action_type(actions, non_latest_update.nevra, pending_type));
+  REQUIRE(pending_type == PendingAction::UPGRADE);
+}
+
+// -----------------------------------------------------------------------------
+// Verify that repeated visible rows for one upgrade do not count as new pending work.
+// -----------------------------------------------------------------------------
+TEST_CASE("Pending transaction bulk upgrade marking ignores duplicate upgrade action")
+{
+  reset_backend_globals();
+
+  PackageRow installed = make_test_package_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
+  installed.repo_candidate_relation = PackageRepoCandidateRelation::NEWER;
+  installed.repo_candidate_nevra = "demo-2.0-1.x86_64";
+  PackageRow update = make_test_package_row("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64");
+
+  dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
+
+  std::vector<PendingAction> actions;
+
+  REQUIRE(pending_transaction_mark_upgrade_action_for_row(actions, installed));
+  REQUIRE_FALSE(pending_transaction_mark_upgrade_action_for_row(actions, update));
+
+  REQUIRE(actions.size() == 1);
+  REQUIRE(actions[0].type == PendingAction::UPGRADE);
+  REQUIRE(actions[0].nevra == update.nevra);
+  REQUIRE(actions[0].transaction_spec == "demo.x86_64");
+}
+
+// -----------------------------------------------------------------------------
 // Verify that bulk marking replaces stale pending actions for the same package.
 // -----------------------------------------------------------------------------
 TEST_CASE("Pending transaction bulk upgrade marking replaces existing package action")
