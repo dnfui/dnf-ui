@@ -65,18 +65,7 @@ remove_pending_upgrade_by_transaction_spec(std::vector<PendingAction> &actions, 
 bool
 daemon_upgrade_target_is_current(const TransactionServiceUpgradeTarget &target, uint64_t upgrade_generation)
 {
-  DaemonUpgradeSnapshot snapshot = DaemonUpgradeState::instance().snapshot();
-  if (snapshot.status != DaemonUpgradeSnapshotStatus::READY || snapshot.generation != upgrade_generation) {
-    return false;
-  }
-
-  auto it = snapshot.targets_by_name_arch.find(target.name_arch_key());
-  if (it == snapshot.targets_by_name_arch.end()) {
-    return false;
-  }
-
-  return it->second.nevra == target.nevra && it->second.full_nevra == target.full_nevra &&
-      it->second.upgrade_spec() == target.upgrade_spec();
+  return DaemonUpgradeState::instance().is_current_target(target, upgrade_generation);
 }
 
 } // namespace

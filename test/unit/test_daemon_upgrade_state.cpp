@@ -100,6 +100,34 @@ TEST_CASE("daemon upgrade state publishes successful targets")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that target validation accepts only the current daemon snapshot entry.
+// -----------------------------------------------------------------------------
+TEST_CASE("daemon upgrade state validates current targets")
+{
+  DaemonUpgradeState &state = reset_state();
+  std::string error;
+  TransactionServiceUpgradeTarget target = make_target("demo", "x86_64", "2.0", "demo-0:2.0-1.fc44.x86_64");
+  std::vector<TransactionServiceUpgradeTarget> targets {
+    target,
+  };
+
+  std::optional<DaemonUpgradeRefreshId> refresh_id = state.begin_refresh();
+  REQUIRE(refresh_id.has_value());
+  REQUIRE(state.publish_success(refresh_id.value(), targets, error));
+
+  DaemonUpgradeSnapshot snapshot = state.snapshot();
+  REQUIRE(state.is_current_target(target, snapshot.generation));
+
+  TransactionServiceUpgradeTarget changed_target = target;
+  changed_target.full_nevra = "demo-0:3.0-1.fc44.x86_64";
+  REQUIRE_FALSE(state.is_current_target(changed_target, snapshot.generation));
+  REQUIRE_FALSE(state.is_current_target(target, snapshot.generation + 1));
+
+  state.mark_stale();
+  REQUIRE_FALSE(state.is_current_target(target, snapshot.generation));
+}
+
+// -----------------------------------------------------------------------------
 // Verify that an empty daemon result is a valid ready snapshot.
 // -----------------------------------------------------------------------------
 TEST_CASE("daemon upgrade state publishes empty successful targets")

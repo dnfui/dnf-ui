@@ -57,6 +57,7 @@ class DaemonUpgradeState {
   static DaemonUpgradeState &instance();
 
   DaemonUpgradeSnapshot snapshot() const;
+  bool is_current_target(const TransactionServiceUpgradeTarget &target, uint64_t generation) const;
   std::optional<DaemonUpgradeRefreshId> begin_refresh();
   bool publish_success(DaemonUpgradeRefreshId refresh_id,
                        const std::vector<TransactionServiceUpgradeTarget> &targets,

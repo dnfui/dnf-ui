@@ -73,6 +73,26 @@ DaemonUpgradeState::snapshot() const
 }
 
 // -----------------------------------------------------------------------------
+// Return true when one displayed daemon target still matches the current snapshot.
+// -----------------------------------------------------------------------------
+bool
+DaemonUpgradeState::is_current_target(const TransactionServiceUpgradeTarget &target, uint64_t generation) const
+{
+  std::lock_guard<std::mutex> lock(mutex);
+  if (current.status != DaemonUpgradeSnapshotStatus::READY || current.generation != generation) {
+    return false;
+  }
+
+  auto it = current.targets_by_name_arch.find(target.name_arch_key());
+  if (it == current.targets_by_name_arch.end()) {
+    return false;
+  }
+
+  return it->second.nevra == target.nevra && it->second.full_nevra == target.full_nevra &&
+      it->second.upgrade_spec() == target.upgrade_spec();
+}
+
+// -----------------------------------------------------------------------------
 // Mark the shared snapshot as refreshing.
 // -----------------------------------------------------------------------------
 std::optional<DaemonUpgradeRefreshId>
