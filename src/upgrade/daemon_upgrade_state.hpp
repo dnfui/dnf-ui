@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <map>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -28,14 +29,18 @@ struct DaemonUpgradeSnapshot {
   std::string error;
 };
 
+using DaemonUpgradeRefreshId = uint64_t;
+
 class DaemonUpgradeState {
   public:
   static DaemonUpgradeState &instance();
 
   DaemonUpgradeSnapshot snapshot() const;
-  bool begin_refresh();
-  bool publish_success(const std::vector<TransactionServiceUpgradeTarget> &targets, std::string &error_out);
-  void publish_failure(const std::string &error);
+  std::optional<DaemonUpgradeRefreshId> begin_refresh();
+  bool publish_success(DaemonUpgradeRefreshId refresh_id,
+                       const std::vector<TransactionServiceUpgradeTarget> &targets,
+                       std::string &error_out);
+  void publish_failure(DaemonUpgradeRefreshId refresh_id, const std::string &error);
   void mark_stale();
 
 #ifdef DNFUI_BUILD_TESTS
@@ -45,6 +50,8 @@ class DaemonUpgradeState {
   private:
   mutable std::mutex mutex;
   DaemonUpgradeSnapshot current;
+  DaemonUpgradeRefreshId next_refresh_id = 1;
+  std::optional<DaemonUpgradeRefreshId> active_refresh_id;
 };
 
 // -----------------------------------------------------------------------------
