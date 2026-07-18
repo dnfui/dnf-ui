@@ -49,7 +49,6 @@ Code:
 Assumptions:
 
 - `PackageQuery::filter_available()` removes installed packages from the query.
-- `PackageQuery::filter_upgrades()` keeps available packages that are upgrades to installed packages.
 - `PackageQuery::filter_latest_evr()` limits visible candidates to the latest EVR.
 
 Current local source:
@@ -58,10 +57,8 @@ Current local source:
 
 Why this matters:
 
-- `dnf_backend_get_upgradeable_package_rows_interruptible` depends on
-  `filter_upgrades()` so the app follows libdnf5's upgrade-candidate semantics
-  instead of maintaining its own version comparison rules.
-- The local upgradable package query is a read-only candidate query. The UI checks the List Upgradable view against the resolved dnf5daemon Upgrade All preview by package name and architecture before showing it. This filters out local rows the daemon would not upgrade, but it is not a strict equality check between the libdnf5 row set and the daemon key set. If libdnf5 reports no upgrade rows but dnf5daemon resolves upgrades, the app must show a clear error instead of a false empty list.
+- List Upgradable uses dnf5daemon's upgrade target list first. libdnf5 is then used only to add package metadata to those exact daemon-reported NEVRAs.
+- Missing libdnf5 metadata must not hide a daemon-reported upgrade. The UI should keep a basic daemon row rather than showing a false empty list.
 - Upgradable rows are available package candidates. UI actions that remove or reinstall such a row
   must resolve the matching installed row by package name and architecture before building the pending action.
 - Installed rows can also be classified as upgradable after repo annotation.
@@ -70,13 +67,13 @@ Why this matters:
 
 Tests:
 
-- `Upgradeable package rows are classified as upgradeable`
-- `Cancelled upgradeable package list returns no results`
+- `Installed row lookup resolves upgrade candidates by name and architecture`
+- `Daemon upgrade metadata lookup does not publish installed state`
 
 Maintenance check:
 
-- If the upgradable list changes, verify `package_query.hpp` in the build image
-  and rerun the backend tests.
+- If installed-row annotation or daemon-target metadata loading changes,
+  verify `package_query.hpp` in the build image and rerun the backend tests.
 
 ## dnf5daemon upgrade requests
 
@@ -121,6 +118,48 @@ Tests:
 Maintenance check:
 
 - If upgrade-all behavior changes, verify `goal.hpp`, then test preview and apply in Docker before any native system test.
+
+## dnf5daemon upgrade target listing
+
+Code:
+
+- [src/dnf5daemon_client/transaction_service_client_dbus.cpp](../src/dnf5daemon_client/transaction_service_client_dbus.cpp)
+- [src/upgrade/daemon_upgrade_state.cpp](../src/upgrade/daemon_upgrade_state.cpp)
+
+Assumption:
+
+- dnf5daemon `org.rpm.dnf.v0.rpm.Rpm.list` supports `scope="upgrades"` and `latest-limit=1`.
+- The requested package attributes `name`, `epoch`, `version`, `release`, `arch`, `repo_id`, `nevra`, and `full_nevra` are supported package-list attributes.
+
+Source:
+
+- DNF5 dnf5daemon D-Bus API
+- DNF5 dnf5daemon example code uses `Rpm.list` with `scope="upgrades"` and `latest-limit=1` to print available upgrades.
+
+Why this matters:
+
+- List Upgradable needs a read-only daemon snapshot of upgrade targets. This snapshot should come from dnf5daemon's package-list API, not from a resolved Upgrade All transaction preview.
+- DNF UI keeps daemon upgrade specs and internal package identity separate. `name.arch` is the daemon upgrade spec. The internal package identity uses package name and architecture as separate values.
+- Normal `nevra` is the application-facing package ID because it matches libdnf5 `PackageRow::nevra`. `full_nevra` is kept separately for callers that need the daemon's full epoch form.
+- The shared daemon upgrade state stores complete package-list results by package name and architecture. It does not fetch daemon data itself.
+- Successful List Upgradable results publish that shared daemon state from the GTK completion path after the result is accepted for display. The worker must not publish a successful snapshot before completion can still reject or cancel the result.
+- List Upgradable performs fresh installed-package scans before and after the daemon target list is loaded. If the second scan detects a change, the daemon result must be rejected and the user must reload List Upgradable.
+- A successful empty result means no daemon-reported upgrade targets. A failed request means upgrade information is unavailable. Those states must not be treated as the same thing.
+- The shared daemon upgrade state exposes status separately from target rows. Only `READY` means the target map can be used as current upgrade information.
+- Daemon upgrade results may only be published by the refresh that owns the active refresh ID. If package or repository state becomes stale before a daemon call returns, that old result must not become the current snapshot.
+- Repository refresh start, successful transaction apply, and an installed-package refresh that observes a changed rpmdb mark daemon upgrade information stale before the UI allows more upgrade actions.
+- Cancelled refresh workers must call the refresh-ID scoped abandon operation. They must not call `mark_stale()`, because that could invalidate newer refresh work.
+- If dnf5daemon returns exact duplicate upgrade targets for the same package identity, DNF UI collapses them. If it returns conflicting targets for the same package identity, DNF UI rejects the whole snapshot instead of choosing one.
+- The final transaction preview still comes from dnf5daemon resolve before apply. The package-list API is the upgrade-state snapshot, not permission to skip preview.
+
+Tests:
+
+- `dnf5daemon client lists upgrade targets`
+- daemon upgrade state unit tests
+
+Maintenance check:
+
+- If dnf5daemon package-list fields or scope names change, update the target parser and rerun the dnf5daemon client tests in Docker.
 
 ## Shared libdnf5 Base access
 

@@ -296,9 +296,9 @@ size_t dnf_backend_installed_snapshot_size();
 
 // -----------------------------------------------------------------------------
 // Refresh the installed-package snapshot used by the UI for exact-installed
-// checks and upgrade-state classification.
+// checks and upgrade-state classification. Returns true when the snapshot changed.
 // -----------------------------------------------------------------------------
-void dnf_backend_refresh_installed_nevras();
+bool dnf_backend_refresh_installed_nevras();
 
 // -----------------------------------------------------------------------------
 // Classify one visible package row for UI status badges and action gating.
@@ -358,9 +358,12 @@ std::vector<PackageRow> dnf_backend_get_installed_package_rows_interruptible(GCa
 std::vector<PackageRow> dnf_backend_get_browse_package_rows_interruptible(GCancellable *cancellable);
 
 // -----------------------------------------------------------------------------
-// Query available repo packages that are upgrades to installed packages.
+// Return available package metadata for exact daemon-selected NEVRAs.
+// This does not decide which packages are upgrades.
 // -----------------------------------------------------------------------------
-std::vector<PackageRow> dnf_backend_get_upgradeable_package_rows_interruptible(GCancellable *cancellable);
+std::vector<PackageRow>
+dnf_backend_get_available_package_metadata_by_nevras_interruptible(const std::vector<std::string> &nevras,
+                                                                   GCancellable *cancellable);
 
 // -----------------------------------------------------------------------------
 // Search the merged browse view using the current search flags.
@@ -380,6 +383,7 @@ std::vector<PackageRow> dnf_backend_get_available_package_rows_by_nevra(const st
 // Return formatted package details for one NEVRA.
 // -----------------------------------------------------------------------------
 std::string dnf_backend_get_package_info(const std::string &pkg_nevra);
+std::string dnf_backend_get_package_info(const std::string &pkg_nevra, const PackageRow *upgrade_row_override);
 // -----------------------------------------------------------------------------
 // Return the installed file list for one NEVRA.
 // -----------------------------------------------------------------------------

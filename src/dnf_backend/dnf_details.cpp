@@ -72,6 +72,12 @@ collect_installed_reverse_dependency_nevras(libdnf5::Base &base, const libdnf5::
 std::string
 dnf_backend_get_package_info(const std::string &pkg_nevra)
 {
+  return dnf_backend_get_package_info(pkg_nevra, nullptr);
+}
+
+std::string
+dnf_backend_get_package_info(const std::string &pkg_nevra, const PackageRow *upgrade_row_override)
+{
   PackageRow selected_row;
   unsigned long long selected_install_size = 0;
   std::string selected_summary, selected_description;
@@ -123,9 +129,12 @@ dnf_backend_get_package_info(const std::string &pkg_nevra)
     }
   }
 
-  // Find the newest available package with the same name and architecture.
-  // It is an upgrade only when its EVR is newer than the installed package.
-  if (have_installed_counterpart) {
+  if (have_installed_counterpart && upgrade_row_override) {
+    upgrade_row = *upgrade_row_override;
+    have_upgrade = true;
+  } else if (have_installed_counterpart) {
+    // Find the newest available package with the same name and architecture.
+    // It is an upgrade only when its EVR is newer than the installed package.
     libdnf5::rpm::PackageQuery available_by_name(base);
     available_by_name.filter_name(installed_row.name, libdnf5::sack::QueryCmp::EQ);
     available_by_name.filter_available();

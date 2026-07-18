@@ -13,6 +13,7 @@
 #pragma once
 
 #include "dnf_backend/dnf_backend.hpp"
+#include "dnf5daemon_client/transaction_service_client.hpp"
 #include "ui/transaction/pending_transaction_state.hpp"
 
 #include <vector>
@@ -35,10 +36,25 @@ struct PendingTransactionActionRows {
 // -----------------------------------------------------------------------------
 PendingTransactionActionRows pending_transaction_action_rows_for_selection(const PackageRow &selected);
 // -----------------------------------------------------------------------------
+// Resolve package IDs for a row that may carry a dnf5daemon upgrade target.
+// -----------------------------------------------------------------------------
+PendingTransactionActionRows
+pending_transaction_action_rows_for_selection(const PackageRow &selected,
+                                              const TransactionServiceUpgradeTarget *upgrade_target,
+                                              uint64_t upgrade_generation);
+// -----------------------------------------------------------------------------
 // Add or replace one pending upgrade action from a package table row.
 // Returns false when the row is not an upgrade candidate.
 // -----------------------------------------------------------------------------
 bool pending_transaction_mark_upgrade_action_for_row(std::vector<PendingAction> &actions, const PackageRow &row);
+// -----------------------------------------------------------------------------
+// Add or replace one pending upgrade action from a package row with an optional daemon target.
+// Returns false when the row is not an upgrade candidate.
+// -----------------------------------------------------------------------------
+bool pending_transaction_mark_upgrade_action_for_row(std::vector<PendingAction> &actions,
+                                                     const PackageRow &row,
+                                                     const TransactionServiceUpgradeTarget *upgrade_target,
+                                                     uint64_t upgrade_generation);
 // -----------------------------------------------------------------------------
 // Return true when self-protection should block the install button path.
 // A normal upgrade is allowed because dnf5daemon still resolves the final preview.

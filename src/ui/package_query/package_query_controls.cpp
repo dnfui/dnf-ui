@@ -13,6 +13,8 @@
 #include "ui/common/widgets.hpp"
 #include "ui/common/widgets_internal.hpp"
 
+#include <vector>
+
 // -----------------------------------------------------------------------------
 // Remember which main query flow produced the currently displayed table.
 // Transaction and repository rebuilds use this to rerun the same query with fresh backend data.
@@ -35,6 +37,25 @@ bool
 package_query_displayed_view_is_upgradeable(const MainWindowUiState *widgets)
 {
   return widgets && widgets->query_state.displayed_query.kind == DisplayedPackageQueryKind::LIST_UPGRADEABLE;
+}
+
+// -----------------------------------------------------------------------------
+// Clear a List Upgradable table when daemon upgrade information is no longer current.
+// The view kind is preserved so completion code can avoid reloading stale upgrade rows.
+// -----------------------------------------------------------------------------
+bool
+package_query_clear_displayed_upgradeable_table(MainWindowUiState *widgets)
+{
+  if (!package_query_displayed_view_is_upgradeable(widgets)) {
+    return false;
+  }
+
+  widgets->query_state.preserve_selection_on_reload = false;
+  widgets->query_state.reload_selected_nevra.clear();
+  widgets->results.selected_nevra.clear();
+  package_table_fill_package_view(widgets, std::vector<PackageRow> {});
+  package_details_reset_details_view(widgets);
+  return true;
 }
 
 // -----------------------------------------------------------------------------
@@ -72,8 +93,8 @@ package_query_finish_results_refresh(MainWindowUiState *widgets)
   }
 
   if (widgets->query_state.preserve_selection_on_reload) {
-    PackageRow selected;
-    if (!package_table_get_selected_package_row(widgets, selected)) {
+    PackageTableRow selected;
+    if (!package_table_get_selected_package(widgets, selected)) {
       package_details_reset_details_view(widgets);
     }
   } else {

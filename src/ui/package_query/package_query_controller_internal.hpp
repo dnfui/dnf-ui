@@ -27,6 +27,10 @@ void package_query_set_displayed_query_kind(MainWindowUiState *widgets, Displaye
 // -----------------------------------------------------------------------------
 bool package_query_displayed_view_is_upgradeable(const MainWindowUiState *widgets);
 // -----------------------------------------------------------------------------
+// Clear the displayed List Upgradable rows when their daemon snapshot is stale.
+// -----------------------------------------------------------------------------
+bool package_query_clear_displayed_upgradeable_table(MainWindowUiState *widgets);
+// -----------------------------------------------------------------------------
 // Remember the search query that produced the current table.
 // -----------------------------------------------------------------------------
 void package_query_set_displayed_search_query(MainWindowUiState *widgets,

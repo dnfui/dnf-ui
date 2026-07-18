@@ -20,7 +20,7 @@
 #include <string>
 #include <vector>
 
-static void update_pending_action_css_for_cell(GtkWidget *cell, MainWindowUiState *widgets, const PackageRow &row);
+static void update_pending_action_css_for_cell(GtkWidget *cell, MainWindowUiState *widgets, const PackageTableRow &row);
 
 // -----------------------------------------------------------------------------
 // Refresh stored package status values without changing the GTK model.
@@ -60,7 +60,7 @@ refresh_visible_status_labels(GtkWidget *widget, MainWindowUiState *widgets)
     return;
   }
 
-  PackageRow *row = static_cast<PackageRow *>(g_object_get_data(G_OBJECT(widget), "package-context-row"));
+  PackageTableRow *row = static_cast<PackageTableRow *>(g_object_get_data(G_OBJECT(widget), "package-context-row"));
   if (row) {
     update_pending_action_css_for_cell(widget, widgets, *row);
     if (g_object_get_data(G_OBJECT(widget), "package-status-cell")) {
@@ -188,7 +188,7 @@ clear_pending_row_css_for_cell(GtkWidget *cell)
 // Return the pending row CSS class for one package row.
 // -----------------------------------------------------------------------------
 static const char *
-pending_row_css_class(MainWindowUiState *widgets, const PackageRow &row)
+pending_row_css_class(MainWindowUiState *widgets, const PackageTableRow &row)
 {
   const char *status_class = package_table_pending_action_css_class(widgets, row);
   if (!status_class) {
@@ -212,7 +212,7 @@ pending_row_css_class(MainWindowUiState *widgets, const PackageRow &row)
 // Apply pending action color to one table cell.
 // -----------------------------------------------------------------------------
 static void
-update_pending_action_css_for_cell(GtkWidget *cell, MainWindowUiState *widgets, const PackageRow &row)
+update_pending_action_css_for_cell(GtkWidget *cell, MainWindowUiState *widgets, const PackageTableRow &row)
 {
   const char *pending_class = pending_row_css_class(widgets, row);
   GtkWidget *target = table_cell_color_target(cell);
@@ -469,8 +469,8 @@ create_text_column(MainWindowUiState *widgets, const PackageTableColumnDefinitio
                          G_CALLBACK(+[](GtkGestureClick *gesture, int, double x, double y, gpointer user_data) {
                            MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
                            GtkWidget *cell = gtk_event_controller_get_widget(GTK_EVENT_CONTROLLER(gesture));
-                           PackageRow *row =
-                               static_cast<PackageRow *>(g_object_get_data(G_OBJECT(cell), "package-context-row"));
+                           PackageTableRow *row =
+                               static_cast<PackageTableRow *>(g_object_get_data(G_OBJECT(cell), "package-context-row"));
                            if (!row) {
                              return;
                            }
@@ -516,14 +516,15 @@ create_text_column(MainWindowUiState *widgets, const PackageTableColumnDefinitio
                      }
 
                      // Store the package row currently bound to this reused table cell.
+                     PackageTableRow table_row = package_table_row_from_item(*package_item);
                      g_object_set_data_full(
-                         G_OBJECT(frame), "package-context-row", new PackageRow(package_item->row), +[](gpointer p) {
-                           delete static_cast<PackageRow *>(p);
+                         G_OBJECT(frame), "package-context-row", new PackageTableRow(table_row), +[](gpointer p) {
+                           delete static_cast<PackageTableRow *>(p);
                          });
 
-                     update_pending_action_css_for_cell(frame, widgets, package_item->row);
+                     update_pending_action_css_for_cell(frame, widgets, table_row);
                      if (kind == PackageColumnKind::STATUS) {
-                       package_table_update_status_label(cell, widgets, package_item->row);
+                       package_table_update_status_label(cell, widgets, table_row);
                      } else {
                        std::string text = package_table_column_text(*package_item, kind);
                        gtk_label_set_text(GTK_LABEL(label), text.c_str());
@@ -623,10 +624,10 @@ restore_package_view_sort_state(GtkColumnView *view, PackageColumnKind kind, Gtk
 }
 
 // -----------------------------------------------------------------------------
-// Return the selected package row from the current package table.
+// Return the selected package table row from the current package table.
 // -----------------------------------------------------------------------------
 bool
-package_table_get_selected_package_row(MainWindowUiState *widgets, PackageRow &out_pkg)
+package_table_get_selected_package(MainWindowUiState *widgets, PackageTableRow &out_pkg)
 {
   if (!widgets || !widgets->results.list_scroller) {
     return false;
@@ -653,10 +654,10 @@ package_table_get_selected_package_row(MainWindowUiState *widgets, PackageRow &o
     return false;
   }
 
-  const PackageRow *row = package_row_from_object(obj);
-  bool ok = row != nullptr;
+  const PackageItem *item = package_item_from_object(obj);
+  bool ok = item != nullptr;
   if (ok) {
-    out_pkg = *row;
+    out_pkg = package_table_row_from_item(*item);
   }
 
   g_object_unref(obj);
@@ -664,12 +665,12 @@ package_table_get_selected_package_row(MainWindowUiState *widgets, PackageRow &o
 }
 
 // -----------------------------------------------------------------------------
-// Return all package rows currently displayed in the package table.
+// Return all package table rows currently displayed in the package table.
 // -----------------------------------------------------------------------------
-std::vector<PackageRow>
-package_table_get_displayed_package_rows(MainWindowUiState *widgets)
+std::vector<PackageTableRow>
+package_table_get_displayed_packages(MainWindowUiState *widgets)
 {
-  std::vector<PackageRow> rows;
+  std::vector<PackageTableRow> rows;
   if (!widgets || !widgets->results.list_scroller) {
     return rows;
   }
@@ -694,9 +695,9 @@ package_table_get_displayed_package_rows(MainWindowUiState *widgets)
   rows.reserve(n_items);
   for (guint i = 0; i < n_items; ++i) {
     GObject *obj = G_OBJECT(g_list_model_get_item(items_model, i));
-    const PackageRow *row = package_row_from_object(obj);
-    if (row) {
-      rows.push_back(*row);
+    const PackageItem *item = package_item_from_object(obj);
+    if (item) {
+      rows.push_back(package_table_row_from_item(*item));
     }
     g_object_unref(obj);
   }
@@ -776,6 +777,27 @@ package_table_fill_package_view(MainWindowUiState *widgets,
                                 const std::vector<PackageRow> &items,
                                 PackageTableEmptyState empty_state)
 {
+  std::vector<PackageTableRow> rows;
+  rows.reserve(items.size());
+  for (const auto &row : items) {
+    PackageTableRow table_row;
+    table_row.row = row;
+    rows.push_back(table_row);
+  }
+
+  package_table_fill_package_view(widgets, rows, empty_state);
+}
+
+// -----------------------------------------------------------------------------
+// Package table population
+// Builds a virtualized GTK4 ColumnView with structured package metadata.
+// Preserves the selected NEVRA across list refreshes when possible.
+// -----------------------------------------------------------------------------
+void
+package_table_fill_package_view(MainWindowUiState *widgets,
+                                const std::vector<PackageTableRow> &items,
+                                PackageTableEmptyState empty_state)
+{
   if (items.empty()) {
     gtk_scrolled_window_set_child(widgets->results.list_scroller, create_empty_package_view(empty_state));
     widgets->results.listbox = nullptr;
@@ -832,14 +854,14 @@ package_table_fill_package_view(MainWindowUiState *widgets,
                      }
 
                      GObject *obj = G_OBJECT(g_list_model_get_item(gtk_single_selection_get_model(self), index));
-                     const PackageRow *row = package_row_from_object(obj);
-                     if (!row) {
+                     const PackageItem *item = package_item_from_object(obj);
+                     if (!item) {
                        g_object_unref(obj);
                        package_details_clear_selected_package_state(widgets);
                        return;
                      }
 
-                     PackageRow selected = *row;
+                     PackageTableRow selected = package_table_row_from_item(*item);
                      g_object_unref(obj);
                      package_details_load_selected_package_info(widgets, selected);
                    }),
@@ -871,13 +893,15 @@ package_table_fill_package_view(MainWindowUiState *widgets,
                        return;
                      }
 
-                     const PackageRow *row = package_row_from_object(obj);
-                     if (!row) {
+                     const PackageItem *item = package_item_from_object(obj);
+                     if (!item) {
                        g_object_unref(obj);
                        return;
                      }
 
-                     PendingTransactionActionRows action_rows = pending_transaction_action_rows_for_selection(*row);
+                     PackageTableRow row = package_table_row_from_item(*item);
+                     PendingTransactionActionRows action_rows = pending_transaction_action_rows_for_selection(
+                         row.row, row.upgrade_target ? &row.upgrade_target.value() : nullptr, row.upgrade_generation);
                      gtk_single_selection_set_selected(sel, position);
                      g_object_unref(obj);
 

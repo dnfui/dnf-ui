@@ -50,7 +50,7 @@ append_context_menu_action(GtkBox *box,
 void
 package_table_show_context_menu(GtkWidget *anchor,
                                 MainWindowUiState *widgets,
-                                const PackageRow &row,
+                                const PackageTableRow &row,
                                 double x,
                                 double y,
                                 const std::function<bool(const std::string &)> &select_row)
@@ -64,7 +64,7 @@ package_table_show_context_menu(GtkWidget *anchor,
     return;
   }
 
-  if (!select_row(row.nevra)) {
+  if (!select_row(row.row.nevra)) {
     return;
   }
 
@@ -78,7 +78,8 @@ package_table_show_context_menu(GtkWidget *anchor,
   GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
   gtk_popover_set_child(GTK_POPOVER(popover), box);
 
-  PendingTransactionActionRows action_rows = pending_transaction_action_rows_for_selection(row);
+  PendingTransactionActionRows action_rows = pending_transaction_action_rows_for_selection(
+      row.row, row.upgrade_target ? &row.upgrade_target.value() : nullptr, row.upgrade_generation);
 
   // Match the main action buttons: install and upgrade use the available row,
   // while remove and reinstall use the installed row.

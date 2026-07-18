@@ -8,6 +8,36 @@
 #include <set>
 #include <string>
 
+namespace {
+
+// -----------------------------------------------------------------------------
+// Find a real available update candidate from installed-row repository annotation.
+// -----------------------------------------------------------------------------
+bool
+find_update_pair_from_installed_annotation(PackageRow &installed_out, PackageRow &update_out)
+{
+  auto installed_rows = dnf_backend_get_installed_package_rows_interruptible(nullptr);
+  for (const auto &installed_row : installed_rows) {
+    if (installed_row.repo_candidate_relation != PackageRepoCandidateRelation::NEWER ||
+        installed_row.repo_candidate_nevra.empty()) {
+      continue;
+    }
+
+    auto candidates = dnf_backend_get_available_package_rows_by_nevra(installed_row.repo_candidate_nevra);
+    if (candidates.empty()) {
+      continue;
+    }
+
+    installed_out = installed_row;
+    update_out = candidates.front();
+    return true;
+  }
+
+  return false;
+}
+
+} // namespace
+
 // -----------------------------------------------------------------------------
 // BaseManager safety & generation tests
 // -----------------------------------------------------------------------------
@@ -140,7 +170,8 @@ TEST_CASE("dnf_backend_refresh_installed_nevras populates installed NEVRA cache"
 {
   reset_backend_globals();
 
-  dnf_backend_refresh_installed_nevras();
+  REQUIRE(dnf_backend_refresh_installed_nevras());
+  REQUIRE_FALSE(dnf_backend_refresh_installed_nevras());
 
   REQUIRE(dnf_backend_installed_snapshot_size() > 0);
 }
@@ -166,6 +197,33 @@ TEST_CASE("Installed package refresh uses a short-lived system-only Base")
   }
 
   mgr.reset_for_tests();
+}
+
+// -----------------------------------------------------------------------------
+// Verify that daemon-target metadata lookup does not refresh installed state.
+// -----------------------------------------------------------------------------
+TEST_CASE("Daemon upgrade metadata lookup does not publish installed state")
+{
+  reset_backend_globals();
+
+  std::vector<PackageRow> rows = dnf_backend_get_browse_package_rows_interruptible(nullptr);
+  std::string target_nevra;
+  for (const auto &row : rows) {
+    if (row.repo != "@System") {
+      target_nevra = row.nevra;
+      break;
+    }
+  }
+  REQUIRE(!target_nevra.empty());
+
+  reset_backend_globals();
+  REQUIRE(dnf_backend_installed_snapshot_size() == 0);
+
+  std::vector<PackageRow> metadata_rows =
+      dnf_backend_get_available_package_metadata_by_nevras_interruptible({ target_nevra }, nullptr);
+
+  REQUIRE(!metadata_rows.empty());
+  REQUIRE(dnf_backend_installed_snapshot_size() == 0);
 }
 
 // -----------------------------------------------------------------------------
@@ -284,37 +342,27 @@ TEST_CASE("Package info formatting contains expected fields")
 }
 
 // -----------------------------------------------------------------------------
-// Verify that installed and available update rows show the same upgrade details.
+// Verify that package details can display an explicit daemon update target.
 // -----------------------------------------------------------------------------
-TEST_CASE("Package info formatting shows upgrade details consistently")
+TEST_CASE("Package info formatting can use explicit upgrade details")
 {
   reset_backend_globals();
 
-  auto upgrade_rows = dnf_backend_get_upgradeable_package_rows_interruptible(nullptr);
-  if (upgrade_rows.empty()) {
-    SUCCEED("No upgradeable packages in the test environment.");
-    return;
-  }
+  auto installed_rows = dnf_backend_get_installed_package_rows_interruptible(nullptr);
+  REQUIRE(!installed_rows.empty());
 
-  const PackageRow &upgrade_row = upgrade_rows.front();
-  PackageRow installed_row;
-  REQUIRE(dnf_backend_get_installed_package_row_by_name_arch(upgrade_row, installed_row));
+  PackageRow installed_row = installed_rows.front();
+  PackageRow daemon_target = installed_row;
+  daemon_target.version = "999.0";
+  daemon_target.release = "1.test";
+  daemon_target.nevra = daemon_target.name + "-999.0-1.test." + daemon_target.arch;
+  daemon_target.repo = "daemon-test";
 
-  auto installed_info = dnf_backend_get_package_info(installed_row.nevra);
-  auto upgrade_info = dnf_backend_get_package_info(upgrade_row.nevra);
+  auto info = dnf_backend_get_package_info(installed_row.nevra, &daemon_target);
 
-  const std::string installed_line = "Installed Version: " + installed_row.display_version();
-  const std::string upgrade_line = "Upgradable Version: " + upgrade_row.display_version();
-
-  REQUIRE(installed_info.find("Package ID: " + installed_row.nevra) != std::string::npos);
-  REQUIRE(installed_info.find(installed_line) != std::string::npos);
-  REQUIRE(installed_info.find(upgrade_line) != std::string::npos);
-  REQUIRE(installed_info.find("Download Size: ") != std::string::npos);
-
-  REQUIRE(upgrade_info.find("Package ID: " + installed_row.nevra) != std::string::npos);
-  REQUIRE(upgrade_info.find(installed_line) != std::string::npos);
-  REQUIRE(upgrade_info.find(upgrade_line) != std::string::npos);
-  REQUIRE(upgrade_info.find("Download Size: ") != std::string::npos);
+  REQUIRE(info.find("Package ID: " + installed_row.nevra) != std::string::npos);
+  REQUIRE(info.find("Installed Version: " + installed_row.display_version()) != std::string::npos);
+  REQUIRE(info.find("Upgradable Version: " + daemon_target.display_version()) != std::string::npos);
 }
 
 // -----------------------------------------------------------------------------
@@ -380,38 +428,6 @@ TEST_CASE("Search results keep one visible EVR per package name and architecture
 }
 
 // -----------------------------------------------------------------------------
-// Verify that upgradable list rows classify as upgradeable after snapshot refresh.
-// -----------------------------------------------------------------------------
-TEST_CASE("Upgradeable package rows are classified as upgradeable")
-{
-  reset_backend_globals();
-
-  auto results = dnf_backend_get_upgradeable_package_rows_interruptible(nullptr);
-  dnf_backend_refresh_installed_nevras();
-
-  for (const auto &row : results) {
-    INFO(row.nevra);
-    REQUIRE(dnf_backend_get_package_install_state(row) == PackageInstallState::UPGRADEABLE);
-  }
-}
-
-// -----------------------------------------------------------------------------
-// Verify that cancelling the upgradable list returns no partial candidates.
-// -----------------------------------------------------------------------------
-TEST_CASE("Cancelled upgradeable package list returns no results")
-{
-  reset_backend_globals();
-
-  GCancellable *cancellable = g_cancellable_new();
-  g_cancellable_cancel(cancellable);
-
-  auto results = dnf_backend_get_upgradeable_package_rows_interruptible(cancellable);
-
-  REQUIRE(results.empty());
-  g_object_unref(cancellable);
-}
-
-// -----------------------------------------------------------------------------
 // Dependency and file list tests (read-only)
 // -----------------------------------------------------------------------------
 
@@ -441,18 +457,15 @@ TEST_CASE("Dependency info uses installed package for update rows")
 {
   reset_backend_globals();
 
-  auto upgrade_rows = dnf_backend_get_upgradeable_package_rows_interruptible(nullptr);
-  if (upgrade_rows.empty()) {
-    SUCCEED("No upgradeable packages in the test environment.");
+  PackageRow installed_row;
+  PackageRow update_row;
+  if (!find_update_pair_from_installed_annotation(installed_row, update_row)) {
+    SUCCEED("No installed package with a newer repo candidate in the test environment.");
     return;
   }
 
-  const PackageRow &upgrade_row = upgrade_rows.front();
-  PackageRow installed_row;
-  REQUIRE(dnf_backend_get_installed_package_row_by_name_arch(upgrade_row, installed_row));
-
   auto installed_deps = dnf_backend_get_package_deps(installed_row.nevra);
-  auto upgrade_deps = dnf_backend_get_package_deps(upgrade_row.nevra);
+  auto upgrade_deps = dnf_backend_get_package_deps(update_row.nevra);
 
   REQUIRE(upgrade_deps == installed_deps);
   REQUIRE(upgrade_deps.find("(installed packages only)") == std::string::npos);
@@ -487,18 +500,15 @@ TEST_CASE("File list query uses installed package for update rows")
 {
   reset_backend_globals();
 
-  auto upgrade_rows = dnf_backend_get_upgradeable_package_rows_interruptible(nullptr);
-  if (upgrade_rows.empty()) {
-    SUCCEED("No upgradeable packages in the test environment.");
+  PackageRow installed_row;
+  PackageRow update_row;
+  if (!find_update_pair_from_installed_annotation(installed_row, update_row)) {
+    SUCCEED("No installed package with a newer repo candidate in the test environment.");
     return;
   }
 
-  const PackageRow &upgrade_row = upgrade_rows.front();
-  PackageRow installed_row;
-  REQUIRE(dnf_backend_get_installed_package_row_by_name_arch(upgrade_row, installed_row));
-
   auto installed_files = dnf_backend_get_installed_package_files(installed_row.nevra, 1500);
-  auto upgrade_files = dnf_backend_get_installed_package_files(upgrade_row.nevra, 1500);
+  auto upgrade_files = dnf_backend_get_installed_package_files(update_row.nevra, 1500);
 
   REQUIRE(upgrade_files.find("File list available only for installed packages.") == std::string::npos);
   REQUIRE(upgrade_files == installed_files);

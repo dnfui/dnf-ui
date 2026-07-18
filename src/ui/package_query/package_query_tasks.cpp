@@ -13,11 +13,14 @@
 #include "ui/package_query/package_query_cache.hpp"
 #include "ui/package_table/package_table_view.hpp"
 #include "dnf5daemon_client/transaction_service_client.hpp"
+#include "upgrade/daemon_upgrade_state.hpp"
 #include "ui/common/ui_helpers.hpp"
 #include "ui/common/widgets.hpp"
 #include "ui/common/widgets_internal.hpp"
 
 #include <set>
+#include <map>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -73,6 +76,24 @@ struct PackageListTaskData {
   gint64 started_at_us;
 };
 
+struct UpgradeablePackageListResult {
+  DaemonUpgradeRefreshOwner refresh_owner;
+  std::vector<TransactionServiceUpgradeTarget> targets;
+  std::vector<PackageRow> metadata_rows;
+  bool package_state_changed = false;
+};
+
+// -----------------------------------------------------------------------------
+// Return a List Upgradable result that tells completion to show the retry message.
+// -----------------------------------------------------------------------------
+static void
+return_package_state_changed_result(GTask *task)
+{
+  auto *results = new UpgradeablePackageListResult;
+  results->package_state_changed = true;
+  g_task_return_pointer(task, results, [](gpointer p) { delete static_cast<UpgradeablePackageListResult *>(p); });
+}
+
 // Data passed to one exact selected-package reload task.
 // The selected NEVRA and generation are checked again before the table is updated.
 struct ExactPackageReloadTaskData {
@@ -117,73 +138,54 @@ struct QueryBackendBaseDropGuard {
 };
 
 // -----------------------------------------------------------------------------
-// Return the package key used to compare UI rows with dnf5daemon upgrade items.
+// Build a basic package row from one daemon upgrade target.
+// libdnf5 may add display metadata later. dnf5daemon decides whether this row
+// appears in List Upgradable.
 // -----------------------------------------------------------------------------
-static std::string
-package_row_upgrade_key(const PackageRow &row)
+static PackageRow
+package_row_from_daemon_upgrade_target(const TransactionServiceUpgradeTarget &target)
 {
-  return row.name + "." + row.arch;
+  PackageRow row;
+  row.nevra = target.nevra.empty() ? target.full_nevra : target.nevra;
+  row.name = target.name;
+  row.epoch = target.epoch;
+  row.version = target.version;
+  row.release = target.release;
+  row.arch = target.arch;
+  row.repo = target.repo_id;
+  return row;
 }
 
 // -----------------------------------------------------------------------------
-// Keep only rows that dnf5daemon lists as real upgrade candidates.
-// The first query uses local libdnf metadata so the table can show package details.
-// This second check resolves the same daemon Upgrade All preview used by the Upgrade All button.
-// It keeps only rows the transaction service would accept.
-// If libdnf sees no upgrades but the daemon does, fail clearly instead of showing a false empty list.
+// Build table rows from one complete daemon upgrade snapshot and optional metadata.
+// Missing metadata does not hide daemon-reported upgrades.
 // -----------------------------------------------------------------------------
-static std::vector<PackageRow>
-filter_upgradeable_rows_by_daemon_list(std::vector<PackageRow> rows, GCancellable *cancellable)
+static std::vector<PackageTableRow>
+package_table_rows_from_daemon_targets(const DaemonUpgradeSnapshot &snapshot,
+                                       const std::vector<PackageRow> &metadata_rows)
 {
-  if (cancellable && g_cancellable_is_cancelled(cancellable)) {
-    return rows;
+  std::map<std::string, PackageRow> metadata_by_nevra;
+  for (const auto &row : metadata_rows) {
+    metadata_by_nevra.emplace(row.nevra, row);
   }
 
-#ifdef DNFUI_DEBUG_TRACE
-  const gint64 started_at_us = g_get_monotonic_time();
-  DNFUI_TRACE("Upgradable daemon list verification start rows=%zu", rows.size());
-#endif
-
-  std::vector<std::string> upgrade_keys;
-  std::string error;
-  if (!transaction_service_client_list_upgrade_keys(upgrade_keys, error, cancellable)) {
-    throw std::runtime_error(error.empty() ? _("Unable to verify upgradable packages.") : error);
-  }
-#ifdef DNFUI_DEBUG_TRACE
-  DNFUI_TRACE("Upgradable daemon list verification keys=%zu elapsed_ms=%lld",
-              upgrade_keys.size(),
-              elapsed_ms_since(started_at_us));
-#endif
-
-  std::set<std::string> daemon_upgrades(upgrade_keys.begin(), upgrade_keys.end());
-  if (daemon_upgrades.empty()) {
-    return {};
-  }
-  if (rows.empty()) {
-    throw std::runtime_error(_("dnf5daemon reports upgrades that DNF UI could not load from repository metadata. "
-                               "Refresh repositories and try again."));
-  }
-
-  std::vector<PackageRow> filtered_rows;
-  filtered_rows.reserve(rows.size());
-  for (const auto &row : rows) {
-    if (cancellable && g_cancellable_is_cancelled(cancellable)) {
-      return {};
+  std::vector<PackageTableRow> rows;
+  rows.reserve(snapshot.targets_by_name_arch.size());
+  for (const auto &[key, target] : snapshot.targets_by_name_arch) {
+    PackageRow row = package_row_from_daemon_upgrade_target(target);
+    auto metadata = metadata_by_nevra.find(row.nevra);
+    if (metadata != metadata_by_nevra.end()) {
+      row = metadata->second;
     }
 
-    std::string row_key = package_row_upgrade_key(row);
-    if (daemon_upgrades.count(row_key) > 0) {
-      filtered_rows.push_back(row);
-    }
+    rows.push_back({
+        .row = row,
+        .upgrade_target = target,
+        .upgrade_generation = snapshot.generation,
+    });
   }
 
-#ifdef DNFUI_DEBUG_TRACE
-  DNFUI_TRACE("Upgradable daemon list verification done rows=%zu filtered=%zu total_ms=%lld",
-              rows.size(),
-              filtered_rows.size(),
-              elapsed_ms_since(started_at_us));
-#endif
-  return filtered_rows;
+  return rows;
 }
 
 // -----------------------------------------------------------------------------
@@ -361,6 +363,8 @@ static void
 on_list_upgradeable_task(GTask *task, gpointer, gpointer, GCancellable *cancellable)
 {
   QueryBackendBaseDropGuard base_drop_guard(cancellable);
+  std::optional<DaemonUpgradeRefreshId> refresh_id;
+  bool refresh_state_closed = false;
 
   try {
 #ifdef DNFUI_DEBUG_TRACE
@@ -368,19 +372,94 @@ on_list_upgradeable_task(GTask *task, gpointer, gpointer, GCancellable *cancella
     DNFUI_TRACE("Upgradable list task start");
 #endif
 
-    auto rows = dnf_backend_get_upgradeable_package_rows_interruptible(cancellable);
+    if (dnf_backend_refresh_installed_nevras()) {
+      DaemonUpgradeState::instance().mark_stale();
+    }
+
+    refresh_id = DaemonUpgradeState::instance().begin_refresh();
+    if (!refresh_id.has_value()) {
+      throw std::runtime_error(_("dnf5daemon upgrade information is already being refreshed."));
+    }
+
+    if (cancellable && g_cancellable_is_cancelled(cancellable)) {
+      DaemonUpgradeState::instance().abandon_refresh(refresh_id.value());
+      refresh_state_closed = true;
+      g_task_return_new_error(task, G_IO_ERROR, G_IO_ERROR_CANCELLED, "%s", _("List Upgradable was cancelled."));
+      return;
+    }
+
+    std::vector<TransactionServiceUpgradeTarget> targets;
+    std::string error;
+    if (!transaction_service_client_list_upgrade_targets(targets, error, cancellable)) {
+      if (cancellable && g_cancellable_is_cancelled(cancellable)) {
+        DaemonUpgradeState::instance().abandon_refresh(refresh_id.value());
+        refresh_state_closed = true;
+        g_task_return_new_error(task, G_IO_ERROR, G_IO_ERROR_CANCELLED, "%s", _("List Upgradable was cancelled."));
+        return;
+      }
+
+      DaemonUpgradeState::instance().publish_failure(refresh_id.value());
+      refresh_state_closed = true;
+      throw std::runtime_error(error.empty() ? _("Unable to load upgradable packages from dnf5daemon.") : error);
+    }
 #ifdef DNFUI_DEBUG_TRACE
-    DNFUI_TRACE("Upgradable list task backend rows=%zu elapsed_ms=%lld", rows.size(), elapsed_ms_since(started_at_us));
+    DNFUI_TRACE(
+        "Upgradable list task daemon targets=%zu elapsed_ms=%lld", targets.size(), elapsed_ms_since(started_at_us));
 #endif
 
-    rows = filter_upgradeable_rows_by_daemon_list(std::move(rows), cancellable);
+    std::vector<std::string> target_nevras;
+    target_nevras.reserve(targets.size());
+    for (const auto &target : targets) {
+      target_nevras.push_back(target.nevra.empty() ? target.full_nevra : target.nevra);
+    }
+
+    std::vector<PackageRow> metadata_rows;
+    try {
+      metadata_rows = dnf_backend_get_available_package_metadata_by_nevras_interruptible(target_nevras, cancellable);
+    } catch (const std::exception &) {
+      // Metadata from libdnf5 is optional here. The dnf5daemon target remains
+      // visible because it is the upgrade reported by the transaction service.
+      metadata_rows.clear();
+    }
+
+    if (dnf_backend_refresh_installed_nevras()) {
+      DaemonUpgradeState::instance().abandon_refresh(refresh_id.value());
+      refresh_state_closed = true;
+      return_package_state_changed_result(task);
+      return;
+    }
+
+    if (cancellable && g_cancellable_is_cancelled(cancellable)) {
+      DaemonUpgradeState::instance().abandon_refresh(refresh_id.value());
+      refresh_state_closed = true;
+      g_task_return_new_error(task, G_IO_ERROR, G_IO_ERROR_CANCELLED, "%s", _("List Upgradable was cancelled."));
+      return;
+    }
+
 #ifdef DNFUI_DEBUG_TRACE
-    DNFUI_TRACE("Upgradable list task verified rows=%zu total_ms=%lld", rows.size(), elapsed_ms_since(started_at_us));
+    DNFUI_TRACE(
+        "Upgradable list task metadata=%zu total_ms=%lld", metadata_rows.size(), elapsed_ms_since(started_at_us));
 #endif
 
-    auto *results = new std::vector<PackageRow>(std::move(rows));
-    g_task_return_pointer(task, results, [](gpointer p) { delete static_cast<std::vector<PackageRow> *>(p); });
+    auto *results = new UpgradeablePackageListResult;
+    results->refresh_owner = DaemonUpgradeRefreshOwner(refresh_id.value());
+    results->targets = std::move(targets);
+    results->metadata_rows = std::move(metadata_rows);
+    refresh_state_closed = true;
+    g_task_return_pointer(task, results, [](gpointer p) { delete static_cast<UpgradeablePackageListResult *>(p); });
   } catch (const std::exception &e) {
+    if (refresh_id.has_value() && !refresh_state_closed) {
+      if (cancellable && g_cancellable_is_cancelled(cancellable)) {
+        DaemonUpgradeState::instance().abandon_refresh(refresh_id.value());
+      } else {
+        DaemonUpgradeState::instance().publish_failure(refresh_id.value());
+      }
+      refresh_state_closed = true;
+    }
+    if (refresh_id.has_value() && cancellable && g_cancellable_is_cancelled(cancellable)) {
+      g_task_return_new_error(task, G_IO_ERROR, G_IO_ERROR_CANCELLED, "%s", _("List Upgradable was cancelled."));
+      return;
+    }
     g_task_return_error(task, g_error_new_literal(G_IO_ERROR, G_IO_ERROR_FAILED, e.what()));
   }
 }
@@ -415,7 +494,8 @@ on_list_upgradeable_task_finished(GObject *, GAsyncResult *res, gpointer user_da
   }
 
   GError *error = nullptr;
-  std::vector<PackageRow> *packages = static_cast<std::vector<PackageRow> *>(g_task_propagate_pointer(task, &error));
+  UpgradeablePackageListResult *result =
+      static_cast<UpgradeablePackageListResult *>(g_task_propagate_pointer(task, &error));
 
   // Release this task's spinner slot.
   widgets_spinner_release(widgets->query.spinner);
@@ -424,7 +504,45 @@ on_list_upgradeable_task_finished(GObject *, GAsyncResult *res, gpointer user_da
     package_query_end_package_list_request(widgets, td->request_id, PackageListRequestKind::LIST_UPGRADEABLE);
   }
 
-  if (packages) {
+  if (result) {
+    if (result->package_state_changed) {
+      delete result;
+      ui_helpers_set_status(widgets->query.status_label,
+                            _("Package state changed while loading upgrades. Press List Upgradable to try again."),
+                            "blue");
+      return;
+    }
+
+    std::string publish_error;
+    if (!DaemonUpgradeState::instance().publish_success(result->refresh_owner.id(), result->targets, publish_error)) {
+      result->refresh_owner.close();
+      const bool refresh_no_longer_active = publish_error == "dnf5daemon upgrade refresh is no longer active.";
+      delete result;
+      if (refresh_no_longer_active) {
+        ui_helpers_set_status(widgets->query.status_label,
+                              _("Package state changed while loading upgrades. Press List Upgradable to try again."),
+                              "blue");
+      } else {
+        ui_helpers_set_status(widgets->query.status_label,
+                              publish_error.empty() ? _("Unable to publish dnf5daemon upgrade information.")
+                                                    : publish_error.c_str(),
+                              "red");
+      }
+      return;
+    }
+    result->refresh_owner.close();
+
+    DaemonUpgradeSnapshot snapshot = DaemonUpgradeState::instance().snapshot();
+    if (snapshot.status != DaemonUpgradeSnapshotStatus::READY) {
+      delete result;
+      ui_helpers_set_status(widgets->query.status_label,
+                            _("Package state changed while loading upgrades. Press List Upgradable to try again."),
+                            "blue");
+      return;
+    }
+
+    auto rows = package_table_rows_from_daemon_targets(snapshot, result->metadata_rows);
+
     package_query_set_displayed_query_kind(widgets, DisplayedPackageQueryKind::LIST_UPGRADEABLE);
 
     if (widgets->query_state.preserve_selection_on_reload) {
@@ -433,14 +551,19 @@ on_list_upgradeable_task_finished(GObject *, GAsyncResult *res, gpointer user_da
       widgets->results.selected_nevra.clear();
     }
     package_table_fill_package_view(
-        widgets, *packages, packages->empty() ? PackageTableEmptyState::NO_RESULTS : PackageTableEmptyState::READY);
+        widgets, rows, rows.empty() ? PackageTableEmptyState::NO_RESULTS : PackageTableEmptyState::READY);
     std::string msg =
-        dnfui_i18n_format_count(packages->size(), "Found %zu upgradable package.", "Found %zu upgradable packages.");
-    ui_helpers_set_status(widgets->query.status_label, msg, packages->empty() ? "gray" : "green");
+        dnfui_i18n_format_count(rows.size(), "Found %zu upgradable package.", "Found %zu upgradable packages.");
+    ui_helpers_set_status(widgets->query.status_label, msg, rows.empty() ? "gray" : "green");
     package_query_show_duration_label(widgets, _("List Upgradable"), td ? td->started_at_us : 0);
     package_query_finish_results_refresh(widgets);
-    delete packages;
+    delete result;
   } else {
+    if (error && g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
+      g_error_free(error);
+      return;
+    }
+
     widgets->query_state.preserve_selection_on_reload = false;
     widgets->query_state.reload_selected_nevra.clear();
     widgets->results.selected_nevra.clear();
@@ -700,6 +823,7 @@ package_query_start_list_available_task(MainWindowUiState *widgets)
 void
 package_query_start_list_upgradeable_task(MainWindowUiState *widgets)
 {
+  package_query_clear_displayed_upgradeable_table(widgets);
   widgets_spinner_acquire(widgets->query.spinner);
 
   GCancellable *c = widgets_make_task_cancellable_for(GTK_WIDGET(widgets->query.entry));

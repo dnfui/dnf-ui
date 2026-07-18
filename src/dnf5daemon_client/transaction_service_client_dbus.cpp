@@ -89,6 +89,23 @@ empty_options()
 }
 
 // -----------------------------------------------------------------------------
+// Return options for the read-only daemon upgrade target list.
+// This uses dnf5daemon's package-list API, not a resolved transaction preview.
+// -----------------------------------------------------------------------------
+GVariant *
+upgrade_target_list_options()
+{
+  const char *attrs[] = { "name", "epoch", "version", "release", "arch", "repo_id", "nevra", "full_nevra", nullptr };
+
+  GVariantBuilder options;
+  g_variant_builder_init(&options, G_VARIANT_TYPE("a{sv}"));
+  g_variant_builder_add(&options, "{sv}", "scope", g_variant_new_string("upgrades"));
+  g_variant_builder_add(&options, "{sv}", "latest-limit", g_variant_new_int32(1));
+  g_variant_builder_add(&options, "{sv}", "package_attrs", g_variant_new_strv(attrs, -1));
+  return g_variant_new("a{sv}", &options);
+}
+
+// -----------------------------------------------------------------------------
 // Return session options for manual repository refresh.
 // The refresh code expires metadata itself before loading repos again.
 // Do not let open_session load old repository data first.
@@ -316,24 +333,45 @@ package_label_from_daemon_object(GVariant *object, std::string &label_out, std::
 }
 
 // -----------------------------------------------------------------------------
-// Build the package key used when comparing dnf5daemon upgrade candidates with UI table rows.
-// The exact NEVRA can differ between daemon list output and UI candidate rows.
-// Name and architecture identify the package row.
+// Build one upgrade target returned by dnf5daemon's package-list API.
 // -----------------------------------------------------------------------------
 bool
-package_upgrade_key_from_daemon_object(GVariant *object, std::string &key_out, std::string &error_out)
+upgrade_target_from_daemon_object(GVariant *object, TransactionServiceUpgradeTarget &target_out, std::string &error_out)
 {
-  key_out.clear();
+  TransactionServiceUpgradeTarget target;
+  target.name = map_lookup_string(object, "name");
+  target.epoch = map_lookup_string(object, "epoch");
+  target.version = map_lookup_string(object, "version");
+  target.release = map_lookup_string(object, "release");
+  target.arch = map_lookup_string(object, "arch");
+  target.repo_id = map_lookup_string(object, "repo_id");
+  target.nevra = map_lookup_string(object, "nevra");
+  target.full_nevra = map_lookup_string(object, "full_nevra");
 
-  const std::string name = map_lookup_string(object, "name");
-  const std::string arch = map_lookup_string(object, "arch");
-
-  if (name.empty() || arch.empty()) {
-    error_out = _("dnf5daemon returned an incomplete package item.");
+  if (target.name.empty() || target.version.empty() || target.release.empty() || target.arch.empty()) {
+    error_out = _("dnf5daemon returned an incomplete upgrade item.");
     return false;
   }
 
-  key_out = name + "." + arch;
+  const std::string normalized_epoch = target.epoch.empty() ? "0" : target.epoch;
+
+  if (target.nevra.empty()) {
+    std::ostringstream nevra;
+    nevra << target.name << "-";
+    if (normalized_epoch != "0") {
+      nevra << normalized_epoch << ":";
+    }
+    nevra << target.version << "-" << target.release << "." << target.arch;
+    target.nevra = nevra.str();
+  }
+  if (target.full_nevra.empty()) {
+    std::ostringstream full_nevra;
+    full_nevra << target.name << "-" << normalized_epoch << ":" << target.version << "-" << target.release << "."
+               << target.arch;
+    target.full_nevra = full_nevra.str();
+  }
+
+  target_out = std::move(target);
   return true;
 }
 
@@ -727,6 +765,57 @@ transaction_service_client_testonly_build_preview_from_item(const std::string &o
   preview = std::move(built_preview);
   return true;
 }
+
+// -----------------------------------------------------------------------------
+// Test-only hook for daemon upgrade target parser coverage.
+// -----------------------------------------------------------------------------
+bool
+transaction_service_client_testonly_build_upgrade_target_from_fields(const std::string &name,
+                                                                     const std::string &epoch,
+                                                                     const std::string &version,
+                                                                     const std::string &release,
+                                                                     const std::string &arch,
+                                                                     const std::string &repo_id,
+                                                                     const std::string &nevra,
+                                                                     const std::string &full_nevra,
+                                                                     TransactionServiceUpgradeTarget &target_out,
+                                                                     std::string &error_out)
+{
+  target_out = {};
+  error_out.clear();
+
+  GVariantBuilder object_builder;
+  g_variant_builder_init(&object_builder, G_VARIANT_TYPE("a{sv}"));
+  if (!name.empty()) {
+    g_variant_builder_add(&object_builder, "{sv}", "name", g_variant_new_string(name.c_str()));
+  }
+  if (!epoch.empty()) {
+    g_variant_builder_add(&object_builder, "{sv}", "epoch", g_variant_new_string(epoch.c_str()));
+  }
+  if (!version.empty()) {
+    g_variant_builder_add(&object_builder, "{sv}", "version", g_variant_new_string(version.c_str()));
+  }
+  if (!release.empty()) {
+    g_variant_builder_add(&object_builder, "{sv}", "release", g_variant_new_string(release.c_str()));
+  }
+  if (!arch.empty()) {
+    g_variant_builder_add(&object_builder, "{sv}", "arch", g_variant_new_string(arch.c_str()));
+  }
+  if (!repo_id.empty()) {
+    g_variant_builder_add(&object_builder, "{sv}", "repo_id", g_variant_new_string(repo_id.c_str()));
+  }
+  if (!nevra.empty()) {
+    g_variant_builder_add(&object_builder, "{sv}", "nevra", g_variant_new_string(nevra.c_str()));
+  }
+  if (!full_nevra.empty()) {
+    g_variant_builder_add(&object_builder, "{sv}", "full_nevra", g_variant_new_string(full_nevra.c_str()));
+  }
+
+  GVariant *object = g_variant_ref_sink(g_variant_builder_end(&object_builder));
+  bool ok = upgrade_target_from_daemon_object(object, target_out, error_out);
+  g_variant_unref(object);
+  return ok;
+}
 #endif
 
 // -----------------------------------------------------------------------------
@@ -928,6 +1017,80 @@ transaction_service_client_refresh_repositories(std::string &error_out, GCancell
 }
 
 // -----------------------------------------------------------------------------
+// List upgrade targets from dnf5daemon's package-list API.
+// -----------------------------------------------------------------------------
+bool
+transaction_service_client_list_daemon_upgrade_targets(GDBusConnection *connection,
+                                                       GCancellable *cancellable,
+                                                       std::vector<TransactionServiceUpgradeTarget> &targets_out,
+                                                       std::string &error_out)
+{
+  targets_out.clear();
+  error_out.clear();
+
+#ifdef DNFUI_DEBUG_TRACE
+  const gint64 started_at_us = g_get_monotonic_time();
+#endif
+  DNFUI_TRACE("dnf5daemon upgrade target list start");
+
+  std::string transaction_path;
+  if (!open_daemon_session(connection, transaction_path, error_out)) {
+    return false;
+  }
+
+  GError *error = nullptr;
+  GVariant *reply = g_dbus_connection_call_sync(connection,
+                                                kDnfDaemonName,
+                                                transaction_path.c_str(),
+                                                kDnfDaemonRpmInterface,
+                                                "list",
+                                                g_variant_new("(@a{sv})", upgrade_target_list_options()),
+                                                G_VARIANT_TYPE("(aa{sv})"),
+                                                G_DBUS_CALL_FLAGS_NONE,
+                                                G_MAXINT,
+                                                cancellable,
+                                                &error);
+
+  std::string release_error;
+  transaction_service_client_release_transaction_request(connection, transaction_path, release_error);
+
+  if (!reply) {
+    error_out = error ? error->message : _("Could not list upgrade targets from dnf5daemon.");
+    DNFUI_TRACE("dnf5daemon upgrade target list failed error=%s", error_out.c_str());
+    g_clear_error(&error);
+    return false;
+  }
+
+  GVariant *packages = nullptr;
+  g_variant_get(reply, "(@aa{sv})", &packages);
+
+  if (packages) {
+    const gsize n = g_variant_n_children(packages);
+    targets_out.reserve(n);
+    for (gsize i = 0; i < n; ++i) {
+      GVariant *pkg = g_variant_get_child_value(packages, i);
+      TransactionServiceUpgradeTarget target;
+      if (!upgrade_target_from_daemon_object(pkg, target, error_out)) {
+        g_variant_unref(pkg);
+        g_variant_unref(packages);
+        g_variant_unref(reply);
+        targets_out.clear();
+        return false;
+      }
+      targets_out.push_back(std::move(target));
+      g_variant_unref(pkg);
+    }
+    g_variant_unref(packages);
+  }
+
+  g_variant_unref(reply);
+  DNFUI_TRACE("dnf5daemon upgrade target list done targets=%zu elapsed_ms=%lld",
+              targets_out.size(),
+              elapsed_ms_since(started_at_us));
+  return true;
+}
+
+// -----------------------------------------------------------------------------
 // Resolve one prepared dnf5daemon session into the existing preview model.
 // -----------------------------------------------------------------------------
 bool
@@ -936,14 +1099,10 @@ transaction_service_client_get_transaction_preview(GDBusConnection *connection,
                                                    TransactionServiceProgressForwarder *progress_forwarder,
                                                    GCancellable *cancellable,
                                                    TransactionPreview &preview_out,
-                                                   std::string &error_out,
-                                                   std::vector<std::string> *upgrade_keys_out)
+                                                   std::string &error_out)
 {
   preview_out = {};
   error_out.clear();
-  if (upgrade_keys_out) {
-    upgrade_keys_out->clear();
-  }
 
   if (!connection || transaction_path.empty()) {
     error_out = _("dnf5daemon transaction session is not available.");
@@ -974,7 +1133,7 @@ transaction_service_client_get_transaction_preview(GDBusConnection *connection,
 
   gulong cancel_handler_id = 0;
   if (cancellable) {
-    // Stop for List Upgradable should cancel the daemon resolve call too.
+    // Forward caller cancellation to the asynchronous daemon resolve call.
     cancel_handler_id = g_cancellable_connect(
         cancellable,
         G_CALLBACK(+[](GCancellable *, gpointer user_data) { g_cancellable_cancel(G_CANCELLABLE(user_data)); }),
@@ -1096,14 +1255,6 @@ transaction_service_client_get_transaction_preview(GDBusConnection *connection,
     g_variant_get(item, "(&s&s&s@a{sv}@a{sv})", &object_type, &action, &reason, &attributes, &object);
     bool ok = append_daemon_preview_item(
         built_preview, object_type ? object_type : "", action ? action : "", object, error_out);
-    if (ok && upgrade_keys_out && ascii_lower(object_type ? object_type : "") == "package" &&
-        ascii_lower(action ? action : "") == "upgrade") {
-      std::string key;
-      ok = package_upgrade_key_from_daemon_object(object, key, error_out);
-      if (ok) {
-        upgrade_keys_out->push_back(std::move(key));
-      }
-    }
 
     g_variant_unref(attributes);
     g_variant_unref(object);

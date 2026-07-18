@@ -85,7 +85,7 @@ std::set<std::string> collect_self_protected_package_names(libdnf5::Base &base);
 // -----------------------------------------------------------------------------
 // Publish a completed installed-package scan to shared backend state.
 // -----------------------------------------------------------------------------
-void publish_installed_snapshot(InstalledQueryResult installed, std::set<std::string> protected_names);
+bool publish_installed_snapshot(InstalledQueryResult installed, std::set<std::string> protected_names);
 
 } // namespace dnf_backend_internal
 

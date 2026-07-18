@@ -90,8 +90,7 @@ resolve_transaction_preview(GDBusConnection *connection,
                             const TransactionKeyImportCallback &key_import_callback,
                             GCancellable *cancellable,
                             TransactionPreview &preview_out,
-                            std::string &error_out,
-                            std::vector<std::string> *upgrade_keys_out = nullptr)
+                            std::string &error_out)
 {
   GMainContext *signal_context = g_main_context_new();
   g_main_context_push_thread_default(signal_context);
@@ -102,7 +101,7 @@ resolve_transaction_preview(GDBusConnection *connection,
       transaction_service_client_subscribe_progress(connection, transaction_path, &progress_forwarder);
 
   bool ok = transaction_service_client_wait_for_started_transaction_preview(
-      connection, transaction_path, &progress_forwarder, cancellable, preview_out, error_out, upgrade_keys_out);
+      connection, transaction_path, &progress_forwarder, cancellable, preview_out, error_out);
 
   if (progress_subscription_id != 0) {
     g_dbus_connection_signal_unsubscribe(connection, progress_subscription_id);
@@ -250,16 +249,14 @@ transaction_service_client_preview_upgrade_all_request(TransactionPreview &previ
 }
 
 // -----------------------------------------------------------------------------
-// List upgrade package keys from the resolved daemon Upgrade All preview.
-// The daemon package-list upgrades scope is only a candidate query. The resolver
-// is the same source used by the actual Upgrade All preview.
+// List upgrade targets from dnf5daemon's package-list API.
 // -----------------------------------------------------------------------------
 bool
-transaction_service_client_list_upgrade_keys(std::vector<std::string> &keys_out,
-                                             std::string &error_out,
-                                             GCancellable *cancellable)
+transaction_service_client_list_upgrade_targets(std::vector<TransactionServiceUpgradeTarget> &targets_out,
+                                                std::string &error_out,
+                                                GCancellable *cancellable)
 {
-  keys_out.clear();
+  targets_out.clear();
   error_out.clear();
 
   std::string connect_error;
@@ -269,21 +266,11 @@ transaction_service_client_list_upgrade_keys(std::vector<std::string> &keys_out,
     return false;
   }
 
-  std::string transaction_path;
-  if (!transaction_service_client_start_upgrade_all_transaction_request(connection, transaction_path, error_out)) {
-    g_object_unref(connection);
-    return false;
-  }
-
-  TransactionPreview preview;
-  bool ok = resolve_transaction_preview(connection, transaction_path, {}, cancellable, preview, error_out, &keys_out);
-
-  std::string release_error;
-  transaction_service_client_release_transaction_request(connection, transaction_path, release_error);
+  bool ok = transaction_service_client_list_daemon_upgrade_targets(connection, cancellable, targets_out, error_out);
   g_object_unref(connection);
 
   if (!ok) {
-    keys_out.clear();
+    targets_out.clear();
     return false;
   }
 

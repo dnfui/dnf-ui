@@ -14,6 +14,27 @@ typedef struct _GCancellable GCancellable;
 struct TransactionRequest;
 struct TransactionPreview;
 
+struct TransactionServiceUpgradeTarget {
+  std::string name;
+  std::string arch;
+  std::string epoch;
+  std::string version;
+  std::string release;
+  std::string nevra;
+  std::string full_nevra;
+  std::string repo_id;
+
+  std::string name_arch_key() const
+  {
+    return name + "\n" + arch;
+  }
+
+  std::string upgrade_spec() const
+  {
+    return name + "." + arch;
+  }
+};
+
 struct TransactionKeyImportRequest {
   std::string key_id;
   std::vector<std::string> user_ids;
@@ -43,11 +64,12 @@ transaction_service_client_preview_upgrade_all_request(TransactionPreview &previ
                                                        GCancellable *cancellable = nullptr);
 
 // -----------------------------------------------------------------------------
-// Ask dnf5daemon for package keys from the resolved Upgrade All preview.
+// List upgrade targets directly from dnf5daemon's package-list API.
+// This is a read-only snapshot of daemon upgrade state, not a transaction preview.
 // -----------------------------------------------------------------------------
-bool transaction_service_client_list_upgrade_keys(std::vector<std::string> &keys_out,
-                                                  std::string &error_out,
-                                                  GCancellable *cancellable = nullptr);
+bool transaction_service_client_list_upgrade_targets(std::vector<TransactionServiceUpgradeTarget> &targets_out,
+                                                     std::string &error_out,
+                                                     GCancellable *cancellable = nullptr);
 
 // -----------------------------------------------------------------------------
 // Refresh dnf5daemon repository metadata for the manual Refresh Repositories action.
@@ -92,6 +114,19 @@ bool transaction_service_client_testonly_build_preview_from_item(const std::stri
                                                                  const std::string &name,
                                                                  TransactionPreview &preview,
                                                                  std::string &error_out);
+// -----------------------------------------------------------------------------
+// Feed one daemon upgrade target object through the package-list parser for tests.
+// -----------------------------------------------------------------------------
+bool transaction_service_client_testonly_build_upgrade_target_from_fields(const std::string &name,
+                                                                          const std::string &epoch,
+                                                                          const std::string &version,
+                                                                          const std::string &release,
+                                                                          const std::string &arch,
+                                                                          const std::string &repo_id,
+                                                                          const std::string &nevra,
+                                                                          const std::string &full_nevra,
+                                                                          TransactionServiceUpgradeTarget &target_out,
+                                                                          std::string &error_out);
 // -----------------------------------------------------------------------------
 // Check the resolved-preview self-protection rule used by daemon previews.
 // -----------------------------------------------------------------------------

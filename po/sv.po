@@ -527,6 +527,15 @@ msgstr "Förråd uppdaterade."
 msgid "Repositories refreshed. Press List Upgradable to load updated upgrades."
 msgstr "Förråd uppdaterade. Tryck på Lista uppgraderbara för att läsa in uppdaterade uppgraderingar."
 
+msgid "Installed package state changed. Press List Upgradable to reload upgrades."
+msgstr "Installerat paketläge ändrades. Tryck på Lista uppgraderbara för att läsa in uppgraderingar igen."
+
+msgid "Package state changed while loading upgrades. Press List Upgradable to try again."
+msgstr "Paketläget ändrades medan uppgraderingar lästes in. Tryck på Lista uppgraderbara för att försöka igen."
+
+msgid "Upgrade information changed. Press List Upgradable to reload."
+msgstr "Uppgraderingsinformationen ändrades. Tryck på Lista uppgraderbara för att läsa in igen."
+
 msgid "Refreshing repositories..."
 msgstr "Uppdaterar förråd..."
 
@@ -761,21 +770,29 @@ msgstr "dnf5daemon returnerade ett transaktionsresultat som inte stöds."
 msgid "dnf5daemon returned an incomplete package item."
 msgstr "dnf5daemon returnerade ett ofullständigt paketobjekt."
 
+msgid "dnf5daemon returned an incomplete upgrade item."
+msgstr "dnf5daemon returnerade ett ofullständigt uppgraderingsobjekt."
+
 msgid "No transaction changes were returned."
 msgstr "Inga transaktionsändringar returnerades."
 
-msgid "Unable to verify upgradable packages."
-msgstr "Kunde inte verifiera uppgraderbara paket."
+msgid "Could not list upgrade targets from dnf5daemon."
+msgstr "Kunde inte lista uppgraderingsmål från dnf5daemon."
 
-msgid "Unable to list upgradable packages with dnf5daemon."
-msgstr "Kunde inte lista uppgraderbara paket med dnf5daemon."
+msgid "dnf5daemon upgrade information is already being refreshed."
+msgstr "dnf5daemon uppgraderingsinformation uppdateras redan."
 
-msgid ""
-"dnf5daemon reports upgrades that DNF UI could not load from repository metadata. "
-"Refresh repositories and try again."
-msgstr ""
-"dnf5daemon rapporterar uppgraderingar som DNF UI inte kunde läsa från förrådsmetadata. "
-"Uppdatera förråden och försök igen."
+msgid "List Upgradable was cancelled."
+msgstr "Listning av uppgraderbara paket avbröts."
+
+msgid "Unable to load upgradable packages from dnf5daemon."
+msgstr "Kunde inte läsa uppgraderbara paket från dnf5daemon."
+
+msgid "Unable to publish dnf5daemon upgrade information."
+msgstr "Kunde inte publicera dnf5daemon uppgraderingsinformation."
+
+msgid "dnf5daemon upgrade information is not ready."
+msgstr "dnf5daemon uppgraderingsinformation är inte klar."
 
 #, c-format
 msgid "Found %zu package."

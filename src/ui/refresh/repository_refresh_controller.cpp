@@ -19,6 +19,7 @@
 #include "ui/common/ui_helpers.hpp"
 #include "ui/common/widgets.hpp"
 #include "ui/common/widgets_internal.hpp"
+#include "upgrade/daemon_upgrade_state.hpp"
 
 #include <atomic>
 
@@ -124,24 +125,6 @@ queue_repository_refresh_phase_label(GtkLabel *label, const std::string &message
   update->label = GTK_LABEL(g_object_ref(label));
   update->message = message;
   g_main_context_invoke(nullptr, repository_refresh_phase_label_update_on_main, update);
-}
-
-// -----------------------------------------------------------------------------
-// Clear a List Upgradable table after repository metadata was refreshed.
-// The old rows came from the previous metadata generation and should not remain visible.
-// -----------------------------------------------------------------------------
-static bool
-repository_refresh_clear_stale_upgradeable_table(MainWindowUiState *widgets)
-{
-  if (!widgets || !package_query_displayed_view_is_upgradeable(widgets)) {
-    return false;
-  }
-
-  widgets->query_state.preserve_selection_on_reload = false;
-  widgets->query_state.reload_selected_nevra.clear();
-  package_table_fill_package_view(widgets, {});
-  package_details_reset_details_view(widgets);
-  return true;
 }
 
 // -----------------------------------------------------------------------------
@@ -281,7 +264,7 @@ repository_refresh_on_rebuild_task_finished(GObject *, GAsyncResult *res, gpoint
     // Search caches are bound to the old Base generation and must be dropped
     // before the user can query against freshly refreshed repositories.
     package_query_clear_search_cache();
-    bool cleared_upgradeable_table = repository_refresh_clear_stale_upgradeable_table(widgets);
+    bool cleared_upgradeable_table = package_query_clear_displayed_upgradeable_table(widgets);
     if (*refresh_state == BaseRepoState::INSTALLED_ONLY) {
       ui_helpers_set_status(
           widgets->query.status_label, _("Repository refresh failed. Showing installed packages only."), "blue");
@@ -375,7 +358,7 @@ repository_refresh_on_force_rebuild_task_finished(GObject *, GAsyncResult *res, 
     // Search caches are bound to the old Base generation and must be dropped
     // before the user can query against freshly refreshed repositories.
     package_query_clear_search_cache();
-    bool cleared_upgradeable_table = repository_refresh_clear_stale_upgradeable_table(widgets);
+    bool cleared_upgradeable_table = package_query_clear_displayed_upgradeable_table(widgets);
     if (*refresh_state == BaseRepoState::LIVE_METADATA || *refresh_state == BaseRepoState::DAEMON_SYNCED_METADATA) {
       if (cleared_upgradeable_table) {
         ui_helpers_set_status(widgets->query.status_label,
@@ -463,6 +446,8 @@ repository_refresh_on_button_clicked(GtkButton *, gpointer user_data)
   // Once a rebuild starts, stop serving cached search results so the UI does
   // not reuse rows from repository state that is changing.
   package_query_clear_search_cache();
+  DaemonUpgradeState::instance().mark_stale();
+  package_query_clear_displayed_upgradeable_table(widgets);
   DNFUI_TRACE("Repository refresh start requested from button");
   package_query_clear_duration_label(widgets);
   ui_helpers_set_status(widgets->query.status_label, _("Refreshing repositories..."), "blue");

@@ -11,12 +11,14 @@
 #include "dnf_backend/dnf_backend.hpp"
 #include "i18n.hpp"
 #include "ui/package_query/package_query_controller.hpp"
+#include "ui/package_query/package_query_controller_internal.hpp"
 #include "ui/window/main_window.hpp"
 #include "ui/transaction/pending_transaction_apply.hpp"
 #include "ui/refresh/repository_refresh_controller.hpp"
 #include "ui/common/ui_helpers.hpp"
 #include "ui/common/widgets.hpp"
 #include "ui/common/widgets_internal.hpp"
+#include "upgrade/daemon_upgrade_state.hpp"
 
 #include <atomic>
 #include <gtk/gtk.h>
@@ -170,8 +172,11 @@ on_installed_refresh_task(GTask *task, gpointer, gpointer, GCancellable *)
   AppBackendBaseDropGuard base_drop_guard;
 
   try {
-    dnf_backend_refresh_installed_nevras();
-    g_task_return_boolean(task, TRUE);
+    const bool changed = dnf_backend_refresh_installed_nevras();
+    if (changed) {
+      DaemonUpgradeState::instance().mark_stale();
+    }
+    g_task_return_boolean(task, changed);
   } catch (const std::exception &e) {
     g_task_return_new_error(task, G_IO_ERROR, G_IO_ERROR_FAILED, "%s", e.what());
   } catch (...) {
@@ -186,7 +191,7 @@ static void
 on_installed_refresh_task_finished(GObject *, GAsyncResult *result, gpointer)
 {
   GError *error = nullptr;
-  g_task_propagate_boolean(G_TASK(result), &error);
+  gboolean changed = g_task_propagate_boolean(G_TASK(result), &error);
 
   if (error) {
     DNFUI_TRACE("Installed package refresh task failed: %s", error->message);
@@ -194,6 +199,13 @@ on_installed_refresh_task_finished(GObject *, GAsyncResult *result, gpointer)
     // A search may have started while the installed-state refresh was running.
     // Drop those cached rows now that the installed snapshot is up to date.
     package_query_clear_search_cache();
+    if (changed) {
+      if (package_query_clear_displayed_upgradeable_table(g_main_widgets)) {
+        ui_helpers_set_status(g_main_widgets->query.status_label,
+                              _("Installed package state changed. Press List Upgradable to reload upgrades."),
+                              "blue");
+      }
+    }
     DNFUI_TRACE("Installed package refresh task done");
   }
 

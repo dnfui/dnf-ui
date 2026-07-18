@@ -160,6 +160,111 @@ TEST_CASE("dnf5daemon preview self-protection rejects replacements")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that daemon upgrade targets keep internal identity and daemon specs separate.
+// -----------------------------------------------------------------------------
+TEST_CASE("dnf5daemon upgrade target parser exposes stable identity helpers")
+{
+  TransactionServiceUpgradeTarget target;
+  std::string error;
+
+  REQUIRE(transaction_service_client_testonly_build_upgrade_target_from_fields("demo",
+                                                                               "0",
+                                                                               "1.2.3",
+                                                                               "4.fc44",
+                                                                               "x86_64",
+                                                                               "updates",
+                                                                               "demo-1.2.3-4.fc44.x86_64",
+                                                                               "demo-0:1.2.3-4.fc44.x86_64",
+                                                                               target,
+                                                                               error));
+  REQUIRE(error.empty());
+  REQUIRE(target.name_arch_key() == "demo\nx86_64");
+  REQUIRE(target.upgrade_spec() == "demo.x86_64");
+}
+
+// -----------------------------------------------------------------------------
+// Verify that normal NEVRA stays the application-facing package ID.
+// -----------------------------------------------------------------------------
+TEST_CASE("dnf5daemon upgrade target parser keeps normal and full NEVRA")
+{
+  TransactionServiceUpgradeTarget target;
+  std::string error;
+
+  REQUIRE(transaction_service_client_testonly_build_upgrade_target_from_fields("demo",
+                                                                               "0",
+                                                                               "1.2.3",
+                                                                               "4.fc44",
+                                                                               "x86_64",
+                                                                               "updates",
+                                                                               "demo-1.2.3-4.fc44.x86_64",
+                                                                               "demo-0:1.2.3-4.fc44.x86_64",
+                                                                               target,
+                                                                               error));
+  REQUIRE(target.nevra == "demo-1.2.3-4.fc44.x86_64");
+  REQUIRE(target.full_nevra == "demo-0:1.2.3-4.fc44.x86_64");
+  REQUIRE(target.repo_id == "updates");
+}
+
+// -----------------------------------------------------------------------------
+// Verify that full NEVRA alone is still kept while normal NEVRA is reconstructed.
+// -----------------------------------------------------------------------------
+TEST_CASE("dnf5daemon upgrade target parser builds normal NEVRA when missing")
+{
+  TransactionServiceUpgradeTarget target;
+  std::string error;
+
+  REQUIRE(transaction_service_client_testonly_build_upgrade_target_from_fields(
+      "demo", "0", "1.2.3", "4.fc44", "x86_64", "updates", "", "demo-0:1.2.3-4.fc44.x86_64", target, error));
+  REQUIRE(target.nevra == "demo-1.2.3-4.fc44.x86_64");
+  REQUIRE(target.full_nevra == "demo-0:1.2.3-4.fc44.x86_64");
+}
+
+// -----------------------------------------------------------------------------
+// Verify that a missing full NEVRA still keeps the epoch-zero full form.
+// -----------------------------------------------------------------------------
+TEST_CASE("dnf5daemon upgrade target parser builds epoch-zero full NEVRA")
+{
+  TransactionServiceUpgradeTarget target;
+  std::string error;
+
+  REQUIRE(transaction_service_client_testonly_build_upgrade_target_from_fields(
+      "demo", "0", "1.2.3", "4.fc44", "x86_64", "updates", "", "", target, error));
+  REQUIRE(target.nevra == "demo-1.2.3-4.fc44.x86_64");
+  REQUIRE(target.full_nevra == "demo-0:1.2.3-4.fc44.x86_64");
+}
+
+// -----------------------------------------------------------------------------
+// Verify that nonzero epochs are kept in the reconstructed NEVRA.
+// -----------------------------------------------------------------------------
+TEST_CASE("dnf5daemon upgrade target parser builds nonzero epoch NEVRA")
+{
+  TransactionServiceUpgradeTarget target;
+  std::string error;
+
+  REQUIRE(transaction_service_client_testonly_build_upgrade_target_from_fields(
+      "demo", "2", "1.2.3", "4.fc44", "x86_64", "updates", "", "", target, error));
+  REQUIRE(target.nevra == "demo-2:1.2.3-4.fc44.x86_64");
+  REQUIRE(target.full_nevra == target.nevra);
+}
+
+// -----------------------------------------------------------------------------
+// Verify that incomplete daemon upgrade targets fail instead of entering the snapshot.
+// -----------------------------------------------------------------------------
+TEST_CASE("dnf5daemon upgrade target parser rejects missing required fields")
+{
+  TransactionServiceUpgradeTarget target;
+  std::string error;
+
+  REQUIRE_FALSE(transaction_service_client_testonly_build_upgrade_target_from_fields(
+      "", "0", "1.2.3", "4.fc44", "x86_64", "updates", "", "", target, error));
+  REQUIRE(error.find("incomplete upgrade item") != std::string::npos);
+
+  REQUIRE_FALSE(transaction_service_client_testonly_build_upgrade_target_from_fields(
+      "demo", "0", "", "4.fc44", "x86_64", "updates", "", "", target, error));
+  REQUIRE(error.find("incomplete upgrade item") != std::string::npos);
+}
+
+// -----------------------------------------------------------------------------
 // Verify that the client can ask dnf5daemon for an install preview.
 // -----------------------------------------------------------------------------
 TEST_CASE("dnf5daemon client previews install requests", "[dnf5daemon]")
@@ -208,26 +313,31 @@ TEST_CASE("dnf5daemon client previews upgrade-all requests", "[dnf5daemon]")
 }
 
 // -----------------------------------------------------------------------------
-// Verify that the client can list upgrade keys from the resolved Upgrade All preview.
-// A fully updated test container may return an empty list.
+// Verify that the client can list daemon upgrade targets without resolving an Upgrade All preview.
+// A fully updated test system may return an empty list.
 // -----------------------------------------------------------------------------
-TEST_CASE("dnf5daemon client lists upgrade keys", "[dnf5daemon]")
+TEST_CASE("dnf5daemon client lists upgrade targets", "[dnf5daemon]")
 {
   require_dnf5daemon_test_enabled();
   transaction_service_client_reset_for_tests();
 
-  std::vector<std::string> keys;
+  std::vector<TransactionServiceUpgradeTarget> targets;
   std::string error;
 
-  bool listed = transaction_service_client_list_upgrade_keys(keys, error);
+  bool listed = transaction_service_client_list_upgrade_targets(targets, error);
 
   transaction_service_client_reset_for_tests();
 
   INFO(error);
   REQUIRE(listed);
-  for (const auto &key : keys) {
-    REQUIRE_FALSE(key.empty());
-    REQUIRE(key.find('.') != std::string::npos);
+  for (const auto &target : targets) {
+    REQUIRE_FALSE(target.name.empty());
+    REQUIRE_FALSE(target.arch.empty());
+    REQUIRE_FALSE(target.version.empty());
+    REQUIRE_FALSE(target.release.empty());
+    REQUIRE_FALSE(target.nevra.empty());
+    REQUIRE(target.name_arch_key() == target.name + "\n" + target.arch);
+    REQUIRE(target.upgrade_spec() == target.name + "." + target.arch);
   }
 }
 

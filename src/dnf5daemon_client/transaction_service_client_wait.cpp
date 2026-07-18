@@ -318,11 +318,10 @@ transaction_service_client_wait_for_started_transaction_preview(GDBusConnection 
                                                                 TransactionServiceProgressForwarder *progress_forwarder,
                                                                 GCancellable *cancellable,
                                                                 TransactionPreview &preview_out,
-                                                                std::string &error_out,
-                                                                std::vector<std::string> *upgrade_keys_out)
+                                                                std::string &error_out)
 {
   if (transaction_service_client_get_transaction_preview(
-          connection, transaction_path, progress_forwarder, cancellable, preview_out, error_out, upgrade_keys_out)) {
+          connection, transaction_path, progress_forwarder, cancellable, preview_out, error_out)) {
     return true;
   }
 

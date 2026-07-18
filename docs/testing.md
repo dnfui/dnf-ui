@@ -29,6 +29,7 @@ Key files:
 
 - [test/unit/test_backend.cpp](../test/unit/test_backend.cpp)
 - [test/unit/test_config.cpp](../test/unit/test_config.cpp)
+- [test/unit/test_daemon_upgrade_state.cpp](../test/unit/test_daemon_upgrade_state.cpp)
 - [test/unit/test_dnf5daemon_client.cpp](../test/unit/test_dnf5daemon_client.cpp)
 - [test/unit/test_pending_transaction_action_rows.cpp](../test/unit/test_pending_transaction_action_rows.cpp)
 - [test/unit/test_package_query_cache.cpp](../test/unit/test_package_query_cache.cpp)
@@ -48,7 +49,8 @@ These tests protect:
 - pending transaction action row selection for install, upgrade, remove, and reinstall
 - package table CSV export formatting
 - package table column text and sorting behavior
-- dnf5daemon transaction preview parsing and failure handling
+- dnf5daemon transaction preview parsing, upgrade-target parsing, and failure handling
+- daemon upgrade snapshot ownership, stale-state invalidation, and current-target validation
 - transaction history row formatting, action labels, and page cursor behavior
 - transaction request validation
 - offline and cached metadata behavior
@@ -56,8 +58,8 @@ These tests protect:
 ## Daemon smoke tests
 
 The app now talks to DNF5 dnf5daemon for privileged transactions.
-Use Docker and native Fedora testing to verify preview, apply, cancel, failure,
-and session cleanup behavior.
+Use Docker and native Fedora testing to verify upgrade-target listing, preview,
+apply, cancel, failure, and session cleanup behavior.
 
 ## Common commands
 
@@ -200,7 +202,7 @@ MEMCHECK_SMOKE_TIMEOUT=10m make memcheck
 ## Docker notes
 
 - `make dockerrun` starts a system bus in the container and uses dnf5daemon
-- `make dockerdnf5daemontest` runs preview, apply, remove, reinstall, and failure checks against dnf5daemon
+- `make dockerdnf5daemontest` runs upgrade-target listing, preview, apply, remove, reinstall, and failure checks against dnf5daemon
 - Use native Fedora to test the real desktop Polkit prompt
 
 ## Fedora review checks

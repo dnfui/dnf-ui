@@ -28,14 +28,6 @@
 
 namespace dnf_backend_internal {
 
-#ifdef DNFUI_DEBUG_TRACE
-static long long
-elapsed_ms_since(gint64 started_at_us)
-{
-  return static_cast<long long>((g_get_monotonic_time() - started_at_us) / 1000);
-}
-#endif
-
 // -----------------------------------------------------------------------------
 // Bridge a GCancellable into the atomic token used by BaseManager.
 // GLib cancellation is signalled through GCancellable.
@@ -560,106 +552,45 @@ dnf_backend_get_browse_package_rows_interruptible(GCancellable *cancellable)
 }
 
 // -----------------------------------------------------------------------------
-// Query available repo packages that are upgrades to installed packages.
-// The returned rows are the available update candidates so selecting one shows
-// the version that would be installed by an upgrade transaction.
+// Return available package metadata for exact daemon-selected NEVRAs.
+// The caller has already decided which packages are upgrade targets.
+// This helper only adds metadata for those exact package IDs.
 // -----------------------------------------------------------------------------
 std::vector<PackageRow>
-dnf_backend_get_upgradeable_package_rows_interruptible(GCancellable *cancellable)
+dnf_backend_get_available_package_metadata_by_nevras_interruptible(const std::vector<std::string> &nevras,
+                                                                   GCancellable *cancellable)
 {
-#ifdef DNFUI_DEBUG_TRACE
-  const gint64 started_at_us = g_get_monotonic_time();
-  DNFUI_TRACE("Upgradable query start");
-#endif
-
   std::vector<PackageRow> rows;
-  InstalledQueryResult installed;
-  std::set<std::string> protected_names;
-  {
-    try {
-#ifdef DNFUI_DEBUG_TRACE
-      const gint64 base_started_at_us = g_get_monotonic_time();
-#endif
-      auto [base, guard, generation] = acquire_interruptible_base_read(cancellable);
-#ifdef DNFUI_DEBUG_TRACE
-      DNFUI_TRACE("Upgradable query base ready elapsed_ms=%lld total_ms=%lld",
-                  elapsed_ms_since(base_started_at_us),
-                  elapsed_ms_since(started_at_us));
-#endif
+  std::set<std::string> requested_nevras(nevras.begin(), nevras.end());
+  std::set<std::string> returned_nevras;
 
-#ifdef DNFUI_DEBUG_TRACE
-      const gint64 upgrade_query_started_at_us = g_get_monotonic_time();
-#endif
-      libdnf5::rpm::PackageQuery query(base);
-      query.filter_available();
-      query.filter_upgrades();
-      query.filter_latest_evr();
+  if (requested_nevras.empty()) {
+    return rows;
+  }
 
-      // libdnf returns the available package that would satisfy each upgrade.
-      // That is the correct row to show here because the main action installs
-      // this newer package over the currently installed one.
-      std::map<std::string, PackageRow> rows_by_name_arch;
-      for (auto pkg : query) {
-        if (package_query_cancelled(cancellable)) {
-          return {};
-        }
+  try {
+    auto [base, guard, generation] = acquire_interruptible_base_read(cancellable);
 
-        PackageRow row = make_package_row(pkg, PackageRepoCandidateRelation::UNKNOWN);
-        remember_newest_row(rows_by_name_arch, row);
-      }
-#ifdef DNFUI_DEBUG_TRACE
-      DNFUI_TRACE("Upgradable query libdnf candidates=%zu elapsed_ms=%lld total_ms=%lld",
-                  rows_by_name_arch.size(),
-                  elapsed_ms_since(upgrade_query_started_at_us),
-                  elapsed_ms_since(started_at_us));
-#endif
+    libdnf5::rpm::PackageQuery query(base);
+    query.filter_available();
 
-      // Even though visible rows are available update candidates, the UI still needs the installed snapshot.
-      // That snapshot resolves remove and reinstall actions back to the currently installed package.
-#ifdef DNFUI_DEBUG_TRACE
-      const gint64 installed_started_at_us = g_get_monotonic_time();
-#endif
-      installed = collect_installed_rows(base, cancellable, DnfBackendSearchOptions {});
+    for (auto pkg : query) {
       if (package_query_cancelled(cancellable)) {
         return {};
       }
-#ifdef DNFUI_DEBUG_TRACE
-      DNFUI_TRACE("Upgradable query installed snapshot rows=%zu elapsed_ms=%lld total_ms=%lld",
-                  installed.rows.size(),
-                  elapsed_ms_since(installed_started_at_us),
-                  elapsed_ms_since(started_at_us));
-#endif
 
-#ifdef DNFUI_DEBUG_TRACE
-      const gint64 protected_started_at_us = g_get_monotonic_time();
-#endif
-      protected_names = collect_self_protected_package_names(base);
-#ifdef DNFUI_DEBUG_TRACE
-      DNFUI_TRACE("Upgradable query self protection names=%zu elapsed_ms=%lld total_ms=%lld",
-                  protected_names.size(),
-                  elapsed_ms_since(protected_started_at_us),
-                  elapsed_ms_since(started_at_us));
-#endif
-
-      rows.reserve(rows_by_name_arch.size());
-      for (auto &[key, row] : rows_by_name_arch) {
-        rows.push_back(row);
+      PackageRow row = make_package_row(pkg, PackageRepoCandidateRelation::UNKNOWN);
+      if (requested_nevras.count(row.nevra) == 0 || returned_nevras.count(row.nevra) > 0) {
+        continue;
       }
-    } catch (const BaseOperationCancelled &) {
-      return {};
+
+      rows.push_back(row);
+      returned_nevras.insert(row.nevra);
     }
+  } catch (const BaseOperationCancelled &) {
+    return {};
   }
 
-#ifdef DNFUI_DEBUG_TRACE
-  const gint64 publish_started_at_us = g_get_monotonic_time();
-#endif
-  publish_installed_snapshot(std::move(installed), std::move(protected_names));
-#ifdef DNFUI_DEBUG_TRACE
-  DNFUI_TRACE("Upgradable query done rows=%zu publish_ms=%lld total_ms=%lld",
-              rows.size(),
-              elapsed_ms_since(publish_started_at_us),
-              elapsed_ms_since(started_at_us));
-#endif
   return rows;
 }
 

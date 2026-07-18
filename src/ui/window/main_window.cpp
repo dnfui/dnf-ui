@@ -415,7 +415,7 @@ initialize_ui_state(MainWindowUiState *widgets)
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.clear_pending_button), FALSE);
 
   ui_helpers_set_status(widgets->query.status_label, _("Ready."), "gray");
-  package_table_fill_package_view(widgets, {});
+  package_table_fill_package_view(widgets, std::vector<PackageRow> {});
 }
 
 // -----------------------------------------------------------------------------
