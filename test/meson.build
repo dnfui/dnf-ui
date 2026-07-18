@@ -16,6 +16,7 @@ dnfui_tests = executable(
     'unit/test_package_query_cache.cpp',
     'unit/test_pending_transaction_request.cpp',
     'unit/test_search.cpp',
+    'unit/test_daemon_upgrade_state.cpp',
     'unit/test_transaction_request.cpp',
     'unit/test_transaction_history.cpp',
   ) + backend_sources + files(
@@ -24,6 +25,7 @@ dnfui_tests = executable(
     '../src/dnf5daemon_client/transaction_service_client_dbus.cpp',
     '../src/dnf5daemon_client/transaction_service_client.cpp',
     '../src/dnf5daemon_client/transaction_service_client_wait.cpp',
+    '../src/upgrade/daemon_upgrade_state.cpp',
     '../src/ui/transaction/pending_transaction_action_rows.cpp',
     '../src/ui/package_table/package_table_columns.cpp',
     '../src/ui/package_table/package_table_export_csv.cpp',

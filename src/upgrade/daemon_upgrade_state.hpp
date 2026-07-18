@@ -1,0 +1,52 @@
+// -----------------------------------------------------------------------------
+// src/upgrade/daemon_upgrade_state.hpp
+// Shared daemon upgrade snapshot state
+// Stores the latest complete upgrade-target result reported by dnf5daemon.
+// -----------------------------------------------------------------------------
+#pragma once
+
+#include "dnf5daemon_client/transaction_service_client.hpp"
+
+#include <cstdint>
+#include <map>
+#include <mutex>
+#include <string>
+#include <vector>
+
+enum class DaemonUpgradeSnapshotStatus {
+  NOT_LOADED,
+  REFRESHING,
+  READY,
+  STALE,
+  ERROR,
+};
+
+struct DaemonUpgradeSnapshot {
+  uint64_t generation = 0;
+  DaemonUpgradeSnapshotStatus status = DaemonUpgradeSnapshotStatus::NOT_LOADED;
+  std::map<std::string, TransactionServiceUpgradeTarget> targets_by_name_arch;
+  std::string error;
+};
+
+class DaemonUpgradeState {
+  public:
+  static DaemonUpgradeState &instance();
+
+  DaemonUpgradeSnapshot snapshot() const;
+  bool begin_refresh();
+  bool publish_success(const std::vector<TransactionServiceUpgradeTarget> &targets, std::string &error_out);
+  void publish_failure(const std::string &error);
+  void mark_stale();
+
+#ifdef DNFUI_BUILD_TESTS
+  void reset_for_tests();
+#endif
+
+  private:
+  mutable std::mutex mutex;
+  DaemonUpgradeSnapshot current;
+};
+
+// -----------------------------------------------------------------------------
+// EOF
+// -----------------------------------------------------------------------------

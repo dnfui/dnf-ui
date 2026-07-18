@@ -70,6 +70,11 @@ service that resolves previews, applies transactions, handles Polkit
 authorization, and deals with repository signing keys. Anything that can change
 the system must go through dnf5daemon.
 
+The daemon upgrade snapshot in [src/upgrade/daemon_upgrade_state.cpp](../src/upgrade/daemon_upgrade_state.cpp)
+stores the latest complete read-only upgrade-target result reported by dnf5daemon.
+Only a `READY` snapshot may be used as current upgrade information. Refreshing,
+stale, error, and not-loaded states must not be shown as upgrade claims.
+
 The List Upgradable view sits between those two paths. The visible rows are
 built from libdnf5 so the table can show normal package information. Before
 those rows are shown, DNF UI asks dnf5daemon to resolve its native Upgrade All
@@ -157,6 +162,7 @@ The backend implementation is split by responsibility:
 - [src/dnf_backend/dnf_details.cpp](../src/dnf_backend/dnf_details.cpp) formats package details, files, dependencies, and changelog text.
 - [src/dnf_backend/dnf_history.cpp](../src/dnf_backend/dnf_history.cpp) reads read-only transaction history.
 - [src/dnf_backend/dnf_state.cpp](../src/dnf_backend/dnf_state.cpp) keeps installed-package snapshot state and package status classification.
+- [src/upgrade/daemon_upgrade_state.cpp](../src/upgrade/daemon_upgrade_state.cpp) keeps the latest complete daemon upgrade snapshot.
 
 Most query and details calls take serialized read access to the shared Base.
 That access is exclusive inside `BaseManager` because read-only `PackageQuery`

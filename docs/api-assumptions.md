@@ -127,6 +127,7 @@ Maintenance check:
 Code:
 
 - [src/dnf5daemon_client/transaction_service_client_dbus.cpp](../src/dnf5daemon_client/transaction_service_client_dbus.cpp)
+- [src/upgrade/daemon_upgrade_state.cpp](../src/upgrade/daemon_upgrade_state.cpp)
 
 Assumption:
 
@@ -143,12 +144,17 @@ Why this matters:
 - The daemon-owned upgrade refactor needs a read-only daemon snapshot of upgrade targets. This snapshot should come from dnf5daemon's package-list API, not from a resolved Upgrade All transaction preview.
 - DNF UI keeps daemon upgrade specs and internal package identity separate. `name.arch` is the daemon upgrade spec. The internal package identity uses package name and architecture as separate values.
 - Normal `nevra` is the application-facing package ID because it matches libdnf5 `PackageRow::nevra`. `full_nevra` is kept separately for callers that need the daemon's full epoch form.
+- The shared daemon upgrade state stores complete package-list results by package name and architecture. It does not fetch daemon data itself.
 - A successful empty result means no daemon-reported upgrade targets. A failed request means upgrade information is unavailable. Those states must not be treated as the same thing.
+- The shared daemon upgrade state exposes status separately from target rows. Only `READY` means the target map can be used as current upgrade information.
+- Daemon upgrade results may only be published while a refresh is active. If package or repository state becomes stale before a daemon call returns, that old result must not become the current snapshot.
+- If dnf5daemon returns exact duplicate upgrade targets for the same package identity, DNF UI collapses them. If it returns conflicting targets for the same package identity, DNF UI rejects the whole snapshot instead of choosing one.
 - The final transaction preview still comes from dnf5daemon resolve before apply. The package-list API is the upgrade-state snapshot, not permission to skip preview.
 
 Tests:
 
 - `dnf5daemon client lists upgrade targets`
+- daemon upgrade state unit tests
 
 Maintenance check:
 

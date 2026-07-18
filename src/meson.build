@@ -40,6 +40,7 @@ app_sources = files(
   'dnf5daemon_client/transaction_service_client_dbus.cpp',
   'dnf5daemon_client/transaction_service_client.cpp',
   'dnf5daemon_client/transaction_service_client_wait.cpp',
+  'upgrade/daemon_upgrade_state.cpp',
   'ui/common/ui_helpers.cpp',
   'ui/common/widgets.cpp',
 )
