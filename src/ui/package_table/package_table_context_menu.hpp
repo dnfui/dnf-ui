@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------------
 #pragma once
 
-#include "dnf_backend/dnf_backend.hpp"
+#include "ui/package_table/package_table_view.hpp"
 
 #include <functional>
 #include <string>
@@ -19,7 +19,7 @@ struct MainWindowUiState;
 // -----------------------------------------------------------------------------
 void package_table_show_context_menu(GtkWidget *anchor,
                                      MainWindowUiState *widgets,
-                                     const PackageRow &row,
+                                     const PackageTableRow &row,
                                      double x,
                                      double y,
                                      const std::function<bool(const std::string &)> &select_row);

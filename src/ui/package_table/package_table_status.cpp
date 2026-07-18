@@ -46,18 +46,19 @@ package_table_status_rank(PackageInstallState state)
 // Build the hover text for one Status cell.
 // -----------------------------------------------------------------------------
 static std::string
-package_table_status_tooltip_text(const PackageRow &row)
+package_table_status_tooltip_text(const PackageTableRow &row)
 {
-  PackageInstallState state = dnf_backend_get_package_install_state(row);
+  PackageInstallState state = row.upgrade_target.has_value() ? PackageInstallState::UPGRADEABLE
+                                                             : dnf_backend_get_package_install_state(row.row);
   if (state == PackageInstallState::AVAILABLE) {
     return {};
   }
 
   std::string tooltip = package_table_status_text(state);
-  if (row.install_reason != PackageInstallReason::UNKNOWN) {
+  if (row.row.install_reason != PackageInstallReason::UNKNOWN) {
     tooltip += "\n";
     tooltip += _("Install reason: ");
-    tooltip += dnf_backend_install_reason_to_string(row.install_reason);
+    tooltip += dnf_backend_install_reason_to_string(row.row.install_reason);
   }
 
   return tooltip;
@@ -110,22 +111,26 @@ pending_css_class(MainWindowUiState *widgets, const std::string &nevra, const st
 // Return the pending action CSS class for one package row.
 // -----------------------------------------------------------------------------
 const char *
-package_table_pending_action_css_class(MainWindowUiState *widgets, const PackageRow &row)
+package_table_pending_action_css_class(MainWindowUiState *widgets, const PackageTableRow &row)
 {
-  PackageInstallState install_state = dnf_backend_get_package_install_state(row);
+  PackageInstallState install_state = row.upgrade_target.has_value() ? PackageInstallState::UPGRADEABLE
+                                                                     : dnf_backend_get_package_install_state(row.row);
   PendingTransactionActionRows action_rows;
   if (install_state == PackageInstallState::UPGRADEABLE) {
-    action_rows = pending_transaction_action_rows_for_selection(row);
+    action_rows = pending_transaction_action_rows_for_selection(
+        row.row, row.upgrade_target ? &row.upgrade_target.value() : nullptr, row.upgrade_generation);
   }
 
   std::string alternate_nevra;
-  if (action_rows.has_install_row && action_rows.install_row.nevra != row.nevra) {
+  if (row.upgrade_target.has_value() && row.upgrade_target->nevra != row.row.nevra) {
+    alternate_nevra = row.upgrade_target->nevra;
+  } else if (action_rows.has_install_row && action_rows.install_row.nevra != row.row.nevra) {
     alternate_nevra = action_rows.install_row.nevra;
-  } else if (action_rows.has_installed_row && action_rows.installed_row.nevra != row.nevra) {
+  } else if (action_rows.has_installed_row && action_rows.installed_row.nevra != row.row.nevra) {
     alternate_nevra = action_rows.installed_row.nevra;
   }
 
-  return pending_css_class(widgets, row.nevra, alternate_nevra);
+  return pending_css_class(widgets, row.row.nevra, alternate_nevra);
 }
 
 // -----------------------------------------------------------------------------
@@ -199,21 +204,25 @@ package_table_clear_pending_action_css(GtkWidget *cell)
 // Apply text, CSS, and tooltip for one Status cell.
 // -----------------------------------------------------------------------------
 void
-package_table_update_status_label(GtkWidget *cell, MainWindowUiState *widgets, const PackageRow &row)
+package_table_update_status_label(GtkWidget *cell, MainWindowUiState *widgets, const PackageTableRow &row)
 {
-  PackageInstallState install_state = dnf_backend_get_package_install_state(row);
+  PackageInstallState install_state = row.upgrade_target.has_value() ? PackageInstallState::UPGRADEABLE
+                                                                     : dnf_backend_get_package_install_state(row.row);
   PendingTransactionActionRows action_rows;
   if (install_state == PackageInstallState::UPGRADEABLE) {
-    action_rows = pending_transaction_action_rows_for_selection(row);
+    action_rows = pending_transaction_action_rows_for_selection(
+        row.row, row.upgrade_target ? &row.upgrade_target.value() : nullptr, row.upgrade_generation);
   }
 
   const char *text = package_table_status_text(install_state);
   const char *icon_name = status_icon_name(install_state);
   for (const auto &a : widgets->transaction.actions) {
-    bool action_matches_visible_row = a.nevra == row.nevra;
+    bool action_matches_visible_row = a.nevra == row.row.nevra;
+    bool action_matches_target = row.upgrade_target.has_value() && a.nevra == row.upgrade_target->nevra;
     bool action_matches_install_row = action_rows.has_install_row && a.nevra == action_rows.install_row.nevra;
     bool action_matches_installed_row = action_rows.has_installed_row && a.nevra == action_rows.installed_row.nevra;
-    if (action_matches_visible_row || action_matches_install_row || action_matches_installed_row) {
+    if (action_matches_visible_row || action_matches_target || action_matches_install_row ||
+        action_matches_installed_row) {
       switch (a.type) {
       case PendingAction::INSTALL:
       case PendingAction::UPGRADE:

@@ -230,7 +230,7 @@ package_query_on_clear_button_clicked(GtkButton *, gpointer user_data)
   widgets->query_state.preserve_selection_on_reload = false;
   widgets->query_state.reload_selected_nevra.clear();
   widgets->results.selected_nevra.clear();
-  package_table_fill_package_view(widgets, {});
+  package_table_fill_package_view(widgets, std::vector<PackageRow> {});
   package_query_clear_duration_label(widgets);
 
   // Reset status labels and package actions.

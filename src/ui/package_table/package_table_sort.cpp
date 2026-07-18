@@ -26,6 +26,9 @@ package_table_column_text(const PackageItem &item, PackageColumnKind kind)
     return item.row.version;
   }
   case PackageColumnKind::UPDATE_VERSION:
+    if (item.upgrade_target.has_value()) {
+      return item.upgrade_target->version;
+    }
     if (dnf_backend_get_package_install_state(item.row) == PackageInstallState::UPGRADEABLE) {
       if (!item.row.repo_candidate_version.empty()) {
         return item.row.repo_candidate_version;
@@ -42,6 +45,9 @@ package_table_column_text(const PackageItem &item, PackageColumnKind kind)
     return item.row.release;
   }
   case PackageColumnKind::UPDATE_RELEASE:
+    if (item.upgrade_target.has_value()) {
+      return item.upgrade_target->release;
+    }
     if (dnf_backend_get_package_install_state(item.row) == PackageInstallState::UPGRADEABLE) {
       if (!item.row.repo_candidate_release.empty()) {
         return item.row.repo_candidate_release;
@@ -56,6 +62,9 @@ package_table_column_text(const PackageItem &item, PackageColumnKind kind)
     // A repository name such as "fedora" means the row is available from that repo.
     // "@System" means the row comes from the local installed rpmdb.
     // For upgradable rows, show the repo that provides the update candidate.
+    if (item.upgrade_target.has_value()) {
+      return item.upgrade_target->repo_id;
+    }
     if (dnf_backend_get_package_install_state(item.row) == PackageInstallState::UPGRADEABLE) {
       if (!item.row.repo_candidate_repo.empty()) {
         return item.row.repo_candidate_repo;

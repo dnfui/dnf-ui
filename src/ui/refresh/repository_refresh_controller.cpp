@@ -139,7 +139,7 @@ repository_refresh_clear_stale_upgradeable_table(MainWindowUiState *widgets)
 
   widgets->query_state.preserve_selection_on_reload = false;
   widgets->query_state.reload_selected_nevra.clear();
-  package_table_fill_package_view(widgets, {});
+  package_table_fill_package_view(widgets, std::vector<PackageRow> {});
   package_details_reset_details_view(widgets);
   return true;
 }

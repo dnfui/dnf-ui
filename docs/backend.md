@@ -80,9 +80,9 @@ load repositories again.
 
 After refresh, normal package views are reloaded from the new Base. If
 List Upgradable is visible, the table is cleared instead of left on screen,
-because those rows came from the previous metadata generation. The app asks the
-user to press List Upgradable again so the daemon-checked upgrade list is loaded
-explicitly.
+because those rows came from the previous daemon upgrade snapshot. The app asks
+the user to press List Upgradable again so a fresh daemon-authoritative upgrade
+list is loaded explicitly.
 
 If the daemon cache directory does not exist yet, the clean step is treated as
 already clean. The refresh still resets the daemon session and loads repositories.
@@ -124,7 +124,7 @@ The main query paths are:
 
 - `dnf_backend_get_installed_package_rows_interruptible`
 - `dnf_backend_get_browse_package_rows_interruptible`
-- `dnf_backend_get_upgradeable_package_rows_interruptible`
+- `dnf_backend_get_available_package_metadata_by_nevras_interruptible`
 - `dnf_backend_search_package_rows_interruptible`
 - `dnf_backend_get_installed_package_rows_by_nevra`
 - `dnf_backend_get_available_package_rows_by_nevra`
@@ -135,9 +135,9 @@ architecture pair.
 
 Normal search is substring based. If the search term contains `*` or `?`, normal search treats it as a wildcard pattern. Exact search remains literal.
 
-The upgradable backend query returns repository candidates from libdnf5. Before the UI shows the List Upgradable result, it checks those candidates against the resolved dnf5daemon Upgrade All preview. That check uses package name and architecture, because the exact NEVRA shown by the daemon preview can differ from the candidate row shown by libdnf5.
+The List Upgradable view uses dnf5daemon as the authority for which upgrades exist. The worker first loads the daemon upgrade targets, stores them in the shared daemon upgrade snapshot, and then asks libdnf5 only for matching package metadata. Missing metadata does not hide a daemon-reported upgrade. In that case the table keeps a basic row built from the daemon target.
 
-The check is deliberately not a strict equality check. libdnf5 owns the table rows because it provides the package details the UI needs. dnf5daemon owns the transaction decision because it is the service that will apply the upgrade. DNF UI filters out libdnf5 rows that dnf5daemon does not resolve, but it does not fail just because dnf5daemon reports an extra upgrade key that the current libdnf5 row query did not return. If libdnf5 reports no upgrade rows while dnf5daemon resolves upgrades, the app reports that mismatch instead of showing a false empty list.
+This keeps the list honest: libdnf5 can enrich daemon-selected upgrade rows, but it no longer decides which rows appear in List Upgradable.
 
 ## Installed snapshot
 
@@ -177,7 +177,7 @@ queries do not publish partial installed state.
 
 Exact installed rows prefer the repository-candidate relation recorded on the row. Available rows fall back to the installed snapshot so the table can show when repository metadata contains a newer candidate without duplicating rows.
 
-The generic Status column is local package metadata. It can say that a newer package exists in enabled repository metadata, but it is not a transaction promise. The List Upgradable view is stricter: it shows only package name and architecture pairs that are present in the resolved dnf5daemon Upgrade All preview. Transaction preview and apply always go through dnf5daemon.
+The generic Status column is local package metadata. It can say that a newer package exists in enabled repository metadata, but it is not a transaction promise. The List Upgradable view is stricter: it shows the current daemon upgrade targets and keeps the daemon target on the table row so the update columns and Mark for Upgrade use the same snapshot. Transaction preview and apply always go through dnf5daemon.
 
 ## Self protection
 

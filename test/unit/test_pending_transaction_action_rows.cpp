@@ -5,8 +5,10 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "test_utils.hpp"
+#include "upgrade/daemon_upgrade_state.hpp"
 #include "ui/transaction/pending_transaction_action_rows.hpp"
 
+#include <optional>
 #include <vector>
 
 // -----------------------------------------------------------------------------
@@ -22,6 +24,27 @@ make_test_package_row(const char *nevra, const char *name, const char *version, 
   row.release = release;
   row.arch = arch;
   return row;
+}
+
+// -----------------------------------------------------------------------------
+// Build one daemon upgrade target for resolver tests.
+// -----------------------------------------------------------------------------
+static TransactionServiceUpgradeTarget
+make_test_upgrade_target(const char *nevra,
+                         const char *name,
+                         const char *version,
+                         const char *release,
+                         const char *arch)
+{
+  TransactionServiceUpgradeTarget target;
+  target.name = name;
+  target.arch = arch;
+  target.version = version;
+  target.release = release;
+  target.nevra = nevra;
+  target.full_nevra = nevra;
+  target.repo_id = "updates";
+  return target;
 }
 
 // -----------------------------------------------------------------------------
@@ -107,6 +130,108 @@ TEST_CASE("Pending transaction action rows resolve upgrade from available update
   REQUIRE(rows.has_installed_row);
   REQUIRE(rows.installed_row.nevra == installed.nevra);
   REQUIRE(rows.can_try_reinstall);
+}
+
+// -----------------------------------------------------------------------------
+// Verify that daemon upgrade targets are used only while their snapshot is current.
+// -----------------------------------------------------------------------------
+TEST_CASE("Pending transaction action rows resolve daemon upgrade target")
+{
+  reset_backend_globals();
+  DaemonUpgradeState &state = DaemonUpgradeState::instance();
+  state.reset_for_tests();
+
+  PackageRow installed = make_test_package_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
+  PackageRow update = make_test_package_row("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64");
+  TransactionServiceUpgradeTarget target = make_test_upgrade_target("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64");
+
+  dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
+
+  std::optional<DaemonUpgradeRefreshId> refresh_id = state.begin_refresh();
+  REQUIRE(refresh_id.has_value());
+
+  std::string error;
+  REQUIRE(state.publish_success(refresh_id.value(), { target }, error));
+  DaemonUpgradeSnapshot snapshot = state.snapshot();
+
+  PendingTransactionActionRows rows =
+      pending_transaction_action_rows_for_selection(update, &target, snapshot.generation);
+
+  REQUIRE(rows.state == PackageInstallState::UPGRADEABLE);
+  REQUIRE(rows.install_is_upgrade);
+  REQUIRE(rows.uses_daemon_upgrade_target);
+  REQUIRE(rows.has_install_row);
+  REQUIRE(rows.install_row.nevra == target.nevra);
+  REQUIRE(rows.upgrade_spec == "demo.x86_64");
+  REQUIRE(rows.has_installed_row);
+  REQUIRE(rows.installed_row.nevra == installed.nevra);
+}
+
+// -----------------------------------------------------------------------------
+// Verify that stale daemon upgrade targets cannot create pending actions.
+// -----------------------------------------------------------------------------
+TEST_CASE("Pending transaction action rows reject stale daemon upgrade target")
+{
+  reset_backend_globals();
+  DaemonUpgradeState &state = DaemonUpgradeState::instance();
+  state.reset_for_tests();
+
+  PackageRow installed = make_test_package_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
+  PackageRow update = make_test_package_row("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64");
+  TransactionServiceUpgradeTarget target = make_test_upgrade_target("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64");
+
+  dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
+
+  std::optional<DaemonUpgradeRefreshId> refresh_id = state.begin_refresh();
+  REQUIRE(refresh_id.has_value());
+
+  std::string error;
+  REQUIRE(state.publish_success(refresh_id.value(), { target }, error));
+  DaemonUpgradeSnapshot snapshot = state.snapshot();
+  state.mark_stale();
+
+  PendingTransactionActionRows rows =
+      pending_transaction_action_rows_for_selection(update, &target, snapshot.generation);
+
+  REQUIRE(rows.state == PackageInstallState::UPGRADEABLE);
+  REQUIRE(rows.install_is_upgrade);
+  REQUIRE_FALSE(rows.uses_daemon_upgrade_target);
+  REQUIRE_FALSE(rows.has_install_row);
+
+  std::vector<PendingAction> actions;
+  REQUIRE_FALSE(pending_transaction_mark_upgrade_action_for_row(actions, update, &target, snapshot.generation));
+  REQUIRE(actions.empty());
+}
+
+// -----------------------------------------------------------------------------
+// Verify that daemon upgrade marking uses the daemon target ID and transaction spec.
+// -----------------------------------------------------------------------------
+TEST_CASE("Pending transaction upgrade marking uses daemon target")
+{
+  reset_backend_globals();
+  DaemonUpgradeState &state = DaemonUpgradeState::instance();
+  state.reset_for_tests();
+
+  PackageRow installed = make_test_package_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
+  PackageRow update_metadata = make_test_package_row("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64");
+  TransactionServiceUpgradeTarget target = make_test_upgrade_target("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64");
+
+  dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
+
+  std::optional<DaemonUpgradeRefreshId> refresh_id = state.begin_refresh();
+  REQUIRE(refresh_id.has_value());
+
+  std::string error;
+  REQUIRE(state.publish_success(refresh_id.value(), { target }, error));
+  DaemonUpgradeSnapshot snapshot = state.snapshot();
+
+  std::vector<PendingAction> actions;
+  REQUIRE(pending_transaction_mark_upgrade_action_for_row(actions, update_metadata, &target, snapshot.generation));
+
+  REQUIRE(actions.size() == 1);
+  REQUIRE(actions[0].type == PendingAction::UPGRADE);
+  REQUIRE(actions[0].nevra == target.nevra);
+  REQUIRE(actions[0].transaction_spec == target.upgrade_spec());
 }
 
 // -----------------------------------------------------------------------------

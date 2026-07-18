@@ -8,6 +8,8 @@
 // -----------------------------------------------------------------------------
 #include "ui/transaction/pending_transaction_action_rows.hpp"
 
+#include "upgrade/daemon_upgrade_state.hpp"
+
 namespace {
 
 // -----------------------------------------------------------------------------
@@ -57,6 +59,26 @@ remove_pending_upgrade_by_transaction_spec(std::vector<PendingAction> &actions, 
   }
 }
 
+// -----------------------------------------------------------------------------
+// Return true when a displayed daemon upgrade target still matches the shared snapshot.
+// -----------------------------------------------------------------------------
+bool
+daemon_upgrade_target_is_current(const TransactionServiceUpgradeTarget &target, uint64_t upgrade_generation)
+{
+  DaemonUpgradeSnapshot snapshot = DaemonUpgradeState::instance().snapshot();
+  if (snapshot.status != DaemonUpgradeSnapshotStatus::READY || snapshot.generation != upgrade_generation) {
+    return false;
+  }
+
+  auto it = snapshot.targets_by_name_arch.find(target.name_arch_key());
+  if (it == snapshot.targets_by_name_arch.end()) {
+    return false;
+  }
+
+  return it->second.nevra == target.nevra && it->second.full_nevra == target.full_nevra &&
+      it->second.upgrade_spec() == target.upgrade_spec();
+}
+
 } // namespace
 
 // -----------------------------------------------------------------------------
@@ -65,8 +87,19 @@ remove_pending_upgrade_by_transaction_spec(std::vector<PendingAction> &actions, 
 PendingTransactionActionRows
 pending_transaction_action_rows_for_selection(const PackageRow &selected)
 {
+  return pending_transaction_action_rows_for_selection(selected, nullptr, 0);
+}
+
+// -----------------------------------------------------------------------------
+// Resolve package IDs for action buttons without running libdnf queries.
+// -----------------------------------------------------------------------------
+PendingTransactionActionRows
+pending_transaction_action_rows_for_selection(const PackageRow &selected,
+                                              const TransactionServiceUpgradeTarget *upgrade_target,
+                                              uint64_t upgrade_generation)
+{
   PendingTransactionActionRows rows;
-  rows.state = dnf_backend_get_package_install_state(selected);
+  rows.state = upgrade_target ? PackageInstallState::UPGRADEABLE : dnf_backend_get_package_install_state(selected);
   rows.install_is_upgrade = rows.state == PackageInstallState::UPGRADEABLE;
   rows.install_row = selected;
   rows.installed_row = selected;
@@ -76,6 +109,16 @@ pending_transaction_action_rows_for_selection(const PackageRow &selected)
 
   // Upgrade actions need the available package ID, not always the visible row ID.
   if (rows.install_is_upgrade) {
+    if (upgrade_target) {
+      rows.has_install_row = daemon_upgrade_target_is_current(*upgrade_target, upgrade_generation);
+      rows.uses_daemon_upgrade_target = rows.has_install_row;
+      rows.install_row.nevra = upgrade_target->nevra.empty() ? selected.nevra : upgrade_target->nevra;
+      rows.upgrade_spec = upgrade_target->upgrade_spec();
+      rows.has_installed_row = dnf_backend_get_installed_package_row_by_name_arch(selected, rows.installed_row);
+      rows.can_try_reinstall = rows.has_installed_row;
+      return rows;
+    }
+
     if (selected_is_installed) {
       // Installed-list rows store the matching available upgrade package ID when the backend annotates them.
       rows.has_install_row = !selected.repo_candidate_nevra.empty();
@@ -109,7 +152,20 @@ pending_transaction_action_rows_for_selection(const PackageRow &selected)
 bool
 pending_transaction_mark_upgrade_action_for_row(std::vector<PendingAction> &actions, const PackageRow &row)
 {
-  PendingTransactionActionRows action_rows = pending_transaction_action_rows_for_selection(row);
+  return pending_transaction_mark_upgrade_action_for_row(actions, row, nullptr, 0);
+}
+
+// -----------------------------------------------------------------------------
+// Add or replace one pending upgrade action from a package table row.
+// -----------------------------------------------------------------------------
+bool
+pending_transaction_mark_upgrade_action_for_row(std::vector<PendingAction> &actions,
+                                                const PackageRow &row,
+                                                const TransactionServiceUpgradeTarget *upgrade_target,
+                                                uint64_t upgrade_generation)
+{
+  PendingTransactionActionRows action_rows =
+      pending_transaction_action_rows_for_selection(row, upgrade_target, upgrade_generation);
   if (!action_rows.install_is_upgrade || !action_rows.has_install_row) {
     return false;
   }

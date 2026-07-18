@@ -188,5 +188,32 @@ TEST_CASE("Package table Repo column uses candidate repo for update rows")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that daemon upgrade rows use daemon target values for update columns.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package table update columns use daemon upgrade target")
+{
+  reset_backend_globals();
+
+  PackageItem item {};
+  item.row = make_table_test_row("demo-1.2.4-1.fc44.x86_64", "demo", "1.2.4", "1.fc44", "x86_64");
+  item.row.repo = "metadata-repo";
+
+  TransactionServiceUpgradeTarget target;
+  target.name = "demo";
+  target.arch = "x86_64";
+  target.version = "1.2.5";
+  target.release = "2.fc44";
+  target.nevra = "demo-1.2.5-2.fc44.x86_64";
+  target.full_nevra = target.nevra;
+  target.repo_id = "daemon-repo";
+
+  item.upgrade_target = target;
+
+  REQUIRE(package_table_column_text(item, PackageColumnKind::UPDATE_VERSION) == "1.2.5");
+  REQUIRE(package_table_column_text(item, PackageColumnKind::UPDATE_RELEASE) == "2.fc44");
+  REQUIRE(package_table_column_text(item, PackageColumnKind::REPO) == "daemon-repo");
+}
+
+// -----------------------------------------------------------------------------
 // EOF
 // -----------------------------------------------------------------------------

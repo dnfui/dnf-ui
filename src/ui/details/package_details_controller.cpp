@@ -244,7 +244,17 @@ package_details_cancel_active_load(MainWindowUiState *widgets)
 static void
 update_selected_package_actions(MainWindowUiState *widgets, const PackageRow &selected)
 {
-  PendingTransactionActionRows action_rows = pending_transaction_action_rows_for_selection(selected);
+  PackageTableRow table_row;
+  table_row.row = selected;
+  PackageTableRow current_selection;
+  if (package_table_get_selected_package(widgets, current_selection) && current_selection.row.nevra == selected.nevra) {
+    table_row = current_selection;
+  }
+
+  PendingTransactionActionRows action_rows = pending_transaction_action_rows_for_selection(
+      table_row.row,
+      table_row.upgrade_target ? &table_row.upgrade_target.value() : nullptr,
+      table_row.upgrade_generation);
 
   // Install and upgrade use the available package row.
   // Remove and reinstall use the installed package row.
@@ -536,9 +546,16 @@ package_details_load_selected_package_info(MainWindowUiState *widgets, const Pac
   widgets->results.package_details_cancellable = G_CANCELLABLE(g_object_ref(c));
 
   // Pass selected row state to the background task.
+  PackageInstallState selected_state = dnf_backend_get_package_install_state(selected);
+  PackageTableRow current_selection;
+  if (package_table_get_selected_package(widgets, current_selection) && current_selection.row.nevra == selected.nevra &&
+      current_selection.upgrade_target.has_value()) {
+    selected_state = PackageInstallState::UPGRADEABLE;
+  }
+
   InfoTaskData *td = static_cast<InfoTaskData *>(g_malloc0(sizeof *td));
   td->nevra = g_strdup(selected.nevra.c_str());
-  td->status_text = g_strdup(package_table_status_text(dnf_backend_get_package_install_state(selected)));
+  td->status_text = g_strdup(package_table_status_text(selected_state));
   td->generation = BaseManager::instance().current_generation();
   g_task_set_task_data(task, td, info_task_data_free);
 

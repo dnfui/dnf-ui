@@ -60,14 +60,16 @@ pending_transaction_on_install_button_clicked(GtkButton *, gpointer user_data)
   }
 
   // Read the selected package from the current package table.
-  PackageRow pkg;
-  if (!package_table_get_selected_package_row(widgets, pkg)) {
+  PackageTableRow selected;
+  if (!package_table_get_selected_package(widgets, selected)) {
     ui_helpers_set_status(widgets->query.status_label, _("No package selected."), "gray");
     return;
   }
+  PackageRow pkg = selected.row;
 
   // Resolve the package ID to queue before adding an install or upgrade action.
-  PendingTransactionActionRows action_rows = pending_transaction_action_rows_for_selection(pkg);
+  PendingTransactionActionRows action_rows = pending_transaction_action_rows_for_selection(
+      pkg, selected.upgrade_target ? &selected.upgrade_target.value() : nullptr, selected.upgrade_generation);
   if (!action_rows.has_install_row) {
     ui_helpers_set_status(widgets->query.status_label, _("No install or upgrade action is available."), "gray");
     return;
@@ -92,7 +94,11 @@ pending_transaction_on_install_button_clicked(GtkButton *, gpointer user_data)
     ui_helpers_set_status(widgets->query.status_label, (std::string(_("Unmarked: ")) + pkg.name).c_str(), "gray");
   } else {
     if (action_type == PendingAction::UPGRADE) {
-      pending_transaction_mark_upgrade_action_for_row(widgets->transaction.actions, pkg);
+      pending_transaction_mark_upgrade_action_for_row(widgets->transaction.actions,
+                                                      pkg,
+                                                      selected.upgrade_target ? &selected.upgrade_target.value()
+                                                                              : nullptr,
+                                                      selected.upgrade_generation);
     } else {
       // Replace any related pending action with install.
       pending_transaction_remove_action(widgets, pkg.nevra);
@@ -267,10 +273,13 @@ pending_transaction_on_mark_listed_upgrades_button_clicked(GtkButton *, gpointer
     return;
   }
 
-  std::vector<PackageRow> rows = package_table_get_displayed_package_rows(widgets);
+  std::vector<PackageTableRow> rows = package_table_get_displayed_packages(widgets);
   size_t marked_count = 0;
   for (const auto &row : rows) {
-    if (pending_transaction_mark_upgrade_action_for_row(widgets->transaction.actions, row)) {
+    if (pending_transaction_mark_upgrade_action_for_row(widgets->transaction.actions,
+                                                        row.row,
+                                                        row.upgrade_target ? &row.upgrade_target.value() : nullptr,
+                                                        row.upgrade_generation)) {
       ++marked_count;
     }
   }

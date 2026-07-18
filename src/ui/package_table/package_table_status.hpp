@@ -7,6 +7,7 @@
 #pragma once
 
 #include "dnf_backend/dnf_backend.hpp"
+#include "ui/package_table/package_table_view.hpp"
 
 #include <gtk/gtk.h>
 
@@ -29,13 +30,13 @@ void package_table_clear_status_css(GtkWidget *cell);
 // -----------------------------------------------------------------------------
 void package_table_clear_pending_action_css(GtkWidget *cell);
 // -----------------------------------------------------------------------------
-// Return the pending action CSS class for one package row.
+// Return the pending action CSS class for one package table row.
 // -----------------------------------------------------------------------------
-const char *package_table_pending_action_css_class(MainWindowUiState *widgets, const PackageRow &row);
+const char *package_table_pending_action_css_class(MainWindowUiState *widgets, const PackageTableRow &row);
 // -----------------------------------------------------------------------------
-// Update one package Status cell for the current row state.
+// Update one package Status cell for the current table row state.
 // -----------------------------------------------------------------------------
-void package_table_update_status_label(GtkWidget *cell, MainWindowUiState *widgets, const PackageRow &row);
+void package_table_update_status_label(GtkWidget *cell, MainWindowUiState *widgets, const PackageTableRow &row);
 
 // -----------------------------------------------------------------------------
 // EOF
