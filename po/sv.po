@@ -761,6 +761,9 @@ msgstr "dnf5daemon returnerade ett transaktionsresultat som inte stöds."
 msgid "dnf5daemon returned an incomplete package item."
 msgstr "dnf5daemon returnerade ett ofullständigt paketobjekt."
 
+msgid "dnf5daemon returned an incomplete upgrade item."
+msgstr "dnf5daemon returnerade ett ofullständigt uppgraderingsobjekt."
+
 msgid "No transaction changes were returned."
 msgstr "Inga transaktionsändringar returnerades."
 
@@ -769,6 +772,9 @@ msgstr "Kunde inte verifiera uppgraderbara paket."
 
 msgid "Unable to list upgradable packages with dnf5daemon."
 msgstr "Kunde inte lista uppgraderbara paket med dnf5daemon."
+
+msgid "Could not list upgrade targets from dnf5daemon."
+msgstr "Kunde inte lista uppgraderingsmål från dnf5daemon."
 
 msgid ""
 "dnf5daemon reports upgrades that DNF UI could not load from repository metadata. "

@@ -69,6 +69,11 @@ bool transaction_service_client_confirm_key(GDBusConnection *connection,
                                             bool confirmed,
                                             std::string &error_out);
 
+bool transaction_service_client_list_daemon_upgrade_targets(GDBusConnection *connection,
+                                                            GCancellable *cancellable,
+                                                            std::vector<TransactionServiceUpgradeTarget> &targets_out,
+                                                            std::string &error_out);
+
 // -----------------------------------------------------------------------------
 // Wait and progress signal handling.
 // -----------------------------------------------------------------------------

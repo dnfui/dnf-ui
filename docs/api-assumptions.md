@@ -122,6 +122,36 @@ Maintenance check:
 
 - If upgrade-all behavior changes, verify `goal.hpp`, then test preview and apply in Docker before any native system test.
 
+## dnf5daemon upgrade target listing
+
+Code:
+
+- [src/dnf5daemon_client/transaction_service_client_dbus.cpp](../src/dnf5daemon_client/transaction_service_client_dbus.cpp)
+
+Assumption:
+
+- dnf5daemon `org.rpm.dnf.v0.rpm.Rpm.list` supports `scope="upgrades"` and `latest-limit=1`.
+- The requested package attributes `name`, `epoch`, `version`, `release`, `arch`, `repo_id`, `nevra`, and `full_nevra` are supported package-list attributes.
+
+Source:
+
+- DNF5 dnf5daemon D-Bus API
+- DNF5 dnf5daemon example code uses `Rpm.list` with `scope="upgrades"` and `latest-limit=1` to print available upgrades.
+
+Why this matters:
+
+- The daemon-owned upgrade refactor needs a read-only daemon snapshot of upgrade targets. This snapshot should come from dnf5daemon's package-list API, not from a resolved Upgrade All transaction preview.
+- A successful empty result means no daemon-reported upgrade targets. A failed request means upgrade information is unavailable. Those states must not be treated as the same thing.
+- The final transaction preview still comes from dnf5daemon resolve before apply. The package-list API is the upgrade-state snapshot, not permission to skip preview.
+
+Tests:
+
+- `dnf5daemon client lists upgrade targets`
+
+Maintenance check:
+
+- If dnf5daemon package-list fields or scope names change, update the target parser and rerun the dnf5daemon client tests in Docker.
+
 ## Shared libdnf5 Base access
 
 Code:

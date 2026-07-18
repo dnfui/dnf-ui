@@ -14,6 +14,21 @@ typedef struct _GCancellable GCancellable;
 struct TransactionRequest;
 struct TransactionPreview;
 
+struct TransactionServiceUpgradeTarget {
+  std::string name;
+  std::string arch;
+  std::string epoch;
+  std::string version;
+  std::string release;
+  std::string nevra;
+  std::string repo_id;
+
+  std::string package_key() const
+  {
+    return name + "." + arch;
+  }
+};
+
 struct TransactionKeyImportRequest {
   std::string key_id;
   std::vector<std::string> user_ids;
@@ -48,6 +63,14 @@ transaction_service_client_preview_upgrade_all_request(TransactionPreview &previ
 bool transaction_service_client_list_upgrade_keys(std::vector<std::string> &keys_out,
                                                   std::string &error_out,
                                                   GCancellable *cancellable = nullptr);
+
+// -----------------------------------------------------------------------------
+// List upgrade targets directly from dnf5daemon's package-list API.
+// This is a read-only snapshot of daemon upgrade state, not a transaction preview.
+// -----------------------------------------------------------------------------
+bool transaction_service_client_list_upgrade_targets(std::vector<TransactionServiceUpgradeTarget> &targets_out,
+                                                     std::string &error_out,
+                                                     GCancellable *cancellable = nullptr);
 
 // -----------------------------------------------------------------------------
 // Refresh dnf5daemon repository metadata for the manual Refresh Repositories action.

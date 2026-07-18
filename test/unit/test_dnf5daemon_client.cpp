@@ -232,6 +232,34 @@ TEST_CASE("dnf5daemon client lists upgrade keys", "[dnf5daemon]")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that the client can list daemon upgrade targets without resolving an Upgrade All preview.
+// A fully updated test system may return an empty list.
+// -----------------------------------------------------------------------------
+TEST_CASE("dnf5daemon client lists upgrade targets", "[dnf5daemon]")
+{
+  require_dnf5daemon_test_enabled();
+  transaction_service_client_reset_for_tests();
+
+  std::vector<TransactionServiceUpgradeTarget> targets;
+  std::string error;
+
+  bool listed = transaction_service_client_list_upgrade_targets(targets, error);
+
+  transaction_service_client_reset_for_tests();
+
+  INFO(error);
+  REQUIRE(listed);
+  for (const auto &target : targets) {
+    REQUIRE_FALSE(target.name.empty());
+    REQUIRE_FALSE(target.arch.empty());
+    REQUIRE_FALSE(target.version.empty());
+    REQUIRE_FALSE(target.release.empty());
+    REQUIRE_FALSE(target.nevra.empty());
+    REQUIRE(target.package_key() == target.name + "." + target.arch);
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Verify that the client can ask dnf5daemon to refresh repository metadata.
 // This is the same daemon path used by the Refresh Repositories button.
 // -----------------------------------------------------------------------------

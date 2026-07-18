@@ -291,6 +291,35 @@ transaction_service_client_list_upgrade_keys(std::vector<std::string> &keys_out,
 }
 
 // -----------------------------------------------------------------------------
+// List upgrade targets from dnf5daemon's package-list API.
+// -----------------------------------------------------------------------------
+bool
+transaction_service_client_list_upgrade_targets(std::vector<TransactionServiceUpgradeTarget> &targets_out,
+                                                std::string &error_out,
+                                                GCancellable *cancellable)
+{
+  targets_out.clear();
+  error_out.clear();
+
+  std::string connect_error;
+  GDBusConnection *connection = transaction_service_client_connect(connect_error);
+  if (!connection) {
+    error_out = connect_error;
+    return false;
+  }
+
+  bool ok = transaction_service_client_list_daemon_upgrade_targets(connection, cancellable, targets_out, error_out);
+  g_object_unref(connection);
+
+  if (!ok) {
+    targets_out.clear();
+    return false;
+  }
+
+  return true;
+}
+
+// -----------------------------------------------------------------------------
 // Apply a previously previewed transaction request through dnf5daemon.
 // The apply call waits until the daemon finishes. Progress arrives as D-Bus
 // signals while the call is running.
