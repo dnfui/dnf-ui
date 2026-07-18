@@ -666,56 +666,44 @@ dnf_backend_get_upgradeable_package_rows_interruptible(GCancellable *cancellable
 // -----------------------------------------------------------------------------
 // Return available package metadata for exact daemon-selected NEVRAs.
 // The caller has already decided which packages are upgrade targets.
-// This helper only enriches those exact package IDs and refreshes installed state once.
+// This helper only enriches those exact package IDs.
 // -----------------------------------------------------------------------------
-DnfBackendUpgradeMetadataResult
+std::vector<PackageRow>
 dnf_backend_get_available_package_metadata_by_nevras_interruptible(const std::vector<std::string> &nevras,
                                                                    GCancellable *cancellable)
 {
-  DnfBackendUpgradeMetadataResult result;
-  InstalledQueryResult installed;
-  std::set<std::string> protected_names;
+  std::vector<PackageRow> rows;
   std::set<std::string> requested_nevras(nevras.begin(), nevras.end());
   std::set<std::string> returned_nevras;
 
   if (requested_nevras.empty()) {
-    return result;
+    return rows;
   }
 
-  {
-    try {
-      auto [base, guard, generation] = acquire_interruptible_base_read(cancellable);
+  try {
+    auto [base, guard, generation] = acquire_interruptible_base_read(cancellable);
 
-      libdnf5::rpm::PackageQuery query(base);
-      query.filter_available();
+    libdnf5::rpm::PackageQuery query(base);
+    query.filter_available();
 
-      for (auto pkg : query) {
-        if (package_query_cancelled(cancellable)) {
-          return {};
-        }
-
-        PackageRow row = make_package_row(pkg, PackageRepoCandidateRelation::UNKNOWN);
-        if (requested_nevras.count(row.nevra) == 0 || returned_nevras.count(row.nevra) > 0) {
-          continue;
-        }
-
-        result.rows.push_back(row);
-        returned_nevras.insert(row.nevra);
-      }
-
-      installed = collect_installed_rows(base, cancellable, DnfBackendSearchOptions {});
+    for (auto pkg : query) {
       if (package_query_cancelled(cancellable)) {
         return {};
       }
 
-      protected_names = collect_self_protected_package_names(base);
-    } catch (const BaseOperationCancelled &) {
-      return {};
+      PackageRow row = make_package_row(pkg, PackageRepoCandidateRelation::UNKNOWN);
+      if (requested_nevras.count(row.nevra) == 0 || returned_nevras.count(row.nevra) > 0) {
+        continue;
+      }
+
+      rows.push_back(row);
+      returned_nevras.insert(row.nevra);
     }
+  } catch (const BaseOperationCancelled &) {
+    return {};
   }
 
-  result.installed_state_changed = publish_installed_snapshot(std::move(installed), std::move(protected_names));
-  return result;
+  return rows;
 }
 
 // -----------------------------------------------------------------------------

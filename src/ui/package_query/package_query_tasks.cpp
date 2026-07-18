@@ -407,13 +407,6 @@ on_list_upgradeable_task(GTask *task, gpointer, gpointer, GCancellable *cancella
         "Upgradable list task daemon targets=%zu elapsed_ms=%lld", targets.size(), elapsed_ms_since(started_at_us));
 #endif
 
-    if (targets.empty() && dnf_backend_refresh_installed_nevras()) {
-      DaemonUpgradeState::instance().abandon_refresh(refresh_id.value());
-      refresh_state_closed = true;
-      return_package_state_changed_result(task);
-      return;
-    }
-
     std::vector<std::string> target_nevras;
     target_nevras.reserve(targets.size());
     for (const auto &target : targets) {
@@ -422,20 +415,20 @@ on_list_upgradeable_task(GTask *task, gpointer, gpointer, GCancellable *cancella
 
     std::vector<PackageRow> metadata_rows;
     try {
-      DnfBackendUpgradeMetadataResult metadata =
-          dnf_backend_get_available_package_metadata_by_nevras_interruptible(target_nevras, cancellable);
-      if (metadata.installed_state_changed) {
-        DaemonUpgradeState::instance().abandon_refresh(refresh_id.value());
-        refresh_state_closed = true;
-        return_package_state_changed_result(task);
-        return;
-      }
-      metadata_rows = std::move(metadata.rows);
+      metadata_rows = dnf_backend_get_available_package_metadata_by_nevras_interruptible(target_nevras, cancellable);
     } catch (const std::exception &) {
       // Metadata enrichment is best effort. The daemon target remains visible
       // because dnf5daemon is the authority for List Upgradable.
       metadata_rows.clear();
     }
+
+    if (dnf_backend_refresh_installed_nevras()) {
+      DaemonUpgradeState::instance().abandon_refresh(refresh_id.value());
+      refresh_state_closed = true;
+      return_package_state_changed_result(task);
+      return;
+    }
+
     if (cancellable && g_cancellable_is_cancelled(cancellable)) {
       DaemonUpgradeState::instance().abandon_refresh(refresh_id.value());
       refresh_state_closed = true;

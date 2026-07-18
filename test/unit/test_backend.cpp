@@ -170,6 +170,33 @@ TEST_CASE("Installed package refresh uses a short-lived system-only Base")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that daemon-target metadata lookup does not refresh installed state.
+// -----------------------------------------------------------------------------
+TEST_CASE("Daemon upgrade metadata lookup does not publish installed state")
+{
+  reset_backend_globals();
+
+  std::vector<PackageRow> rows = dnf_backend_get_browse_package_rows_interruptible(nullptr);
+  std::string target_nevra;
+  for (const auto &row : rows) {
+    if (row.repo != "@System") {
+      target_nevra = row.nevra;
+      break;
+    }
+  }
+  REQUIRE(!target_nevra.empty());
+
+  reset_backend_globals();
+  REQUIRE(dnf_backend_installed_snapshot_size() == 0);
+
+  std::vector<PackageRow> metadata_rows =
+      dnf_backend_get_available_package_metadata_by_nevras_interruptible({ target_nevra }, nullptr);
+
+  REQUIRE(!metadata_rows.empty());
+  REQUIRE(dnf_backend_installed_snapshot_size() == 0);
+}
+
+// -----------------------------------------------------------------------------
 // Search behavior tests (read-only repo metadata)
 // -----------------------------------------------------------------------------
 
