@@ -81,8 +81,8 @@ load repositories again.
 After refresh, normal package views are reloaded from the new Base. If
 List Upgradable is visible, the table is cleared instead of left on screen,
 because those rows came from the previous daemon upgrade snapshot. The app asks
-the user to press List Upgradable again so a fresh daemon-authoritative upgrade
-list is loaded explicitly.
+the user to press List Upgradable again so a fresh dnf5daemon upgrade list is
+loaded explicitly.
 
 If the daemon cache directory does not exist yet, the clean step is treated as
 already clean. The refresh still resets the daemon session and loads repositories.
@@ -135,9 +135,9 @@ architecture pair.
 
 Normal search is substring based. If the search term contains `*` or `?`, normal search treats it as a wildcard pattern. Exact search remains literal.
 
-The List Upgradable view uses dnf5daemon as the authority for which upgrades exist. The worker refreshes installed-package state, loads the daemon upgrade targets, asks libdnf5 only for matching package metadata, and then refreshes installed-package state again. If installed state changed while the daemon result was being loaded, the result is rejected and the user must reload List Upgradable. The GTK completion stores the daemon targets in the shared daemon upgrade snapshot only when it accepts the matching table rows. Missing metadata does not hide a daemon-reported upgrade. In that case the table keeps a basic row built from the daemon target.
+The List Upgradable view uses dnf5daemon to decide which upgrades exist. The worker refreshes installed-package state, loads the daemon upgrade targets, asks libdnf5 only for matching package metadata, and then refreshes installed-package state again. If installed state changed while the daemon result was being loaded, the result is rejected and the user must reload List Upgradable. The GTK completion stores the daemon targets in the shared daemon upgrade snapshot only when it accepts the matching table rows. Missing metadata does not hide a daemon-reported upgrade. In that case the table keeps a basic row built from the daemon target.
 
-This keeps the list honest: libdnf5 can enrich daemon-selected upgrade rows, but it no longer decides which rows appear in List Upgradable.
+This keeps the list honest: libdnf5 can add metadata to daemon-reported upgrade rows, but it no longer decides which rows appear in List Upgradable.
 
 ## Installed snapshot
 

@@ -57,7 +57,7 @@ Current local source:
 
 Why this matters:
 
-- List Upgradable uses dnf5daemon's upgrade target list first. libdnf5 is then used only to enrich those exact daemon-selected NEVRAs with package metadata.
+- List Upgradable uses dnf5daemon's upgrade target list first. libdnf5 is then used only to add package metadata to those exact daemon-reported NEVRAs.
 - Missing libdnf5 metadata must not hide a daemon-reported upgrade. The UI should keep a basic daemon row rather than showing a false empty list.
 - Upgradable rows are available package candidates. UI actions that remove or reinstall such a row
   must resolve the matching installed row by package name and architecture before building the pending action.
@@ -72,7 +72,7 @@ Tests:
 
 Maintenance check:
 
-- If installed-row annotation or daemon-target metadata enrichment changes,
+- If installed-row annotation or daemon-target metadata loading changes,
   verify `package_query.hpp` in the build image and rerun the backend tests.
 
 ## dnf5daemon upgrade requests
@@ -138,7 +138,7 @@ Source:
 
 Why this matters:
 
-- The daemon-owned upgrade refactor needs a read-only daemon snapshot of upgrade targets. This snapshot should come from dnf5daemon's package-list API, not from a resolved Upgrade All transaction preview.
+- List Upgradable needs a read-only daemon snapshot of upgrade targets. This snapshot should come from dnf5daemon's package-list API, not from a resolved Upgrade All transaction preview.
 - DNF UI keeps daemon upgrade specs and internal package identity separate. `name.arch` is the daemon upgrade spec. The internal package identity uses package name and architecture as separate values.
 - Normal `nevra` is the application-facing package ID because it matches libdnf5 `PackageRow::nevra`. `full_nevra` is kept separately for callers that need the daemon's full epoch form.
 - The shared daemon upgrade state stores complete package-list results by package name and architecture. It does not fetch daemon data itself.

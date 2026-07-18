@@ -36,7 +36,7 @@ struct PendingTransactionActionRows {
 // -----------------------------------------------------------------------------
 PendingTransactionActionRows pending_transaction_action_rows_for_selection(const PackageRow &selected);
 // -----------------------------------------------------------------------------
-// Resolve package IDs for a row that may carry a daemon-authoritative upgrade target.
+// Resolve package IDs for a row that may carry a dnf5daemon upgrade target.
 // -----------------------------------------------------------------------------
 PendingTransactionActionRows
 pending_transaction_action_rows_for_selection(const PackageRow &selected,

@@ -139,8 +139,8 @@ struct QueryBackendBaseDropGuard {
 
 // -----------------------------------------------------------------------------
 // Build a basic package row from one daemon upgrade target.
-// libdnf5 metadata can enrich this later, but the daemon target itself is the
-// authority for whether the row appears in List Upgradable.
+// libdnf5 may add display metadata later. dnf5daemon decides whether this row
+// appears in List Upgradable.
 // -----------------------------------------------------------------------------
 static PackageRow
 package_row_from_daemon_upgrade_target(const TransactionServiceUpgradeTarget &target)
@@ -417,8 +417,8 @@ on_list_upgradeable_task(GTask *task, gpointer, gpointer, GCancellable *cancella
     try {
       metadata_rows = dnf_backend_get_available_package_metadata_by_nevras_interruptible(target_nevras, cancellable);
     } catch (const std::exception &) {
-      // Metadata enrichment is best effort. The daemon target remains visible
-      // because dnf5daemon is the authority for List Upgradable.
+      // Metadata from libdnf5 is optional here. The dnf5daemon target remains
+      // visible because it is the upgrade reported by the transaction service.
       metadata_rows.clear();
     }
 
