@@ -375,17 +375,22 @@ upgrade_target_from_daemon_object(GVariant *object, TransactionServiceUpgradeTar
     return false;
   }
 
+  const std::string normalized_epoch = target.epoch.empty() ? "0" : target.epoch;
+
   if (target.nevra.empty()) {
     std::ostringstream nevra;
     nevra << target.name << "-";
-    if (!target.epoch.empty() && target.epoch != "0") {
-      nevra << target.epoch << ":";
+    if (normalized_epoch != "0") {
+      nevra << normalized_epoch << ":";
     }
     nevra << target.version << "-" << target.release << "." << target.arch;
     target.nevra = nevra.str();
   }
   if (target.full_nevra.empty()) {
-    target.full_nevra = target.nevra;
+    std::ostringstream full_nevra;
+    full_nevra << target.name << "-" << normalized_epoch << ":" << target.version << "-" << target.release << "."
+               << target.arch;
+    target.full_nevra = full_nevra.str();
   }
 
   target_out = std::move(target);

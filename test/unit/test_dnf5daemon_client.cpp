@@ -220,6 +220,20 @@ TEST_CASE("dnf5daemon upgrade target parser builds normal NEVRA when missing")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that a missing full NEVRA still keeps the epoch-zero full form.
+// -----------------------------------------------------------------------------
+TEST_CASE("dnf5daemon upgrade target parser builds epoch-zero full NEVRA")
+{
+  TransactionServiceUpgradeTarget target;
+  std::string error;
+
+  REQUIRE(transaction_service_client_testonly_build_upgrade_target_from_fields(
+      "demo", "0", "1.2.3", "4.fc44", "x86_64", "updates", "", "", target, error));
+  REQUIRE(target.nevra == "demo-1.2.3-4.fc44.x86_64");
+  REQUIRE(target.full_nevra == "demo-0:1.2.3-4.fc44.x86_64");
+}
+
+// -----------------------------------------------------------------------------
 // Verify that nonzero epochs are kept in the reconstructed NEVRA.
 // -----------------------------------------------------------------------------
 TEST_CASE("dnf5daemon upgrade target parser builds nonzero epoch NEVRA")
