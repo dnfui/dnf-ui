@@ -94,11 +94,16 @@ pending_transaction_on_install_button_clicked(GtkButton *, gpointer user_data)
     ui_helpers_set_status(widgets->query.status_label, (std::string(_("Unmarked: ")) + pkg.name).c_str(), "gray");
   } else {
     if (action_type == PendingAction::UPGRADE) {
-      pending_transaction_mark_upgrade_action_for_row(widgets->transaction.actions,
-                                                      pkg,
-                                                      selected.upgrade_target ? &selected.upgrade_target.value()
-                                                                              : nullptr,
-                                                      selected.upgrade_generation);
+      const TransactionServiceUpgradeTarget *upgrade_target =
+          selected.upgrade_target ? &selected.upgrade_target.value() : nullptr;
+      bool marked = pending_transaction_mark_upgrade_action_for_row(
+          widgets->transaction.actions, pkg, upgrade_target, selected.upgrade_generation);
+      if (!marked) {
+        package_query_clear_displayed_upgradeable_table(widgets);
+        ui_helpers_set_status(
+            widgets->query.status_label, _("Upgrade information changed. Press List Upgradable to reload."), "blue");
+        return;
+      }
     } else {
       // Replace any related pending action with install.
       pending_transaction_remove_action(widgets, pkg.nevra);
