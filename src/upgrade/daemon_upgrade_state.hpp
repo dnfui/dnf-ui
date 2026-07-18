@@ -41,6 +41,7 @@ class DaemonUpgradeState {
                        const std::vector<TransactionServiceUpgradeTarget> &targets,
                        std::string &error_out);
   void publish_failure(DaemonUpgradeRefreshId refresh_id, const std::string &error);
+  bool abandon_refresh(DaemonUpgradeRefreshId refresh_id);
   void mark_stale();
 
 #ifdef DNFUI_BUILD_TESTS
@@ -48,6 +49,10 @@ class DaemonUpgradeState {
 #endif
 
   private:
+  DaemonUpgradeState() = default;
+  DaemonUpgradeState(const DaemonUpgradeState &) = delete;
+  DaemonUpgradeState &operator=(const DaemonUpgradeState &) = delete;
+
   mutable std::mutex mutex;
   DaemonUpgradeSnapshot current;
   DaemonUpgradeRefreshId next_refresh_id = 1;

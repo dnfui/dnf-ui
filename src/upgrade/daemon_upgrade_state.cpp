@@ -67,15 +67,18 @@ DaemonUpgradeState::publish_success(DaemonUpgradeRefreshId refresh_id,
       continue;
     }
 
-    error_out = "dnf5daemon returned more than one upgrade target for " + target.upgrade_spec() + ".";
     std::lock_guard<std::mutex> lock(mutex);
-    if (active_refresh_id.has_value() && active_refresh_id.value() == refresh_id &&
-        current.status == DaemonUpgradeSnapshotStatus::REFRESHING) {
-      active_refresh_id.reset();
-      current.status = DaemonUpgradeSnapshotStatus::ERROR;
-      current.targets_by_name_arch.clear();
-      current.error = error_out;
+    if (!active_refresh_id.has_value() || active_refresh_id.value() != refresh_id ||
+        current.status != DaemonUpgradeSnapshotStatus::REFRESHING) {
+      error_out = "dnf5daemon upgrade refresh is no longer active.";
+      return false;
     }
+
+    error_out = "dnf5daemon returned more than one upgrade target for " + target.upgrade_spec() + ".";
+    active_refresh_id.reset();
+    current.status = DaemonUpgradeSnapshotStatus::ERROR;
+    current.targets_by_name_arch.clear();
+    current.error = error_out;
     return false;
   }
 
@@ -109,6 +112,28 @@ DaemonUpgradeState::publish_failure(DaemonUpgradeRefreshId refresh_id, const std
   current.status = DaemonUpgradeSnapshotStatus::ERROR;
   current.targets_by_name_arch.clear();
   current.error = error;
+}
+
+// -----------------------------------------------------------------------------
+// Abandon an active daemon upgrade refresh without reporting a daemon failure.
+// -----------------------------------------------------------------------------
+bool
+DaemonUpgradeState::abandon_refresh(DaemonUpgradeRefreshId refresh_id)
+{
+  std::lock_guard<std::mutex> lock(mutex);
+  if (!active_refresh_id.has_value() || active_refresh_id.value() != refresh_id) {
+    return false;
+  }
+
+  active_refresh_id.reset();
+  if (current.generation == 0) {
+    current.status = DaemonUpgradeSnapshotStatus::NOT_LOADED;
+  } else {
+    current.status = DaemonUpgradeSnapshotStatus::STALE;
+  }
+  current.targets_by_name_arch.clear();
+  current.error.clear();
+  return true;
 }
 
 // -----------------------------------------------------------------------------

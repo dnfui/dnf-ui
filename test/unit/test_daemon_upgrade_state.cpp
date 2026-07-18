@@ -268,6 +268,85 @@ TEST_CASE("daemon upgrade state rejects publication after stale")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that cancellation can abandon the refresh it owns.
+// -----------------------------------------------------------------------------
+TEST_CASE("daemon upgrade state abandons active refresh")
+{
+  DaemonUpgradeState &state = reset_state();
+
+  std::optional<DaemonUpgradeRefreshId> refresh_id = state.begin_refresh();
+  REQUIRE(refresh_id.has_value());
+  REQUIRE(state.abandon_refresh(refresh_id.value()));
+
+  DaemonUpgradeSnapshot snapshot = state.snapshot();
+  REQUIRE(snapshot.status == DaemonUpgradeSnapshotStatus::NOT_LOADED);
+  REQUIRE(snapshot.generation == 0);
+  REQUIRE(snapshot.targets_by_name_arch.empty());
+  REQUIRE(snapshot.error.empty());
+}
+
+// -----------------------------------------------------------------------------
+// Verify that abandoning a refresh releases ownership for the next refresh.
+// -----------------------------------------------------------------------------
+TEST_CASE("daemon upgrade state allows refresh after abandon")
+{
+  DaemonUpgradeState &state = reset_state();
+
+  std::optional<DaemonUpgradeRefreshId> refresh_id = state.begin_refresh();
+  REQUIRE(refresh_id.has_value());
+  REQUIRE(state.abandon_refresh(refresh_id.value()));
+
+  std::optional<DaemonUpgradeRefreshId> next_refresh_id = state.begin_refresh();
+  REQUIRE(next_refresh_id.has_value());
+  REQUIRE(next_refresh_id.value() != refresh_id.value());
+  REQUIRE(state.snapshot().status == DaemonUpgradeSnapshotStatus::REFRESHING);
+}
+
+// -----------------------------------------------------------------------------
+// Verify that abandoning a later refresh of a ready snapshot makes it stale.
+// -----------------------------------------------------------------------------
+TEST_CASE("daemon upgrade state abandons later refresh as stale")
+{
+  DaemonUpgradeState &state = reset_state();
+  std::string error;
+  std::vector<TransactionServiceUpgradeTarget> targets {
+    make_target("demo", "x86_64", "2.0", "demo-0:2.0-1.fc44.x86_64"),
+  };
+
+  std::optional<DaemonUpgradeRefreshId> first_refresh_id = state.begin_refresh();
+  REQUIRE(first_refresh_id.has_value());
+  REQUIRE(state.publish_success(first_refresh_id.value(), targets, error));
+
+  std::optional<DaemonUpgradeRefreshId> second_refresh_id = state.begin_refresh();
+  REQUIRE(second_refresh_id.has_value());
+  REQUIRE(state.abandon_refresh(second_refresh_id.value()));
+
+  DaemonUpgradeSnapshot snapshot = state.snapshot();
+  REQUIRE(snapshot.status == DaemonUpgradeSnapshotStatus::STALE);
+  REQUIRE(snapshot.generation == 1);
+  REQUIRE(snapshot.targets_by_name_arch.empty());
+  REQUIRE(snapshot.error.empty());
+}
+
+// -----------------------------------------------------------------------------
+// Verify that an old refresh cannot abandon a newer refresh.
+// -----------------------------------------------------------------------------
+TEST_CASE("daemon upgrade state rejects old abandon during newer refresh")
+{
+  DaemonUpgradeState &state = reset_state();
+
+  std::optional<DaemonUpgradeRefreshId> old_refresh_id = state.begin_refresh();
+  REQUIRE(old_refresh_id.has_value());
+  state.mark_stale();
+
+  std::optional<DaemonUpgradeRefreshId> new_refresh_id = state.begin_refresh();
+  REQUIRE(new_refresh_id.has_value());
+
+  REQUIRE_FALSE(state.abandon_refresh(old_refresh_id.value()));
+  REQUIRE(state.snapshot().status == DaemonUpgradeSnapshotStatus::REFRESHING);
+}
+
+// -----------------------------------------------------------------------------
 // Verify that an old successful result cannot replace a newer refresh.
 // -----------------------------------------------------------------------------
 TEST_CASE("daemon upgrade state rejects old success during newer refresh")
@@ -328,6 +407,35 @@ TEST_CASE("daemon upgrade state ignores old failure during newer refresh")
   REQUIRE(snapshot.generation == 1);
   REQUIRE(snapshot.error.empty());
   REQUIRE(snapshot.targets_by_name_arch.at("demo\nx86_64").full_nevra == "demo-0:3.0-1.fc44.x86_64");
+}
+
+// -----------------------------------------------------------------------------
+// Verify that an old conflicting result reports lost ownership, not target conflict.
+// -----------------------------------------------------------------------------
+TEST_CASE("daemon upgrade state reports inactive old conflict during newer refresh")
+{
+  DaemonUpgradeState &state = reset_state();
+  std::string error;
+  std::vector<TransactionServiceUpgradeTarget> conflicting_targets {
+    make_target("demo", "x86_64", "2.0", "demo-0:2.0-1.fc44.x86_64"),
+    make_target("demo", "x86_64", "3.0", "demo-0:3.0-1.fc44.x86_64"),
+  };
+
+  std::optional<DaemonUpgradeRefreshId> old_refresh_id = state.begin_refresh();
+  REQUIRE(old_refresh_id.has_value());
+  state.mark_stale();
+
+  std::optional<DaemonUpgradeRefreshId> new_refresh_id = state.begin_refresh();
+  REQUIRE(new_refresh_id.has_value());
+
+  REQUIRE_FALSE(state.publish_success(old_refresh_id.value(), conflicting_targets, error));
+  REQUIRE(error.find("no longer active") != std::string::npos);
+  REQUIRE(error.find("more than one upgrade target") == std::string::npos);
+
+  DaemonUpgradeSnapshot snapshot = state.snapshot();
+  REQUIRE(snapshot.status == DaemonUpgradeSnapshotStatus::REFRESHING);
+  REQUIRE(snapshot.generation == 0);
+  REQUIRE(snapshot.error.empty());
 }
 
 // -----------------------------------------------------------------------------
