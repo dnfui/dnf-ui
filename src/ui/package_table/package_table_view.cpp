@@ -810,6 +810,11 @@ package_table_fill_package_view(MainWindowUiState *widgets,
   GtkSortType sort_order = GTK_SORT_ASCENDING;
   bool have_sort_state = get_package_view_sort_state(widgets, sort_kind, sort_order);
 
+  // Release the old table before allocating the new row model.
+  // Large package lists otherwise keep the old and new row objects alive at the same time.
+  gtk_scrolled_window_set_child(widgets->results.list_scroller, nullptr);
+  widgets->results.listbox = nullptr;
+
   GListStore *store = g_list_store_new(G_TYPE_OBJECT);
   for (const auto &row : items) {
     GObject *obj = make_package_object(widgets, row);
