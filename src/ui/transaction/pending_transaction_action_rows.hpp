@@ -25,7 +25,6 @@ struct PendingTransactionActionRows {
   bool has_installed_row = false;
   // Fast UI check only. This does not prove that reinstall is available from repositories.
   bool can_try_reinstall = false;
-  bool uses_daemon_upgrade_target = false;
   std::string upgrade_spec;
   PackageRow install_row;
   PackageRow installed_row;

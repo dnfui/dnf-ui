@@ -54,7 +54,6 @@ TEST_CASE("daemon upgrade state starts as not loaded")
   REQUIRE(snapshot.status == DaemonUpgradeSnapshotStatus::NOT_LOADED);
   REQUIRE(snapshot.generation == 0);
   REQUIRE(snapshot.targets_by_name_arch.empty());
-  REQUIRE(snapshot.error.empty());
 }
 
 // -----------------------------------------------------------------------------
@@ -93,7 +92,6 @@ TEST_CASE("daemon upgrade state publishes successful targets")
   DaemonUpgradeSnapshot snapshot = state.snapshot();
   REQUIRE(snapshot.status == DaemonUpgradeSnapshotStatus::READY);
   REQUIRE(snapshot.generation == 1);
-  REQUIRE(snapshot.error.empty());
   REQUIRE(snapshot.targets_by_name_arch.size() == 1);
   REQUIRE(snapshot.targets_by_name_arch.count("demo\nx86_64") == 1);
   REQUIRE(snapshot.targets_by_name_arch.at("demo\nx86_64").full_nevra == "demo-0:2.0-1.fc44.x86_64");
@@ -144,7 +142,6 @@ TEST_CASE("daemon upgrade state publishes empty successful targets")
   REQUIRE(snapshot.status == DaemonUpgradeSnapshotStatus::READY);
   REQUIRE(snapshot.generation == 1);
   REQUIRE(snapshot.targets_by_name_arch.empty());
-  REQUIRE(snapshot.error.empty());
 }
 
 // -----------------------------------------------------------------------------
@@ -162,7 +159,6 @@ TEST_CASE("daemon upgrade state publishes failure")
   REQUIRE(snapshot.status == DaemonUpgradeSnapshotStatus::ERROR);
   REQUIRE(snapshot.generation == 0);
   REQUIRE(snapshot.targets_by_name_arch.empty());
-  REQUIRE(snapshot.error == "daemon failed");
 }
 
 // -----------------------------------------------------------------------------
@@ -185,7 +181,6 @@ TEST_CASE("daemon upgrade state marks snapshots stale")
   REQUIRE(snapshot.status == DaemonUpgradeSnapshotStatus::STALE);
   REQUIRE(snapshot.generation == 1);
   REQUIRE(snapshot.targets_by_name_arch.empty());
-  REQUIRE(snapshot.error.empty());
 }
 
 // -----------------------------------------------------------------------------
@@ -237,7 +232,6 @@ TEST_CASE("daemon upgrade state rejects conflicting duplicate targets")
   REQUIRE(snapshot.status == DaemonUpgradeSnapshotStatus::ERROR);
   REQUIRE(snapshot.generation == 1);
   REQUIRE(snapshot.targets_by_name_arch.empty());
-  REQUIRE(snapshot.error.find("demo.x86_64") != std::string::npos);
 }
 
 // -----------------------------------------------------------------------------
@@ -292,7 +286,6 @@ TEST_CASE("daemon upgrade state rejects publication after stale")
   REQUIRE(snapshot.status == DaemonUpgradeSnapshotStatus::STALE);
   REQUIRE(snapshot.generation == 0);
   REQUIRE(snapshot.targets_by_name_arch.empty());
-  REQUIRE(snapshot.error.empty());
 }
 
 // -----------------------------------------------------------------------------
@@ -310,7 +303,6 @@ TEST_CASE("daemon upgrade state abandons active refresh")
   REQUIRE(snapshot.status == DaemonUpgradeSnapshotStatus::NOT_LOADED);
   REQUIRE(snapshot.generation == 0);
   REQUIRE(snapshot.targets_by_name_arch.empty());
-  REQUIRE(snapshot.error.empty());
 }
 
 // -----------------------------------------------------------------------------
@@ -353,7 +345,6 @@ TEST_CASE("daemon upgrade state abandons later refresh as stale")
   REQUIRE(snapshot.status == DaemonUpgradeSnapshotStatus::STALE);
   REQUIRE(snapshot.generation == 1);
   REQUIRE(snapshot.targets_by_name_arch.empty());
-  REQUIRE(snapshot.error.empty());
 }
 
 // -----------------------------------------------------------------------------
@@ -433,7 +424,6 @@ TEST_CASE("daemon upgrade state ignores old failure during newer refresh")
   DaemonUpgradeSnapshot snapshot = state.snapshot();
   REQUIRE(snapshot.status == DaemonUpgradeSnapshotStatus::READY);
   REQUIRE(snapshot.generation == 1);
-  REQUIRE(snapshot.error.empty());
   REQUIRE(snapshot.targets_by_name_arch.at("demo\nx86_64").full_nevra == "demo-0:3.0-1.fc44.x86_64");
 }
 
@@ -463,7 +453,6 @@ TEST_CASE("daemon upgrade state reports inactive old conflict during newer refre
   DaemonUpgradeSnapshot snapshot = state.snapshot();
   REQUIRE(snapshot.status == DaemonUpgradeSnapshotStatus::REFRESHING);
   REQUIRE(snapshot.generation == 0);
-  REQUIRE(snapshot.error.empty());
 }
 
 // -----------------------------------------------------------------------------
@@ -485,7 +474,6 @@ TEST_CASE("daemon upgrade state rejects publication without refresh")
   REQUIRE(snapshot.status == DaemonUpgradeSnapshotStatus::NOT_LOADED);
   REQUIRE(snapshot.generation == 0);
   REQUIRE(snapshot.targets_by_name_arch.empty());
-  REQUIRE(snapshot.error.empty());
 }
 
 // -----------------------------------------------------------------------------
@@ -529,50 +517,6 @@ TEST_CASE("daemon upgrade refresh owner keeps accepted results")
   REQUIRE(snapshot.status == DaemonUpgradeSnapshotStatus::READY);
   REQUIRE(snapshot.generation == 1);
   REQUIRE(snapshot.targets_by_name_arch.size() == 1);
-}
-
-// -----------------------------------------------------------------------------
-// Verify that an installed-state change during enrichment prevents publication.
-// -----------------------------------------------------------------------------
-TEST_CASE("daemon upgrade state rejects publication after enrichment state change")
-{
-  DaemonUpgradeState &state = reset_state();
-  std::string error;
-  std::vector<TransactionServiceUpgradeTarget> targets {
-    make_target("demo", "x86_64", "2.0", "demo-0:2.0-1.fc44.x86_64"),
-  };
-
-  std::optional<DaemonUpgradeRefreshId> refresh_id = state.begin_refresh();
-  REQUIRE(refresh_id.has_value());
-  REQUIRE(state.abandon_refresh(refresh_id.value()));
-  REQUIRE_FALSE(state.publish_success(refresh_id.value(), targets, error));
-  REQUIRE(error.find("no longer active") != std::string::npos);
-
-  DaemonUpgradeSnapshot snapshot = state.snapshot();
-  REQUIRE(snapshot.status == DaemonUpgradeSnapshotStatus::NOT_LOADED);
-  REQUIRE(snapshot.targets_by_name_arch.empty());
-}
-
-// -----------------------------------------------------------------------------
-// Verify that state can become stale after a result was published.
-// -----------------------------------------------------------------------------
-TEST_CASE("daemon upgrade state can become stale after publication")
-{
-  DaemonUpgradeState &state = reset_state();
-  std::string error;
-  std::vector<TransactionServiceUpgradeTarget> targets {
-    make_target("demo", "x86_64", "2.0", "demo-0:2.0-1.fc44.x86_64"),
-  };
-
-  std::optional<DaemonUpgradeRefreshId> refresh_id = state.begin_refresh();
-  REQUIRE(refresh_id.has_value());
-  REQUIRE(state.publish_success(refresh_id.value(), targets, error));
-  state.mark_stale();
-
-  DaemonUpgradeSnapshot snapshot = state.snapshot();
-  REQUIRE(snapshot.status == DaemonUpgradeSnapshotStatus::STALE);
-  REQUIRE(snapshot.generation == 1);
-  REQUIRE(snapshot.targets_by_name_arch.empty());
 }
 
 // -----------------------------------------------------------------------------

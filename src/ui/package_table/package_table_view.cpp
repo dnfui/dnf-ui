@@ -665,21 +665,6 @@ package_table_get_selected_package(MainWindowUiState *widgets, PackageTableRow &
 }
 
 // -----------------------------------------------------------------------------
-// Return the selected package row from the current package table.
-// -----------------------------------------------------------------------------
-bool
-package_table_get_selected_package_row(MainWindowUiState *widgets, PackageRow &out_pkg)
-{
-  PackageTableRow selected;
-  if (!package_table_get_selected_package(widgets, selected)) {
-    return false;
-  }
-
-  out_pkg = selected.row;
-  return true;
-}
-
-// -----------------------------------------------------------------------------
 // Return all package table rows currently displayed in the package table.
 // -----------------------------------------------------------------------------
 std::vector<PackageTableRow>
@@ -715,22 +700,6 @@ package_table_get_displayed_packages(MainWindowUiState *widgets)
       rows.push_back(package_table_row_from_item(*item));
     }
     g_object_unref(obj);
-  }
-
-  return rows;
-}
-
-// -----------------------------------------------------------------------------
-// Return all package rows currently displayed in the package table.
-// -----------------------------------------------------------------------------
-std::vector<PackageRow>
-package_table_get_displayed_package_rows(MainWindowUiState *widgets)
-{
-  std::vector<PackageTableRow> items = package_table_get_displayed_packages(widgets);
-  std::vector<PackageRow> rows;
-  rows.reserve(items.size());
-  for (const auto &item : items) {
-    rows.push_back(item.row);
   }
 
   return rows;

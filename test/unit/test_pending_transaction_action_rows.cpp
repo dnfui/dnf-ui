@@ -159,7 +159,6 @@ TEST_CASE("Pending transaction action rows resolve daemon upgrade target")
 
   REQUIRE(rows.state == PackageInstallState::UPGRADEABLE);
   REQUIRE(rows.install_is_upgrade);
-  REQUIRE(rows.uses_daemon_upgrade_target);
   REQUIRE(rows.has_install_row);
   REQUIRE(rows.install_row.nevra == target.nevra);
   REQUIRE(rows.upgrade_spec == "demo.x86_64");
@@ -191,7 +190,6 @@ TEST_CASE("Pending transaction action rows resolve daemon target without install
 
   REQUIRE(rows.state == PackageInstallState::UPGRADEABLE);
   REQUIRE(rows.install_is_upgrade);
-  REQUIRE(rows.uses_daemon_upgrade_target);
   REQUIRE(rows.has_install_row);
   REQUIRE(rows.install_row.nevra == target.nevra);
   REQUIRE(rows.upgrade_spec == "demo.x86_64");
@@ -226,7 +224,6 @@ TEST_CASE("Pending transaction action rows reject stale daemon upgrade target")
 
   REQUIRE(rows.state == PackageInstallState::UPGRADEABLE);
   REQUIRE(rows.install_is_upgrade);
-  REQUIRE_FALSE(rows.uses_daemon_upgrade_target);
   REQUIRE_FALSE(rows.has_install_row);
 
   std::vector<PendingAction> actions;

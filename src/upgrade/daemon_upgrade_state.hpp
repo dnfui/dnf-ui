@@ -26,7 +26,6 @@ struct DaemonUpgradeSnapshot {
   uint64_t generation = 0;
   DaemonUpgradeSnapshotStatus status = DaemonUpgradeSnapshotStatus::NOT_LOADED;
   std::map<std::string, TransactionServiceUpgradeTarget> targets_by_name_arch;
-  std::string error;
 };
 
 using DaemonUpgradeRefreshId = uint64_t;

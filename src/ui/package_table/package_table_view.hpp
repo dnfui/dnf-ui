@@ -31,17 +31,9 @@ struct PackageTableRow {
 // -----------------------------------------------------------------------------
 bool package_table_get_selected_package(MainWindowUiState *widgets, PackageTableRow &out_pkg);
 // -----------------------------------------------------------------------------
-// Return the currently selected package row.
-// -----------------------------------------------------------------------------
-bool package_table_get_selected_package_row(MainWindowUiState *widgets, PackageRow &out_pkg);
-// -----------------------------------------------------------------------------
 // Return all package table rows currently displayed in the package table.
 // -----------------------------------------------------------------------------
 std::vector<PackageTableRow> package_table_get_displayed_packages(MainWindowUiState *widgets);
-// -----------------------------------------------------------------------------
-// Return all package rows currently displayed in the package table.
-// -----------------------------------------------------------------------------
-std::vector<PackageRow> package_table_get_displayed_package_rows(MainWindowUiState *widgets);
 // -----------------------------------------------------------------------------
 // Replace the package table contents with the provided rows.
 // -----------------------------------------------------------------------------

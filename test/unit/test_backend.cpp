@@ -11,7 +11,7 @@
 namespace {
 
 // -----------------------------------------------------------------------------
-// Find a real available update candidate without using the old upgrade-list path.
+// Find a real available update candidate from installed-row repository annotation.
 // -----------------------------------------------------------------------------
 bool
 find_update_pair_from_installed_annotation(PackageRow &installed_out, PackageRow &update_out)

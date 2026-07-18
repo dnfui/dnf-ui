@@ -1133,7 +1133,7 @@ transaction_service_client_get_transaction_preview(GDBusConnection *connection,
 
   gulong cancel_handler_id = 0;
   if (cancellable) {
-    // Stop for List Upgradable should cancel the daemon resolve call too.
+    // Forward caller cancellation to the asynchronous daemon resolve call.
     cancel_handler_id = g_cancellable_connect(
         cancellable,
         G_CALLBACK(+[](GCancellable *, gpointer user_data) { g_cancellable_cancel(G_CANCELLABLE(user_data)); }),

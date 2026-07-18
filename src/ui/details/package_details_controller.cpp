@@ -57,23 +57,6 @@ struct DeferredDetailsUiState {
 static void load_visible_package_details_page(MainWindowUiState *widgets, GtkStack *stack);
 
 // -----------------------------------------------------------------------------
-// Build a package row from the daemon target attached to one List Upgradable row.
-// -----------------------------------------------------------------------------
-static PackageRow
-package_row_from_upgrade_target(const TransactionServiceUpgradeTarget &target)
-{
-  PackageRow row;
-  row.nevra = target.nevra.empty() ? target.full_nevra : target.nevra;
-  row.name = target.name;
-  row.epoch = target.epoch;
-  row.version = target.version;
-  row.release = target.release;
-  row.arch = target.arch;
-  row.repo = target.repo_id;
-  return row;
-}
-
-// -----------------------------------------------------------------------------
 // Free data owned by one package details task.
 // -----------------------------------------------------------------------------
 static void
@@ -547,7 +530,7 @@ package_details_load_selected_package_info(MainWindowUiState *widgets, const Pac
   std::string details_query_nevra = selected.row.nevra;
   std::optional<PackageRow> upgrade_row_override;
   if (selected.upgrade_target.has_value()) {
-    upgrade_row_override = package_row_from_upgrade_target(selected.upgrade_target.value());
+    upgrade_row_override = selected.row;
     PackageRow installed_row;
     if (dnf_backend_get_installed_package_row_by_name_arch(selected.row, installed_row)) {
       details_query_nevra = installed_row.nevra;

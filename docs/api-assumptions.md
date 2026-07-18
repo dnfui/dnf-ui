@@ -67,7 +67,7 @@ Why this matters:
 
 Tests:
 
-- `Installed rows can resolve matching repo candidates for action state`
+- `Installed row lookup resolves upgrade candidates by name and architecture`
 - `Daemon upgrade metadata lookup does not publish installed state`
 
 Maintenance check:

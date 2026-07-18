@@ -59,15 +59,6 @@ remove_pending_upgrade_by_transaction_spec(std::vector<PendingAction> &actions, 
   }
 }
 
-// -----------------------------------------------------------------------------
-// Return true when a displayed daemon upgrade target still matches the shared snapshot.
-// -----------------------------------------------------------------------------
-bool
-daemon_upgrade_target_is_current(const TransactionServiceUpgradeTarget &target, uint64_t upgrade_generation)
-{
-  return DaemonUpgradeState::instance().is_current_target(target, upgrade_generation);
-}
-
 } // namespace
 
 // -----------------------------------------------------------------------------
@@ -99,8 +90,7 @@ pending_transaction_action_rows_for_selection(const PackageRow &selected,
   // Upgrade actions need the available package ID, not always the visible row ID.
   if (rows.install_is_upgrade) {
     if (upgrade_target) {
-      rows.has_install_row = daemon_upgrade_target_is_current(*upgrade_target, upgrade_generation);
-      rows.uses_daemon_upgrade_target = rows.has_install_row;
+      rows.has_install_row = DaemonUpgradeState::instance().is_current_target(*upgrade_target, upgrade_generation);
       rows.install_row.nevra = upgrade_target->nevra.empty() ? selected.nevra : upgrade_target->nevra;
       rows.upgrade_spec = upgrade_target->upgrade_spec();
       rows.has_installed_row = dnf_backend_get_installed_package_row_by_name_arch(selected, rows.installed_row);

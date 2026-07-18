@@ -107,7 +107,6 @@ DaemonUpgradeState::begin_refresh()
   active_refresh_id = refresh_id;
   current.status = DaemonUpgradeSnapshotStatus::REFRESHING;
   current.targets_by_name_arch.clear();
-  current.error.clear();
   return refresh_id;
 }
 
@@ -146,7 +145,6 @@ DaemonUpgradeState::publish_success(DaemonUpgradeRefreshId refresh_id,
     active_refresh_id.reset();
     current.status = DaemonUpgradeSnapshotStatus::ERROR;
     current.targets_by_name_arch.clear();
-    current.error = error_out;
     return false;
   }
 
@@ -161,7 +159,6 @@ DaemonUpgradeState::publish_success(DaemonUpgradeRefreshId refresh_id,
   current.generation += 1;
   current.status = DaemonUpgradeSnapshotStatus::READY;
   current.targets_by_name_arch = std::move(next_targets);
-  current.error.clear();
   return true;
 }
 
@@ -169,7 +166,7 @@ DaemonUpgradeState::publish_success(DaemonUpgradeRefreshId refresh_id,
 // Store a failed daemon upgrade snapshot request.
 // -----------------------------------------------------------------------------
 void
-DaemonUpgradeState::publish_failure(DaemonUpgradeRefreshId refresh_id, const std::string &error)
+DaemonUpgradeState::publish_failure(DaemonUpgradeRefreshId refresh_id, const std::string &)
 {
   std::lock_guard<std::mutex> lock(mutex);
   if (!active_refresh_id.has_value() || active_refresh_id.value() != refresh_id) {
@@ -179,7 +176,6 @@ DaemonUpgradeState::publish_failure(DaemonUpgradeRefreshId refresh_id, const std
   active_refresh_id.reset();
   current.status = DaemonUpgradeSnapshotStatus::ERROR;
   current.targets_by_name_arch.clear();
-  current.error = error;
 }
 
 // -----------------------------------------------------------------------------
@@ -200,7 +196,6 @@ DaemonUpgradeState::abandon_refresh(DaemonUpgradeRefreshId refresh_id)
     current.status = DaemonUpgradeSnapshotStatus::STALE;
   }
   current.targets_by_name_arch.clear();
-  current.error.clear();
   return true;
 }
 
@@ -214,7 +209,6 @@ DaemonUpgradeState::mark_stale()
   active_refresh_id.reset();
   current.status = DaemonUpgradeSnapshotStatus::STALE;
   current.targets_by_name_arch.clear();
-  current.error.clear();
 }
 
 #ifdef DNFUI_BUILD_TESTS

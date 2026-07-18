@@ -93,8 +93,8 @@ package_query_finish_results_refresh(MainWindowUiState *widgets)
   }
 
   if (widgets->query_state.preserve_selection_on_reload) {
-    PackageRow selected;
-    if (!package_table_get_selected_package_row(widgets, selected)) {
+    PackageTableRow selected;
+    if (!package_table_get_selected_package(widgets, selected)) {
       package_details_reset_details_view(widgets);
     }
   } else {
