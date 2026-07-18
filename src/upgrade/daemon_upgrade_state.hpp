@@ -61,7 +61,7 @@ class DaemonUpgradeState {
   bool publish_success(DaemonUpgradeRefreshId refresh_id,
                        const std::vector<TransactionServiceUpgradeTarget> &targets,
                        std::string &error_out);
-  void publish_failure(DaemonUpgradeRefreshId refresh_id, const std::string &error);
+  void publish_failure(DaemonUpgradeRefreshId refresh_id);
   bool abandon_refresh(DaemonUpgradeRefreshId refresh_id);
   void mark_stale();
 

@@ -166,7 +166,7 @@ DaemonUpgradeState::publish_success(DaemonUpgradeRefreshId refresh_id,
 // Store a failed daemon upgrade snapshot request.
 // -----------------------------------------------------------------------------
 void
-DaemonUpgradeState::publish_failure(DaemonUpgradeRefreshId refresh_id, const std::string &)
+DaemonUpgradeState::publish_failure(DaemonUpgradeRefreshId refresh_id)
 {
   std::lock_guard<std::mutex> lock(mutex);
   if (!active_refresh_id.has_value() || active_refresh_id.value() != refresh_id) {

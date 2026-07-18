@@ -153,7 +153,7 @@ TEST_CASE("daemon upgrade state publishes failure")
 
   std::optional<DaemonUpgradeRefreshId> refresh_id = state.begin_refresh();
   REQUIRE(refresh_id.has_value());
-  state.publish_failure(refresh_id.value(), "daemon failed");
+  state.publish_failure(refresh_id.value());
 
   DaemonUpgradeSnapshot snapshot = state.snapshot();
   REQUIRE(snapshot.status == DaemonUpgradeSnapshotStatus::ERROR);
@@ -247,7 +247,7 @@ TEST_CASE("daemon upgrade state recovers after error and stale states")
 
   std::optional<DaemonUpgradeRefreshId> failed_refresh_id = state.begin_refresh();
   REQUIRE(failed_refresh_id.has_value());
-  state.publish_failure(failed_refresh_id.value(), "daemon failed");
+  state.publish_failure(failed_refresh_id.value());
   error = "old error";
   std::optional<DaemonUpgradeRefreshId> error_recovery_id = state.begin_refresh();
   REQUIRE(error_recovery_id.has_value());
@@ -280,7 +280,7 @@ TEST_CASE("daemon upgrade state rejects publication after stale")
   state.mark_stale();
   REQUIRE_FALSE(state.publish_success(refresh_id.value(), targets, error));
   REQUIRE(error.find("no longer active") != std::string::npos);
-  state.publish_failure(refresh_id.value(), "old failure");
+  state.publish_failure(refresh_id.value());
 
   DaemonUpgradeSnapshot snapshot = state.snapshot();
   REQUIRE(snapshot.status == DaemonUpgradeSnapshotStatus::STALE);
@@ -416,7 +416,7 @@ TEST_CASE("daemon upgrade state ignores old failure during newer refresh")
   std::optional<DaemonUpgradeRefreshId> new_refresh_id = state.begin_refresh();
   REQUIRE(new_refresh_id.has_value());
 
-  state.publish_failure(old_refresh_id.value(), "old failure");
+  state.publish_failure(old_refresh_id.value());
   REQUIRE(state.snapshot().status == DaemonUpgradeSnapshotStatus::REFRESHING);
 
   REQUIRE(state.publish_success(new_refresh_id.value(), targets, error));
@@ -468,7 +468,7 @@ TEST_CASE("daemon upgrade state rejects publication without refresh")
 
   REQUIRE_FALSE(state.publish_success(1, targets, error));
   REQUIRE(error.find("no longer active") != std::string::npos);
-  state.publish_failure(1, "old failure");
+  state.publish_failure(1);
 
   DaemonUpgradeSnapshot snapshot = state.snapshot();
   REQUIRE(snapshot.status == DaemonUpgradeSnapshotStatus::NOT_LOADED);

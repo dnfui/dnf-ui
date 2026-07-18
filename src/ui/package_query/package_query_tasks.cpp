@@ -398,7 +398,7 @@ on_list_upgradeable_task(GTask *task, gpointer, gpointer, GCancellable *cancella
         return;
       }
 
-      DaemonUpgradeState::instance().publish_failure(refresh_id.value(), error);
+      DaemonUpgradeState::instance().publish_failure(refresh_id.value());
       refresh_state_closed = true;
       throw std::runtime_error(error.empty() ? _("Unable to load upgradable packages from dnf5daemon.") : error);
     }
@@ -452,7 +452,7 @@ on_list_upgradeable_task(GTask *task, gpointer, gpointer, GCancellable *cancella
       if (cancellable && g_cancellable_is_cancelled(cancellable)) {
         DaemonUpgradeState::instance().abandon_refresh(refresh_id.value());
       } else {
-        DaemonUpgradeState::instance().publish_failure(refresh_id.value(), e.what());
+        DaemonUpgradeState::instance().publish_failure(refresh_id.value());
       }
       refresh_state_closed = true;
     }
