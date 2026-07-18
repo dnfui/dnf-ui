@@ -135,7 +135,7 @@ architecture pair.
 
 Normal search is substring based. If the search term contains `*` or `?`, normal search treats it as a wildcard pattern. Exact search remains literal.
 
-The List Upgradable view uses dnf5daemon as the authority for which upgrades exist. The worker first loads the daemon upgrade targets and asks libdnf5 only for matching package metadata. The GTK completion stores the daemon targets in the shared daemon upgrade snapshot only when it accepts the matching table rows. Missing metadata does not hide a daemon-reported upgrade. In that case the table keeps a basic row built from the daemon target.
+The List Upgradable view uses dnf5daemon as the authority for which upgrades exist. The worker first loads the daemon upgrade targets and asks libdnf5 only for matching package metadata. Metadata enrichment also refreshes installed-package state. If that state changed after the daemon target list was loaded, the result is rejected and the user must reload List Upgradable. The GTK completion stores the daemon targets in the shared daemon upgrade snapshot only when it accepts the matching table rows. Missing metadata does not hide a daemon-reported upgrade. In that case the table keeps a basic row built from the daemon target.
 
 This keeps the list honest: libdnf5 can enrich daemon-selected upgrade rows, but it no longer decides which rows appear in List Upgradable.
 

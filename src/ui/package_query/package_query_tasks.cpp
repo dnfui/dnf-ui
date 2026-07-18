@@ -80,7 +80,19 @@ struct UpgradeablePackageListResult {
   DaemonUpgradeRefreshOwner refresh_owner;
   std::vector<TransactionServiceUpgradeTarget> targets;
   std::vector<PackageRow> metadata_rows;
+  bool package_state_changed = false;
 };
+
+// -----------------------------------------------------------------------------
+// Return a List Upgradable result that tells completion to show the retry message.
+// -----------------------------------------------------------------------------
+static void
+return_package_state_changed_result(GTask *task)
+{
+  auto *results = new UpgradeablePackageListResult;
+  results->package_state_changed = true;
+  g_task_return_pointer(task, results, [](gpointer p) { delete static_cast<UpgradeablePackageListResult *>(p); });
+}
 
 // Data passed to one exact selected-package reload task.
 // The selected NEVRA and generation are checked again before the table is updated.
@@ -360,6 +372,10 @@ on_list_upgradeable_task(GTask *task, gpointer, gpointer, GCancellable *cancella
     DNFUI_TRACE("Upgradable list task start");
 #endif
 
+    if (dnf_backend_refresh_installed_nevras()) {
+      DaemonUpgradeState::instance().mark_stale();
+    }
+
     refresh_id = DaemonUpgradeState::instance().begin_refresh();
     if (!refresh_id.has_value()) {
       throw std::runtime_error(_("dnf5daemon upgrade information is already being refreshed."));
@@ -391,6 +407,13 @@ on_list_upgradeable_task(GTask *task, gpointer, gpointer, GCancellable *cancella
         "Upgradable list task daemon targets=%zu elapsed_ms=%lld", targets.size(), elapsed_ms_since(started_at_us));
 #endif
 
+    if (targets.empty() && dnf_backend_refresh_installed_nevras()) {
+      DaemonUpgradeState::instance().abandon_refresh(refresh_id.value());
+      refresh_state_closed = true;
+      return_package_state_changed_result(task);
+      return;
+    }
+
     std::vector<std::string> target_nevras;
     target_nevras.reserve(targets.size());
     for (const auto &target : targets) {
@@ -399,7 +422,15 @@ on_list_upgradeable_task(GTask *task, gpointer, gpointer, GCancellable *cancella
 
     std::vector<PackageRow> metadata_rows;
     try {
-      metadata_rows = dnf_backend_get_available_package_metadata_by_nevras_interruptible(target_nevras, cancellable);
+      DnfBackendUpgradeMetadataResult metadata =
+          dnf_backend_get_available_package_metadata_by_nevras_interruptible(target_nevras, cancellable);
+      if (metadata.installed_state_changed) {
+        DaemonUpgradeState::instance().abandon_refresh(refresh_id.value());
+        refresh_state_closed = true;
+        return_package_state_changed_result(task);
+        return;
+      }
+      metadata_rows = std::move(metadata.rows);
     } catch (const std::exception &) {
       // Metadata enrichment is best effort. The daemon target remains visible
       // because dnf5daemon is the authority for List Upgradable.
@@ -481,6 +512,14 @@ on_list_upgradeable_task_finished(GObject *, GAsyncResult *res, gpointer user_da
   }
 
   if (result) {
+    if (result->package_state_changed) {
+      delete result;
+      ui_helpers_set_status(widgets->query.status_label,
+                            _("Package state changed while loading upgrades. Press List Upgradable to try again."),
+                            "blue");
+      return;
+    }
+
     std::string publish_error;
     if (!DaemonUpgradeState::instance().publish_success(result->refresh_owner.id(), result->targets, publish_error)) {
       result->refresh_owner.close();
@@ -503,6 +542,9 @@ on_list_upgradeable_task_finished(GObject *, GAsyncResult *res, gpointer user_da
     DaemonUpgradeSnapshot snapshot = DaemonUpgradeState::instance().snapshot();
     if (snapshot.status != DaemonUpgradeSnapshotStatus::READY) {
       delete result;
+      ui_helpers_set_status(widgets->query.status_label,
+                            _("Package state changed while loading upgrades. Press List Upgradable to try again."),
+                            "blue");
       return;
     }
 

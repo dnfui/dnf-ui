@@ -145,6 +145,7 @@ Why this matters:
 - Normal `nevra` is the application-facing package ID because it matches libdnf5 `PackageRow::nevra`. `full_nevra` is kept separately for callers that need the daemon's full epoch form.
 - The shared daemon upgrade state stores complete package-list results by package name and architecture. It does not fetch daemon data itself.
 - Successful List Upgradable results publish that shared daemon state from the GTK completion path after the result is accepted for display. The worker must not publish a successful snapshot before completion can still reject or cancel the result.
+- Metadata enrichment for List Upgradable also refreshes installed-package state. If that scan detects an installed-state change after the daemon target list was loaded, the daemon result must be rejected and the user must reload List Upgradable.
 - A successful empty result means no daemon-reported upgrade targets. A failed request means upgrade information is unavailable. Those states must not be treated as the same thing.
 - The shared daemon upgrade state exposes status separately from target rows. Only `READY` means the target map can be used as current upgrade information.
 - Daemon upgrade results may only be published by the refresh that owns the active refresh ID. If package or repository state becomes stale before a daemon call returns, that old result must not become the current snapshot.

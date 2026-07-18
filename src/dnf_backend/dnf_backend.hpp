@@ -361,11 +361,17 @@ std::vector<PackageRow> dnf_backend_get_browse_package_rows_interruptible(GCance
 // Query available repo packages that are upgrades to installed packages.
 // -----------------------------------------------------------------------------
 std::vector<PackageRow> dnf_backend_get_upgradeable_package_rows_interruptible(GCancellable *cancellable);
+
+struct DnfBackendUpgradeMetadataResult {
+  std::vector<PackageRow> rows;
+  bool installed_state_changed = false;
+};
+
 // -----------------------------------------------------------------------------
 // Return available package metadata for exact daemon-selected NEVRAs.
 // This does not decide which packages are upgrades.
 // -----------------------------------------------------------------------------
-std::vector<PackageRow>
+DnfBackendUpgradeMetadataResult
 dnf_backend_get_available_package_metadata_by_nevras_interruptible(const std::vector<std::string> &nevras,
                                                                    GCancellable *cancellable);
 

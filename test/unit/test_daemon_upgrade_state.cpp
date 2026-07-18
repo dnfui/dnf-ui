@@ -504,5 +504,49 @@ TEST_CASE("daemon upgrade refresh owner keeps accepted results")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that an installed-state change during enrichment prevents publication.
+// -----------------------------------------------------------------------------
+TEST_CASE("daemon upgrade state rejects publication after enrichment state change")
+{
+  DaemonUpgradeState &state = reset_state();
+  std::string error;
+  std::vector<TransactionServiceUpgradeTarget> targets {
+    make_target("demo", "x86_64", "2.0", "demo-0:2.0-1.fc44.x86_64"),
+  };
+
+  std::optional<DaemonUpgradeRefreshId> refresh_id = state.begin_refresh();
+  REQUIRE(refresh_id.has_value());
+  REQUIRE(state.abandon_refresh(refresh_id.value()));
+  REQUIRE_FALSE(state.publish_success(refresh_id.value(), targets, error));
+  REQUIRE(error.find("no longer active") != std::string::npos);
+
+  DaemonUpgradeSnapshot snapshot = state.snapshot();
+  REQUIRE(snapshot.status == DaemonUpgradeSnapshotStatus::NOT_LOADED);
+  REQUIRE(snapshot.targets_by_name_arch.empty());
+}
+
+// -----------------------------------------------------------------------------
+// Verify that state can become stale after a result was published.
+// -----------------------------------------------------------------------------
+TEST_CASE("daemon upgrade state can become stale after publication")
+{
+  DaemonUpgradeState &state = reset_state();
+  std::string error;
+  std::vector<TransactionServiceUpgradeTarget> targets {
+    make_target("demo", "x86_64", "2.0", "demo-0:2.0-1.fc44.x86_64"),
+  };
+
+  std::optional<DaemonUpgradeRefreshId> refresh_id = state.begin_refresh();
+  REQUIRE(refresh_id.has_value());
+  REQUIRE(state.publish_success(refresh_id.value(), targets, error));
+  state.mark_stale();
+
+  DaemonUpgradeSnapshot snapshot = state.snapshot();
+  REQUIRE(snapshot.status == DaemonUpgradeSnapshotStatus::STALE);
+  REQUIRE(snapshot.generation == 1);
+  REQUIRE(snapshot.targets_by_name_arch.empty());
+}
+
+// -----------------------------------------------------------------------------
 // EOF
 // -----------------------------------------------------------------------------

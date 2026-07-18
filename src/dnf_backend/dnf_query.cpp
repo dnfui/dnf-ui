@@ -668,18 +668,18 @@ dnf_backend_get_upgradeable_package_rows_interruptible(GCancellable *cancellable
 // The caller has already decided which packages are upgrade targets.
 // This helper only enriches those exact package IDs and refreshes installed state once.
 // -----------------------------------------------------------------------------
-std::vector<PackageRow>
+DnfBackendUpgradeMetadataResult
 dnf_backend_get_available_package_metadata_by_nevras_interruptible(const std::vector<std::string> &nevras,
                                                                    GCancellable *cancellable)
 {
-  std::vector<PackageRow> rows;
+  DnfBackendUpgradeMetadataResult result;
   InstalledQueryResult installed;
   std::set<std::string> protected_names;
   std::set<std::string> requested_nevras(nevras.begin(), nevras.end());
   std::set<std::string> returned_nevras;
 
   if (requested_nevras.empty()) {
-    return rows;
+    return result;
   }
 
   {
@@ -699,7 +699,7 @@ dnf_backend_get_available_package_metadata_by_nevras_interruptible(const std::ve
           continue;
         }
 
-        rows.push_back(row);
+        result.rows.push_back(row);
         returned_nevras.insert(row.nevra);
       }
 
@@ -714,8 +714,8 @@ dnf_backend_get_available_package_metadata_by_nevras_interruptible(const std::ve
     }
   }
 
-  publish_installed_snapshot(std::move(installed), std::move(protected_names));
-  return rows;
+  result.installed_state_changed = publish_installed_snapshot(std::move(installed), std::move(protected_names));
+  return result;
 }
 
 // -----------------------------------------------------------------------------
