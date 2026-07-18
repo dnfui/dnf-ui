@@ -78,8 +78,8 @@ package_table_show_context_menu(GtkWidget *anchor,
   GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
   gtk_popover_set_child(GTK_POPOVER(popover), box);
 
-  PendingTransactionActionRows action_rows = pending_transaction_action_rows_for_selection(
-      row.row, row.upgrade_target ? &row.upgrade_target.value() : nullptr, row.upgrade_generation);
+  PendingTransactionActionRows action_rows =
+      pending_transaction_action_rows_for_selection(row.row, row.upgrade_target(), row.upgrade_generation());
 
   // Match the main action buttons: install and upgrade use the available row,
   // while remove and reinstall use the installed row.

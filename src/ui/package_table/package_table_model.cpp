@@ -31,13 +31,14 @@ package_table_fill_item_status(MainWindowUiState *widgets, PackageItem &item)
 {
   // Keep Status sorting tied to the stable package state so marking a pending
   // action does not move the row away from the user in the current view.
-  PackageInstallState install_state = item.upgrade_target.has_value() ? PackageInstallState::UPGRADEABLE
-                                                                      : dnf_backend_get_package_install_state(item.row);
+  PackageInstallState install_state =
+      item.upgrade_target() ? PackageInstallState::UPGRADEABLE : dnf_backend_get_package_install_state(item.row);
   item.status_rank = package_table_status_rank(install_state);
 
   for (const auto &a : widgets->transaction.actions) {
     bool action_matches_row = a.nevra == item.row.nevra;
-    bool action_matches_target = item.upgrade_target.has_value() && a.nevra == item.upgrade_target->nevra;
+    const TransactionServiceUpgradeTarget *upgrade_target = item.upgrade_target();
+    bool action_matches_target = upgrade_target && a.nevra == upgrade_target->nevra;
     if (action_matches_row || action_matches_target) {
       switch (a.type) {
       case PendingAction::INSTALL:
@@ -64,10 +65,21 @@ package_table_fill_item_status(MainWindowUiState *widgets, PackageItem &item)
 // Wrap one package row in a GObject so GTK list models can sort and select it.
 // -----------------------------------------------------------------------------
 GObject *
+make_package_object(MainWindowUiState *widgets, const PackageRow &row)
+{
+  GObject *obj = G_OBJECT(g_object_new(G_TYPE_OBJECT, nullptr));
+  auto *item = new PackageItem { row, {}, {}, 0 };
+  package_table_fill_item_status(widgets, *item);
+  g_object_set_qdata_full(obj, package_row_quark(), item, +[](gpointer p) { delete static_cast<PackageItem *>(p); });
+
+  return obj;
+}
+
+GObject *
 make_package_object(MainWindowUiState *widgets, const PackageTableRow &row)
 {
   GObject *obj = G_OBJECT(g_object_new(G_TYPE_OBJECT, nullptr));
-  auto *item = new PackageItem { row.row, row.upgrade_target, row.upgrade_generation, {}, 0 };
+  auto *item = new PackageItem { row.row, row.daemon_upgrade, {}, 0 };
   package_table_fill_item_status(widgets, *item);
   g_object_set_qdata_full(obj, package_row_quark(), item, +[](gpointer p) { delete static_cast<PackageItem *>(p); });
 
@@ -122,8 +134,7 @@ package_table_row_from_item(const PackageItem &item)
 {
   return {
     .row = item.row,
-    .upgrade_target = item.upgrade_target,
-    .upgrade_generation = item.upgrade_generation,
+    .daemon_upgrade = item.daemon_upgrade,
   };
 }
 

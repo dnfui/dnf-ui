@@ -68,8 +68,8 @@ pending_transaction_on_install_button_clicked(GtkButton *, gpointer user_data)
   PackageRow pkg = selected.row;
 
   // Resolve the package ID to queue before adding an install or upgrade action.
-  PendingTransactionActionRows action_rows = pending_transaction_action_rows_for_selection(
-      pkg, selected.upgrade_target ? &selected.upgrade_target.value() : nullptr, selected.upgrade_generation);
+  PendingTransactionActionRows action_rows =
+      pending_transaction_action_rows_for_selection(pkg, selected.upgrade_target(), selected.upgrade_generation());
   if (!action_rows.has_install_row) {
     ui_helpers_set_status(widgets->query.status_label, _("No install or upgrade action is available."), "gray");
     return;
@@ -94,10 +94,8 @@ pending_transaction_on_install_button_clicked(GtkButton *, gpointer user_data)
     ui_helpers_set_status(widgets->query.status_label, (std::string(_("Unmarked: ")) + pkg.name).c_str(), "gray");
   } else {
     if (action_type == PendingAction::UPGRADE) {
-      const TransactionServiceUpgradeTarget *upgrade_target =
-          selected.upgrade_target ? &selected.upgrade_target.value() : nullptr;
       bool marked = pending_transaction_mark_upgrade_action_for_row(
-          widgets->transaction.actions, pkg, upgrade_target, selected.upgrade_generation);
+          widgets->transaction.actions, pkg, selected.upgrade_target(), selected.upgrade_generation());
       if (!marked) {
         package_query_clear_displayed_upgradeable_table(widgets);
         ui_helpers_set_status(
@@ -147,8 +145,8 @@ pending_transaction_on_remove_button_clicked(GtkButton *, gpointer user_data)
   }
   PackageRow pkg = selected.row;
 
-  PendingTransactionActionRows action_rows = pending_transaction_action_rows_for_selection(
-      pkg, selected.upgrade_target ? &selected.upgrade_target.value() : nullptr, selected.upgrade_generation);
+  PendingTransactionActionRows action_rows =
+      pending_transaction_action_rows_for_selection(pkg, selected.upgrade_target(), selected.upgrade_generation());
 
   // Removal checks the installed row.
   // Upgrade candidates use the currently installed NEVRA for removal.
@@ -215,8 +213,8 @@ pending_transaction_on_reinstall_button_clicked(GtkButton *, gpointer user_data)
   }
   PackageRow pkg = selected.row;
 
-  PendingTransactionActionRows action_rows = pending_transaction_action_rows_for_selection(
-      pkg, selected.upgrade_target ? &selected.upgrade_target.value() : nullptr, selected.upgrade_generation);
+  PendingTransactionActionRows action_rows =
+      pending_transaction_action_rows_for_selection(pkg, selected.upgrade_target(), selected.upgrade_generation());
 
   // Reinstall must check the installed package, not the visible update row.
   if (!action_rows.has_installed_row) {
@@ -285,10 +283,8 @@ pending_transaction_on_mark_listed_upgrades_button_clicked(GtkButton *, gpointer
   std::vector<PackageTableRow> rows = package_table_get_displayed_packages(widgets);
   size_t marked_count = 0;
   for (const auto &row : rows) {
-    if (pending_transaction_mark_upgrade_action_for_row(widgets->transaction.actions,
-                                                        row.row,
-                                                        row.upgrade_target ? &row.upgrade_target.value() : nullptr,
-                                                        row.upgrade_generation)) {
+    if (pending_transaction_mark_upgrade_action_for_row(
+            widgets->transaction.actions, row.row, row.upgrade_target(), row.upgrade_generation())) {
       ++marked_count;
     }
   }

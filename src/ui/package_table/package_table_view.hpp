@@ -10,7 +10,7 @@
 #include "dnf_backend/dnf_backend.hpp"
 #include "dnf5daemon_client/transaction_service_client.hpp"
 
-#include <optional>
+#include <memory>
 #include <vector>
 
 struct MainWindowUiState;
@@ -20,10 +20,27 @@ enum class PackageTableEmptyState {
   NO_RESULTS,
 };
 
+// Only List Upgradable rows need daemon target data. Keep it behind a pointer so normal package rows stay small.
+struct DaemonUpgradeRowContext {
+  TransactionServiceUpgradeTarget target;
+  uint64_t upgrade_generation = 0;
+};
+
+using DaemonUpgradeRowContextPtr = std::shared_ptr<const DaemonUpgradeRowContext>;
+
 struct PackageTableRow {
   PackageRow row;
-  std::optional<TransactionServiceUpgradeTarget> upgrade_target;
-  uint64_t upgrade_generation = 0;
+  DaemonUpgradeRowContextPtr daemon_upgrade;
+
+  const TransactionServiceUpgradeTarget *upgrade_target() const
+  {
+    return daemon_upgrade ? &daemon_upgrade->target : nullptr;
+  }
+
+  uint64_t upgrade_generation() const
+  {
+    return daemon_upgrade ? daemon_upgrade->upgrade_generation : 0;
+  }
 };
 
 // -----------------------------------------------------------------------------

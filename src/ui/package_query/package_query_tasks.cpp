@@ -20,6 +20,7 @@
 
 #include <set>
 #include <map>
+#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -180,8 +181,10 @@ package_table_rows_from_daemon_targets(const DaemonUpgradeSnapshot &snapshot,
 
     rows.push_back({
         .row = row,
-        .upgrade_target = target,
-        .upgrade_generation = snapshot.generation,
+        .daemon_upgrade = std::make_shared<DaemonUpgradeRowContext>(DaemonUpgradeRowContext {
+            .target = target,
+            .upgrade_generation = snapshot.generation,
+        }),
     });
   }
 

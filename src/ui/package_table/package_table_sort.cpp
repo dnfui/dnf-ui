@@ -18,7 +18,7 @@ package_table_column_text(const PackageItem &item, PackageColumnKind kind)
     return item.row.name;
   case PackageColumnKind::VERSION: {
     PackageRow installed_row;
-    if (item.upgrade_target.has_value()) {
+    if (item.upgrade_target()) {
       if (dnf_backend_get_installed_package_row_by_name_arch(item.row, installed_row)) {
         return installed_row.version;
       }
@@ -32,8 +32,8 @@ package_table_column_text(const PackageItem &item, PackageColumnKind kind)
     return item.row.version;
   }
   case PackageColumnKind::UPDATE_VERSION:
-    if (item.upgrade_target.has_value()) {
-      return item.upgrade_target->version;
+    if (const TransactionServiceUpgradeTarget *upgrade_target = item.upgrade_target()) {
+      return upgrade_target->version;
     }
     if (dnf_backend_get_package_install_state(item.row) == PackageInstallState::UPGRADEABLE) {
       if (!item.row.repo_candidate_version.empty()) {
@@ -44,7 +44,7 @@ package_table_column_text(const PackageItem &item, PackageColumnKind kind)
     return {};
   case PackageColumnKind::RELEASE: {
     PackageRow installed_row;
-    if (item.upgrade_target.has_value()) {
+    if (item.upgrade_target()) {
       if (dnf_backend_get_installed_package_row_by_name_arch(item.row, installed_row)) {
         return installed_row.release;
       }
@@ -57,8 +57,8 @@ package_table_column_text(const PackageItem &item, PackageColumnKind kind)
     return item.row.release;
   }
   case PackageColumnKind::UPDATE_RELEASE:
-    if (item.upgrade_target.has_value()) {
-      return item.upgrade_target->release;
+    if (const TransactionServiceUpgradeTarget *upgrade_target = item.upgrade_target()) {
+      return upgrade_target->release;
     }
     if (dnf_backend_get_package_install_state(item.row) == PackageInstallState::UPGRADEABLE) {
       if (!item.row.repo_candidate_release.empty()) {
@@ -74,8 +74,8 @@ package_table_column_text(const PackageItem &item, PackageColumnKind kind)
     // A repository name such as "fedora" means the row is available from that repo.
     // "@System" means the row comes from the local installed rpmdb.
     // For upgradable rows, show the repo that provides the update candidate.
-    if (item.upgrade_target.has_value()) {
-      return item.upgrade_target->repo_id;
+    if (const TransactionServiceUpgradeTarget *upgrade_target = item.upgrade_target()) {
+      return upgrade_target->repo_id;
     }
     if (dnf_backend_get_package_install_state(item.row) == PackageInstallState::UPGRADEABLE) {
       if (!item.row.repo_candidate_repo.empty()) {

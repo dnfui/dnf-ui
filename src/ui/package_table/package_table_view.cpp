@@ -767,61 +767,14 @@ package_table_reset_columns_to_default(MainWindowUiState *widgets)
   }
 }
 
-// -----------------------------------------------------------------------------
-// Package table population
-// Builds a virtualized GTK4 ColumnView with structured package metadata.
-// Preserves the selected NEVRA across list refreshes when possible.
-// -----------------------------------------------------------------------------
-void
-package_table_fill_package_view(MainWindowUiState *widgets,
-                                const std::vector<PackageRow> &items,
-                                PackageTableEmptyState empty_state)
+static void
+finish_package_table_view(MainWindowUiState *widgets,
+                          GListStore *store,
+                          size_t item_count,
+                          PackageColumnKind sort_kind,
+                          GtkSortType sort_order,
+                          bool have_sort_state)
 {
-  std::vector<PackageTableRow> rows;
-  rows.reserve(items.size());
-  for (const auto &row : items) {
-    PackageTableRow table_row;
-    table_row.row = row;
-    rows.push_back(table_row);
-  }
-
-  package_table_fill_package_view(widgets, rows, empty_state);
-}
-
-// -----------------------------------------------------------------------------
-// Package table population
-// Builds a virtualized GTK4 ColumnView with structured package metadata.
-// Preserves the selected NEVRA across list refreshes when possible.
-// -----------------------------------------------------------------------------
-void
-package_table_fill_package_view(MainWindowUiState *widgets,
-                                const std::vector<PackageTableRow> &items,
-                                PackageTableEmptyState empty_state)
-{
-  if (items.empty()) {
-    gtk_scrolled_window_set_child(widgets->results.list_scroller, create_empty_package_view(empty_state));
-    widgets->results.listbox = nullptr;
-    gtk_label_set_text(widgets->results.count_label, _("Items: 0"));
-    package_details_clear_selected_package_state(widgets);
-    return;
-  }
-
-  PackageColumnKind sort_kind = PackageColumnKind::STATUS;
-  GtkSortType sort_order = GTK_SORT_ASCENDING;
-  bool have_sort_state = get_package_view_sort_state(widgets, sort_kind, sort_order);
-
-  // Release the old table before allocating the new row model.
-  // Large package lists otherwise keep the old and new row objects alive at the same time.
-  gtk_scrolled_window_set_child(widgets->results.list_scroller, nullptr);
-  widgets->results.listbox = nullptr;
-
-  GListStore *store = g_list_store_new(G_TYPE_OBJECT);
-  for (const auto &row : items) {
-    GObject *obj = make_package_object(widgets, row);
-    g_list_store_append(store, obj);
-    g_object_unref(obj);
-  }
-
   GtkColumnView *view = GTK_COLUMN_VIEW(gtk_column_view_new(nullptr));
   gtk_widget_add_css_class(GTK_WIDGET(view), "package-table-view");
   gtk_widget_set_hexpand(GTK_WIDGET(view), TRUE);
@@ -906,7 +859,7 @@ package_table_fill_package_view(MainWindowUiState *widgets,
 
                      PackageTableRow row = package_table_row_from_item(*item);
                      PendingTransactionActionRows action_rows = pending_transaction_action_rows_for_selection(
-                         row.row, row.upgrade_target ? &row.upgrade_target.value() : nullptr, row.upgrade_generation);
+                         row.row, row.upgrade_target(), row.upgrade_generation());
                      gtk_single_selection_set_selected(sel, position);
                      g_object_unref(obj);
 
@@ -922,7 +875,7 @@ package_table_fill_package_view(MainWindowUiState *widgets,
   widgets->results.listbox = nullptr;
 
   // Update count label
-  std::string count_msg = dnfui_i18n_format_count(items.size(), "Item: %zu", "Items: %zu");
+  std::string count_msg = dnfui_i18n_format_count(item_count, "Item: %zu", "Items: %zu");
   gtk_label_set_text(widgets->results.count_label, count_msg.c_str());
 
   // Restore selection when the same package is still present after a refresh.
@@ -951,6 +904,80 @@ package_table_fill_package_view(MainWindowUiState *widgets,
 
   g_object_unref(sort_model);
   g_object_unref(sel);
+}
+
+// -----------------------------------------------------------------------------
+// Package table population
+// Builds a virtualized GTK4 ColumnView with structured package metadata.
+// Preserves the selected NEVRA across list refreshes when possible.
+// -----------------------------------------------------------------------------
+void
+package_table_fill_package_view(MainWindowUiState *widgets,
+                                const std::vector<PackageRow> &items,
+                                PackageTableEmptyState empty_state)
+{
+  if (items.empty()) {
+    gtk_scrolled_window_set_child(widgets->results.list_scroller, create_empty_package_view(empty_state));
+    widgets->results.listbox = nullptr;
+    gtk_label_set_text(widgets->results.count_label, _("Items: 0"));
+    package_details_clear_selected_package_state(widgets);
+    return;
+  }
+
+  PackageColumnKind sort_kind = PackageColumnKind::STATUS;
+  GtkSortType sort_order = GTK_SORT_ASCENDING;
+  bool have_sort_state = get_package_view_sort_state(widgets, sort_kind, sort_order);
+
+  // Release the old table before allocating the new row model.
+  // Large package lists otherwise keep the old and new row objects alive at the same time.
+  gtk_scrolled_window_set_child(widgets->results.list_scroller, nullptr);
+  widgets->results.listbox = nullptr;
+
+  GListStore *store = g_list_store_new(G_TYPE_OBJECT);
+  for (const auto &row : items) {
+    GObject *obj = make_package_object(widgets, row);
+    g_list_store_append(store, obj);
+    g_object_unref(obj);
+  }
+
+  finish_package_table_view(widgets, store, items.size(), sort_kind, sort_order, have_sort_state);
+}
+
+// -----------------------------------------------------------------------------
+// Package table population
+// Builds a virtualized GTK4 ColumnView with structured package metadata.
+// Preserves the selected NEVRA across list refreshes when possible.
+// -----------------------------------------------------------------------------
+void
+package_table_fill_package_view(MainWindowUiState *widgets,
+                                const std::vector<PackageTableRow> &items,
+                                PackageTableEmptyState empty_state)
+{
+  if (items.empty()) {
+    gtk_scrolled_window_set_child(widgets->results.list_scroller, create_empty_package_view(empty_state));
+    widgets->results.listbox = nullptr;
+    gtk_label_set_text(widgets->results.count_label, _("Items: 0"));
+    package_details_clear_selected_package_state(widgets);
+    return;
+  }
+
+  PackageColumnKind sort_kind = PackageColumnKind::STATUS;
+  GtkSortType sort_order = GTK_SORT_ASCENDING;
+  bool have_sort_state = get_package_view_sort_state(widgets, sort_kind, sort_order);
+
+  // Release the old table before allocating the new row model.
+  // Large package lists otherwise keep the old and new row objects alive at the same time.
+  gtk_scrolled_window_set_child(widgets->results.list_scroller, nullptr);
+  widgets->results.listbox = nullptr;
+
+  GListStore *store = g_list_store_new(G_TYPE_OBJECT);
+  for (const auto &row : items) {
+    GObject *obj = make_package_object(widgets, row);
+    g_list_store_append(store, obj);
+    g_object_unref(obj);
+  }
+
+  finish_package_table_view(widgets, store, items.size(), sort_kind, sort_order, have_sort_state);
 }
 
 // -----------------------------------------------------------------------------

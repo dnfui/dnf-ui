@@ -48,8 +48,9 @@ package_table_status_rank(PackageInstallState state)
 static std::string
 package_table_status_tooltip_text(const PackageTableRow &row)
 {
-  PackageInstallState state = row.upgrade_target.has_value() ? PackageInstallState::UPGRADEABLE
-                                                             : dnf_backend_get_package_install_state(row.row);
+  const TransactionServiceUpgradeTarget *upgrade_target = row.upgrade_target();
+  PackageInstallState state =
+      upgrade_target ? PackageInstallState::UPGRADEABLE : dnf_backend_get_package_install_state(row.row);
   if (state == PackageInstallState::AVAILABLE) {
     return {};
   }
@@ -113,17 +114,17 @@ pending_css_class(MainWindowUiState *widgets, const std::string &nevra, const st
 const char *
 package_table_pending_action_css_class(MainWindowUiState *widgets, const PackageTableRow &row)
 {
-  PackageInstallState install_state = row.upgrade_target.has_value() ? PackageInstallState::UPGRADEABLE
-                                                                     : dnf_backend_get_package_install_state(row.row);
+  const TransactionServiceUpgradeTarget *upgrade_target = row.upgrade_target();
+  PackageInstallState install_state =
+      upgrade_target ? PackageInstallState::UPGRADEABLE : dnf_backend_get_package_install_state(row.row);
   PendingTransactionActionRows action_rows;
   if (install_state == PackageInstallState::UPGRADEABLE) {
-    action_rows = pending_transaction_action_rows_for_selection(
-        row.row, row.upgrade_target ? &row.upgrade_target.value() : nullptr, row.upgrade_generation);
+    action_rows = pending_transaction_action_rows_for_selection(row.row, upgrade_target, row.upgrade_generation());
   }
 
   std::string alternate_nevra;
-  if (row.upgrade_target.has_value() && row.upgrade_target->nevra != row.row.nevra) {
-    alternate_nevra = row.upgrade_target->nevra;
+  if (upgrade_target && upgrade_target->nevra != row.row.nevra) {
+    alternate_nevra = upgrade_target->nevra;
   } else if (action_rows.has_install_row && action_rows.install_row.nevra != row.row.nevra) {
     alternate_nevra = action_rows.install_row.nevra;
   } else if (action_rows.has_installed_row && action_rows.installed_row.nevra != row.row.nevra) {
@@ -206,19 +207,19 @@ package_table_clear_pending_action_css(GtkWidget *cell)
 void
 package_table_update_status_label(GtkWidget *cell, MainWindowUiState *widgets, const PackageTableRow &row)
 {
-  PackageInstallState install_state = row.upgrade_target.has_value() ? PackageInstallState::UPGRADEABLE
-                                                                     : dnf_backend_get_package_install_state(row.row);
+  const TransactionServiceUpgradeTarget *upgrade_target = row.upgrade_target();
+  PackageInstallState install_state =
+      upgrade_target ? PackageInstallState::UPGRADEABLE : dnf_backend_get_package_install_state(row.row);
   PendingTransactionActionRows action_rows;
   if (install_state == PackageInstallState::UPGRADEABLE) {
-    action_rows = pending_transaction_action_rows_for_selection(
-        row.row, row.upgrade_target ? &row.upgrade_target.value() : nullptr, row.upgrade_generation);
+    action_rows = pending_transaction_action_rows_for_selection(row.row, upgrade_target, row.upgrade_generation());
   }
 
   const char *text = package_table_status_text(install_state);
   const char *icon_name = status_icon_name(install_state);
   for (const auto &a : widgets->transaction.actions) {
     bool action_matches_visible_row = a.nevra == row.row.nevra;
-    bool action_matches_target = row.upgrade_target.has_value() && a.nevra == row.upgrade_target->nevra;
+    bool action_matches_target = upgrade_target && a.nevra == upgrade_target->nevra;
     bool action_matches_install_row = action_rows.has_install_row && a.nevra == action_rows.install_row.nevra;
     bool action_matches_installed_row = action_rows.has_installed_row && a.nevra == action_rows.installed_row.nevra;
     if (action_matches_visible_row || action_matches_target || action_matches_install_row ||

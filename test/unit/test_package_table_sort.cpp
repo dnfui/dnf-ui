@@ -4,6 +4,8 @@
 #include "test_utils.hpp"
 #include "ui/package_table/package_table_view_internal.hpp"
 
+#include <memory>
+
 static PackageRow
 make_table_test_row(const std::string &nevra,
                     const std::string &name,
@@ -207,7 +209,9 @@ TEST_CASE("Package table update columns use daemon upgrade target")
   target.full_nevra = target.nevra;
   target.repo_id = "daemon-repo";
 
-  item.upgrade_target = target;
+  item.daemon_upgrade = std::make_shared<DaemonUpgradeRowContext>(DaemonUpgradeRowContext {
+      .target = target,
+  });
 
   REQUIRE(package_table_column_text(item, PackageColumnKind::VERSION).empty());
   REQUIRE(package_table_column_text(item, PackageColumnKind::UPDATE_VERSION) == "1.2.5");
@@ -239,7 +243,9 @@ TEST_CASE("Package table daemon upgrade rows use installed version when availabl
   target.full_nevra = target.nevra;
   target.repo_id = "daemon-repo";
 
-  item.upgrade_target = target;
+  item.daemon_upgrade = std::make_shared<DaemonUpgradeRowContext>(DaemonUpgradeRowContext {
+      .target = target,
+  });
 
   REQUIRE(package_table_column_text(item, PackageColumnKind::VERSION) == "1.2.4");
   REQUIRE(package_table_column_text(item, PackageColumnKind::UPDATE_VERSION) == "1.2.5");

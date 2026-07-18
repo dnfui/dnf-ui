@@ -18,10 +18,14 @@ struct MainWindowUiState;
 // Package row wrapper used by the sortable GTK model.
 struct PackageItem {
   PackageRow row;
-  std::optional<TransactionServiceUpgradeTarget> upgrade_target;
-  uint64_t upgrade_generation = 0;
+  DaemonUpgradeRowContextPtr daemon_upgrade;
   std::string status_text;
   int status_rank;
+
+  const TransactionServiceUpgradeTarget *upgrade_target() const
+  {
+    return daemon_upgrade ? &daemon_upgrade->target : nullptr;
+  }
 };
 
 // Per-column data carried by the custom GTK sorter.
@@ -29,6 +33,7 @@ struct ColumnSorterData {
   PackageColumnKind kind;
 };
 
+GObject *make_package_object(MainWindowUiState *widgets, const PackageRow &row);
 GObject *make_package_object(MainWindowUiState *widgets, const PackageTableRow &row);
 const PackageItem *package_item_from_object(GObject *obj);
 PackageItem *mutable_package_item_from_object(GObject *obj);

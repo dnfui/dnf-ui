@@ -239,7 +239,7 @@ static void
 update_selected_package_actions(MainWindowUiState *widgets, const PackageTableRow &selected)
 {
   PendingTransactionActionRows action_rows = pending_transaction_action_rows_for_selection(
-      selected.row, selected.upgrade_target ? &selected.upgrade_target.value() : nullptr, selected.upgrade_generation);
+      selected.row, selected.upgrade_target(), selected.upgrade_generation());
 
   // Install and upgrade use the available package row.
   // Remove and reinstall use the installed package row.
@@ -529,7 +529,7 @@ package_details_load_selected_package_info(MainWindowUiState *widgets, const Pac
 
   std::string details_query_nevra = selected.row.nevra;
   std::optional<PackageRow> upgrade_row_override;
-  if (selected.upgrade_target.has_value()) {
+  if (selected.upgrade_target()) {
     upgrade_row_override = selected.row;
     PackageRow installed_row;
     if (dnf_backend_get_installed_package_row_by_name_arch(selected.row, installed_row)) {
@@ -553,9 +553,8 @@ package_details_load_selected_package_info(MainWindowUiState *widgets, const Pac
   widgets->results.package_details_cancellable = G_CANCELLABLE(g_object_ref(c));
 
   // Pass selected row state to the background task.
-  PackageInstallState selected_state = selected.upgrade_target.has_value()
-      ? PackageInstallState::UPGRADEABLE
-      : dnf_backend_get_package_install_state(selected.row);
+  PackageInstallState selected_state = selected.upgrade_target() ? PackageInstallState::UPGRADEABLE
+                                                                 : dnf_backend_get_package_install_state(selected.row);
 
   InfoTaskData *td = new InfoTaskData;
   td->selected_nevra = selected.row.nevra;
