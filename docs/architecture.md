@@ -75,7 +75,7 @@ stores the latest complete read-only upgrade-target result reported by dnf5daemo
 Only a `READY` snapshot may be used as current upgrade information. Refreshing,
 stale, error, and not-loaded states must not be shown as upgrade claims.
 
-The List Upgradable view uses dnf5daemon as the authority for upgrade claims.
+The List Upgradable view uses dnf5daemon to decide which upgrades exist.
 The worker loads one complete daemon upgrade-target result and asks libdnf5 only
 for metadata that matches those exact package IDs. The GTK completion publishes
 the daemon snapshot only when it accepts the matching table rows. The table keeps

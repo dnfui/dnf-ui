@@ -30,8 +30,19 @@ struct DaemonUpgradeSnapshot {
 
 using DaemonUpgradeRefreshId = uint64_t;
 
+// The shared state holds the last List Upgradable result accepted by GTK.
+// It does not fetch data from dnf5daemon. Workers load targets, then GTK
+// publishes the result only after cancellation and state checks pass.
+//
+// Table rows keep the snapshot generation they were built from. Later action
+// handling uses that generation to reject stale rows instead of marking an
+// upgrade from an old daemon result.
+//
+// Refresh IDs let only the worker that started the current refresh publish or
+// fail it. Cancelled workers abandon their refresh instead of marking newer work stale.
+//
 // Own one active daemon refresh until the GTK completion either publishes it or
-// rejects it. Destruction abandons an unclosed refresh so stale worker results
+// rejects it. Destruction abandons an unclosed refresh so a cancelled worker
 // cannot keep the shared state locked in REFRESHING.
 class DaemonUpgradeRefreshOwner {
   public:
