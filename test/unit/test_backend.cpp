@@ -140,7 +140,8 @@ TEST_CASE("dnf_backend_refresh_installed_nevras populates installed NEVRA cache"
 {
   reset_backend_globals();
 
-  dnf_backend_refresh_installed_nevras();
+  REQUIRE(dnf_backend_refresh_installed_nevras());
+  REQUIRE_FALSE(dnf_backend_refresh_installed_nevras());
 
   REQUIRE(dnf_backend_installed_snapshot_size() > 0);
 }
@@ -315,6 +316,30 @@ TEST_CASE("Package info formatting shows upgrade details consistently")
   REQUIRE(upgrade_info.find(installed_line) != std::string::npos);
   REQUIRE(upgrade_info.find(upgrade_line) != std::string::npos);
   REQUIRE(upgrade_info.find("Download Size: ") != std::string::npos);
+}
+
+// -----------------------------------------------------------------------------
+// Verify that package details can display an explicit daemon update target.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package info formatting can use explicit upgrade details")
+{
+  reset_backend_globals();
+
+  auto installed_rows = dnf_backend_get_installed_package_rows_interruptible(nullptr);
+  REQUIRE(!installed_rows.empty());
+
+  PackageRow installed_row = installed_rows.front();
+  PackageRow daemon_target = installed_row;
+  daemon_target.version = "999.0";
+  daemon_target.release = "1.test";
+  daemon_target.nevra = daemon_target.name + "-999.0-1.test." + daemon_target.arch;
+  daemon_target.repo = "daemon-test";
+
+  auto info = dnf_backend_get_package_info(installed_row.nevra, &daemon_target);
+
+  REQUIRE(info.find("Package ID: " + installed_row.nevra) != std::string::npos);
+  REQUIRE(info.find("Installed Version: " + installed_row.display_version()) != std::string::npos);
+  REQUIRE(info.find("Upgradable Version: " + daemon_target.display_version()) != std::string::npos);
 }
 
 // -----------------------------------------------------------------------------

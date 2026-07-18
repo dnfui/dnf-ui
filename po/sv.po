@@ -527,6 +527,9 @@ msgstr "Förråd uppdaterade."
 msgid "Repositories refreshed. Press List Upgradable to load updated upgrades."
 msgstr "Förråd uppdaterade. Tryck på Lista uppgraderbara för att läsa in uppdaterade uppgraderingar."
 
+msgid "Installed package state changed. Press List Upgradable to reload upgrades."
+msgstr "Installerat paketläge ändrades. Tryck på Lista uppgraderbara för att läsa in uppgraderingar igen."
+
 msgid "Refreshing repositories..."
 msgstr "Uppdaterar förråd..."
 

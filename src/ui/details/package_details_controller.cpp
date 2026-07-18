@@ -15,14 +15,17 @@
 #include "ui/package_table/package_table_view.hpp"
 #include "ui/package_table/package_table_status.hpp"
 
+#include <optional>
 #include <string>
 
 // Task data for one package details load.
 // Snapshot generation at dispatch time.
 // Outdated results can be dropped after a Base rebuild.
 struct InfoTaskData {
-  char *nevra;
-  char *status_text;
+  std::string selected_nevra;
+  std::string details_query_nevra;
+  std::string status_text;
+  std::optional<PackageRow> upgrade_row_override;
   uint64_t generation;
 };
 
@@ -36,7 +39,8 @@ enum class DeferredDetailsPage {
 // Task data for one deferred details load.
 // The selected NEVRA and generation are checked before the result is shown.
 struct DeferredDetailsTaskData {
-  char *nevra;
+  std::string selected_nevra;
+  std::string details_query_nevra;
   uint64_t generation;
   DeferredDetailsPage page;
 };
@@ -53,18 +57,29 @@ struct DeferredDetailsUiState {
 static void load_visible_package_details_page(MainWindowUiState *widgets, GtkStack *stack);
 
 // -----------------------------------------------------------------------------
+// Build a package row from the daemon target attached to one List Upgradable row.
+// -----------------------------------------------------------------------------
+static PackageRow
+package_row_from_upgrade_target(const TransactionServiceUpgradeTarget &target)
+{
+  PackageRow row;
+  row.nevra = target.nevra.empty() ? target.full_nevra : target.nevra;
+  row.name = target.name;
+  row.epoch = target.epoch;
+  row.version = target.version;
+  row.release = target.release;
+  row.arch = target.arch;
+  row.repo = target.repo_id;
+  return row;
+}
+
+// -----------------------------------------------------------------------------
 // Free data owned by one package details task.
 // -----------------------------------------------------------------------------
 static void
 info_task_data_free(gpointer p)
 {
-  InfoTaskData *d = static_cast<InfoTaskData *>(p);
-  if (!d) {
-    return;
-  }
-  g_free(d->nevra);
-  g_free(d->status_text);
-  g_free(d);
+  delete static_cast<InfoTaskData *>(p);
 }
 
 // -----------------------------------------------------------------------------
@@ -73,13 +88,7 @@ info_task_data_free(gpointer p)
 static void
 deferred_details_task_data_free(gpointer p)
 {
-  DeferredDetailsTaskData *d = static_cast<DeferredDetailsTaskData *>(p);
-  if (!d) {
-    return;
-  }
-
-  g_free(d->nevra);
-  g_free(d);
+  delete static_cast<DeferredDetailsTaskData *>(p);
 }
 
 // -----------------------------------------------------------------------------
@@ -177,6 +186,7 @@ package_details_reset_details_view(MainWindowUiState *widgets)
   widgets->results.files_loaded_nevra.clear();
   widgets->results.deps_loaded_nevra.clear();
   widgets->results.changelog_loaded_nevra.clear();
+  widgets->results.details_query_nevra.clear();
   set_details_text(widgets->results.details_buffer, _("Select a package for details."));
   set_details_text(widgets->results.files_buffer, _("Select an installed package to view its file list."));
   set_details_text(widgets->results.deps_buffer, _("Select a package to view dependencies."));
@@ -194,6 +204,7 @@ package_details_clear_selected_package_state(MainWindowUiState *widgets)
   }
 
   widgets->results.selected_nevra.clear();
+  widgets->results.details_query_nevra.clear();
   widgets->results.files_loaded_nevra.clear();
   widgets->results.deps_loaded_nevra.clear();
   widgets->results.changelog_loaded_nevra.clear();
@@ -242,19 +253,10 @@ package_details_cancel_active_load(MainWindowUiState *widgets)
 // Enable only the transaction actions that make sense for the selected row.
 // -----------------------------------------------------------------------------
 static void
-update_selected_package_actions(MainWindowUiState *widgets, const PackageRow &selected)
+update_selected_package_actions(MainWindowUiState *widgets, const PackageTableRow &selected)
 {
-  PackageTableRow table_row;
-  table_row.row = selected;
-  PackageTableRow current_selection;
-  if (package_table_get_selected_package(widgets, current_selection) && current_selection.row.nevra == selected.nevra) {
-    table_row = current_selection;
-  }
-
   PendingTransactionActionRows action_rows = pending_transaction_action_rows_for_selection(
-      table_row.row,
-      table_row.upgrade_target ? &table_row.upgrade_target.value() : nullptr,
-      table_row.upgrade_generation);
+      selected.row, selected.upgrade_target ? &selected.upgrade_target.value() : nullptr, selected.upgrade_generation);
 
   // Install and upgrade use the available package row.
   // Remove and reinstall use the installed package row.
@@ -271,8 +273,9 @@ update_selected_package_actions(MainWindowUiState *widgets, const PackageRow &se
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.reinstall_button),
                            action_rows.can_try_reinstall && !self_protected);
 
-  const std::string install_nevra = action_rows.has_install_row ? action_rows.install_row.nevra : selected.nevra;
-  const std::string installed_nevra = action_rows.has_installed_row ? action_rows.installed_row.nevra : selected.nevra;
+  const std::string install_nevra = action_rows.has_install_row ? action_rows.install_row.nevra : selected.row.nevra;
+  const std::string installed_nevra =
+      action_rows.has_installed_row ? action_rows.installed_row.nevra : selected.row.nevra;
   ui_helpers_update_action_button_labels_for_selection(
       widgets, install_nevra, installed_nevra, installed_nevra, action_rows.install_is_upgrade);
 }
@@ -290,19 +293,22 @@ on_package_details_task(GTask *task, gpointer, gpointer task_data, GCancellable 
 
   InfoTaskData *td = static_cast<InfoTaskData *>(task_data);
   try {
-    DNFUI_TRACE("Package info task start nevra=%s", td ? td->nevra : "");
-    std::string info = dnf_backend_get_package_info(td->nevra);
-    DNFUI_TRACE("Package info details loaded nevra=%s bytes=%zu", td ? td->nevra : "", info.size());
+    DNFUI_TRACE("Package info task start nevra=%s", td ? td->details_query_nevra.c_str() : "");
+    std::string info = td && td->upgrade_row_override.has_value()
+        ? dnf_backend_get_package_info(td->details_query_nevra, &td->upgrade_row_override.value())
+        : dnf_backend_get_package_info(td ? td->details_query_nevra : "");
+    DNFUI_TRACE(
+        "Package info details loaded nevra=%s bytes=%zu", td ? td->details_query_nevra.c_str() : "", info.size());
 
     if (cancellable && g_cancellable_is_cancelled(cancellable)) {
       return_package_details_task_cancelled(task);
       return;
     }
 
-    DNFUI_TRACE("Package info task done nevra=%s", td ? td->nevra : "");
+    DNFUI_TRACE("Package info task done nevra=%s", td ? td->details_query_nevra.c_str() : "");
     g_task_return_pointer(task, g_strdup(info.c_str()), g_free);
   } catch (const std::exception &e) {
-    DNFUI_TRACE("Package info task failed nevra=%s error=%s", td ? td->nevra : "", e.what());
+    DNFUI_TRACE("Package info task failed nevra=%s error=%s", td ? td->details_query_nevra.c_str() : "", e.what());
     g_task_return_error(task, g_error_new_literal(G_IO_ERROR, G_IO_ERROR_FAILED, e.what()));
   }
 }
@@ -337,7 +343,9 @@ on_package_details_task_finished(GObject *, GAsyncResult *res, gpointer user_dat
     widgets->results.package_details_cancellable = nullptr;
   }
 
-  if (td->generation != BaseManager::instance().current_generation() || widgets->results.selected_nevra != td->nevra) {
+  if (td->generation != BaseManager::instance().current_generation() ||
+      widgets->results.selected_nevra != td->selected_nevra ||
+      widgets->results.details_query_nevra != td->details_query_nevra) {
     g_free(info);
     if (error) {
       g_error_free(error);
@@ -354,7 +362,7 @@ on_package_details_task_finished(GObject *, GAsyncResult *res, gpointer user_dat
   }
 
   // Show the row status even when the Status column is hidden.
-  std::string info_text = package_info_text_with_status(info, td->status_text);
+  std::string info_text = package_info_text_with_status(info, td->status_text.c_str());
 
   // Display general package information.
   set_details_text(widgets->results.details_buffer, info_text.c_str());
@@ -383,20 +391,20 @@ on_deferred_details_task(GTask *task, gpointer, gpointer task_data, GCancellable
     std::string text;
     switch (td->page) {
     case DeferredDetailsPage::FILES:
-      DNFUI_TRACE("Package file list load start nevra=%s", td->nevra);
+      DNFUI_TRACE("Package file list load start nevra=%s", td->details_query_nevra.c_str());
       // NOTE: Limit displayed files so very large file lists can still be copied.
-      text = dnf_backend_get_installed_package_files(td->nevra, 1500);
-      DNFUI_TRACE("Package file list loaded nevra=%s bytes=%zu", td->nevra, text.size());
+      text = dnf_backend_get_installed_package_files(td->details_query_nevra, 1500);
+      DNFUI_TRACE("Package file list loaded nevra=%s bytes=%zu", td->details_query_nevra.c_str(), text.size());
       break;
     case DeferredDetailsPage::DEPENDENCIES:
-      DNFUI_TRACE("Package dependencies load start nevra=%s", td->nevra);
-      text = dnf_backend_get_package_deps(td->nevra);
-      DNFUI_TRACE("Package dependencies loaded nevra=%s bytes=%zu", td->nevra, text.size());
+      DNFUI_TRACE("Package dependencies load start nevra=%s", td->details_query_nevra.c_str());
+      text = dnf_backend_get_package_deps(td->details_query_nevra);
+      DNFUI_TRACE("Package dependencies loaded nevra=%s bytes=%zu", td->details_query_nevra.c_str(), text.size());
       break;
     case DeferredDetailsPage::CHANGELOG:
-      DNFUI_TRACE("Package changelog load start nevra=%s", td->nevra);
-      text = dnf_backend_get_package_changelog(td->nevra);
-      DNFUI_TRACE("Package changelog loaded nevra=%s bytes=%zu", td->nevra, text.size());
+      DNFUI_TRACE("Package changelog load start nevra=%s", td->details_query_nevra.c_str());
+      text = dnf_backend_get_package_changelog(td->details_query_nevra);
+      DNFUI_TRACE("Package changelog loaded nevra=%s bytes=%zu", td->details_query_nevra.c_str(), text.size());
       break;
     }
 
@@ -407,7 +415,8 @@ on_deferred_details_task(GTask *task, gpointer, gpointer task_data, GCancellable
 
     g_task_return_pointer(task, g_strdup(text.c_str()), g_free);
   } catch (const std::exception &e) {
-    DNFUI_TRACE("Deferred package details load failed nevra=%s error=%s", td ? td->nevra : "", e.what());
+    DNFUI_TRACE(
+        "Deferred package details load failed nevra=%s error=%s", td ? td->details_query_nevra.c_str() : "", e.what());
     g_task_return_pointer(task, g_strdup(e.what()), g_free);
   }
 }
@@ -444,7 +453,9 @@ on_deferred_details_task_finished(GObject *, GAsyncResult *res, gpointer user_da
     *ui.cancellable = nullptr;
   }
 
-  if (td->generation != BaseManager::instance().current_generation() || widgets->results.selected_nevra != td->nevra) {
+  if (td->generation != BaseManager::instance().current_generation() ||
+      widgets->results.selected_nevra != td->selected_nevra ||
+      widgets->results.details_query_nevra != td->details_query_nevra) {
     g_free(text);
     if (error) {
       g_error_free(error);
@@ -460,7 +471,7 @@ on_deferred_details_task_finished(GObject *, GAsyncResult *res, gpointer user_da
     return;
   }
 
-  *ui.loaded_nevra = td->nevra;
+  *ui.loaded_nevra = td->details_query_nevra;
   set_details_text(ui.buffer, text);
   g_free(text);
 }
@@ -471,17 +482,18 @@ on_deferred_details_task_finished(GObject *, GAsyncResult *res, gpointer user_da
 static void
 load_selected_package_details_page(MainWindowUiState *widgets, DeferredDetailsPage page)
 {
-  if (!widgets || widgets->results.selected_nevra.empty() || widgets->results.package_details_cancellable) {
+  if (!widgets || widgets->results.selected_nevra.empty() || widgets->results.details_query_nevra.empty() ||
+      widgets->results.package_details_cancellable) {
     return;
   }
-  PackageRow selected;
-  if (!package_table_get_selected_package_row(widgets, selected) || selected.nevra != widgets->results.selected_nevra) {
+  PackageTableRow selected;
+  if (!package_table_get_selected_package(widgets, selected) || selected.row.nevra != widgets->results.selected_nevra) {
     return;
   }
 
   DeferredDetailsUiState ui = deferred_details_ui_state(widgets, page);
   if (!ui.buffer || !ui.loaded_nevra || !ui.cancellable || *ui.cancellable ||
-      *ui.loaded_nevra == widgets->results.selected_nevra) {
+      *ui.loaded_nevra == widgets->results.details_query_nevra) {
     return;
   }
 
@@ -491,8 +503,9 @@ load_selected_package_details_page(MainWindowUiState *widgets, DeferredDetailsPa
   GTask *task = widgets_task_new_for_main_window_ui_state(widgets, c, on_deferred_details_task_finished);
   *ui.cancellable = G_CANCELLABLE(g_object_ref(c));
 
-  DeferredDetailsTaskData *td = static_cast<DeferredDetailsTaskData *>(g_malloc0(sizeof *td));
-  td->nevra = g_strdup(widgets->results.selected_nevra.c_str());
+  DeferredDetailsTaskData *td = new DeferredDetailsTaskData;
+  td->selected_nevra = widgets->results.selected_nevra;
+  td->details_query_nevra = widgets->results.details_query_nevra;
   td->generation = BaseManager::instance().current_generation();
   td->page = page;
   g_task_set_task_data(task, td, deferred_details_task_data_free);
@@ -523,7 +536,7 @@ load_visible_package_details_page(MainWindowUiState *widgets, GtkStack *stack)
 // Start the async package details load for the newly selected package row.
 // -----------------------------------------------------------------------------
 void
-package_details_load_selected_package_info(MainWindowUiState *widgets, const PackageRow &selected)
+package_details_load_selected_package_info(MainWindowUiState *widgets, const PackageTableRow &selected)
 {
   if (!widgets) {
     return;
@@ -531,7 +544,18 @@ package_details_load_selected_package_info(MainWindowUiState *widgets, const Pac
 
   package_details_cancel_active_load(widgets);
 
-  widgets->results.selected_nevra = selected.nevra;
+  std::string details_query_nevra = selected.row.nevra;
+  std::optional<PackageRow> upgrade_row_override;
+  if (selected.upgrade_target.has_value()) {
+    upgrade_row_override = package_row_from_upgrade_target(selected.upgrade_target.value());
+    PackageRow installed_row;
+    if (dnf_backend_get_installed_package_row_by_name_arch(selected.row, installed_row)) {
+      details_query_nevra = installed_row.nevra;
+    }
+  }
+
+  widgets->results.selected_nevra = selected.row.nevra;
+  widgets->results.details_query_nevra = details_query_nevra;
   widgets->results.files_loaded_nevra.clear();
   widgets->results.deps_loaded_nevra.clear();
   widgets->results.changelog_loaded_nevra.clear();
@@ -546,16 +570,15 @@ package_details_load_selected_package_info(MainWindowUiState *widgets, const Pac
   widgets->results.package_details_cancellable = G_CANCELLABLE(g_object_ref(c));
 
   // Pass selected row state to the background task.
-  PackageInstallState selected_state = dnf_backend_get_package_install_state(selected);
-  PackageTableRow current_selection;
-  if (package_table_get_selected_package(widgets, current_selection) && current_selection.row.nevra == selected.nevra &&
-      current_selection.upgrade_target.has_value()) {
-    selected_state = PackageInstallState::UPGRADEABLE;
-  }
+  PackageInstallState selected_state = selected.upgrade_target.has_value()
+      ? PackageInstallState::UPGRADEABLE
+      : dnf_backend_get_package_install_state(selected.row);
 
-  InfoTaskData *td = static_cast<InfoTaskData *>(g_malloc0(sizeof *td));
-  td->nevra = g_strdup(selected.nevra.c_str());
-  td->status_text = g_strdup(package_table_status_text(selected_state));
+  InfoTaskData *td = new InfoTaskData;
+  td->selected_nevra = selected.row.nevra;
+  td->details_query_nevra = details_query_nevra;
+  td->status_text = package_table_status_text(selected_state);
+  td->upgrade_row_override = upgrade_row_override;
   td->generation = BaseManager::instance().current_generation();
   g_task_set_task_data(task, td, info_task_data_free);
 

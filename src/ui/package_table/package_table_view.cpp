@@ -894,7 +894,7 @@ package_table_fill_package_view(MainWindowUiState *widgets,
 
                      PackageTableRow selected = package_table_row_from_item(*item);
                      g_object_unref(obj);
-                     package_details_load_selected_package_info(widgets, selected.row);
+                     package_details_load_selected_package_info(widgets, selected);
                    }),
                    widgets);
 

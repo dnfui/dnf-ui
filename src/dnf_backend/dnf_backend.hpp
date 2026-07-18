@@ -387,6 +387,7 @@ std::vector<PackageRow> dnf_backend_get_available_package_rows_by_nevra(const st
 // Return formatted package details for one NEVRA.
 // -----------------------------------------------------------------------------
 std::string dnf_backend_get_package_info(const std::string &pkg_nevra);
+std::string dnf_backend_get_package_info(const std::string &pkg_nevra, const PackageRow *upgrade_row_override);
 // -----------------------------------------------------------------------------
 // Return the installed file list for one NEVRA.
 // -----------------------------------------------------------------------------

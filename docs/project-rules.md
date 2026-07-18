@@ -32,7 +32,8 @@ This file states the rules that should stay true as DNF UI changes.
 - An upgradable package row represents an installed package with a newer
   repository candidate.
 - libdnf5 is the source for package rows, package details, and local package
-  state shown in the UI.
+  state shown in the UI. For List Upgradable rows, the displayed update target
+  comes from dnf5daemon.
 - dnf5daemon is the source for transaction previews, apply work, Upgrade All,
   and the List Upgradable upgrade target set.
 - The generic Status column may show that repository metadata contains a newer candidate. It must not be treated as proof that dnf5daemon can apply that upgrade.
@@ -40,6 +41,9 @@ This file states the rules that should stay true as DNF UI changes.
 - If dnf5daemon reports an upgrade whose metadata cannot be loaded from libdnf5, keep a basic daemon row visible instead of hiding the upgrade.
 - When showing an upgradable package, details tabs should describe the currently
   installed package unless the text clearly says it is showing update information.
+- For daemon-backed List Upgradable rows, the Info tab must use the attached
+  daemon target for update information instead of selecting a separate libdnf5
+  candidate.
 - Installed package checks must not load repository metadata when local rpmdb
   state is enough.
 - Repository refresh can update repository-visible package state, but it should

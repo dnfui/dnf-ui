@@ -173,6 +173,9 @@ on_installed_refresh_task(GTask *task, gpointer, gpointer, GCancellable *)
 
   try {
     const bool changed = dnf_backend_refresh_installed_nevras();
+    if (changed) {
+      DaemonUpgradeState::instance().mark_stale();
+    }
     g_task_return_boolean(task, changed);
   } catch (const std::exception &e) {
     g_task_return_new_error(task, G_IO_ERROR, G_IO_ERROR_FAILED, "%s", e.what());
@@ -197,8 +200,11 @@ on_installed_refresh_task_finished(GObject *, GAsyncResult *result, gpointer)
     // Drop those cached rows now that the installed snapshot is up to date.
     package_query_clear_search_cache();
     if (changed) {
-      DaemonUpgradeState::instance().mark_stale();
-      package_query_clear_displayed_upgradeable_table(g_main_widgets);
+      if (package_query_clear_displayed_upgradeable_table(g_main_widgets)) {
+        ui_helpers_set_status(g_main_widgets->query.status_label,
+                              _("Installed package state changed. Press List Upgradable to reload upgrades."),
+                              "blue");
+      }
     }
     DNFUI_TRACE("Installed package refresh task done");
   }

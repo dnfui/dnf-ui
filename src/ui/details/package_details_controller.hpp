@@ -12,6 +12,7 @@ typedef struct _GParamSpec GParamSpec;
 typedef struct _GtkStack GtkStack;
 
 struct MainWindowUiState;
+struct PackageTableRow;
 
 // -----------------------------------------------------------------------------
 // Clear the selected package state and disable package actions.
@@ -24,7 +25,7 @@ void package_details_cancel_active_load(MainWindowUiState *widgets);
 // -----------------------------------------------------------------------------
 // Start loading details for the selected package.
 // -----------------------------------------------------------------------------
-void package_details_load_selected_package_info(MainWindowUiState *widgets, const PackageRow &selected);
+void package_details_load_selected_package_info(MainWindowUiState *widgets, const PackageTableRow &selected);
 // -----------------------------------------------------------------------------
 // Load tab content that is fetched only when the tab is opened.
 // -----------------------------------------------------------------------------

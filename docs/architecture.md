@@ -76,11 +76,11 @@ Only a `READY` snapshot may be used as current upgrade information. Refreshing,
 stale, error, and not-loaded states must not be shown as upgrade claims.
 
 The List Upgradable view uses dnf5daemon as the authority for upgrade claims.
-The worker stores one complete daemon upgrade-target result in the shared
-snapshot, then asks libdnf5 only for metadata that matches those exact package
-IDs. The table keeps a daemon-reported row visible even if libdnf5 metadata is
-missing, because hiding that row would make the UI disagree with the service
-that applies upgrades.
+The worker loads one complete daemon upgrade-target result and asks libdnf5 only
+for metadata that matches those exact package IDs. The GTK completion publishes
+the daemon snapshot only when it accepts the matching table rows. The table keeps
+a daemon-reported row visible even if libdnf5 metadata is missing, because hiding
+that row would make the UI disagree with the service that applies upgrades.
 
 This split is intentional, but it is also a boundary that may change in a later
 version if dnf5daemon gains a better read API for the full package table.
