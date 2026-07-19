@@ -160,6 +160,7 @@ Tests:
 Maintenance check:
 
 - If dnf5daemon package-list fields or scope names change, update the target parser and rerun the dnf5daemon client tests in Docker.
+- If the upgrade-target query starts requesting many more fields or returns a much larger package set, consider switching from `Rpm.list()` to `Rpm.list_fd()` so the result is not limited by one D-Bus reply size.
 
 ## Shared libdnf5 Base access
 

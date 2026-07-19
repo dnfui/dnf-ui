@@ -199,6 +199,23 @@ MEMCHECK_SMOKE_TIMEOUT=5m make memcheck
 MEMCHECK_SMOKE_TIMEOUT=10m make memcheck
 ```
 
+### Package table memory regression check
+
+Use this before releases that change package table storage, package query workers, or List Upgradable row handling:
+
+1. Start DNF UI and record process memory after the first window is idle:
+
+```sh
+pid="$(pgrep -n dnfui)"
+grep -E 'Rss|Pss|Private' "/proc/$pid/smaps_rollup"
+```
+
+2. Run `List Packages` ten times, waiting for each run to finish before recording memory again.
+3. Repeat with `List Installed`, a broad `Search`, and `List Upgradable`.
+4. Alternate `List Upgradable` and `List Packages` a few times to verify old daemon-backed rows are released.
+5. A high but stable value is acceptable. Continued substantial growth after every completed run is a release blocker.
+6. Run `make memcheck-app` once if memory keeps growing or if table row ownership changed.
+
 ## Docker notes
 
 - `make dockerrun` starts a system bus in the container and uses dnf5daemon
