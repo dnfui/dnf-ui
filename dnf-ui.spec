@@ -1,5 +1,5 @@
 Name:           dnf-ui
-Version:        0.3.8
+Version:        0.4.0
 Release:        1%{?dist}
 Summary:        GTK interface for DNF5
 
@@ -56,6 +56,14 @@ appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/io.github.dnfui.
 %{_datadir}/metainfo/io.github.dnfui.dnfui.metainfo.xml
 
 %changelog
+* Sun Jul 19 2026 ErikMN <dnfui@proton.me> - 0.4.0-1
+- Use dnf5daemon as the source for List Upgradable
+- Keep daemon-reported upgrades visible when optional package metadata is unavailable
+- Reject stale upgrade rows after package or repository state changes
+- Keep selected upgrades tied to daemon preview and apply
+- Reduce package-table memory use during repeated large-list rebuilds
+- Remove the obsolete transaction item-count limit
+
 * Thu Jul 16 2026 ErikMN <dnfui@proton.me> - 0.3.8-1
 - Add bulk marking of listed upgrades for selective system updates
 - Keep bulk and individual upgrade actions consistent after metadata changes
