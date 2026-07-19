@@ -28,8 +28,10 @@ find_update_pair_from_installed_annotation(PackageRow &installed_out, PackageRow
       continue;
     }
 
-    installed_out = installed_row;
     update_out = candidates.front();
+    if (!dnf_backend_get_installed_package_row_by_name_arch(update_out, installed_out)) {
+      continue;
+    }
     return true;
   }
 
