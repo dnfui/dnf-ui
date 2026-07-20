@@ -541,9 +541,8 @@ create_text_column(MainWindowUiState *widgets, const PackageTableColumnDefinitio
   gtk_column_view_column_set_resizable(column, TRUE);
   gtk_column_view_column_set_expand(column, definition.expand);
 
-  GtkSorter *sorter = GTK_SORTER(gtk_custom_sorter_new(package_table_column_sorter_compare,
-                                                       new ColumnSorterData { definition.kind },
-                                                       package_table_column_sorter_data_free));
+  gpointer sorter_data = GINT_TO_POINTER(static_cast<int>(definition.kind) + 1);
+  GtkSorter *sorter = GTK_SORTER(gtk_custom_sorter_new(package_table_column_sorter_compare, sorter_data, nullptr));
   gtk_column_view_column_set_sorter(column, sorter);
   g_object_unref(sorter);
 

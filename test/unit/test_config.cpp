@@ -155,10 +155,12 @@ TEST_CASE("Package table columns use default visibility when missing")
 {
   reset_test_config_file();
 
-  REQUIRE(package_table_load_visible_column_ids() == default_visible_package_table_columns());
-  REQUIRE(package_table_column_is_visible("package"));
-  REQUIRE_FALSE(package_table_column_is_visible("release"));
-  REQUIRE_FALSE(package_table_column_is_visible("unknown-column"));
+  std::set<std::string> visible = package_table_load_visible_column_ids();
+
+  REQUIRE(visible == default_visible_package_table_columns());
+  REQUIRE(visible.count("package") == 1);
+  REQUIRE(visible.count("release") == 0);
+  REQUIRE(visible.count("unknown-column") == 0);
 }
 
 // -----------------------------------------------------------------------------

@@ -15,6 +15,7 @@
 #include "ui/common/widgets.hpp"
 
 #include <string>
+#include <set>
 
 #ifndef DNFUI_VERSION
 #define DNFUI_VERSION "unknown"
@@ -69,12 +70,12 @@ sync_column_action_states(GSimpleActionGroup *actions)
     return;
   }
 
-  for (const auto &column : package_table_column_infos()) {
+  const std::set<std::string> visible_columns = package_table_load_visible_column_ids();
+  for (const auto &column : package_table_column_definitions()) {
     std::string action_name = column_action_name_for_id(column.id);
     GAction *action = g_action_map_lookup_action(G_ACTION_MAP(actions), action_name.c_str());
     if (action && G_IS_SIMPLE_ACTION(action)) {
-      g_simple_action_set_state(G_SIMPLE_ACTION(action),
-                                g_variant_new_boolean(package_table_column_is_visible(column.id)));
+      g_simple_action_set_state(G_SIMPLE_ACTION(action), g_variant_new_boolean(visible_columns.count(column.id) > 0));
     }
   }
 }
@@ -291,7 +292,7 @@ main_menu_create()
   g_menu_append(view_menu, _("History Panel"), "win.show-history");
   g_menu_append(view_menu, _("Package Info Panel"), "win.show-info");
   GMenu *columns_menu = g_menu_new();
-  for (const auto &column : package_table_column_infos()) {
+  for (const auto &column : package_table_column_definitions()) {
     std::string detailed_action = "win.";
     detailed_action += column_action_name_for_id(column.id);
     g_menu_append(columns_menu, _(column.title), detailed_action.c_str());
@@ -360,10 +361,11 @@ main_menu_connect_actions(const MainMenuWidgets &menu_widgets, MainWindowUiState
 
   GSimpleActionGroup *actions = g_simple_action_group_new();
   g_action_map_add_action_entries(G_ACTION_MAP(actions), entries, G_N_ELEMENTS(entries), data);
-  for (const auto &column : package_table_column_infos()) {
+  const std::set<std::string> visible_columns = package_table_load_visible_column_ids();
+  for (const auto &column : package_table_column_definitions()) {
     std::string action_name = column_action_name_for_id(column.id);
     GSimpleAction *action = g_simple_action_new_stateful(
-        action_name.c_str(), nullptr, g_variant_new_boolean(package_table_column_is_visible(column.id)));
+        action_name.c_str(), nullptr, g_variant_new_boolean(visible_columns.count(column.id) > 0));
     g_signal_connect(action, "change-state", G_CALLBACK(on_menu_column_visibility_changed), data);
     g_action_map_add_action(G_ACTION_MAP(actions), G_ACTION(action));
     g_object_unref(action);

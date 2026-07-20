@@ -142,14 +142,5 @@ ui_helpers_update_action_button_labels_for_selection(MainWindowUiState *widgets,
 }
 
 // -----------------------------------------------------------------------------
-// Update transaction action button labels when all actions use one package ID.
-// -----------------------------------------------------------------------------
-void
-ui_helpers_update_action_button_labels(MainWindowUiState *widgets, const std::string &pkg)
-{
-  ui_helpers_update_action_button_labels_for_selection(widgets, pkg, pkg, pkg, false);
-}
-
-// -----------------------------------------------------------------------------
 // EOF
 // -----------------------------------------------------------------------------

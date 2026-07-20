@@ -49,8 +49,7 @@ struct PackageQueryState {
   // Rebuilds can repopulate the visible table instead of leaving outdated rows on screen after a transaction.
   DisplayedPackageQueryState displayed_query;
   // Temporary selection snapshot used only while a rebuild-triggered query is reloading.
-  // This lets the refreshed view keep the previously selected row and details panel when the package is still present.
-  bool preserve_selection_on_reload = false;
+  // Empty means no selection should be preserved.
   std::string reload_selected_nevra;
   std::vector<std::string> history;
 };

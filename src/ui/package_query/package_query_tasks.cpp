@@ -253,7 +253,7 @@ on_list_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
     package_query_set_displayed_query_kind(widgets, DisplayedPackageQueryKind::LIST_INSTALLED);
 
     // Fill the package table and update status.
-    if (widgets->query_state.preserve_selection_on_reload) {
+    if (!widgets->query_state.reload_selected_nevra.empty()) {
       widgets->results.selected_nevra = widgets->query_state.reload_selected_nevra;
     } else {
       widgets->results.selected_nevra.clear();
@@ -267,7 +267,6 @@ on_list_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
     package_query_finish_results_refresh(widgets);
     delete packages;
   } else {
-    widgets->query_state.preserve_selection_on_reload = false;
     widgets->query_state.reload_selected_nevra.clear();
     ui_helpers_set_status(widgets->query.status_label, error ? error->message : _("Error listing packages."), "red");
     package_query_show_duration_label(widgets, _("List Installed"), td ? td->started_at_us : 0);
@@ -336,7 +335,7 @@ on_list_available_task_finished(GObject *, GAsyncResult *res, gpointer user_data
   if (packages) {
     package_query_set_displayed_query_kind(widgets, DisplayedPackageQueryKind::LIST_AVAILABLE);
 
-    if (widgets->query_state.preserve_selection_on_reload) {
+    if (!widgets->query_state.reload_selected_nevra.empty()) {
       widgets->results.selected_nevra = widgets->query_state.reload_selected_nevra;
     } else {
       widgets->results.selected_nevra.clear();
@@ -349,7 +348,6 @@ on_list_available_task_finished(GObject *, GAsyncResult *res, gpointer user_data
     package_query_finish_results_refresh(widgets);
     delete packages;
   } else {
-    widgets->query_state.preserve_selection_on_reload = false;
     widgets->query_state.reload_selected_nevra.clear();
     ui_helpers_set_status(widgets->query.status_label, error ? error->message : _("Error listing packages."), "red");
     package_query_show_duration_label(widgets, _("List Packages"), td ? td->started_at_us : 0);
@@ -548,7 +546,7 @@ on_list_upgradeable_task_finished(GObject *, GAsyncResult *res, gpointer user_da
 
     package_query_set_displayed_query_kind(widgets, DisplayedPackageQueryKind::LIST_UPGRADEABLE);
 
-    if (widgets->query_state.preserve_selection_on_reload) {
+    if (!widgets->query_state.reload_selected_nevra.empty()) {
       widgets->results.selected_nevra = widgets->query_state.reload_selected_nevra;
     } else {
       widgets->results.selected_nevra.clear();
@@ -567,7 +565,6 @@ on_list_upgradeable_task_finished(GObject *, GAsyncResult *res, gpointer user_da
       return;
     }
 
-    widgets->query_state.preserve_selection_on_reload = false;
     widgets->query_state.reload_selected_nevra.clear();
     widgets->results.selected_nevra.clear();
     package_query_set_displayed_query_kind(widgets, DisplayedPackageQueryKind::LIST_UPGRADEABLE);
@@ -657,7 +654,7 @@ on_search_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
     }
 
     // Fill the package table and display the result count.
-    if (widgets->query_state.preserve_selection_on_reload) {
+    if (!widgets->query_state.reload_selected_nevra.empty()) {
       widgets->results.selected_nevra = widgets->query_state.reload_selected_nevra;
     } else {
       widgets->results.selected_nevra.clear();
@@ -670,7 +667,6 @@ on_search_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
     package_query_finish_results_refresh(widgets);
     delete packages;
   } else {
-    widgets->query_state.preserve_selection_on_reload = false;
     widgets->query_state.reload_selected_nevra.clear();
     ui_helpers_set_status(widgets->query.status_label, error ? error->message : _("Error or no results."), "red");
     package_query_show_duration_label(widgets, _("Search"), td ? td->started_at_us : 0);
@@ -764,7 +760,6 @@ on_exact_package_reload_task_finished(GObject *, GAsyncResult *res, gpointer use
     package_query_finish_results_refresh(widgets);
     delete packages;
   } else {
-    widgets->query_state.preserve_selection_on_reload = false;
     widgets->query_state.reload_selected_nevra.clear();
     ui_helpers_set_status(widgets->query.status_label, error ? error->message : _("Error refreshing package."), "red");
     package_query_show_duration_label(widgets, _("Refresh"), td ? td->started_at_us : 0);

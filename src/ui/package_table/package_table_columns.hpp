@@ -33,11 +33,6 @@ struct PackageTableColumnDefinition {
   bool default_visible;
 };
 
-struct PackageTableColumnInfo {
-  const char *id;
-  const char *title;
-};
-
 // -----------------------------------------------------------------------------
 // Return the package table column definitions.
 // -----------------------------------------------------------------------------
@@ -63,14 +58,6 @@ package_table_update_visible_column_ids(std::set<std::string> &visible_columns, 
 // Reset visible package table columns to the default set.
 // -----------------------------------------------------------------------------
 void package_table_reset_visible_column_ids();
-// -----------------------------------------------------------------------------
-// Return the package table columns exposed to the View menu.
-// -----------------------------------------------------------------------------
-std::vector<PackageTableColumnInfo> package_table_column_infos();
-// -----------------------------------------------------------------------------
-// Return whether one package table column is enabled in user settings.
-// -----------------------------------------------------------------------------
-bool package_table_column_is_visible(const char *column_id);
 
 // -----------------------------------------------------------------------------
 // EOF

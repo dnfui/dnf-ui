@@ -50,7 +50,6 @@ package_query_clear_displayed_upgradeable_table(MainWindowUiState *widgets)
     return false;
   }
 
-  widgets->query_state.preserve_selection_on_reload = false;
   widgets->query_state.reload_selected_nevra.clear();
   widgets->results.selected_nevra.clear();
   package_table_fill_package_view(widgets, std::vector<PackageRow> {});
@@ -92,7 +91,7 @@ package_query_finish_results_refresh(MainWindowUiState *widgets)
     return;
   }
 
-  if (widgets->query_state.preserve_selection_on_reload) {
+  if (!widgets->query_state.reload_selected_nevra.empty()) {
     PackageTableRow selected;
     if (!package_table_get_selected_package(widgets, selected)) {
       package_details_reset_details_view(widgets);
@@ -101,7 +100,6 @@ package_query_finish_results_refresh(MainWindowUiState *widgets)
     package_details_reset_details_view(widgets);
   }
 
-  widgets->query_state.preserve_selection_on_reload = false;
   widgets->query_state.reload_selected_nevra.clear();
 }
 

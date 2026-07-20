@@ -14,14 +14,13 @@
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
-// Verify that empty state and item count include explicit actions and upgrade all.
+// Verify that empty state reflects explicit actions and upgrade all.
 // -----------------------------------------------------------------------------
-TEST_CASE("Transaction request empty state and item count reflect queued actions")
+TEST_CASE("Transaction request empty state reflects queued actions")
 {
   TransactionRequest request;
 
   REQUIRE(request.empty());
-  REQUIRE(request.item_count() == 0);
 
   request.install.push_back("example-install-spec");
   request.upgrade.push_back("example-upgrade-spec");
@@ -29,13 +28,11 @@ TEST_CASE("Transaction request empty state and item count reflect queued actions
   request.reinstall.push_back("example-reinstall-spec");
 
   REQUIRE_FALSE(request.empty());
-  REQUIRE(request.item_count() == 4);
 
   TransactionRequest upgrade_all_request;
   upgrade_all_request.upgrade_all = true;
 
   REQUIRE_FALSE(upgrade_all_request.empty());
-  REQUIRE(upgrade_all_request.item_count() == 1);
 }
 
 // -----------------------------------------------------------------------------

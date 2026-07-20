@@ -24,11 +24,6 @@ void ui_helpers_set_icon_button(GtkButton *button, const char *icon_name, const 
 // Set the status label text and background color.
 // -----------------------------------------------------------------------------
 void ui_helpers_set_status(GtkLabel *label, const std::string &text, const std::string &color);
-// -----------------------------------------------------------------------------
-// Update action button labels for the selected package.
-// -----------------------------------------------------------------------------
-void ui_helpers_update_action_button_labels(MainWindowUiState *widgets, const std::string &pkg);
-// -----------------------------------------------------------------------------
 // Update action button labels when the visible row and installed row differ.
 // -----------------------------------------------------------------------------
 void ui_helpers_update_action_button_labels_for_selection(MainWindowUiState *widgets,

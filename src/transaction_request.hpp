@@ -37,14 +37,6 @@ struct TransactionRequest {
   }
 
   // -----------------------------------------------------------------------------
-  // Return the total number of requested package actions.
-  // -----------------------------------------------------------------------------
-  size_t item_count() const
-  {
-    return (upgrade_all ? 1 : 0) + install.size() + upgrade.size() + remove.size() + reinstall.size();
-  }
-
-  // -----------------------------------------------------------------------------
   // Reject empty, invalid, duplicate, or conflicting requests before they reach the transaction client.
   // -----------------------------------------------------------------------------
   bool validate(std::string &error_out) const

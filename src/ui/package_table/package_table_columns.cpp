@@ -229,34 +229,5 @@ package_table_reset_visible_column_ids()
 }
 
 // -----------------------------------------------------------------------------
-// Return the package table columns exposed to the View menu.
-// -----------------------------------------------------------------------------
-std::vector<PackageTableColumnInfo>
-package_table_column_infos()
-{
-  std::vector<PackageTableColumnInfo> infos;
-  infos.reserve(package_table_column_definitions().size());
-  for (const auto &column : package_table_column_definitions()) {
-    infos.push_back({ column.id, column.title });
-  }
-
-  return infos;
-}
-
-// -----------------------------------------------------------------------------
-// Return whether one package table column is enabled in user settings.
-// -----------------------------------------------------------------------------
-bool
-package_table_column_is_visible(const char *column_id)
-{
-  if (!package_table_column_definition_by_id(column_id)) {
-    return false;
-  }
-
-  std::set<std::string> visible = package_table_load_visible_column_ids();
-  return visible.count(column_id) > 0;
-}
-
-// -----------------------------------------------------------------------------
 // EOF
 // -----------------------------------------------------------------------------

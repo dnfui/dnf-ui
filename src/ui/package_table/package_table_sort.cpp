@@ -96,15 +96,6 @@ package_table_column_text(const PackageItem &item, PackageColumnKind kind)
 }
 
 // -----------------------------------------------------------------------------
-// Free data owned by one package table column sorter.
-// -----------------------------------------------------------------------------
-void
-package_table_column_sorter_data_free(gpointer p)
-{
-  delete static_cast<ColumnSorterData *>(p);
-}
-
-// -----------------------------------------------------------------------------
 // Compare two strings case-insensitively while keeping a stable fallback order.
 // -----------------------------------------------------------------------------
 static int
@@ -184,14 +175,15 @@ compare_package_items(const PackageItem &lhs, const PackageItem &rhs, PackageCol
 int
 package_table_column_sorter_compare(gconstpointer item1, gconstpointer item2, gpointer user_data)
 {
-  const auto *data = static_cast<const ColumnSorterData *>(user_data);
   const PackageItem *lhs = package_item_from_object(G_OBJECT(const_cast<gpointer>(item1)));
   const PackageItem *rhs = package_item_from_object(G_OBJECT(const_cast<gpointer>(item2)));
-  if (!data || !lhs || !rhs) {
+  const int kind_value = GPOINTER_TO_INT(user_data);
+  if (kind_value <= 0 || !lhs || !rhs) {
     return 0;
   }
 
-  return compare_package_items(*lhs, *rhs, data->kind);
+  PackageColumnKind kind = static_cast<PackageColumnKind>(kind_value - 1);
+  return compare_package_items(*lhs, *rhs, kind);
 }
 
 // -----------------------------------------------------------------------------

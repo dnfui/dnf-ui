@@ -15,7 +15,7 @@
 // Button payload used to jump from one pending action back to its package row.
 struct PendingJumpButtonData {
   MainWindowUiState *widgets;
-  PendingAction action;
+  std::string nevra;
 };
 
 // -----------------------------------------------------------------------------
@@ -26,19 +26,6 @@ pending_jump_button_data_free(gpointer p)
 {
   PendingJumpButtonData *d = static_cast<PendingJumpButtonData *>(p);
   delete d;
-}
-
-// -----------------------------------------------------------------------------
-// Show the selected pending action in the main package list.
-// -----------------------------------------------------------------------------
-static void
-show_pending_action_package(MainWindowUiState *widgets, const PendingAction &action)
-{
-  if (!widgets) {
-    return;
-  }
-
-  package_query_show_exact_package(widgets, action.nevra);
 }
 
 // -----------------------------------------------------------------------------
@@ -102,7 +89,7 @@ pending_transaction_refresh_pending_tab(MainWindowUiState *widgets)
     gtk_widget_set_halign(label, GTK_ALIGN_FILL);
     gtk_button_set_child(GTK_BUTTON(button), label);
 
-    PendingJumpButtonData *data = new PendingJumpButtonData { widgets, a };
+    PendingJumpButtonData *data = new PendingJumpButtonData { widgets, a.nevra };
     g_signal_connect_data(
         button,
         "clicked",
@@ -112,7 +99,9 @@ pending_transaction_refresh_pending_tab(MainWindowUiState *widgets)
             return;
           }
 
-          show_pending_action_package(data->widgets, data->action);
+          if (data->widgets) {
+            package_query_show_exact_package(data->widgets, data->nevra);
+          }
         }),
         data,
         +[](gpointer data, GClosure *) { pending_jump_button_data_free(data); },

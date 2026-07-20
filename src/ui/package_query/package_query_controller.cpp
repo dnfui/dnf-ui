@@ -76,7 +76,7 @@ perform_search(MainWindowUiState *widgets, const std::string &term)
   std::string searching_message = dnfui_i18n_format(_("Searching for '%s'..."), term.c_str());
   ui_helpers_set_status(widgets->query.status_label, searching_message, "blue");
   package_query_clear_duration_label(widgets);
-  if (!widgets->query_state.preserve_selection_on_reload) {
+  if (widgets->query_state.reload_selected_nevra.empty()) {
     widgets->results.selected_nevra.clear();
   }
 
@@ -227,7 +227,6 @@ package_query_on_clear_button_clicked(GtkButton *, gpointer user_data)
   package_query_cancel_active_package_list_request(widgets);
 
   widgets->query_state.displayed_query = DisplayedPackageQueryState();
-  widgets->query_state.preserve_selection_on_reload = false;
   widgets->query_state.reload_selected_nevra.clear();
   widgets->results.selected_nevra.clear();
   package_table_fill_package_view(widgets, std::vector<PackageRow> {});
@@ -236,7 +235,7 @@ package_query_on_clear_button_clicked(GtkButton *, gpointer user_data)
   // Reset status labels and package actions.
   ui_helpers_set_status(widgets->query.status_label, _("Ready."), "gray");
   package_details_reset_details_view(widgets);
-  ui_helpers_update_action_button_labels(widgets, "");
+  ui_helpers_update_action_button_labels_for_selection(widgets, "", "", "", false);
 }
 
 // -----------------------------------------------------------------------------
@@ -251,7 +250,6 @@ package_query_reload_current_view(MainWindowUiState *widgets)
     return;
   }
 
-  widgets->query_state.preserve_selection_on_reload = !widgets->results.selected_nevra.empty();
   widgets->query_state.reload_selected_nevra = widgets->results.selected_nevra;
 
   const DisplayedPackageQueryState view_state = widgets->query_state.displayed_query;
@@ -259,7 +257,6 @@ package_query_reload_current_view(MainWindowUiState *widgets)
   switch (view_state.kind) {
   case DisplayedPackageQueryKind::SEARCH:
     if (view_state.search_term.empty()) {
-      widgets->query_state.preserve_selection_on_reload = false;
       widgets->query_state.reload_selected_nevra.clear();
       BaseManager::instance().drop_cached_base();
       return;
@@ -287,7 +284,6 @@ package_query_reload_current_view(MainWindowUiState *widgets)
   // When the user is reviewing one package from the pending-actions sidebar,
   // refresh the selected NEVRA directly so removed rows disappear without extra global view state.
   if (widgets->results.selected_nevra.empty()) {
-    widgets->query_state.preserve_selection_on_reload = false;
     widgets->query_state.reload_selected_nevra.clear();
     BaseManager::instance().drop_cached_base();
     return;
@@ -312,7 +308,6 @@ package_query_show_exact_package(MainWindowUiState *widgets, const std::string &
   }
 
   widgets->query_state.displayed_query = DisplayedPackageQueryState();
-  widgets->query_state.preserve_selection_on_reload = true;
   widgets->query_state.reload_selected_nevra = nevra;
   widgets->results.selected_nevra = nevra;
 

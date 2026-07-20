@@ -194,7 +194,7 @@ package_details_clear_selected_package_state(MainWindowUiState *widgets)
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.install_button), FALSE);
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.remove_button), FALSE);
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.reinstall_button), FALSE);
-  ui_helpers_update_action_button_labels(widgets, "");
+  ui_helpers_update_action_button_labels_for_selection(widgets, "", "", "", false);
 }
 
 // -----------------------------------------------------------------------------
