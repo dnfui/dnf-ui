@@ -30,23 +30,12 @@ struct PendingTransactionActionRows {
   PackageRow installed_row;
 };
 
-// -----------------------------------------------------------------------------
-// Resolve package IDs for action buttons without running libdnf queries.
-// This is used from GTK selection and context-menu code.
-// -----------------------------------------------------------------------------
-PendingTransactionActionRows pending_transaction_action_rows_for_selection(const PackageRow &selected);
-// -----------------------------------------------------------------------------
 // Resolve package IDs for a row that may carry a dnf5daemon upgrade target.
 // -----------------------------------------------------------------------------
 PendingTransactionActionRows
 pending_transaction_action_rows_for_selection(const PackageRow &selected,
                                               const TransactionServiceUpgradeTarget *upgrade_target,
                                               uint64_t upgrade_generation);
-// -----------------------------------------------------------------------------
-// Add or replace one pending upgrade action from a package table row.
-// Returns false when the row is not an upgrade candidate.
-// -----------------------------------------------------------------------------
-bool pending_transaction_mark_upgrade_action_for_row(std::vector<PendingAction> &actions, const PackageRow &row);
 // -----------------------------------------------------------------------------
 // Add or replace one pending upgrade action from a package row with an optional daemon target.
 // Returns false when the row is not an upgrade candidate.

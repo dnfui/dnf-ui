@@ -38,7 +38,6 @@ struct PackageQueryWidgets {
 // Package list view, details panel, and current selection state
 // -----------------------------------------------------------------------------
 struct PackageResultsWidgets {
-  GtkListBox *listbox = nullptr;
   GtkScrolledWindow *list_scroller = nullptr;
   GtkPaned *inner_paned = nullptr;
   GtkStack *details_stack = nullptr;

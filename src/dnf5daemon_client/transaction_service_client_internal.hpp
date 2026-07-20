@@ -73,17 +73,6 @@ bool transaction_service_client_list_daemon_upgrade_targets(GDBusConnection *con
                                                             std::vector<TransactionServiceUpgradeTarget> &targets_out,
                                                             std::string &error_out);
 
-// -----------------------------------------------------------------------------
-// Wait and progress signal handling.
-// -----------------------------------------------------------------------------
-bool
-transaction_service_client_wait_for_started_transaction_preview(GDBusConnection *connection,
-                                                                const std::string &transaction_path,
-                                                                TransactionServiceProgressForwarder *progress_forwarder,
-                                                                GCancellable *cancellable,
-                                                                TransactionPreview &preview_out,
-                                                                std::string &error_out);
-
 guint transaction_service_client_subscribe_progress(GDBusConnection *connection,
                                                     const std::string &transaction_path,
                                                     TransactionServiceProgressForwarder *progress_forwarder);

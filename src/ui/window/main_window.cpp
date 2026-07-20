@@ -191,7 +191,6 @@ create_main_window_ui_state(const AppWidgets *ui)
   widgets->query.desc_checkbox = GTK_CHECK_BUTTON(ui->desc_checkbox);
   widgets->query.exact_checkbox = GTK_CHECK_BUTTON(ui->exact_checkbox);
 
-  widgets->results.listbox = GTK_LIST_BOX(ui->listbox);
   widgets->results.list_scroller = GTK_SCROLLED_WINDOW(ui->scrolled_list);
   widgets->results.inner_paned = GTK_PANED(ui->inner_paned);
   widgets->results.details_stack = GTK_STACK(ui->details_stack);

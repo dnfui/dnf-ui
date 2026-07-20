@@ -431,7 +431,7 @@ dnf_backend_search_package_rows_interruptible(const std::string &pattern, GCance
   std::set<std::string> protected_names;
   {
     try {
-      auto [base, guard, generation] = acquire_interruptible_base_read(cancellable);
+      auto [base, guard] = acquire_interruptible_base_read(cancellable);
       auto available_rows = collect_available_rows_by_name_arch(base, cancellable, search_options, &pattern);
       if (package_query_cancelled(cancellable)) {
         return {};
@@ -482,7 +482,7 @@ dnf_backend_get_installed_package_rows_interruptible(GCancellable *cancellable)
   std::set<std::string> protected_names;
   {
     try {
-      auto [base, guard, generation] = acquire_interruptible_base_read(cancellable);
+      auto [base, guard] = acquire_interruptible_base_read(cancellable);
       const DnfBackendSearchOptions search_options {};
       installed = collect_installed_rows(base, cancellable, search_options);
       if (package_query_cancelled(cancellable)) {
@@ -527,7 +527,7 @@ dnf_backend_get_browse_package_rows_interruptible(GCancellable *cancellable)
   std::set<std::string> protected_names;
   {
     try {
-      auto [base, guard, generation] = acquire_interruptible_base_read(cancellable);
+      auto [base, guard] = acquire_interruptible_base_read(cancellable);
       auto available_rows = collect_available_rows_by_name_arch(base, cancellable, search_options);
       if (package_query_cancelled(cancellable)) {
         return {};
@@ -569,7 +569,7 @@ dnf_backend_get_available_package_metadata_by_nevras_interruptible(const std::ve
   }
 
   try {
-    auto [base, guard, generation] = acquire_interruptible_base_read(cancellable);
+    auto [base, guard] = acquire_interruptible_base_read(cancellable);
 
     libdnf5::rpm::PackageQuery query(base);
     query.filter_available();
@@ -604,7 +604,7 @@ dnf_backend_get_installed_package_rows_by_nevra(const std::string &pkg_nevra)
 {
   std::vector<PackageRow> packages;
 
-  auto [base, guard, generation] = BaseManager::instance().acquire_read();
+  auto [base, guard] = BaseManager::instance().acquire_read();
   libdnf5::rpm::PackageQuery query(base);
   query.filter_nevra(pkg_nevra);
   query.filter_installed();
@@ -658,7 +658,7 @@ dnf_backend_get_available_package_rows_by_nevra(const std::string &pkg_nevra)
 {
   std::vector<PackageRow> packages;
 
-  auto [base, guard, generation] = BaseManager::instance().acquire_read();
+  auto [base, guard] = BaseManager::instance().acquire_read();
   libdnf5::rpm::PackageQuery query(base);
   query.filter_nevra(pkg_nevra);
   query.filter_available();

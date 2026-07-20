@@ -20,12 +20,6 @@ struct PendingRequestBaseDropGuard {
   }
 };
 
-const std::string &
-pending_transaction_spec(const PendingAction &action)
-{
-  return action.transaction_spec.empty() ? action.nevra : action.transaction_spec;
-}
-
 }
 
 // -----------------------------------------------------------------------------
@@ -51,18 +45,27 @@ build_pending_transaction_specs(const std::vector<PendingAction> &actions,
   reinstall.reserve(actions.size());
 
   for (const auto &action : actions) {
+    if (action.transaction_spec.empty()) {
+      install.clear();
+      upgrade.clear();
+      remove.clear();
+      reinstall.clear();
+      error_out = _("Pending package action is missing its transaction spec.");
+      return false;
+    }
+
     switch (action.type) {
     case PendingAction::INSTALL:
-      install.push_back(pending_transaction_spec(action));
+      install.push_back(action.transaction_spec);
       break;
     case PendingAction::UPGRADE:
-      upgrade.push_back(pending_transaction_spec(action));
+      upgrade.push_back(action.transaction_spec);
       break;
     case PendingAction::REMOVE:
-      remove.push_back(pending_transaction_spec(action));
+      remove.push_back(action.transaction_spec);
       break;
     case PendingAction::REINSTALL:
-      reinstall.push_back(pending_transaction_spec(action));
+      reinstall.push_back(action.transaction_spec);
       break;
     default:
       install.clear();

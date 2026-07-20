@@ -33,7 +33,7 @@ package_table_fill_item_status(MainWindowUiState *widgets, PackageItem &item)
   // action does not move the row away from the user in the current view.
   PackageInstallState install_state =
       item.upgrade_target() ? PackageInstallState::UPGRADEABLE : dnf_backend_get_package_install_state(item.row);
-  item.status_rank = package_table_status_rank(install_state);
+  item.status_rank = dnf_backend_get_install_state_sort_rank(install_state);
 
   for (const auto &a : widgets->transaction.actions) {
     bool action_matches_row = a.nevra == item.row.nevra;

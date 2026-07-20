@@ -33,7 +33,7 @@ package_query_set_displayed_query_kind(MainWindowUiState *widgets, DisplayedPack
 // -----------------------------------------------------------------------------
 // Return true when the currently displayed table came from List Upgradable.
 // -----------------------------------------------------------------------------
-bool
+static bool
 package_query_displayed_view_is_upgradeable(const MainWindowUiState *widgets)
 {
   return widgets && widgets->query_state.displayed_query.kind == DisplayedPackageQueryKind::LIST_UPGRADEABLE;

@@ -1,7 +1,4 @@
 dnfui
-dnfui-service
-dnfui-service-smoke-client
-dnfui-service-tests
 dnfui-tests
 .history
 build/

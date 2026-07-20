@@ -201,22 +201,33 @@ dnf_backend_get_search_options()
 // -----------------------------------------------------------------------------
 // Return true when the installed-package snapshot contains one exact NEVRA.
 // -----------------------------------------------------------------------------
-bool
+static bool
 dnf_backend_installed_snapshot_contains(const std::string &nevra)
 {
   std::lock_guard<std::mutex> lock(g_installed_mutex);
   return g_installed_nevras.count(nevra) > 0;
 }
 
+#ifdef DNFUI_BUILD_TESTS
 // -----------------------------------------------------------------------------
 // Return the number of exact NEVRAs in the installed-package snapshot.
 // -----------------------------------------------------------------------------
 size_t
-dnf_backend_installed_snapshot_size()
+dnf_backend_installed_snapshot_size_for_tests()
 {
   std::lock_guard<std::mutex> lock(g_installed_mutex);
   return g_installed_nevras.size();
 }
+
+// -----------------------------------------------------------------------------
+// Return true when the installed-package snapshot contains the exact NEVRA.
+// -----------------------------------------------------------------------------
+bool
+dnf_backend_installed_snapshot_contains_for_tests(const std::string &nevra)
+{
+  return dnf_backend_installed_snapshot_contains(nevra);
+}
+#endif
 
 // -----------------------------------------------------------------------------
 // Refresh the exact-installed and self-protection snapshots used by UI state classification.

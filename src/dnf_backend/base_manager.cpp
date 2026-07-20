@@ -413,13 +413,6 @@ build_base_with_offline_fallback(BaseRefreshMode refresh_mode = BaseRefreshMode:
                                  BaseProgressCallback progress_callback = {},
                                  bool load_changelog_metadata = false)
 {
-  if (refresh_mode == BaseRefreshMode::SYSTEM_CACHE_ONLY) {
-    BuiltBase built = build_base_for_mode(
-        RepoLoadMode::CACHE_ONLY_METADATA, BaseRefreshMode::NORMAL, cancel_requested, {}, load_changelog_metadata);
-    built.repo_state = BaseRepoState::DAEMON_SYNCED_METADATA;
-    return built;
-  }
-
   try {
     return build_base_for_mode(
         RepoLoadMode::FULL, refresh_mode, cancel_requested, progress_callback, load_changelog_metadata);
@@ -529,7 +522,7 @@ BaseManager::acquire_read()
     throw std::runtime_error("DNF backend not initialized (Base is null).");
   }
 
-  return { *base_ptr, BaseGuard(std::move(lock)), generation.load(std::memory_order_relaxed) };
+  return { *base_ptr, BaseGuard(std::move(lock)) };
 }
 
 // -----------------------------------------------------------------------------
@@ -560,7 +553,7 @@ BaseManager::acquire_read(std::shared_ptr<std::atomic<bool>> cancel_requested)
     throw std::runtime_error("DNF backend not initialized (Base is null).");
   }
 
-  return { *base_ptr, BaseGuard(std::move(lock)), generation.load(std::memory_order_relaxed) };
+  return { *base_ptr, BaseGuard(std::move(lock)) };
 }
 
 // -----------------------------------------------------------------------------
@@ -646,29 +639,8 @@ BaseManager::rebuild(BaseRefreshMode refresh_mode,
 
   // Publish the generation change only after the new Base is ready so readers
   // never drop their cached results without a replacement snapshot to use.
-  base_epoch.fetch_add(1, std::memory_order_relaxed);
   generation.fetch_add(1, std::memory_order_relaxed);
   return rebuilt.repo_state;
-}
-
-// -----------------------------------------------------------------------------
-// Force a local-only rebuild that loads only the installed-package view from the rpmdb.
-// This keeps remove-only transaction flows independent of remote repository availability.
-// -----------------------------------------------------------------------------
-void
-BaseManager::rebuild_system_only()
-{
-  std::unique_lock lock(base_mutex);
-
-  auto rebuilt_base = build_initialized_system_only_base();
-  if (!rebuilt_base) {
-    throw std::runtime_error("System-only repository rebuild failed (Base is null).");
-  }
-
-  base_ptr = rebuilt_base;
-  repo_state = BaseRepoState::INSTALLED_ONLY;
-  base_epoch.fetch_add(1, std::memory_order_relaxed);
-  generation.fetch_add(1, std::memory_order_relaxed);
 }
 
 // -----------------------------------------------------------------------------
@@ -683,27 +655,25 @@ BaseManager::drop_cached_base()
       return;
     }
     base_ptr.reset();
-    base_epoch.fetch_add(1, std::memory_order_relaxed);
   }
 
   trim_free_heap();
 }
 
+#ifdef DNFUI_BUILD_TESTS
 // -----------------------------------------------------------------------------
-// Ensure one local-only Base exists without attempting a live repo refresh.
-// Remove-only transaction flows use this when the shared Base has not been
-// initialized yet and no repo metadata is required.
+// Initialize a system-only Base for tests that need a cached Base without repository metadata.
 // -----------------------------------------------------------------------------
 void
-BaseManager::ensure_system_only_initialized_if_needed()
+BaseManager::initialize_system_only_base_for_tests()
 {
   std::unique_lock<std::shared_mutex> unique(base_mutex);
   if (!base_ptr) {
     base_ptr = build_initialized_system_only_base();
     repo_state = BaseRepoState::INSTALLED_ONLY;
-    base_epoch.fetch_add(1, std::memory_order_relaxed);
   }
 }
+#endif
 
 // -----------------------------------------------------------------------------
 // Build a Base that reads only the local installed package database.
@@ -724,7 +694,6 @@ BaseManager::ensure_base_initialized(std::shared_ptr<std::atomic<bool>> cancel_r
     BuiltBase built = build_base_with_offline_fallback(BaseRefreshMode::NORMAL, std::move(cancel_requested));
     base_ptr = built.base;
     repo_state = built.repo_state;
-    base_epoch.fetch_add(1, std::memory_order_relaxed);
   }
 }
 
@@ -748,7 +717,6 @@ BaseManager::reset_for_tests()
   std::unique_lock<std::shared_mutex> unique(base_mutex);
   base_ptr.reset();
   generation.store(0, std::memory_order_relaxed);
-  base_epoch.store(0, std::memory_order_relaxed);
 }
 #endif
 

@@ -31,10 +31,9 @@ Controller code should use this public API instead of calling libdnf5 directly.
 
 [src/dnf_backend/base_manager.cpp](../src/dnf_backend/base_manager.cpp) manages the shared libdnf5 `Base`.
 
-The Base can be in one of four repository states:
+The Base can be in one of three repository states:
 
 - `LIVE_METADATA`: normal repository metadata loaded
-- `DAEMON_SYNCED_METADATA`: dnf5daemon refreshed metadata first, then the UI loaded matching refreshed metadata
 - `CACHED_METADATA`: live repository refresh failed, cached metadata loaded
 - `INSTALLED_ONLY`: only the local installed package database is available
 
@@ -51,17 +50,11 @@ The Base has a generation counter. When the Base is rebuilt, the generation is
 incremented. UI tasks use that value to reject outdated results after refreshes
 and transactions.
 
-The shared cached Base also has an id that changes whenever the shared Base is
-created, replaced, or dropped. This is useful for code that needs to know when
-the exact cached Base object changed, but a Base drop does not mean package rows
-are stale.
-
 The package search cache also keeps its own cache epoch. That epoch advances
 when the UI explicitly clears cached search rows, even if the backend Base
 generation has not changed yet. This keeps older search workers from storing
 old rows back into a cache state the UI already invalidated. Search cache
-validity depends on the Base generation and this cache epoch, not on the cached
-Base id.
+validity depends on the Base generation and this cache epoch.
 
 ## Repository refresh
 

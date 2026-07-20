@@ -17,8 +17,6 @@
 struct AppWidgets {
   GtkWidget *window = NULL;
 
-  GtkWidget *vbox_root = NULL;
-  GtkWidget *vbox_main = NULL;
   GtkWidget *vbox_history = NULL;
 
   GtkWidget *history_list = NULL;
@@ -46,7 +44,6 @@ struct AppWidgets {
   GtkWidget *inner_paned = NULL;
 
   GtkWidget *scrolled_list = NULL;
-  GtkWidget *listbox = NULL;
   GtkWidget *details_panel = NULL;
   GtkWidget *details_stack = NULL;
 

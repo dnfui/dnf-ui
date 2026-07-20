@@ -55,7 +55,6 @@ main_window_build_layout(AppWidgets *ui)
 
   GtkWidget *vbox_root = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
   gtk_window_set_child(GTK_WINDOW(window), vbox_root);
-  ui->vbox_root = vbox_root;
 
   GtkWidget *menu_bar = main_menu_create();
   gtk_box_append(GTK_BOX(vbox_root), menu_bar);
@@ -69,7 +68,6 @@ main_window_build_layout(AppWidgets *ui)
 
   GtkWidget *vbox_main = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
   gtk_paned_set_end_child(GTK_PANED(outer_paned), vbox_main);
-  ui->vbox_main = vbox_main;
 
   GtkWidget *vbox_history = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
   gtk_widget_set_vexpand(vbox_history, TRUE);
@@ -207,10 +205,6 @@ main_window_build_layout(AppWidgets *ui)
   gtk_widget_set_vexpand(scrolled_list, TRUE);
   gtk_paned_set_start_child(GTK_PANED(inner_paned), scrolled_list);
   ui->scrolled_list = scrolled_list;
-
-  GtkWidget *listbox = gtk_list_box_new();
-  gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled_list), listbox);
-  ui->listbox = listbox;
 
   // Details panel.
   GtkWidget *details_panel = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);

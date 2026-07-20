@@ -872,7 +872,6 @@ finish_package_table_view(MainWindowUiState *widgets,
                    widgets);
 
   gtk_scrolled_window_set_child(widgets->results.list_scroller, GTK_WIDGET(view));
-  widgets->results.listbox = nullptr;
 
   // Update count label
   std::string count_msg = dnfui_i18n_format_count(item_count, "Item: %zu", "Items: %zu");
@@ -918,7 +917,6 @@ package_table_fill_package_view(MainWindowUiState *widgets,
 {
   if (items.empty()) {
     gtk_scrolled_window_set_child(widgets->results.list_scroller, create_empty_package_view(empty_state));
-    widgets->results.listbox = nullptr;
     gtk_label_set_text(widgets->results.count_label, _("Items: 0"));
     package_details_clear_selected_package_state(widgets);
     return;
@@ -931,7 +929,6 @@ package_table_fill_package_view(MainWindowUiState *widgets,
   // Release the old table before allocating the new row model.
   // Large package lists otherwise keep the old and new row objects alive at the same time.
   gtk_scrolled_window_set_child(widgets->results.list_scroller, nullptr);
-  widgets->results.listbox = nullptr;
 
   GListStore *store = g_list_store_new(G_TYPE_OBJECT);
   for (const auto &row : items) {
@@ -955,7 +952,6 @@ package_table_fill_package_view(MainWindowUiState *widgets,
 {
   if (items.empty()) {
     gtk_scrolled_window_set_child(widgets->results.list_scroller, create_empty_package_view(empty_state));
-    widgets->results.listbox = nullptr;
     gtk_label_set_text(widgets->results.count_label, _("Items: 0"));
     package_details_clear_selected_package_state(widgets);
     return;
@@ -968,7 +964,6 @@ package_table_fill_package_view(MainWindowUiState *widgets,
   // Release the old table before allocating the new row model.
   // Large package lists otherwise keep the old and new row objects alive at the same time.
   gtk_scrolled_window_set_child(widgets->results.list_scroller, nullptr);
-  widgets->results.listbox = nullptr;
 
   GListStore *store = g_list_store_new(G_TYPE_OBJECT);
   for (const auto &row : items) {

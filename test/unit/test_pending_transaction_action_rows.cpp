@@ -56,7 +56,7 @@ TEST_CASE("Pending transaction action rows resolve plain available package")
 
   PackageRow available = make_test_package_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
 
-  PendingTransactionActionRows rows = pending_transaction_action_rows_for_selection(available);
+  PendingTransactionActionRows rows = pending_transaction_action_rows_for_selection(available, nullptr, 0);
 
   REQUIRE(rows.state == PackageInstallState::AVAILABLE);
   REQUIRE_FALSE(rows.install_is_upgrade);
@@ -79,7 +79,7 @@ TEST_CASE("Pending transaction action rows resolve upgrade from installed packag
 
   dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
 
-  PendingTransactionActionRows rows = pending_transaction_action_rows_for_selection(installed);
+  PendingTransactionActionRows rows = pending_transaction_action_rows_for_selection(installed, nullptr, 0);
 
   REQUIRE(rows.state == PackageInstallState::UPGRADEABLE);
   REQUIRE(rows.install_is_upgrade);
@@ -120,7 +120,7 @@ TEST_CASE("Pending transaction action rows resolve upgrade from available update
 
   dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
 
-  PendingTransactionActionRows rows = pending_transaction_action_rows_for_selection(update);
+  PendingTransactionActionRows rows = pending_transaction_action_rows_for_selection(update, nullptr, 0);
 
   REQUIRE(rows.state == PackageInstallState::UPGRADEABLE);
   REQUIRE(rows.install_is_upgrade);
@@ -277,8 +277,8 @@ TEST_CASE("Pending transaction bulk upgrade marking ignores non upgrade rows")
 
   std::vector<PendingAction> actions;
 
-  REQUIRE(pending_transaction_mark_upgrade_action_for_row(actions, update));
-  REQUIRE_FALSE(pending_transaction_mark_upgrade_action_for_row(actions, available));
+  REQUIRE(pending_transaction_mark_upgrade_action_for_row(actions, update, nullptr, 0));
+  REQUIRE_FALSE(pending_transaction_mark_upgrade_action_for_row(actions, available, nullptr, 0));
 
   REQUIRE(actions.size() == 1);
   REQUIRE(actions[0].type == PendingAction::UPGRADE);
@@ -302,7 +302,7 @@ TEST_CASE("Pending transaction bulk upgrade marking replaces existing package ac
     { PendingAction::REMOVE, installed.nevra, installed.nevra },
   };
 
-  REQUIRE(pending_transaction_mark_upgrade_action_for_row(actions, update));
+  REQUIRE(pending_transaction_mark_upgrade_action_for_row(actions, update, nullptr, 0));
 
   REQUIRE(actions.size() == 1);
   REQUIRE(actions[0].type == PendingAction::UPGRADE);
@@ -327,7 +327,7 @@ TEST_CASE("Pending transaction upgrade marking replaces stale upgrade candidate"
     { PendingAction::UPGRADE, old_update.nevra, "demo.x86_64" },
   };
 
-  REQUIRE(pending_transaction_mark_upgrade_action_for_row(actions, new_update));
+  REQUIRE(pending_transaction_mark_upgrade_action_for_row(actions, new_update, nullptr, 0));
 
   REQUIRE(actions.size() == 1);
   REQUIRE(actions[0].type == PendingAction::UPGRADE);
@@ -347,7 +347,7 @@ TEST_CASE("Pending transaction action rows reject reinstall for local only insta
 
   dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
 
-  PendingTransactionActionRows rows = pending_transaction_action_rows_for_selection(installed);
+  PendingTransactionActionRows rows = pending_transaction_action_rows_for_selection(installed, nullptr, 0);
 
   REQUIRE(rows.state == PackageInstallState::LOCAL_ONLY);
   REQUIRE_FALSE(rows.has_install_row);

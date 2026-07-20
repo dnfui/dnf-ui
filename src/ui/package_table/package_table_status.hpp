@@ -17,11 +17,6 @@ struct MainWindowUiState;
 // Return display text for one package install state.
 // -----------------------------------------------------------------------------
 const char *package_table_status_text(PackageInstallState state);
-// -----------------------------------------------------------------------------
-// Return the package table sort rank for one install state.
-// -----------------------------------------------------------------------------
-int package_table_status_rank(PackageInstallState state);
-// -----------------------------------------------------------------------------
 // Remove all status CSS classes from a Status cell.
 // -----------------------------------------------------------------------------
 void package_table_clear_status_css(GtkWidget *cell);

@@ -34,15 +34,6 @@ package_table_status_text(PackageInstallState state)
 }
 
 // -----------------------------------------------------------------------------
-// Return the table sort priority used by the Status column.
-// -----------------------------------------------------------------------------
-int
-package_table_status_rank(PackageInstallState state)
-{
-  return dnf_backend_get_install_state_sort_rank(state);
-}
-
-// -----------------------------------------------------------------------------
 // Build the hover text for one Status cell.
 // -----------------------------------------------------------------------------
 static std::string

@@ -286,15 +286,6 @@ void dnf_backend_set_search_options(const DnfBackendSearchOptions &options);
 DnfBackendSearchOptions dnf_backend_get_search_options();
 
 // -----------------------------------------------------------------------------
-// Return true when the installed-package snapshot contains the exact NEVRA.
-// -----------------------------------------------------------------------------
-bool dnf_backend_installed_snapshot_contains(const std::string &nevra);
-// -----------------------------------------------------------------------------
-// Return the number of exact NEVRA entries in the installed snapshot.
-// -----------------------------------------------------------------------------
-size_t dnf_backend_installed_snapshot_size();
-
-// -----------------------------------------------------------------------------
 // Refresh the installed-package snapshot used by the UI for exact-installed
 // checks and upgrade-state classification. Returns true when the snapshot changed.
 // -----------------------------------------------------------------------------
@@ -398,6 +389,14 @@ std::string dnf_backend_get_package_deps(const std::string &pkg_nevra);
 std::string dnf_backend_get_package_changelog(const std::string &pkg_nevra);
 
 #ifdef DNFUI_BUILD_TESTS
+// -----------------------------------------------------------------------------
+// Return true when the installed-package snapshot contains the exact NEVRA.
+// -----------------------------------------------------------------------------
+bool dnf_backend_installed_snapshot_contains_for_tests(const std::string &nevra);
+// -----------------------------------------------------------------------------
+// Return the number of exact NEVRA entries in the installed snapshot.
+// -----------------------------------------------------------------------------
+size_t dnf_backend_installed_snapshot_size_for_tests();
 // -----------------------------------------------------------------------------
 // Test-only hooks for cache-state setup.
 // Production callers should refresh the installed snapshot from libdnf instead of mutating it directly.

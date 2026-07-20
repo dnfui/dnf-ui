@@ -22,11 +22,6 @@ struct MainWindowUiState;
 // Remember which query-backed view is currently displayed.
 // -----------------------------------------------------------------------------
 void package_query_set_displayed_query_kind(MainWindowUiState *widgets, DisplayedPackageQueryKind kind);
-// -----------------------------------------------------------------------------
-// Return true when the currently displayed table came from List Upgradable.
-// -----------------------------------------------------------------------------
-bool package_query_displayed_view_is_upgradeable(const MainWindowUiState *widgets);
-// -----------------------------------------------------------------------------
 // Clear the displayed List Upgradable rows when their daemon snapshot is stale.
 // -----------------------------------------------------------------------------
 bool package_query_clear_displayed_upgradeable_table(MainWindowUiState *widgets);

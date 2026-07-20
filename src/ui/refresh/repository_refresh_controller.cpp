@@ -188,7 +188,7 @@ repository_refresh_on_rebuild_task(GTask *task, gpointer, gpointer, GCancellable
 // Force repository metadata refresh on a worker thread.
 // Used only when the user clicks Refresh Repositories.
 // -----------------------------------------------------------------------------
-void
+static void
 repository_refresh_on_force_rebuild_task(GTask *task, gpointer, gpointer task_data, GCancellable *cancellable)
 {
   auto *refresh_data = static_cast<RepositoryRefreshTaskData *>(task_data);
@@ -290,7 +290,7 @@ repository_refresh_on_rebuild_task_finished(GObject *, GAsyncResult *res, gpoint
 // -----------------------------------------------------------------------------
 // Finish user-triggered repository refresh and release its spinner slot.
 // -----------------------------------------------------------------------------
-void
+static void
 repository_refresh_on_force_rebuild_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
 {
   GTask *task = G_TASK(res);
@@ -359,7 +359,7 @@ repository_refresh_on_force_rebuild_task_finished(GObject *, GAsyncResult *res, 
     // before the user can query against freshly refreshed repositories.
     package_query_clear_search_cache();
     bool cleared_upgradeable_table = package_query_clear_displayed_upgradeable_table(widgets);
-    if (*refresh_state == BaseRepoState::LIVE_METADATA || *refresh_state == BaseRepoState::DAEMON_SYNCED_METADATA) {
+    if (*refresh_state == BaseRepoState::LIVE_METADATA) {
       if (cleared_upgradeable_table) {
         ui_helpers_set_status(widgets->query.status_label,
                               _("Repositories refreshed. Press List Upgradable to load updated upgrades."),

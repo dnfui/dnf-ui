@@ -37,12 +37,11 @@ class BaseGuard {
 };
 
 // -----------------------------------------------------------------------------
-// Serialized read access bundle with Base reference, lock guard, and generation snapshot.
+// Serialized read access bundle with Base reference and lock guard.
 // -----------------------------------------------------------------------------
 struct BaseRead {
   libdnf5::Base &base;
   BaseGuard guard;
-  uint64_t generation;
 };
 
 // -----------------------------------------------------------------------------
@@ -62,12 +61,10 @@ struct TemporaryBaseRead {
 
 // Result of one repository rebuild attempt.
 // LIVE_METADATA means a normal online refresh succeeded.
-// DAEMON_SYNCED_METADATA means dnf5daemon refreshed metadata first, then the UI loaded matching refreshed metadata.
 // CACHED_METADATA means live refresh failed but cached repo metadata loaded.
 // INSTALLED_ONLY means both repo-backed paths failed and only the local rpmdb remains.
 enum class BaseRepoState {
   LIVE_METADATA,
-  DAEMON_SYNCED_METADATA,
   CACHED_METADATA,
   INSTALLED_ONLY,
 };
@@ -75,11 +72,9 @@ enum class BaseRepoState {
 // Requested metadata freshness for Base rebuilds.
 // NORMAL follows libdnf metadata expiration rules.
 // FORCE_METADATA_CHECK expires existing repository metadata before loading repos.
-// SYSTEM_CACHE_ONLY reads repository metadata from the system cache.
 enum class BaseRefreshMode {
   NORMAL,
   FORCE_METADATA_CHECK,
-  SYSTEM_CACHE_ONLY,
 };
 
 // -----------------------------------------------------------------------------
@@ -136,15 +131,6 @@ class BaseManager {
   }
 
   // -----------------------------------------------------------------------------
-  // Return the current cached Base id.
-  // This changes whenever the shared cached Base is replaced, created, or dropped.
-  // -----------------------------------------------------------------------------
-  uint64_t current_base_epoch() const
-  {
-    return base_epoch.load(std::memory_order_relaxed);
-  }
-
-  // -----------------------------------------------------------------------------
   // Return the repo state of the cached Base.
   // -----------------------------------------------------------------------------
   BaseRepoState current_repo_state() const;
@@ -156,19 +142,15 @@ class BaseManager {
                         std::shared_ptr<std::atomic<bool>> cancel_requested = nullptr,
                         BaseProgressCallback progress_callback = {});
   // -----------------------------------------------------------------------------
-  // Rebuild the cached Base from the local rpmdb only.
-  // -----------------------------------------------------------------------------
-  void rebuild_system_only();
-  // -----------------------------------------------------------------------------
   // Drop the cached Base so the next backend operation rebuilds it on demand.
   // -----------------------------------------------------------------------------
   void drop_cached_base();
+
+#ifdef DNFUI_BUILD_TESTS
   // -----------------------------------------------------------------------------
   // Initialize a system-only Base when no Base exists yet.
   // -----------------------------------------------------------------------------
-  void ensure_system_only_initialized_if_needed();
-
-#ifdef DNFUI_BUILD_TESTS
+  void initialize_system_only_base_for_tests();
   // -----------------------------------------------------------------------------
   // Return true when a cached Base exists.
   // -----------------------------------------------------------------------------
@@ -206,7 +188,6 @@ class BaseManager {
   BaseRepoState repo_state = BaseRepoState::LIVE_METADATA;
 
   std::atomic<uint64_t> generation { 0 };
-  std::atomic<uint64_t> base_epoch { 0 };
 
   // Serializes Base queries, rebuilds, and Base destruction.
   mutable std::shared_mutex base_mutex;

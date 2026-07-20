@@ -65,15 +65,6 @@ remove_pending_upgrade_by_transaction_spec(std::vector<PendingAction> &actions, 
 // Resolve package IDs for action buttons without running libdnf queries.
 // -----------------------------------------------------------------------------
 PendingTransactionActionRows
-pending_transaction_action_rows_for_selection(const PackageRow &selected)
-{
-  return pending_transaction_action_rows_for_selection(selected, nullptr, 0);
-}
-
-// -----------------------------------------------------------------------------
-// Resolve package IDs for action buttons without running libdnf queries.
-// -----------------------------------------------------------------------------
-PendingTransactionActionRows
 pending_transaction_action_rows_for_selection(const PackageRow &selected,
                                               const TransactionServiceUpgradeTarget *upgrade_target,
                                               uint64_t upgrade_generation)
@@ -123,15 +114,6 @@ pending_transaction_action_rows_for_selection(const PackageRow &selected,
       rows.state != PackageInstallState::INSTALLED_NEWER_THAN_REPO;
 
   return rows;
-}
-
-// -----------------------------------------------------------------------------
-// Add or replace one pending upgrade action from a package table row.
-// -----------------------------------------------------------------------------
-bool
-pending_transaction_mark_upgrade_action_for_row(std::vector<PendingAction> &actions, const PackageRow &row)
-{
-  return pending_transaction_mark_upgrade_action_for_row(actions, row, nullptr, 0);
 }
 
 // -----------------------------------------------------------------------------
