@@ -118,6 +118,18 @@ struct PackageRow {
   }
 };
 
+struct PackageDependencyLink {
+  int line = 0;
+  int start_column = 0;
+  int length = 0;
+  std::string nevra;
+};
+
+struct PackageDependencyDetails {
+  std::string text;
+  std::vector<PackageDependencyLink> links;
+};
+
 // -----------------------------------------------------------------------------
 // Backend-owned install state so the UI can reason about package actions
 // without depending on libdnf5 headers or EVR comparison details.
@@ -357,6 +369,7 @@ std::string dnf_backend_get_installed_package_files(const std::string &pkg_nevra
 // Return formatted dependency details for one NEVRA.
 // -----------------------------------------------------------------------------
 std::string dnf_backend_get_package_deps(const std::string &pkg_nevra);
+PackageDependencyDetails dnf_backend_get_package_deps_with_links(const std::string &pkg_nevra);
 // -----------------------------------------------------------------------------
 // Return formatted changelog entries for one NEVRA.
 // -----------------------------------------------------------------------------

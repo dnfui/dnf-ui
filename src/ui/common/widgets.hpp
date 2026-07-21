@@ -45,8 +45,10 @@ struct PackageResultsWidgets {
   GtkTextBuffer *details_buffer = nullptr;
   GtkTextBuffer *files_buffer = nullptr;
   GtkTextBuffer *deps_buffer = nullptr;
+  GtkTextView *deps_view = nullptr;
   GtkTextBuffer *changelog_buffer = nullptr;
   GtkLabel *count_label = nullptr;
+  std::vector<PackageDependencyLink> deps_links;
   std::string selected_nevra;
   std::string details_query_nevra;
   std::string files_loaded_nevra;

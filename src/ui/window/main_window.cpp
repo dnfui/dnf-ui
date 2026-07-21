@@ -197,6 +197,7 @@ create_main_window_ui_state(const AppWidgets *ui)
   widgets->results.details_buffer = ui->details_buffer;
   widgets->results.files_buffer = ui->files_buffer;
   widgets->results.deps_buffer = ui->deps_buffer;
+  widgets->results.deps_view = ui->deps_view;
   widgets->results.changelog_buffer = ui->changelog_buffer;
   widgets->results.count_label = GTK_LABEL(ui->count_label);
 
@@ -211,6 +212,7 @@ create_main_window_ui_state(const AppWidgets *ui)
 
   widgets->window_state.backend_warmup_label = GTK_LABEL(ui->warmup_label);
   widgets->window_state.query_duration_label = GTK_LABEL(ui->query_duration_label);
+  package_details_connect_dependency_links(widgets.get());
 
   return widgets;
 }

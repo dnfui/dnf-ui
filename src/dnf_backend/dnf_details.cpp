@@ -321,13 +321,19 @@ dnf_backend_get_installed_package_files(const std::string &pkg_nevra, size_t max
 std::string
 dnf_backend_get_package_deps(const std::string &pkg_nevra)
 {
+  return dnf_backend_get_package_deps_with_links(pkg_nevra).text;
+}
+
+PackageDependencyDetails
+dnf_backend_get_package_deps_with_links(const std::string &pkg_nevra)
+{
   auto [base, guard] = BaseManager::instance().acquire_read();
   libdnf5::rpm::PackageQuery query(base);
 
   query.filter_nevra(pkg_nevra);
 
   if (query.empty()) {
-    return "No dependency information found for this package.";
+    return { "No dependency information found for this package.", {} };
   }
 
   std::string dependency_nevra;
@@ -379,44 +385,66 @@ dnf_backend_get_package_deps(const std::string &pkg_nevra)
   }
 
   if (dependency_query.empty()) {
-    return "No dependency information found for this package.";
+    return { "No dependency information found for this package.", {} };
   }
 
   dependency_query.filter_latest_evr();
   auto pkg = *dependency_query.begin();
   std::set<std::string> required_by_nevras = collect_installed_reverse_dependency_nevras(base, pkg);
 
+  PackageDependencyDetails details;
   std::ostringstream out;
+  int line_number = 0;
+
+  auto append_line = [&](const std::string &line) {
+    out << line << "\n";
+    line_number++;
+  };
+
+  auto append_blank_line = [&]() {
+    out << "\n";
+    line_number++;
+  };
 
   auto list_field = [&](const char *title, const auto &items) {
-    out << title << ":\n";
+    append_line(std::string(title) + ":");
     if (items.empty()) {
-      out << "  (none)\n\n";
+      append_line("  (none)");
+      append_blank_line();
       return;
     }
     for (const auto &i : items) {
-      out << "  " << i.to_string() << "\n";
+      append_line("  " + i.to_string());
     }
-    out << "\n";
+    append_blank_line();
   };
 
   list_field("Requires", pkg.get_requires());
-  out << "Required By:\n";
+  append_line("Required By:");
   if (!pkg.is_installed()) {
-    out << "  (installed packages only)\n\n";
+    append_line("  (installed packages only)");
+    append_blank_line();
   } else if (required_by_nevras.empty()) {
-    out << "  (none)\n\n";
+    append_line("  (none)");
+    append_blank_line();
   } else {
     for (const auto &nevra : required_by_nevras) {
-      out << "  " << nevra << "\n";
+      details.links.push_back(PackageDependencyLink {
+          .line = line_number,
+          .start_column = 2,
+          .length = static_cast<int>(nevra.size()),
+          .nevra = nevra,
+      });
+      append_line("  " + nevra);
     }
-    out << "\n";
+    append_blank_line();
   }
   list_field("Provides", pkg.get_provides());
   list_field("Conflicts", pkg.get_conflicts());
   list_field("Obsoletes", pkg.get_obsoletes());
 
-  return out.str();
+  details.text = out.str();
+  return details;
 }
 
 // -----------------------------------------------------------------------------

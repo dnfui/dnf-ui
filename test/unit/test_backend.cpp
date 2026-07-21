@@ -7,8 +7,10 @@
 
 #include <map>
 #include <set>
+#include <sstream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace {
 
@@ -419,6 +421,36 @@ TEST_CASE("Dependency info contains expected section headers")
   REQUIRE(deps.find("Provides:") != std::string::npos);
   REQUIRE(deps.find("Conflicts:") != std::string::npos);
   REQUIRE(deps.find("Obsoletes:") != std::string::npos);
+}
+
+// -----------------------------------------------------------------------------
+// Verify that dependency links point at package IDs inside the formatted text.
+// -----------------------------------------------------------------------------
+TEST_CASE("Dependency links point to formatted dependency rows")
+{
+  reset_backend_globals();
+
+  auto results = dnf_backend_search_package_rows_interruptible("bash", backend_search_options(false, false), nullptr);
+  REQUIRE(!results.empty());
+
+  auto deps = dnf_backend_get_package_deps_with_links(results.front().nevra);
+  std::vector<std::string> lines;
+  std::istringstream input(deps.text);
+  std::string line;
+  while (std::getline(input, line)) {
+    lines.push_back(line);
+  }
+
+  REQUIRE(deps.text.find("Required By:") != std::string::npos);
+  for (const auto &link : deps.links) {
+    INFO(link.nevra);
+    REQUIRE(!link.nevra.empty());
+    REQUIRE(link.line >= 0);
+    REQUIRE(link.start_column >= 0);
+    REQUIRE(link.length == static_cast<int>(link.nevra.size()));
+    REQUIRE(static_cast<size_t>(link.line) < lines.size());
+    REQUIRE(lines[link.line].substr(link.start_column, link.length) == link.nevra);
+  }
 }
 
 // -----------------------------------------------------------------------------

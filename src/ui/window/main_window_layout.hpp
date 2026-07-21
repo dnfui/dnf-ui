@@ -50,6 +50,7 @@ struct AppWidgets {
   GtkTextBuffer *details_buffer = NULL;
   GtkTextBuffer *files_buffer = NULL;
   GtkTextBuffer *deps_buffer = NULL;
+  GtkTextView *deps_view = NULL;
   GtkTextBuffer *changelog_buffer = NULL;
   GtkWidget *pending_list = NULL;
 

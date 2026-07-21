@@ -17,7 +17,10 @@
 // Create selectable read-only text view inside a scrolled window.
 // -----------------------------------------------------------------------------
 static GtkWidget *
-create_scrolled_text_view(const char *text, GtkWrapMode wrap_mode, GtkTextBuffer **out_buffer)
+create_scrolled_text_view(const char *text,
+                          GtkWrapMode wrap_mode,
+                          GtkTextBuffer **out_buffer,
+                          GtkTextView **out_view = nullptr)
 {
   GtkWidget *scrolled = gtk_scrolled_window_new();
   gtk_widget_set_hexpand(scrolled, TRUE);
@@ -40,6 +43,9 @@ create_scrolled_text_view(const char *text, GtkWrapMode wrap_mode, GtkTextBuffer
 
   if (out_buffer) {
     *out_buffer = buffer;
+  }
+  if (out_view) {
+    *out_view = GTK_TEXT_VIEW(view);
   }
 
   return scrolled;
@@ -243,9 +249,11 @@ main_window_build_layout(AppWidgets *ui)
 
   // Dependencies tab.
   GtkTextBuffer *deps_buffer = NULL;
+  GtkTextView *deps_view = NULL;
   GtkWidget *scrolled_deps =
-      create_scrolled_text_view(_("Select a package to view dependencies."), GTK_WRAP_WORD, &deps_buffer);
+      create_scrolled_text_view(_("Select a package to view dependencies."), GTK_WRAP_WORD, &deps_buffer, &deps_view);
   ui->deps_buffer = deps_buffer;
+  ui->deps_view = deps_view;
 
   gtk_stack_add_titled(GTK_STACK(details_stack), scrolled_deps, "dependencies", _("Dependencies"));
 

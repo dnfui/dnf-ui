@@ -31,6 +31,10 @@ void package_details_load_selected_package_info(MainWindowUiState *widgets, cons
 // -----------------------------------------------------------------------------
 void package_details_on_details_page_changed(GtkStack *stack, GParamSpec *, gpointer user_data);
 // -----------------------------------------------------------------------------
+// Connect package links in the Dependencies tab.
+// -----------------------------------------------------------------------------
+void package_details_connect_dependency_links(MainWindowUiState *widgets);
+// -----------------------------------------------------------------------------
 // Reset the package details panel to its empty state.
 // -----------------------------------------------------------------------------
 void package_details_reset_details_view(MainWindowUiState *widgets);

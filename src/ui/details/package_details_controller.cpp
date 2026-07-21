@@ -12,11 +12,14 @@
 #include "ui/common/ui_helpers.hpp"
 #include "ui/common/widgets.hpp"
 #include "ui/common/widgets_internal.hpp"
+#include "ui/package_query/package_query_controller.hpp"
 #include "ui/package_table/package_table_view.hpp"
 #include "ui/package_table/package_table_status.hpp"
 
 #include <optional>
 #include <string>
+#include <utility>
+#include <vector>
 
 // Task data for one package details load.
 // Snapshot generation at dispatch time.
@@ -43,6 +46,11 @@ struct DeferredDetailsTaskData {
   std::string details_query_nevra;
   uint64_t generation;
   DeferredDetailsPage page;
+};
+
+struct DeferredDetailsResult {
+  std::string text;
+  std::vector<PackageDependencyLink> links;
 };
 
 // Widgets and request state used by one deferred details tab.
@@ -131,6 +139,36 @@ set_details_text(GtkTextBuffer *buffer, const char *text)
 }
 
 // -----------------------------------------------------------------------------
+// Add link styling to concrete package IDs in the Dependencies tab.
+// -----------------------------------------------------------------------------
+static void
+set_dependency_details_text(MainWindowUiState *widgets, const DeferredDetailsResult &result)
+{
+  if (!widgets || !widgets->results.deps_buffer) {
+    return;
+  }
+
+  widgets->results.deps_links = result.links;
+  gtk_text_buffer_set_text(widgets->results.deps_buffer, result.text.c_str(), -1);
+
+  GtkTextTagTable *tag_table = gtk_text_buffer_get_tag_table(widgets->results.deps_buffer);
+  GtkTextTag *link_tag = gtk_text_tag_table_lookup(tag_table, "dependency-package-link");
+  if (!link_tag) {
+    link_tag = gtk_text_buffer_create_tag(
+        widgets->results.deps_buffer, "dependency-package-link", "underline", PANGO_UNDERLINE_SINGLE, nullptr);
+  }
+
+  for (const auto &link : widgets->results.deps_links) {
+    GtkTextIter start;
+    GtkTextIter end;
+    gtk_text_buffer_get_iter_at_line_offset(widgets->results.deps_buffer, &start, link.line, link.start_column);
+    gtk_text_buffer_get_iter_at_line_offset(
+        widgets->results.deps_buffer, &end, link.line, link.start_column + link.length);
+    gtk_text_buffer_apply_tag(widgets->results.deps_buffer, link_tag, &start, &end);
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Insert the UI row status between package metadata and summary text.
 // -----------------------------------------------------------------------------
 static std::string
@@ -169,6 +207,7 @@ package_details_reset_details_view(MainWindowUiState *widgets)
   widgets->results.files_loaded_nevra.clear();
   widgets->results.deps_loaded_nevra.clear();
   widgets->results.changelog_loaded_nevra.clear();
+  widgets->results.deps_links.clear();
   widgets->results.details_query_nevra.clear();
   set_details_text(widgets->results.details_buffer, _("Select a package for details."));
   set_details_text(widgets->results.files_buffer, _("Select an installed package to view its file list."));
@@ -191,6 +230,7 @@ package_details_clear_selected_package_state(MainWindowUiState *widgets)
   widgets->results.files_loaded_nevra.clear();
   widgets->results.deps_loaded_nevra.clear();
   widgets->results.changelog_loaded_nevra.clear();
+  widgets->results.deps_links.clear();
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.install_button), FALSE);
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.remove_button), FALSE);
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction.reinstall_button), FALSE);
@@ -372,6 +412,7 @@ on_deferred_details_task(GTask *task, gpointer, gpointer task_data, GCancellable
   DeferredDetailsTaskData *td = static_cast<DeferredDetailsTaskData *>(task_data);
   try {
     std::string text;
+    std::vector<PackageDependencyLink> links;
     switch (td->page) {
     case DeferredDetailsPage::FILES:
       DNFUI_TRACE("Package file list load start nevra=%s", td->details_query_nevra.c_str());
@@ -381,7 +422,11 @@ on_deferred_details_task(GTask *task, gpointer, gpointer task_data, GCancellable
       break;
     case DeferredDetailsPage::DEPENDENCIES:
       DNFUI_TRACE("Package dependencies load start nevra=%s", td->details_query_nevra.c_str());
-      text = dnf_backend_get_package_deps(td->details_query_nevra);
+      {
+        PackageDependencyDetails details = dnf_backend_get_package_deps_with_links(td->details_query_nevra);
+        text = std::move(details.text);
+        links = std::move(details.links);
+      }
       DNFUI_TRACE("Package dependencies loaded nevra=%s bytes=%zu", td->details_query_nevra.c_str(), text.size());
       break;
     case DeferredDetailsPage::CHANGELOG:
@@ -396,11 +441,16 @@ on_deferred_details_task(GTask *task, gpointer, gpointer task_data, GCancellable
       return;
     }
 
-    g_task_return_pointer(task, g_strdup(text.c_str()), g_free);
+    auto *result = new DeferredDetailsResult;
+    result->text = std::move(text);
+    result->links = std::move(links);
+    g_task_return_pointer(task, result, [](gpointer p) { delete static_cast<DeferredDetailsResult *>(p); });
   } catch (const std::exception &e) {
     DNFUI_TRACE(
         "Deferred package details load failed nevra=%s error=%s", td ? td->details_query_nevra.c_str() : "", e.what());
-    g_task_return_pointer(task, g_strdup(e.what()), g_free);
+    auto *result = new DeferredDetailsResult;
+    result->text = e.what();
+    g_task_return_pointer(task, result, [](gpointer p) { delete static_cast<DeferredDetailsResult *>(p); });
   }
 }
 
@@ -418,10 +468,10 @@ on_deferred_details_task_finished(GObject *, GAsyncResult *res, gpointer user_da
 
   const DeferredDetailsTaskData *td = static_cast<const DeferredDetailsTaskData *>(g_task_get_task_data(task));
   GError *error = nullptr;
-  char *text = static_cast<char *>(g_task_propagate_pointer(task, &error));
+  DeferredDetailsResult *result = static_cast<DeferredDetailsResult *>(g_task_propagate_pointer(task, &error));
 
   if (!td) {
-    g_free(text);
+    delete result;
     if (error) {
       g_error_free(error);
     }
@@ -439,14 +489,14 @@ on_deferred_details_task_finished(GObject *, GAsyncResult *res, gpointer user_da
   if (td->generation != BaseManager::instance().current_generation() ||
       widgets->results.selected_nevra != td->selected_nevra ||
       widgets->results.details_query_nevra != td->details_query_nevra) {
-    g_free(text);
+    delete result;
     if (error) {
       g_error_free(error);
     }
     return;
   }
 
-  if (!text) {
+  if (!result) {
     set_details_text(ui.buffer, error ? error->message : ui.error_text);
     if (error) {
       g_error_free(error);
@@ -455,8 +505,12 @@ on_deferred_details_task_finished(GObject *, GAsyncResult *res, gpointer user_da
   }
 
   *ui.loaded_nevra = td->details_query_nevra;
-  set_details_text(ui.buffer, text);
-  g_free(text);
+  if (td->page == DeferredDetailsPage::DEPENDENCIES) {
+    set_dependency_details_text(widgets, *result);
+  } else {
+    set_details_text(ui.buffer, result->text.c_str());
+  }
+  delete result;
 }
 
 // -----------------------------------------------------------------------------
@@ -481,6 +535,9 @@ load_selected_package_details_page(MainWindowUiState *widgets, DeferredDetailsPa
   }
 
   set_details_text(ui.buffer, ui.loading_text);
+  if (page == DeferredDetailsPage::DEPENDENCIES) {
+    widgets->results.deps_links.clear();
+  }
 
   GCancellable *c = widgets_make_task_cancellable_for(GTK_WIDGET(widgets->query.entry));
   GTask *task = widgets_task_new_for_main_window_ui_state(widgets, c, on_deferred_details_task_finished);
@@ -542,6 +599,7 @@ package_details_load_selected_package_info(MainWindowUiState *widgets, const Pac
   widgets->results.files_loaded_nevra.clear();
   widgets->results.deps_loaded_nevra.clear();
   widgets->results.changelog_loaded_nevra.clear();
+  widgets->results.deps_links.clear();
   set_details_text(widgets->results.files_buffer, _("Open the Files tab to load the file list."));
   set_details_text(widgets->results.deps_buffer, _("Open the Dependencies tab to load dependencies."));
   set_details_text(widgets->results.changelog_buffer, _("Open the Changelog tab to load the changelog."));
@@ -583,6 +641,52 @@ package_details_on_details_page_changed(GtkStack *stack, GParamSpec *, gpointer 
   }
 
   load_visible_package_details_page(widgets, stack);
+}
+
+// -----------------------------------------------------------------------------
+// Connect clicks on package links in the Dependencies tab.
+// -----------------------------------------------------------------------------
+void
+package_details_connect_dependency_links(MainWindowUiState *widgets)
+{
+  if (!widgets || !widgets->results.deps_view) {
+    return;
+  }
+
+  GtkGesture *click = gtk_gesture_click_new();
+  gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(click), GDK_BUTTON_PRIMARY);
+  g_signal_connect(click,
+                   "pressed",
+                   G_CALLBACK(+[](GtkGestureClick *gesture, int, double x, double y, gpointer user_data) {
+                     MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
+                     GtkWidget *widget = gtk_event_controller_get_widget(GTK_EVENT_CONTROLLER(gesture));
+                     if (!widgets || !widget || widgets->results.deps_links.empty()) {
+                       return;
+                     }
+
+                     GtkTextView *view = GTK_TEXT_VIEW(widget);
+                     int buffer_x = 0;
+                     int buffer_y = 0;
+                     gtk_text_view_window_to_buffer_coords(
+                         view, GTK_TEXT_WINDOW_WIDGET, static_cast<int>(x), static_cast<int>(y), &buffer_x, &buffer_y);
+
+                     GtkTextIter iter;
+                     if (!gtk_text_view_get_iter_at_location(view, &iter, buffer_x, buffer_y)) {
+                       return;
+                     }
+
+                     const int line = gtk_text_iter_get_line(&iter);
+                     const int column = gtk_text_iter_get_line_offset(&iter);
+                     for (const auto &link : widgets->results.deps_links) {
+                       if (line == link.line && column >= link.start_column &&
+                           column < link.start_column + link.length) {
+                         package_query_show_exact_package(widgets, link.nevra);
+                         return;
+                       }
+                     }
+                   }),
+                   widgets);
+  gtk_widget_add_controller(GTK_WIDGET(widgets->results.deps_view), GTK_EVENT_CONTROLLER(click));
 }
 
 // -----------------------------------------------------------------------------
