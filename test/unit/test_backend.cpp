@@ -307,6 +307,7 @@ TEST_CASE("Package info formatting contains expected fields")
   REQUIRE(info.find("Version: ") != std::string::npos);
   REQUIRE(info.find("Release: ") != std::string::npos);
   REQUIRE(info.find("Arch: ") != std::string::npos);
+  REQUIRE(info.find("Installed From: ") != std::string::npos);
   REQUIRE(info.find("Install Size: ") != std::string::npos);
   REQUIRE(info.find("Install Reason: ") != std::string::npos);
   REQUIRE(info.find("Summary:") != std::string::npos);

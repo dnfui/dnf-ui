@@ -1,6 +1,7 @@
 packaging/io.github.dnfui.dnfui.desktop.in
 packaging/io.github.dnfui.dnfui.metainfo.xml.in
 src/app.cpp
+src/dnf_backend/dnf_details.cpp
 src/i18n.cpp
 src/main.cpp
 src/transaction_service_client.cpp

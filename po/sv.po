@@ -145,6 +145,9 @@ msgstr "Uppdateringsutgåva"
 msgid "Repo"
 msgstr "Förråd"
 
+msgid "Installed From"
+msgstr "Installerad från"
+
 msgid "Name"
 msgstr "Namn"
 

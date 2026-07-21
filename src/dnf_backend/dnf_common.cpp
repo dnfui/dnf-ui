@@ -58,6 +58,9 @@ make_package_row(const libdnf5::rpm::Package &pkg, PackageRepoCandidateRelation 
   row.release = pkg.get_release();
   row.arch = pkg.get_arch();
   row.repo = pkg.get_repo_id();
+  if (pkg.is_installed()) {
+    row.installed_from_repo = pkg.get_from_repo_id();
+  }
   row.summary = pkg.get_summary();
   if (pkg.is_installed()) {
     row.install_reason = package_install_reason_from_libdnf(pkg.get_reason());

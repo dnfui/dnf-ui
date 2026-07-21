@@ -171,8 +171,13 @@ dnf_backend_get_package_info(const std::string &pkg_nevra, const PackageRow *upg
       << _("Version") << ": " << display_row.version << "\n"
       << _("Release") << ": " << display_row.release << "\n"
       << _("Arch") << ": " << display_row.arch << "\n"
-      << _("Repo") << ": " << display_row.repo << "\n"
-      << _("Install Size") << ": " << format_package_size(display_install_size) << "\n";
+      << _("Repo") << ": " << display_row.repo << "\n";
+
+  if (have_installed_counterpart) {
+    oss << _("Installed From") << ": " << installed_row.installed_from_repo << "\n";
+  }
+
+  oss << _("Install Size") << ": " << format_package_size(display_install_size) << "\n";
 
   if (have_installed_counterpart) {
     oss << _("Install Reason") << ": " << dnf_backend_install_reason_to_string(installed_row.install_reason) << "\n";
