@@ -10,6 +10,7 @@
 
 #include <atomic>
 #include <sstream>
+#include <string>
 
 // -----------------------------------------------------------------------------
 // Transaction progress popup state
@@ -40,7 +41,7 @@ struct TransactionProgressWindow {
 
 struct ProgressAppendData {
   TransactionProgressWindow *progress = nullptr;
-  char *message;
+  std::string message;
 };
 
 // -----------------------------------------------------------------------------
@@ -54,7 +55,6 @@ progress_append_data_free(ProgressAppendData *data)
   }
 
   transaction_progress_release(data->progress);
-  g_free(data->message);
   delete data;
 }
 
@@ -249,7 +249,7 @@ append_transaction_progress_line(TransactionProgressWindow *progress, const std:
 
   auto *data = new ProgressAppendData();
   data->progress = transaction_progress_retain(progress);
-  data->message = g_strdup(message.c_str());
+  data->message = message;
 
   g_main_context_invoke(
       nullptr,
@@ -262,7 +262,7 @@ append_transaction_progress_line(TransactionProgressWindow *progress, const std:
           return G_SOURCE_REMOVE;
         }
 
-        append_progress_line_on_main(progress, data->message);
+        append_progress_line_on_main(progress, data->message.c_str());
         progress_append_data_free(data);
         return G_SOURCE_REMOVE;
       },
