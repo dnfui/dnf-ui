@@ -3,8 +3,8 @@
 // Internal libdnf5 backend implementation helpers
 //
 // The public backend contract lives in the backend facade header. This header is
-// shared only by the backend implementation units so the app-facing API can stay
-// small while query, details, and state-cache code remain in separate files.
+// shared by backend implementation units and backend tests so the app-facing API
+// can stay small while query, details, and state-cache code remain in separate files.
 // -----------------------------------------------------------------------------
 #pragma once
 
