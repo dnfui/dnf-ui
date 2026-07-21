@@ -39,8 +39,8 @@ elapsed_ms_since(gint64 started_at_us)
 // Data passed to one background search task.
 // -----------------------------------------------------------------------------
 struct SearchTaskData {
-  char *term;
-  char *cache_key;
+  std::string term;
+  std::string cache_key;
   uint64_t request_id;
   gint64 started_at_us;
   // BaseManager generation recorded when the task starts.
@@ -59,13 +59,7 @@ struct SearchTaskData {
 static void
 search_task_data_free(gpointer p)
 {
-  SearchTaskData *d = static_cast<SearchTaskData *>(p);
-  if (!d) {
-    return;
-  }
-  g_free(d->term);
-  g_free(d->cache_key);
-  g_free(d);
+  delete static_cast<SearchTaskData *>(p);
 }
 
 // Data passed to one background package list task.
@@ -98,7 +92,7 @@ return_package_state_changed_result(GTask *task)
 // Data passed to one exact selected-package reload task.
 // The selected NEVRA and generation are checked again before the table is updated.
 struct ExactPackageReloadTaskData {
-  char *nevra;
+  std::string nevra;
   uint64_t request_id;
   uint64_t generation;
   gint64 started_at_us;
@@ -110,12 +104,7 @@ struct ExactPackageReloadTaskData {
 static void
 exact_package_reload_task_data_free(gpointer p)
 {
-  ExactPackageReloadTaskData *d = static_cast<ExactPackageReloadTaskData *>(p);
-  if (!d) {
-    return;
-  }
-  g_free(d->nevra);
-  g_free(d);
+  delete static_cast<ExactPackageReloadTaskData *>(p);
 }
 
 struct QueryBackendBaseDropGuard {
@@ -589,10 +578,11 @@ on_search_task(GTask *task, gpointer, gpointer task_data, GCancellable *cancella
   QueryBackendBaseDropGuard base_drop_guard(cancellable);
 
   const SearchTaskData *td = static_cast<const SearchTaskData *>(task_data);
-  const char *pattern = td ? td->term : "";
+  const std::string pattern = td ? td->term : "";
   try {
-    DNFUI_TRACE(
-        "Search task start request=%llu pattern=%s", td ? static_cast<unsigned long long>(td->request_id) : 0, pattern);
+    DNFUI_TRACE("Search task start request=%llu pattern=%s",
+                td ? static_cast<unsigned long long>(td->request_id) : 0,
+                pattern.c_str());
     auto *results = new std::vector<PackageRow>(dnf_backend_search_package_rows_interruptible(pattern, cancellable));
     DNFUI_TRACE("Search task done request=%llu results=%zu",
                 td ? static_cast<unsigned long long>(td->request_id) : 0,
@@ -644,13 +634,12 @@ on_search_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
   if (packages) {
     // Save rows so the same search can be shown faster next time.
     // Dropping the cached Base releases memory, but it does not make this result stale.
-    if (td && td->cache_key) {
+    if (td && !td->cache_key.empty()) {
       package_query_cache_store(td->cache_key, td->generation, td->cache_epoch, *packages);
     }
 
     if (td) {
-      package_query_set_displayed_search_query(
-          widgets, td->term ? td->term : "", td->search_in_description, td->exact_match);
+      package_query_set_displayed_search_query(widgets, td->term, td->search_in_description, td->exact_match);
     }
 
     // Fill the package table and display the result count.
@@ -686,7 +675,7 @@ on_exact_package_reload_task(GTask *task, gpointer, gpointer task_data, GCancell
   QueryBackendBaseDropGuard base_drop_guard(cancellable);
 
   const ExactPackageReloadTaskData *td = static_cast<const ExactPackageReloadTaskData *>(task_data);
-  const char *nevra = td && td->nevra ? td->nevra : "";
+  const std::string nevra = td ? td->nevra : "";
 
   try {
     dnf_backend_refresh_installed_nevras();
@@ -715,7 +704,7 @@ on_exact_package_reload_task_finished(GObject *, GAsyncResult *res, gpointer use
   GTask *task = G_TASK(res);
   MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
   const ExactPackageReloadTaskData *td = static_cast<const ExactPackageReloadTaskData *>(g_task_get_task_data(task));
-  const std::string task_nevra = td && td->nevra ? td->nevra : "";
+  const std::string task_nevra = td ? td->nevra : "";
 
   if (widgets_task_should_skip_completion(task, widgets)) {
     if (widgets && !widgets->window_state.destroyed) {
@@ -852,9 +841,9 @@ package_query_start_search_task(MainWindowUiState *widgets,
 {
   widgets_spinner_acquire(widgets->query.spinner);
 
-  SearchTaskData *td = static_cast<SearchTaskData *>(g_malloc0(sizeof *td));
-  td->term = g_strdup(term.c_str());
-  td->cache_key = g_strdup(cache_key.c_str());
+  SearchTaskData *td = new SearchTaskData;
+  td->term = term;
+  td->cache_key = cache_key;
   td->request_id = widgets->query_state.next_package_list_request_id++;
   td->started_at_us = g_get_monotonic_time();
   td->generation = generation;
@@ -883,8 +872,8 @@ package_query_start_exact_package_reload_task(MainWindowUiState *widgets, const 
 
   widgets_spinner_acquire(widgets->query.spinner);
 
-  ExactPackageReloadTaskData *td = static_cast<ExactPackageReloadTaskData *>(g_malloc0(sizeof *td));
-  td->nevra = g_strdup(nevra.c_str());
+  ExactPackageReloadTaskData *td = new ExactPackageReloadTaskData;
+  td->nevra = nevra;
   td->request_id = widgets->query_state.next_package_list_request_id++;
   td->generation = BaseManager::instance().current_generation();
   td->started_at_us = g_get_monotonic_time();
