@@ -17,6 +17,7 @@
 #include <chrono>
 #include <filesystem>
 #include <iostream>
+#include <optional>
 #include <stdexcept>
 #include <system_error>
 #include <thread>
@@ -384,9 +385,9 @@ build_base_for_mode(RepoLoadMode mode,
     result.base->set_download_callbacks(
         std::make_unique<CancelableDownloadCallbacks>(cancel_requested, std::move(progress_callback)));
   }
-  std::unique_ptr<DownloadCallbacksReset> download_callbacks_reset;
+  std::optional<DownloadCallbacksReset> download_callbacks_reset;
   if (has_download_callbacks) {
-    download_callbacks_reset = std::make_unique<DownloadCallbacksReset>(*result.base);
+    download_callbacks_reset.emplace(*result.base);
   }
   if (mode == RepoLoadMode::FULL && refresh_mode == BaseRefreshMode::FORCE_METADATA_CHECK) {
     throw_if_rebuild_cancelled(cancel_requested);

@@ -9,23 +9,8 @@
 #include "ui/transaction/pending_transaction_action_rows.hpp"
 #include "ui/transaction/pending_transaction_controller.hpp"
 #include "ui/transaction/pending_transaction_state.hpp"
+#include "ui/transaction/pending_transaction_view.hpp"
 #include "ui/common/widgets.hpp"
-
-// -----------------------------------------------------------------------------
-// Find the pending action for the clicked package row, if one exists.
-// -----------------------------------------------------------------------------
-static bool
-get_context_menu_pending_action(MainWindowUiState *widgets, const std::string &nevra, PendingAction::Type &out_type)
-{
-  for (const auto &action : widgets->transaction.actions) {
-    if (action.nevra == nevra) {
-      out_type = action.type;
-      return true;
-    }
-  }
-
-  return false;
-}
 
 // -----------------------------------------------------------------------------
 // Add one transaction action to the package context menu.
@@ -92,11 +77,11 @@ package_table_show_context_menu(GtkWidget *anchor,
 
   PendingAction::Type pending_install_type;
   bool has_pending_install = action_rows.has_install_row &&
-      get_context_menu_pending_action(widgets, action_rows.install_row.nevra, pending_install_type);
+      pending_transaction_get_action_type(widgets, action_rows.install_row.nevra, pending_install_type);
 
   PendingAction::Type pending_destructive_type;
   bool has_pending_destructive = action_rows.has_installed_row &&
-      get_context_menu_pending_action(widgets, action_rows.installed_row.nevra, pending_destructive_type);
+      pending_transaction_get_action_type(widgets, action_rows.installed_row.nevra, pending_destructive_type);
 
   // Keep context menu actions aligned with the normal package action buttons.
   const char *install_label = nullptr;

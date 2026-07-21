@@ -209,16 +209,8 @@ create_main_window_ui_state(const AppWidgets *ui)
   widgets->transaction.clear_pending_button = GTK_BUTTON(ui->clear_pending_button);
   widgets->transaction.pending_list = GTK_LIST_BOX(ui->pending_list);
 
-  widgets->query_state.package_list_cancellable = nullptr;
-  widgets->query_state.next_package_list_request_id = 1;
-  widgets->query_state.current_package_list_request_id = 0;
-  widgets->query_state.current_package_list_request_kind = PackageListRequestKind::NONE;
-
-  widgets->window_state.allow_close_with_pending = false;
-  widgets->window_state.pending_quit_dialog_open = false;
   widgets->window_state.backend_warmup_label = GTK_LABEL(ui->warmup_label);
   widgets->window_state.query_duration_label = GTK_LABEL(ui->query_duration_label);
-  widgets->window_state.backend_warmup_cancellable = nullptr;
 
   return widgets;
 }
@@ -590,15 +582,7 @@ on_main_window_close_request(GtkWindow *window, gpointer user_data)
     return TRUE;
   }
 
-  if (widgets->window_state.allow_close_with_pending) {
-    config_save_window_geometry(window);
-    if (widgets->results.inner_paned) {
-      config_save_paned_position(widgets->results.inner_paned);
-    }
-    return FALSE;
-  }
-
-  if (widgets->transaction.actions.empty()) {
+  if (widgets->window_state.allow_close_with_pending || widgets->transaction.actions.empty()) {
     config_save_window_geometry(window);
     if (widgets->results.inner_paned) {
       config_save_paned_position(widgets->results.inner_paned);

@@ -16,7 +16,6 @@
 #include <mutex>
 #include <set>
 #include <string>
-#include <vector>
 
 #ifdef DNFUI_BUILD_TESTS
 #include <glib.h>
@@ -69,17 +68,15 @@ package_spec_matches_protected_name(const std::string &spec, const std::set<std:
 // Resolve the current GUI executable path so the app can block self-modification
 // without hard-coding the RPM package name.
 // -----------------------------------------------------------------------------
-std::vector<std::string>
-self_protected_file_paths()
+std::string
+self_protected_file_path()
 {
-  std::set<std::string> paths;
-
   try {
-    paths.insert(std::filesystem::canonical("/proc/self/exe").string());
+    return std::filesystem::canonical("/proc/self/exe").string();
   } catch (const std::exception &) {
   }
 
-  return { paths.begin(), paths.end() };
+  return {};
 }
 
 } // namespace
@@ -96,7 +93,8 @@ collect_self_protected_package_names(libdnf5::Base &base)
 {
   std::set<std::string> protected_names;
 
-  for (const auto &path : self_protected_file_paths()) {
+  const std::string path = self_protected_file_path();
+  if (!path.empty()) {
     libdnf5::rpm::PackageQuery query(base);
     query.filter_installed();
     query.filter_file(path);
