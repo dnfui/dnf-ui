@@ -1,11 +1,13 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include "dnf_backend/dnf_backend.hpp"
 #include "dnf_backend/base_manager.hpp"
+#include "dnf_backend/dnf_backend.hpp"
+#include "dnf_backend/dnf_internal.hpp"
 #include "test_utils.hpp"
 
 #include <map>
 #include <set>
+#include <stdexcept>
 #include <string>
 
 namespace {
@@ -592,7 +594,12 @@ TEST_CASE("Annotation fallback keeps installed rows usable when repo lookup fail
   dnf_backend_testonly_replace_installed_snapshot({ row.nevra });
 
   std::vector<PackageRow> rows { row };
-  REQUIRE(dnf_backend_testonly_annotation_fallback_leaves_rows_unknown(rows));
+  dnf_backend_internal::annotate_installed_rows_with_repo_candidates_best_effort(
+      rows, nullptr, [](GCancellable *) -> std::map<std::string, PackageRow> {
+        throw std::runtime_error("forced annotation failure");
+      });
+
   REQUIRE(rows.size() == 1);
+  REQUIRE(rows.front().repo_candidate_relation == PackageRepoCandidateRelation::UNKNOWN);
   REQUIRE(dnf_backend_get_package_install_state(rows.front()) == PackageInstallState::INSTALLED);
 }

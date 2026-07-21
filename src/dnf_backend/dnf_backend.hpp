@@ -392,11 +392,6 @@ void dnf_backend_testonly_replace_installed_snapshot(const std::set<std::string>
 // name and architecture lookups.
 // -----------------------------------------------------------------------------
 void dnf_backend_testonly_replace_installed_snapshot_rows(const std::vector<PackageRow> &rows);
-// -----------------------------------------------------------------------------
-// Test-only hook: force the optional repo annotation path to fail and return
-// whether all rows kept UNKNOWN repo-candidate relation afterwards.
-// -----------------------------------------------------------------------------
-bool dnf_backend_testonly_annotation_fallback_leaves_rows_unknown(std::vector<PackageRow> &rows);
 #endif
 
 // -----------------------------------------------------------------------------

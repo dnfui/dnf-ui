@@ -613,41 +613,13 @@ dnf_backend_get_installed_package_rows_by_nevra(const std::string &pkg_nevra)
     packages.push_back(make_package_row(pkg));
   }
 
-  // Scope the annotation query to the package name so we load only the one
-  // relevant name and architecture entry instead of the entire available package set.
-  const std::string annotation_pattern = packages.empty() ? "" : packages[0].name;
   annotate_installed_rows_with_repo_candidates_best_effort(
-      packages, nullptr, [&base, &annotation_pattern](GCancellable *annotation_cancellable) {
-        const DnfBackendSearchOptions search_options {};
-        return collect_available_rows_by_name_arch(
-            base, annotation_cancellable, search_options, annotation_pattern.empty() ? nullptr : &annotation_pattern);
+      packages, nullptr, [&base, &packages](GCancellable *annotation_cancellable) {
+        return collect_available_rows_for_installed_names(base, annotation_cancellable, packages);
       });
 
   return packages;
 }
-
-#ifdef DNFUI_BUILD_TESTS
-// -----------------------------------------------------------------------------
-// Test-only hook that forces annotation failure and verifies rows retain
-// UNKNOWN repo-candidate relation rather than being misclassified.
-// -----------------------------------------------------------------------------
-bool
-dnf_backend_testonly_annotation_fallback_leaves_rows_unknown(std::vector<PackageRow> &rows)
-{
-  for (auto &row : rows) {
-    row.repo_candidate_relation = PackageRepoCandidateRelation::UNKNOWN;
-  }
-
-  annotate_installed_rows_with_repo_candidates_best_effort(
-      rows, nullptr, [](GCancellable *) -> std::map<std::string, PackageRow> {
-        throw std::runtime_error("forced annotation failure");
-      });
-
-  return std::all_of(rows.begin(), rows.end(), [](const PackageRow &row) {
-    return row.repo_candidate_relation == PackageRepoCandidateRelation::UNKNOWN;
-  });
-}
-#endif
 
 // -----------------------------------------------------------------------------
 // Return available package rows that exactly match one NEVRA.
