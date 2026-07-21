@@ -132,31 +132,6 @@ history_setup_shortcuts(GtkWidget *window, GtkWidget *package_entry)
   gtk_shortcut_controller_add_shortcut(GTK_SHORTCUT_CONTROLLER(shortcuts), close_window);
 }
 
-const char *
-history_action_filter_label(TransactionHistoryAction action)
-{
-  switch (action) {
-  case TransactionHistoryAction::INSTALL:
-    return _("Install");
-  case TransactionHistoryAction::UPGRADE:
-    return _("Upgrade");
-  case TransactionHistoryAction::DOWNGRADE:
-    return _("Downgrade");
-  case TransactionHistoryAction::REINSTALL:
-    return _("Reinstall");
-  case TransactionHistoryAction::REMOVE:
-    return _("Remove");
-  case TransactionHistoryAction::REPLACED:
-    return _("Replaced");
-  case TransactionHistoryAction::REASON_CHANGE:
-    return _("Reason changed");
-  case TransactionHistoryAction::OTHER:
-    return _("Other");
-  }
-
-  return _("Other");
-}
-
 // -----------------------------------------------------------------------------
 // Return the selected action filters from the checkbox menu.
 // When every action is checked, the backend can treat it as All actions.
@@ -194,7 +169,8 @@ history_update_action_menu_label(const std::shared_ptr<TransactionHistoryWindowS
   } else if (actions.empty()) {
     gtk_menu_button_set_label(state->action_menu_button, _("No actions"));
   } else if (actions.size() == 1) {
-    gtk_menu_button_set_label(state->action_menu_button, history_action_filter_label(*actions.begin()));
+    std::string label = dnf_backend_transaction_history_action_to_string(*actions.begin());
+    gtk_menu_button_set_label(state->action_menu_button, label.c_str());
   } else {
     std::string label = dnfui_i18n_format(_("%zu actions"), actions.size());
     gtk_menu_button_set_label(state->action_menu_button, label.c_str());
@@ -1020,8 +996,8 @@ transaction_history_show_window(GtkWindow *parent)
   state->all_actions_check_button = GTK_CHECK_BUTTON(all_actions_check_button);
 
   for (size_t i = 0; i < kHistoryActionFilterValues.size(); ++i) {
-    GtkWidget *check_button =
-        gtk_check_button_new_with_label(history_action_filter_label(kHistoryActionFilterValues[i]));
+    std::string label = dnf_backend_transaction_history_action_to_string(kHistoryActionFilterValues[i]);
+    GtkWidget *check_button = gtk_check_button_new_with_label(label.c_str());
     gtk_check_button_set_active(GTK_CHECK_BUTTON(check_button), TRUE);
     gtk_box_append(GTK_BOX(action_box), check_button);
     state->action_check_buttons[i] = GTK_CHECK_BUTTON(check_button);

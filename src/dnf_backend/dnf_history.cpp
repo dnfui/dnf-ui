@@ -82,16 +82,11 @@ make_history_row(libdnf5::transaction::Transaction &transaction,
   TransactionHistoryPackageRow row;
   row.transaction_id = transaction.get_id();
   row.started_at = transaction.get_dt_start();
-  row.ended_at = transaction.get_dt_end();
   // Historical package items can keep STARTED as their item state even when the transaction completed successfully.
   row.succeeded = succeeded;
   row.action = action;
   row.package_id = package.to_string();
   row.name = package.get_name();
-  row.epoch = package.get_epoch();
-  row.version = package.get_version();
-  row.release = package.get_release();
-  row.arch = package.get_arch();
   row.repo = package.get_repoid();
   row.description = description;
   return row;

@@ -175,31 +175,12 @@ enum class TransactionHistoryAction {
 struct TransactionHistoryPackageRow {
   int64_t transaction_id = 0;
   int64_t started_at = 0;
-  int64_t ended_at = 0;
   bool succeeded = false;
   TransactionHistoryAction action = TransactionHistoryAction::OTHER;
   std::string package_id;
   std::string name;
-  std::string epoch;
-  std::string version;
-  std::string release;
-  std::string arch;
   std::string repo;
   std::string description;
-
-  // -----------------------------------------------------------------------------
-  // Return the user-visible version and release string.
-  // -----------------------------------------------------------------------------
-  std::string display_version() const
-  {
-    if (version.empty()) {
-      return release;
-    }
-    if (release.empty()) {
-      return version;
-    }
-    return version + "-" + release;
-  }
 };
 
 struct TransactionHistoryCursor {
