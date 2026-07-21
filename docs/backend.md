@@ -128,6 +128,8 @@ architecture pair.
 
 Normal search is substring based. If the search term contains `*` or `?`, normal search treats it as a wildcard pattern. Exact search remains literal.
 
+The GTK controller captures the description and exact-match checkboxes once for each search request. That same option snapshot is used for the search cache key and passed to the backend worker, so a queued search does not depend on later checkbox changes.
+
 The List Upgradable view uses dnf5daemon to decide which upgrades exist. The worker refreshes installed-package state, loads the daemon upgrade targets, asks libdnf5 only for matching package metadata, and then refreshes installed-package state again. If installed state changed while the daemon result was being loaded, the result is rejected and the user must reload List Upgradable. The GTK completion stores the daemon targets in the shared daemon upgrade snapshot only when it accepts the matching table rows. Missing metadata does not hide a daemon-reported upgrade. In that case the table keeps a basic row built from the daemon target.
 
 This keeps the list honest: libdnf5 can add metadata to daemon-reported upgrade rows, but it no longer decides which rows appear in List Upgradable.
@@ -141,7 +143,6 @@ It stores:
 
 - exact installed NEVRAs
 - installed rows keyed by package name and architecture
-- current backend search options
 - package names that own the running GUI executable
 
 The installed snapshot lets the UI classify package rows without doing a fresh
