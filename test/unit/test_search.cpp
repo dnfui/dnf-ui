@@ -47,9 +47,7 @@ TEST_CASE("Search contains mode returns results for common package")
 {
   reset_backend_globals();
 
-  set_backend_search_options(false, false);
-
-  auto results = dnf_backend_search_package_rows_interruptible("bash", nullptr);
+  auto results = dnf_backend_search_package_rows_interruptible("bash", backend_search_options(false, false), nullptr);
 
   REQUIRE(!results.empty());
 }
@@ -61,10 +59,9 @@ TEST_CASE("Search contains mode is case-insensitive for installed package annota
 {
   reset_backend_globals();
 
-  set_backend_search_options(false, false);
-
-  auto lower_results = dnf_backend_search_package_rows_interruptible("bash", nullptr);
-  auto upper_results = dnf_backend_search_package_rows_interruptible("BASH", nullptr);
+  const DnfBackendSearchOptions options = backend_search_options(false, false);
+  auto lower_results = dnf_backend_search_package_rows_interruptible("bash", options, nullptr);
+  auto upper_results = dnf_backend_search_package_rows_interruptible("BASH", options, nullptr);
 
   const PackageRow *lower_bash = find_package_name(lower_results, "bash");
   const PackageRow *upper_bash = find_package_name(upper_results, "bash");
@@ -82,9 +79,7 @@ TEST_CASE("Search exact mode does not match partial substring")
 {
   reset_backend_globals();
 
-  set_backend_search_options(false, true);
-
-  auto exact = dnf_backend_search_package_rows_interruptible("ba", nullptr);
+  auto exact = dnf_backend_search_package_rows_interruptible("ba", backend_search_options(false, true), nullptr);
 
   REQUIRE(exact.empty());
 }
@@ -96,9 +91,7 @@ TEST_CASE("Search wildcard mode returns matching package names")
 {
   reset_backend_globals();
 
-  set_backend_search_options(false, false);
-
-  auto results = dnf_backend_search_package_rows_interruptible("ba*", nullptr);
+  auto results = dnf_backend_search_package_rows_interruptible("ba*", backend_search_options(false, false), nullptr);
 
   REQUIRE(contains_package_name(results, "bash"));
 }
@@ -110,9 +103,7 @@ TEST_CASE("Search exact mode treats wildcard characters literally")
 {
   reset_backend_globals();
 
-  set_backend_search_options(false, true);
-
-  auto results = dnf_backend_search_package_rows_interruptible("ba*", nullptr);
+  auto results = dnf_backend_search_package_rows_interruptible("ba*", backend_search_options(false, true), nullptr);
 
   REQUIRE(results.empty());
 }
@@ -124,11 +115,11 @@ TEST_CASE("Search description mode expands or equals name-only results")
 {
   reset_backend_globals();
 
-  set_backend_search_options(false, false);
-  auto name_only = dnf_backend_search_package_rows_interruptible("shell", nullptr);
+  auto name_only =
+      dnf_backend_search_package_rows_interruptible("shell", backend_search_options(false, false), nullptr);
 
-  set_backend_search_options(true, false);
-  auto desc_search = dnf_backend_search_package_rows_interruptible("shell", nullptr);
+  auto desc_search =
+      dnf_backend_search_package_rows_interruptible("shell", backend_search_options(true, false), nullptr);
 
   if (desc_search.size() < name_only.size()) {
     FAIL("Description search returned fewer results than name-only search");
@@ -142,11 +133,11 @@ TEST_CASE("Search description mode includes package summaries")
 {
   reset_backend_globals();
 
-  set_backend_search_options(false, false);
-  auto name_only = dnf_backend_search_package_rows_interruptible("bourne", nullptr);
+  auto name_only =
+      dnf_backend_search_package_rows_interruptible("bourne", backend_search_options(false, false), nullptr);
 
-  set_backend_search_options(true, false);
-  auto desc_search = dnf_backend_search_package_rows_interruptible("bourne", nullptr);
+  auto desc_search =
+      dnf_backend_search_package_rows_interruptible("bourne", backend_search_options(true, false), nullptr);
 
   if (name_only.empty() && desc_search.empty()) {
     SKIP("Current repository metadata does not provide the expected bash summary search fixture.");
@@ -163,9 +154,8 @@ TEST_CASE("Search returns empty for impossible package name")
 {
   reset_backend_globals();
 
-  set_backend_search_options(false, false);
-
-  auto results = dnf_backend_search_package_rows_interruptible("___definitely_not_a_real_package_987654___", nullptr);
+  auto results = dnf_backend_search_package_rows_interruptible(
+      "___definitely_not_a_real_package_987654___", backend_search_options(false, false), nullptr);
 
   REQUIRE(results.empty());
 }

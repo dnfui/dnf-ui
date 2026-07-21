@@ -25,13 +25,12 @@ TEST_CASE("Offline cached search finds a repo package", "[offline]")
 
   auto &mgr = BaseManager::instance();
   mgr.reset_for_tests();
-  set_backend_search_options(false, true);
 
   auto installed_rows = dnf_backend_get_installed_package_rows_interruptible(nullptr);
   REQUIRE_FALSE(std::any_of(
       installed_rows.begin(), installed_rows.end(), [&](const PackageRow &row) { return row.name == repo_spec; }));
 
-  auto results = dnf_backend_search_package_rows_interruptible(repo_spec, nullptr);
+  auto results = dnf_backend_search_package_rows_interruptible(repo_spec, backend_search_options(false, true), nullptr);
 
   INFO(repo_spec);
   REQUIRE(std::any_of(results.begin(), results.end(), [&](const PackageRow &row) { return row.name == repo_spec; }));

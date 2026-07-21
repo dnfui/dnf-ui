@@ -14,9 +14,9 @@
 #include <vector>
 
 // -----------------------------------------------------------------------------
-// Build the cache key from the current search options and search term.
+// Build the cache key from one request's search options and search term.
 // -----------------------------------------------------------------------------
-std::string package_query_cache_key_for(const std::string &term);
+std::string package_query_cache_key_for(const std::string &term, const DnfBackendSearchOptions &options);
 // -----------------------------------------------------------------------------
 // Clear all cached package query results.
 // -----------------------------------------------------------------------------

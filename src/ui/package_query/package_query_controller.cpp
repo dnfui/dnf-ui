@@ -65,12 +65,11 @@ perform_search(MainWindowUiState *widgets, const std::string &term)
   }
 
   // Include the current checkboxes in the cache key even for history searches.
-  dnf_backend_set_search_options({
-      .search_in_description =
-          static_cast<bool>(gtk_check_button_get_active(GTK_CHECK_BUTTON(widgets->query.desc_checkbox))),
-      .exact_match = static_cast<bool>(gtk_check_button_get_active(GTK_CHECK_BUTTON(widgets->query.exact_checkbox))),
-  });
-  const DnfBackendSearchOptions search_options = dnf_backend_get_search_options();
+  const DnfBackendSearchOptions search_options {
+    .search_in_description =
+        static_cast<bool>(gtk_check_button_get_active(GTK_CHECK_BUTTON(widgets->query.desc_checkbox))),
+    .exact_match = static_cast<bool>(gtk_check_button_get_active(GTK_CHECK_BUTTON(widgets->query.exact_checkbox))),
+  };
 
   gtk_editable_set_text(GTK_EDITABLE(widgets->query.entry), term.c_str());
   std::string searching_message = dnfui_i18n_format(_("Searching for '%s'..."), term.c_str());
@@ -83,7 +82,7 @@ perform_search(MainWindowUiState *widgets, const std::string &term)
   // Look up saved rows before starting a new backend query.
   // Base drops do not invalidate search results because they only release memory.
   // Generation and cache epoch still reject rows after refreshes, transactions, or explicit cache clears.
-  const std::string key = package_query_cache_key_for(term);
+  const std::string key = package_query_cache_key_for(term, search_options);
   const uint64_t generation = BaseManager::instance().current_generation();
   const uint64_t cache_epoch = package_query_cache_current_epoch();
   const gint64 started_at_us = g_get_monotonic_time();

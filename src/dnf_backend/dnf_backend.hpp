@@ -249,22 +249,13 @@ TransactionHistoryPage dnf_backend_list_transaction_history_page(TransactionHist
 
 // -----------------------------------------------------------------------------
 // Search flags used by backend search queries.
-// The UI can update them from the search controls.
-// Each backend worker copies a snapshot before scanning so one query remains internally consistent.
+// Each search request carries its own options so worker tasks do not depend on
+// mutable global checkbox state.
 // -----------------------------------------------------------------------------
 struct DnfBackendSearchOptions {
   bool search_in_description = false;
   bool exact_match = false;
 };
-
-// -----------------------------------------------------------------------------
-// Publish the backend-owned search option snapshot.
-// -----------------------------------------------------------------------------
-void dnf_backend_set_search_options(const DnfBackendSearchOptions &options);
-// -----------------------------------------------------------------------------
-// Return the current backend-owned search option snapshot.
-// -----------------------------------------------------------------------------
-DnfBackendSearchOptions dnf_backend_get_search_options();
 
 // -----------------------------------------------------------------------------
 // Refresh the installed-package snapshot used by the UI for exact-installed
@@ -338,9 +329,10 @@ dnf_backend_get_available_package_metadata_by_nevras_interruptible(const std::ve
                                                                    GCancellable *cancellable);
 
 // -----------------------------------------------------------------------------
-// Search the merged browse view using the current search flags.
+// Search the merged browse view using one request-local option snapshot.
 // -----------------------------------------------------------------------------
 std::vector<PackageRow> dnf_backend_search_package_rows_interruptible(const std::string &pattern,
+                                                                      const DnfBackendSearchOptions &search_options,
                                                                       GCancellable *cancellable);
 
 // -----------------------------------------------------------------------------

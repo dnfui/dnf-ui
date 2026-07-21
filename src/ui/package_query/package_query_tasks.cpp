@@ -583,7 +583,12 @@ on_search_task(GTask *task, gpointer, gpointer task_data, GCancellable *cancella
     DNFUI_TRACE("Search task start request=%llu pattern=%s",
                 td ? static_cast<unsigned long long>(td->request_id) : 0,
                 pattern.c_str());
-    auto *results = new std::vector<PackageRow>(dnf_backend_search_package_rows_interruptible(pattern, cancellable));
+    const DnfBackendSearchOptions search_options {
+      .search_in_description = td ? td->search_in_description : false,
+      .exact_match = td ? td->exact_match : false,
+    };
+    auto *results = new std::vector<PackageRow>(
+        dnf_backend_search_package_rows_interruptible(pattern, search_options, cancellable));
     DNFUI_TRACE("Search task done request=%llu results=%zu",
                 td ? static_cast<unsigned long long>(td->request_id) : 0,
                 results->size());

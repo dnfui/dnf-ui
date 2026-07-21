@@ -213,9 +213,8 @@ TEST_CASE("Searching for impossible package name returns empty result")
 {
   reset_backend_globals();
 
-  set_backend_search_options(false, false);
-
-  auto results = dnf_backend_search_package_rows_interruptible("___definitely_not_a_real_package_123456___", nullptr);
+  auto results = dnf_backend_search_package_rows_interruptible(
+      "___definitely_not_a_real_package_123456___", backend_search_options(false, false), nullptr);
 
   REQUIRE(results.empty());
 }
@@ -227,11 +226,9 @@ TEST_CASE("Exact match results are subset of contains results")
 {
   reset_backend_globals();
 
-  set_backend_search_options(false, false);
-  auto contains = dnf_backend_search_package_rows_interruptible("bash", nullptr);
+  auto contains = dnf_backend_search_package_rows_interruptible("bash", backend_search_options(false, false), nullptr);
 
-  set_backend_search_options(false, true);
-  auto exact = dnf_backend_search_package_rows_interruptible("bash", nullptr);
+  auto exact = dnf_backend_search_package_rows_interruptible("bash", backend_search_options(false, true), nullptr);
 
   auto contains_nevras = package_row_nevras(contains);
   REQUIRE(contains.size() >= exact.size());
@@ -248,11 +245,11 @@ TEST_CASE("Description search returns superset of name-only search")
 {
   reset_backend_globals();
 
-  set_backend_search_options(false, false);
-  auto name_only = dnf_backend_search_package_rows_interruptible("shell", nullptr);
+  auto name_only =
+      dnf_backend_search_package_rows_interruptible("shell", backend_search_options(false, false), nullptr);
 
-  set_backend_search_options(true, false);
-  auto desc_search = dnf_backend_search_package_rows_interruptible("shell", nullptr);
+  auto desc_search =
+      dnf_backend_search_package_rows_interruptible("shell", backend_search_options(true, false), nullptr);
 
   auto desc_search_nevras = package_row_nevras(desc_search);
   REQUIRE(desc_search.size() >= name_only.size());
@@ -269,12 +266,11 @@ TEST_CASE("Cancelled search returns no results")
 {
   reset_backend_globals();
 
-  set_backend_search_options(false, false);
-
   GCancellable *cancellable = g_cancellable_new();
   g_cancellable_cancel(cancellable);
 
-  auto results = dnf_backend_search_package_rows_interruptible("bash", cancellable);
+  auto results =
+      dnf_backend_search_package_rows_interruptible("bash", backend_search_options(false, false), cancellable);
 
   REQUIRE(results.empty());
   g_object_unref(cancellable);
@@ -352,7 +348,7 @@ TEST_CASE("Structured package rows expose searchable metadata")
 {
   reset_backend_globals();
 
-  auto results = dnf_backend_search_package_rows_interruptible("bash", nullptr);
+  auto results = dnf_backend_search_package_rows_interruptible("bash", backend_search_options(false, false), nullptr);
   REQUIRE(!results.empty());
 
   const auto &row = results.front();
@@ -387,9 +383,7 @@ TEST_CASE("Search results keep one visible EVR per package name and architecture
 {
   reset_backend_globals();
 
-  set_backend_search_options(false, false);
-
-  auto results = dnf_backend_search_package_rows_interruptible("bash", nullptr);
+  auto results = dnf_backend_search_package_rows_interruptible("bash", backend_search_options(false, false), nullptr);
   REQUIRE(!results.empty());
 
   std::map<std::string, std::set<std::string>> versions_by_name_arch;
@@ -414,7 +408,7 @@ TEST_CASE("Dependency info contains expected section headers")
 {
   reset_backend_globals();
 
-  auto results = dnf_backend_search_package_rows_interruptible("bash", nullptr);
+  auto results = dnf_backend_search_package_rows_interruptible("bash", backend_search_options(false, false), nullptr);
   REQUIRE(!results.empty());
 
   auto deps = dnf_backend_get_package_deps(results.front().nevra);
@@ -454,7 +448,7 @@ TEST_CASE("File list query is safe and returns valid state")
 {
   reset_backend_globals();
 
-  auto results = dnf_backend_search_package_rows_interruptible("bash", nullptr);
+  auto results = dnf_backend_search_package_rows_interruptible("bash", backend_search_options(false, false), nullptr);
   REQUIRE(!results.empty());
 
   auto files = dnf_backend_get_installed_package_files(results.front().nevra);

@@ -52,9 +52,8 @@ package_query_cache_prune_locked()
 // Build a unique cache key from search options and the search term.
 // -----------------------------------------------------------------------------
 std::string
-package_query_cache_key_for(const std::string &term)
+package_query_cache_key_for(const std::string &term, const DnfBackendSearchOptions &options)
 {
-  const DnfBackendSearchOptions options = dnf_backend_get_search_options();
   std::string key = (options.search_in_description ? "desc:" : "name:");
   key += (options.exact_match ? "exact:" : "contains:");
   key += term;

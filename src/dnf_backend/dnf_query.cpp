@@ -422,10 +422,10 @@ using namespace dnf_backend_internal;
 // Search merged repo and installed-only package rows and stop early when the task cancellable is set.
 // -----------------------------------------------------------------------------
 std::vector<PackageRow>
-dnf_backend_search_package_rows_interruptible(const std::string &pattern, GCancellable *cancellable)
+dnf_backend_search_package_rows_interruptible(const std::string &pattern,
+                                              const DnfBackendSearchOptions &search_options,
+                                              GCancellable *cancellable)
 {
-  const DnfBackendSearchOptions search_options = dnf_backend_get_search_options();
-
   std::vector<PackageRow> rows;
   InstalledQueryResult installed_snapshot;
   std::set<std::string> protected_names;

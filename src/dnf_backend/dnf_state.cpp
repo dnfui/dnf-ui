@@ -9,7 +9,6 @@
 
 #include "dnf_backend/base_manager.hpp"
 
-#include <atomic>
 #include <exception>
 #include <filesystem>
 #include <map>
@@ -30,12 +29,6 @@ namespace {
 std::set<std::string> g_installed_nevras;
 // Mutex for thread-safe access to the installed-package cache and derived state.
 std::mutex g_installed_mutex;
-// Packed search flags read by query workers when they start a search. Keeping
-// both options in one atomic makes dnf_backend_get_search_options a single
-// coherent snapshot.
-constexpr unsigned kSearchInDescriptionBit = 1U << 0;
-constexpr unsigned kExactMatchBit = 1U << 1;
-std::atomic<unsigned> g_search_option_bits { 0 };
 // Cached installed rows keyed by name and arch for upgrade-state classification.
 std::map<std::string, PackageRow> g_installed_rows_by_name_arch;
 // Installed package names that own the running GUI binary.
@@ -166,35 +159,6 @@ publish_installed_snapshot(InstalledQueryResult installed, std::set<std::string>
 } // namespace dnf_backend_internal
 
 using namespace dnf_backend_internal;
-
-// -----------------------------------------------------------------------------
-// Publish the search options used by new backend search workers.
-// -----------------------------------------------------------------------------
-void
-dnf_backend_set_search_options(const DnfBackendSearchOptions &options)
-{
-  unsigned bits = 0;
-  if (options.search_in_description) {
-    bits |= kSearchInDescriptionBit;
-  }
-  if (options.exact_match) {
-    bits |= kExactMatchBit;
-  }
-  g_search_option_bits.store(bits, std::memory_order_relaxed);
-}
-
-// -----------------------------------------------------------------------------
-// Return one consistent snapshot of the backend search options.
-// -----------------------------------------------------------------------------
-DnfBackendSearchOptions
-dnf_backend_get_search_options()
-{
-  const unsigned bits = g_search_option_bits.load(std::memory_order_relaxed);
-  return {
-    .search_in_description = (bits & kSearchInDescriptionBit) != 0,
-    .exact_match = (bits & kExactMatchBit) != 0,
-  };
-}
 
 // -----------------------------------------------------------------------------
 // Return true when the installed-package snapshot contains one exact NEVRA.
