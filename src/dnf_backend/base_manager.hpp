@@ -7,7 +7,6 @@
 #include <functional>
 #include <memory>
 #include <mutex>
-#include <shared_mutex>
 #include <stdexcept>
 #include <string>
 
@@ -23,7 +22,7 @@ class BaseGuard {
   // -----------------------------------------------------------------------------
   // Take ownership of a BaseManager lock.
   // -----------------------------------------------------------------------------
-  explicit BaseGuard(std::unique_lock<std::shared_mutex> &&l)
+  explicit BaseGuard(std::unique_lock<std::mutex> &&l)
       : lock(std::move(l))
   {
   }
@@ -33,7 +32,7 @@ class BaseGuard {
   BaseGuard &operator=(const BaseGuard &) = delete;
 
   private:
-  std::unique_lock<std::shared_mutex> lock;
+  std::unique_lock<std::mutex> lock;
 };
 
 // -----------------------------------------------------------------------------
@@ -190,7 +189,7 @@ class BaseManager {
   std::atomic<uint64_t> generation { 0 };
 
   // Serializes Base queries, rebuilds, and Base destruction.
-  mutable std::shared_mutex base_mutex;
+  mutable std::mutex base_mutex;
 };
 
 // -----------------------------------------------------------------------------

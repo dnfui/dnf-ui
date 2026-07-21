@@ -502,7 +502,7 @@ BaseManager::instance()
 BaseRepoState
 BaseManager::current_repo_state() const
 {
-  std::shared_lock<std::shared_mutex> shared(base_mutex);
+  std::lock_guard<std::mutex> lock(base_mutex);
   return repo_state;
 }
 
@@ -514,7 +514,7 @@ BaseManager::acquire_read()
 {
   // Keep the lock exclusive for the whole libdnf Base operation.
   // PackageQuery work can touch shared Base internals even when the caller only reads data.
-  std::unique_lock<std::shared_mutex> lock(base_mutex);
+  std::unique_lock<std::mutex> lock(base_mutex);
   if (!base_ptr) {
     ensure_base_initialized();
   }
@@ -537,7 +537,7 @@ BaseManager::acquire_read(std::shared_ptr<std::atomic<bool>> cancel_requested)
   //
   // lock() would wait here without checking Stop.
   // Use short try_lock waits so a package list worker can stop while another Base operation is still running.
-  std::unique_lock<std::shared_mutex> lock(base_mutex, std::defer_lock);
+  std::unique_lock<std::mutex> lock(base_mutex, std::defer_lock);
   while (!lock.try_lock()) {
     throw_if_base_operation_cancelled(cancel_requested, "Package query was cancelled.");
     // Avoid busy waiting while another worker owns BaseManager.
@@ -563,7 +563,7 @@ BaseManager::acquire_read(std::shared_ptr<std::atomic<bool>> cancel_requested)
 TemporaryBaseRead
 BaseManager::acquire_system_only_read()
 {
-  std::unique_lock<std::shared_mutex> lock(base_mutex);
+  std::unique_lock<std::mutex> lock(base_mutex);
   auto built_base = build_initialized_system_only_base();
   if (!built_base) {
     throw std::runtime_error("System-only backend initialization failed (Base is null).");
@@ -574,13 +574,13 @@ BaseManager::acquire_system_only_read()
 
 // -----------------------------------------------------------------------------
 // Build a private Base for long read-only history scans.
-// The shared lock protects Base construction and destruction, but not the scan.
+// The manager lock protects Base construction and destruction, but not the scan.
 // This keeps normal package queries from waiting behind a long history search.
 // -----------------------------------------------------------------------------
 std::shared_ptr<libdnf5::Base>
 BaseManager::build_transaction_history_base()
 {
-  std::unique_lock<std::shared_mutex> lock(base_mutex);
+  std::unique_lock<std::mutex> lock(base_mutex);
   auto built_base = build_initialized_system_only_base();
   if (!built_base) {
     throw std::runtime_error("Transaction history backend initialization failed (Base is null).");
@@ -588,7 +588,7 @@ BaseManager::build_transaction_history_base()
 
   libdnf5::Base *raw_base = built_base.get();
   return std::shared_ptr<libdnf5::Base>(raw_base, [this, base = std::move(built_base)](libdnf5::Base *) mutable {
-    std::unique_lock<std::shared_mutex> lock(base_mutex);
+    std::unique_lock<std::mutex> lock(base_mutex);
     base.reset();
     trim_free_heap();
   });
@@ -601,7 +601,7 @@ BaseManager::build_transaction_history_base()
 std::shared_ptr<libdnf5::Base>
 BaseManager::build_changelog_base()
 {
-  std::unique_lock<std::shared_mutex> lock(base_mutex);
+  std::unique_lock<std::mutex> lock(base_mutex);
   BuiltBase built = build_base_with_offline_fallback(BaseRefreshMode::NORMAL, nullptr, {}, true);
   if (!built.base) {
     throw std::runtime_error("Changelog backend initialization failed (Base is null).");
@@ -609,7 +609,7 @@ BaseManager::build_changelog_base()
 
   libdnf5::Base *raw_base = built.base.get();
   return std::shared_ptr<libdnf5::Base>(raw_base, [this, built = std::move(built)](libdnf5::Base *) mutable {
-    std::unique_lock<std::shared_mutex> lock(base_mutex);
+    std::unique_lock<std::mutex> lock(base_mutex);
     built.base.reset();
     trim_free_heap();
   });
@@ -651,7 +651,7 @@ void
 BaseManager::drop_cached_base()
 {
   {
-    std::unique_lock<std::shared_mutex> lock(base_mutex);
+    std::unique_lock<std::mutex> lock(base_mutex);
     if (!base_ptr) {
       return;
     }
@@ -668,7 +668,7 @@ BaseManager::drop_cached_base()
 void
 BaseManager::initialize_system_only_base_for_tests()
 {
-  std::unique_lock<std::shared_mutex> unique(base_mutex);
+  std::unique_lock<std::mutex> lock(base_mutex);
   if (!base_ptr) {
     base_ptr = build_initialized_system_only_base();
     repo_state = BaseRepoState::INSTALLED_ONLY;
@@ -686,7 +686,7 @@ BaseManager::build_initialized_system_only_base()
 }
 
 // -----------------------------------------------------------------------------
-// Create the shared Base while the caller holds the write lock.
+// Create the shared Base while the caller holds the manager lock.
 // -----------------------------------------------------------------------------
 void
 BaseManager::ensure_base_initialized(std::shared_ptr<std::atomic<bool>> cancel_requested)
@@ -705,7 +705,7 @@ BaseManager::ensure_base_initialized(std::shared_ptr<std::atomic<bool>> cancel_r
 bool
 BaseManager::has_cached_base_for_tests() const
 {
-  std::shared_lock<std::shared_mutex> shared(base_mutex);
+  std::lock_guard<std::mutex> lock(base_mutex);
   return base_ptr != nullptr;
 }
 
@@ -715,7 +715,7 @@ BaseManager::has_cached_base_for_tests() const
 void
 BaseManager::reset_for_tests()
 {
-  std::unique_lock<std::shared_mutex> unique(base_mutex);
+  std::unique_lock<std::mutex> lock(base_mutex);
   base_ptr.reset();
   generation.store(0, std::memory_order_relaxed);
 }
