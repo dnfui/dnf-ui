@@ -1,5 +1,5 @@
 Name:           dnf-ui
-Version:        0.4.0
+Version:        0.4.1
 Release:        1%{?dist}
 Summary:        GTK interface for DNF5
 
@@ -56,6 +56,12 @@ appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/io.github.dnfui.
 %{_datadir}/metainfo/io.github.dnfui.dnfui.metainfo.xml
 
 %changelog
+* Tue Jul 21 2026 ErikMN [dnfui@proton.me](mailto:dnfui@proton.me) - 0.4.1-1
+- Improve package search and backend state handling
+- Simplify asynchronous ownership and BaseManager locking
+- Show installed package origin in package details
+- Update backend documentation
+
 * Sun Jul 19 2026 ErikMN <dnfui@proton.me> - 0.4.0-1
 - Use dnf5daemon as the source for List Upgradable
 - Keep daemon-reported upgrades visible when optional package metadata is unavailable
