@@ -400,7 +400,7 @@ on_deferred_details_task(GTask *task, gpointer, gpointer task_data, GCancellable
   } catch (const std::exception &e) {
     DNFUI_TRACE(
         "Deferred package details load failed nevra=%s error=%s", td ? td->details_query_nevra.c_str() : "", e.what());
-    g_task_return_pointer(task, g_strdup(e.what()), g_free);
+    g_task_return_new_error(task, G_IO_ERROR, G_IO_ERROR_FAILED, "%s", e.what());
   }
 }
 
@@ -447,7 +447,10 @@ on_deferred_details_task_finished(GObject *, GAsyncResult *res, gpointer user_da
   }
 
   if (!text) {
-    set_details_text(ui.buffer, error ? error->message : ui.error_text);
+    set_details_text(ui.buffer, ui.error_text);
+    if (error && error->message) {
+      ui_helpers_set_status(widgets->query.status_label, error->message, "red");
+    }
     if (error) {
       g_error_free(error);
     }
