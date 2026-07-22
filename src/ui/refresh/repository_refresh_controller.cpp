@@ -176,7 +176,7 @@ repository_refresh_on_rebuild_task(GTask *task, gpointer, gpointer, GCancellable
   try {
     BaseRepoState refresh_state = BaseManager::instance().rebuild();
     // GTask completion transfers this heap value back to the GTK thread.
-    // repository_refresh_on_rebuild_task_finished() deletes it after reading the result.
+    // The caller completion handler deletes it after reading the result.
     g_task_return_pointer(
         task, new BaseRepoState(refresh_state), [](gpointer p) { delete static_cast<BaseRepoState *>(p); });
   } catch (const std::exception &e) {
@@ -230,60 +230,6 @@ repository_refresh_on_force_rebuild_task(GTask *task, gpointer, gpointer task_da
   } catch (const std::exception &e) {
     DNFUI_TRACE("Repository refresh worker failed: %s", e.what());
     g_task_return_error(task, g_error_new_literal(G_IO_ERROR, G_IO_ERROR_FAILED, e.what()));
-  }
-}
-
-// -----------------------------------------------------------------------------
-// Finish repository refresh on the GTK thread.
-// -----------------------------------------------------------------------------
-void
-repository_refresh_on_rebuild_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
-{
-  GTask *task = G_TASK(res);
-  MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
-  if (widgets_task_should_skip_completion(task, widgets)) {
-    repository_refresh_running = false;
-    return;
-  }
-
-  GError *error = nullptr;
-  // When rebuild succeeds, this returns the heap value from repository_refresh_on_rebuild_task().
-  // This handler receives that pointer and deletes it after use.
-  BaseRepoState *refresh_state = static_cast<BaseRepoState *>(g_task_propagate_pointer(task, &error));
-
-  // Re-enable shared controls before status updates and view reload so the window returns to normal after refresh.
-  package_query_set_idle_controls_sensitive(widgets, true);
-  if (widgets->results.list_scroller) {
-    gtk_widget_set_sensitive(GTK_WIDGET(widgets->results.list_scroller), TRUE);
-  }
-  pending_transaction_set_preview_controls_sensitive(widgets, true);
-
-  repository_refresh_running = false;
-
-  if (refresh_state) {
-    // Search caches are bound to the old Base generation and must be dropped
-    // before the user can query against freshly refreshed repositories.
-    package_query_clear_search_cache();
-    bool cleared_upgradeable_table = package_query_clear_displayed_upgradeable_table(widgets);
-    if (*refresh_state == BaseRepoState::INSTALLED_ONLY) {
-      ui_helpers_set_status(
-          widgets->query.status_label, _("Repository refresh failed. Showing installed packages only."), "blue");
-    } else if (cleared_upgradeable_table) {
-      ui_helpers_set_status(widgets->query.status_label,
-                            _("Repositories refreshed. Press List Upgradable to load updated upgrades."),
-                            "green");
-    } else {
-      ui_helpers_set_status(widgets->query.status_label, _("Repositories refreshed."), "green");
-    }
-    if (!cleared_upgradeable_table) {
-      package_query_reload_current_view(widgets);
-    }
-    delete refresh_state;
-  } else {
-    ui_helpers_set_status(widgets->query.status_label, error ? error->message : _("Repo refresh failed."), "red");
-    if (error) {
-      g_error_free(error);
-    }
   }
 }
 

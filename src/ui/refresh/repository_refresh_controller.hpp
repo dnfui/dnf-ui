@@ -25,9 +25,6 @@ void repository_refresh_cancel_active();
 // Rebuild repositories on a background task thread.
 // -----------------------------------------------------------------------------
 void repository_refresh_on_rebuild_task(GTask *task, gpointer, gpointer, GCancellable *);
-// Finish repository rebuild handling on the GTK thread.
-// -----------------------------------------------------------------------------
-void repository_refresh_on_rebuild_task_finished(GObject *, GAsyncResult *res, gpointer user_data);
 
 // -----------------------------------------------------------------------------
 // EOF
