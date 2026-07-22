@@ -43,9 +43,15 @@ static void on_backend_warmup_task_finished(GObject *source_object, GAsyncResult
 static const char *base_repo_state_trace_name(BaseRepoState state);
 #endif
 
-static std::atomic<bool> g_installed_refresh_running { false };
+struct InstalledRefreshState {
+  // True while the periodic installed refresh task is running.
+  std::atomic<bool> running { false };
+  // GTK source ID for the periodic refresh timer. Zero means no timer is registered.
+  guint source_id = 0;
+};
+
 // Keep one periodic installed-refresh source for the whole application process.
-static guint g_periodic_installed_refresh_source_id = 0;
+static InstalledRefreshState g_installed_refresh_state;
 // DNF UI has one shared backend state.
 // Keep one main window so global tasks do not have to decide which window owns
 // refresh, spinner, or transaction state.
@@ -109,12 +115,12 @@ setup_periodic_tasks(void)
 {
   // GtkApplication can activate more than once for the same process.
   // Keep one periodic refresh source even when another activation presents a window.
-  if (g_periodic_installed_refresh_source_id != 0) {
+  if (g_installed_refresh_state.source_id != 0) {
     return;
   }
 
   // --- Periodic refresh of installed package names every 5 minutes ---
-  g_periodic_installed_refresh_source_id = g_timeout_add_seconds(300, on_periodic_installed_refresh_tick, nullptr);
+  g_installed_refresh_state.source_id = g_timeout_add_seconds(300, on_periodic_installed_refresh_tick, nullptr);
 }
 
 // -----------------------------------------------------------------------------
@@ -146,7 +152,7 @@ start_installed_refresh_task(void)
     return;
   }
 
-  if (g_installed_refresh_running.exchange(true)) {
+  if (g_installed_refresh_state.running.exchange(true)) {
     DNFUI_TRACE("Installed package refresh skipped because the previous refresh is still running");
     return;
   }
@@ -208,7 +214,7 @@ on_installed_refresh_task_finished(GObject *, GAsyncResult *result, gpointer)
   }
 
   g_clear_error(&error);
-  g_installed_refresh_running = false;
+  g_installed_refresh_state.running = false;
 }
 
 // -----------------------------------------------------------------------------
