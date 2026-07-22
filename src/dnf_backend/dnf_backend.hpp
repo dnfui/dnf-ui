@@ -68,29 +68,21 @@ struct PackageRow {
   std::string summary;
   PackageInstallReason install_reason = PackageInstallReason::UNKNOWN;
   PackageRepoCandidateRelation repo_candidate_relation = PackageRepoCandidateRelation::UNKNOWN;
-  // Available package ID for the newest repo candidate matching this installed row.
+  // These fields are set only when an installed row has a visible repository candidate.
   std::string repo_candidate_nevra;
   std::string repo_candidate_version;
   std::string repo_candidate_release;
   std::string repo_candidate_repo;
 
-  // -----------------------------------------------------------------------------
-  // Return the package epoch field.
-  // -----------------------------------------------------------------------------
+  // libdnf EVR comparison adapter.
   const std::string &get_epoch() const
   {
     return epoch;
   }
-  // -----------------------------------------------------------------------------
-  // Return the package version field.
-  // -----------------------------------------------------------------------------
   const std::string &get_version() const
   {
     return version;
   }
-  // -----------------------------------------------------------------------------
-  // Return the package release field.
-  // -----------------------------------------------------------------------------
   const std::string &get_release() const
   {
     return release;
