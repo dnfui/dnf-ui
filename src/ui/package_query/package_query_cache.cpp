@@ -24,10 +24,14 @@ struct CachedSearchResults {
   std::vector<PackageRow> packages;
 };
 
-static std::map<std::string, CachedSearchResults> g_search_cache;
-static std::mutex g_cache_mutex; // Protects g_search_cache
-static uint64_t g_cache_use_counter = 0;
-static uint64_t g_cache_epoch = 0;
+struct SearchCacheState {
+  std::mutex mutex;
+  std::map<std::string, CachedSearchResults> entries;
+  uint64_t use_counter = 0;
+  uint64_t epoch = 0;
+};
+
+static SearchCacheState g_search_cache;
 
 // -----------------------------------------------------------------------------
 // Drop the oldest cached search rows when the cache reaches its entry limit.
@@ -35,14 +39,14 @@ static uint64_t g_cache_epoch = 0;
 static void
 package_query_cache_prune_locked()
 {
-  while (g_search_cache.size() > kMaxSearchCacheEntries) {
-    auto oldest = g_search_cache.begin();
-    for (auto it = g_search_cache.begin(); it != g_search_cache.end(); ++it) {
+  while (g_search_cache.entries.size() > kMaxSearchCacheEntries) {
+    auto oldest = g_search_cache.entries.begin();
+    for (auto it = g_search_cache.entries.begin(); it != g_search_cache.entries.end(); ++it) {
       if (it->second.last_used < oldest->second.last_used) {
         oldest = it;
       }
     }
-    g_search_cache.erase(oldest);
+    g_search_cache.entries.erase(oldest);
   }
 }
 
@@ -70,10 +74,10 @@ package_query_cache_key_for(const std::string &term, const DnfBackendSearchOptio
 void
 package_query_cache_clear()
 {
-  std::lock_guard<std::mutex> lock(g_cache_mutex);
-  g_search_cache.clear();
-  g_cache_use_counter = 0;
-  g_cache_epoch++;
+  std::lock_guard<std::mutex> lock(g_search_cache.mutex);
+  g_search_cache.entries.clear();
+  g_search_cache.use_counter = 0;
+  g_search_cache.epoch++;
 }
 
 // -----------------------------------------------------------------------------
@@ -82,8 +86,8 @@ package_query_cache_clear()
 uint64_t
 package_query_cache_current_epoch()
 {
-  std::lock_guard<std::mutex> lock(g_cache_mutex);
-  return g_cache_epoch;
+  std::lock_guard<std::mutex> lock(g_search_cache.mutex);
+  return g_search_cache.epoch;
 }
 
 // -----------------------------------------------------------------------------
@@ -97,18 +101,18 @@ package_query_cache_lookup(const std::string &key,
                            uint64_t cache_epoch,
                            std::vector<PackageRow> &out_packages)
 {
-  std::lock_guard<std::mutex> lock(g_cache_mutex);
-  auto it = g_search_cache.find(key);
-  if (it == g_search_cache.end()) {
+  std::lock_guard<std::mutex> lock(g_search_cache.mutex);
+  auto it = g_search_cache.entries.find(key);
+  if (it == g_search_cache.entries.end()) {
     return false;
   }
 
   if (it->second.generation != generation || it->second.cache_epoch != cache_epoch) {
-    g_search_cache.erase(it);
+    g_search_cache.entries.erase(it);
     return false;
   }
 
-  it->second.last_used = ++g_cache_use_counter;
+  it->second.last_used = ++g_search_cache.use_counter;
   out_packages = it->second.packages;
   return true;
 }
@@ -123,12 +127,12 @@ package_query_cache_store(const std::string &key,
                           uint64_t cache_epoch,
                           const std::vector<PackageRow> &packages)
 {
-  std::lock_guard<std::mutex> lock(g_cache_mutex);
-  if (cache_epoch != g_cache_epoch) {
+  std::lock_guard<std::mutex> lock(g_search_cache.mutex);
+  if (cache_epoch != g_search_cache.epoch) {
     return;
   }
 
-  g_search_cache[key] = CachedSearchResults { generation, cache_epoch, ++g_cache_use_counter, packages };
+  g_search_cache.entries[key] = CachedSearchResults { generation, cache_epoch, ++g_search_cache.use_counter, packages };
   package_query_cache_prune_locked();
 }
 
