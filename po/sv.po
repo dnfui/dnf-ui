@@ -1019,9 +1019,6 @@ msgstr "DNF UI kan inte ta bort paketet som äger det körande programmet. Stän
 msgid "DNF UI cannot reinstall the package that owns the running application while it is running."
 msgstr "DNF UI kan inte ominstallera paketet som äger det körande programmet medan det körs."
 
-msgid "Install reason: "
-msgstr "Installationsorsak: "
-
 msgid "Arch"
 msgstr "Arkitektur"
 

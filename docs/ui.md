@@ -161,7 +161,7 @@ current table rows to CSV.
 CSV text and is tested without opening a GTK file dialog.
 
 [src/ui/package_table/package_table_status.cpp](../src/ui/package_table/package_table_status.cpp) keeps the
-status text, tooltip text, and CSS classes separate from table construction.
+status text and CSS classes separate from table construction.
 
 [src/ui/package_table/package_table_context_menu.cpp](../src/ui/package_table/package_table_context_menu.cpp)
 builds right-click actions for package rows.

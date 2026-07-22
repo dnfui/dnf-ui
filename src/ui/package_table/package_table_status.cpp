@@ -1,8 +1,7 @@
 // -----------------------------------------------------------------------------
 // src/ui/package_table/package_table_status.cpp
 // Package table status rendering helpers
-// Keeps status text, tooltip text, sort priority, and CSS class handling
-// separate from the broader package table construction code.
+// Keeps status text, sort priority, and CSS class handling separate from the broader package table construction code.
 // -----------------------------------------------------------------------------
 #include "ui/package_table/package_table_status.hpp"
 
@@ -31,29 +30,6 @@ package_table_status_text(PackageInstallState state)
   default:
     return _("Available");
   }
-}
-
-// -----------------------------------------------------------------------------
-// Build the hover text for one Status cell.
-// -----------------------------------------------------------------------------
-static std::string
-package_table_status_tooltip_text(const PackageTableRow &row)
-{
-  const TransactionServiceUpgradeTarget *upgrade_target = row.upgrade_target();
-  PackageInstallState state =
-      upgrade_target ? PackageInstallState::UPGRADEABLE : dnf_backend_get_package_install_state(row.row);
-  if (state == PackageInstallState::AVAILABLE) {
-    return {};
-  }
-
-  std::string tooltip = package_table_status_text(state);
-  if (row.row.install_reason != PackageInstallReason::UNKNOWN) {
-    tooltip += "\n";
-    tooltip += _("Install reason: ");
-    tooltip += dnf_backend_install_reason_to_string(row.row.install_reason);
-  }
-
-  return tooltip;
 }
 
 // -----------------------------------------------------------------------------
@@ -193,7 +169,7 @@ package_table_clear_pending_action_css(GtkWidget *cell)
 }
 
 // -----------------------------------------------------------------------------
-// Apply text, CSS, and tooltip for one Status cell.
+// Apply text and CSS for one Status cell.
 // -----------------------------------------------------------------------------
 void
 package_table_update_status_label(GtkWidget *cell, MainWindowUiState *widgets, const PackageTableRow &row)
@@ -257,9 +233,6 @@ package_table_update_status_label(GtkWidget *cell, MainWindowUiState *widgets, c
       gtk_widget_add_css_class(cell, "package-status-available");
     }
   }
-
-  std::string tooltip = package_table_status_tooltip_text(row);
-  gtk_widget_set_tooltip_text(cell, tooltip.empty() ? nullptr : tooltip.c_str());
 }
 
 // -----------------------------------------------------------------------------

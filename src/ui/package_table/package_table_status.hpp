@@ -2,7 +2,7 @@
 // src/ui/package_table/package_table_status.hpp
 // Package table status rendering helpers
 //
-// Owns status text, sort priority, tooltip text, and CSS updates for the package table Status column.
+// Owns status text, sort priority, and CSS updates for the package table Status column.
 // -----------------------------------------------------------------------------
 #pragma once
 

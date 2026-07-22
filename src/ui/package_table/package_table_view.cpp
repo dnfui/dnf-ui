@@ -507,7 +507,6 @@ create_text_column(MainWindowUiState *widgets, const PackageTableColumnDefinitio
 
                      if (!package_item) {
                        gtk_label_set_text(GTK_LABEL(label), "");
-                       gtk_widget_set_tooltip_text(frame, nullptr);
                        package_table_clear_status_css(cell);
                        package_table_clear_pending_action_css(frame);
                        clear_pending_row_css_for_cell(frame);
