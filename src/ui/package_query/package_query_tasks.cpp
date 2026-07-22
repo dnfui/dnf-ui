@@ -228,7 +228,8 @@ on_list_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
   }
 
   GError *error = nullptr;
-  std::vector<PackageRow> *packages = static_cast<std::vector<PackageRow> *>(g_task_propagate_pointer(task, &error));
+  std::unique_ptr<std::vector<PackageRow>> packages(
+      static_cast<std::vector<PackageRow> *>(g_task_propagate_pointer(task, &error)));
 
   // Release this task's spinner slot.
   widgets_spinner_release(widgets->query.spinner);
@@ -253,7 +254,6 @@ on_list_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
     ui_helpers_set_status(widgets->query.status_label, msg, "green");
     package_query_show_duration_label(widgets, _("List Installed"), td ? td->started_at_us : 0);
     package_query_finish_results_refresh(widgets);
-    delete packages;
   } else {
     widgets->query_state.reload_selected_nevra.clear();
     ui_helpers_set_status(widgets->query.status_label, error ? error->message : _("Error listing packages."), "red");
@@ -311,7 +311,8 @@ on_list_available_task_finished(GObject *, GAsyncResult *res, gpointer user_data
   }
 
   GError *error = nullptr;
-  std::vector<PackageRow> *packages = static_cast<std::vector<PackageRow> *>(g_task_propagate_pointer(task, &error));
+  std::unique_ptr<std::vector<PackageRow>> packages(
+      static_cast<std::vector<PackageRow> *>(g_task_propagate_pointer(task, &error)));
 
   // Release this task's spinner slot.
   widgets_spinner_release(widgets->query.spinner);
@@ -334,7 +335,6 @@ on_list_available_task_finished(GObject *, GAsyncResult *res, gpointer user_data
     ui_helpers_set_status(widgets->query.status_label, msg, "green");
     package_query_show_duration_label(widgets, _("List Packages"), td ? td->started_at_us : 0);
     package_query_finish_results_refresh(widgets);
-    delete packages;
   } else {
     widgets->query_state.reload_selected_nevra.clear();
     ui_helpers_set_status(widgets->query.status_label, error ? error->message : _("Error listing packages."), "red");
@@ -483,8 +483,8 @@ on_list_upgradeable_task_finished(GObject *, GAsyncResult *res, gpointer user_da
   }
 
   GError *error = nullptr;
-  UpgradeablePackageListResult *result =
-      static_cast<UpgradeablePackageListResult *>(g_task_propagate_pointer(task, &error));
+  std::unique_ptr<UpgradeablePackageListResult> result(
+      static_cast<UpgradeablePackageListResult *>(g_task_propagate_pointer(task, &error)));
 
   // Release this task's spinner slot.
   widgets_spinner_release(widgets->query.spinner);
@@ -495,7 +495,6 @@ on_list_upgradeable_task_finished(GObject *, GAsyncResult *res, gpointer user_da
 
   if (result) {
     if (result->package_state_changed) {
-      delete result;
       ui_helpers_set_status(widgets->query.status_label,
                             _("Package state changed while loading upgrades. Press List Upgradable to try again."),
                             "blue");
@@ -506,7 +505,6 @@ on_list_upgradeable_task_finished(GObject *, GAsyncResult *res, gpointer user_da
     if (!DaemonUpgradeState::instance().publish_success(result->refresh_owner.id(), result->targets, publish_error)) {
       result->refresh_owner.close();
       const bool refresh_no_longer_active = publish_error == "dnf5daemon upgrade refresh is no longer active.";
-      delete result;
       if (refresh_no_longer_active) {
         ui_helpers_set_status(widgets->query.status_label,
                               _("Package state changed while loading upgrades. Press List Upgradable to try again."),
@@ -523,7 +521,6 @@ on_list_upgradeable_task_finished(GObject *, GAsyncResult *res, gpointer user_da
 
     DaemonUpgradeSnapshot snapshot = DaemonUpgradeState::instance().snapshot();
     if (snapshot.status != DaemonUpgradeSnapshotStatus::READY) {
-      delete result;
       ui_helpers_set_status(widgets->query.status_label,
                             _("Package state changed while loading upgrades. Press List Upgradable to try again."),
                             "blue");
@@ -546,7 +543,6 @@ on_list_upgradeable_task_finished(GObject *, GAsyncResult *res, gpointer user_da
     ui_helpers_set_status(widgets->query.status_label, msg, rows.empty() ? "gray" : "green");
     package_query_show_duration_label(widgets, _("List Upgradable"), td ? td->started_at_us : 0);
     package_query_finish_results_refresh(widgets);
-    delete result;
   } else {
     if (error && g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
       g_error_free(error);
@@ -623,7 +619,8 @@ on_search_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
   }
 
   GError *error = nullptr;
-  std::vector<PackageRow> *packages = static_cast<std::vector<PackageRow> *>(g_task_propagate_pointer(task, &error));
+  std::unique_ptr<std::vector<PackageRow>> packages(
+      static_cast<std::vector<PackageRow> *>(g_task_propagate_pointer(task, &error)));
 
   // Release this task's spinner slot.
   widgets_spinner_release(widgets->query.spinner);
@@ -656,7 +653,6 @@ on_search_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
     ui_helpers_set_status(widgets->query.status_label, msg, "green");
     package_query_show_duration_label(widgets, _("Search"), td ? td->started_at_us : 0);
     package_query_finish_results_refresh(widgets);
-    delete packages;
   } else {
     widgets->query_state.reload_selected_nevra.clear();
     ui_helpers_set_status(widgets->query.status_label, error ? error->message : _("Error or no results."), "red");
@@ -735,7 +731,8 @@ on_exact_package_reload_task_finished(GObject *, GAsyncResult *res, gpointer use
   }
 
   GError *error = nullptr;
-  std::vector<PackageRow> *packages = static_cast<std::vector<PackageRow> *>(g_task_propagate_pointer(task, &error));
+  std::unique_ptr<std::vector<PackageRow>> packages(
+      static_cast<std::vector<PackageRow> *>(g_task_propagate_pointer(task, &error)));
 
   widgets_spinner_release(widgets->query.spinner);
 
@@ -749,7 +746,6 @@ on_exact_package_reload_task_finished(GObject *, GAsyncResult *res, gpointer use
         widgets, *packages, packages->empty() ? PackageTableEmptyState::NO_RESULTS : PackageTableEmptyState::READY);
     package_query_show_duration_label(widgets, _("Refresh"), td ? td->started_at_us : 0);
     package_query_finish_results_refresh(widgets);
-    delete packages;
   } else {
     widgets->query_state.reload_selected_nevra.clear();
     ui_helpers_set_status(widgets->query.status_label, error ? error->message : _("Error refreshing package."), "red");
