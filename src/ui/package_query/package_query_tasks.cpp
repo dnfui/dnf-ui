@@ -49,8 +49,7 @@ struct SearchTaskData {
   // Search-cache epoch recorded when the task starts.
   // Used to avoid storing rows back into a cache state the UI invalidated while the worker was still running.
   uint64_t cache_epoch;
-  bool search_in_description;
-  bool exact_match;
+  DnfBackendSearchOptions options;
 };
 
 // -----------------------------------------------------------------------------
@@ -583,10 +582,7 @@ on_search_task(GTask *task, gpointer, gpointer task_data, GCancellable *cancella
     DNFUI_TRACE("Search task start request=%llu pattern=%s",
                 td ? static_cast<unsigned long long>(td->request_id) : 0,
                 pattern.c_str());
-    const DnfBackendSearchOptions search_options {
-      .search_in_description = td ? td->search_in_description : false,
-      .exact_match = td ? td->exact_match : false,
-    };
+    const DnfBackendSearchOptions search_options = td ? td->options : DnfBackendSearchOptions {};
     auto *results = new std::vector<PackageRow>(
         dnf_backend_search_package_rows_interruptible(pattern, search_options, cancellable));
     DNFUI_TRACE("Search task done request=%llu results=%zu",
@@ -644,7 +640,8 @@ on_search_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
     }
 
     if (td) {
-      package_query_set_displayed_search_query(widgets, td->term, td->search_in_description, td->exact_match);
+      package_query_set_displayed_search_query(
+          widgets, td->term, td->options.search_in_description, td->options.exact_match);
     }
 
     // Fill the package table and display the result count.
@@ -853,8 +850,7 @@ package_query_start_search_task(MainWindowUiState *widgets,
   td->started_at_us = g_get_monotonic_time();
   td->generation = generation;
   td->cache_epoch = cache_epoch;
-  td->search_in_description = search_options.search_in_description;
-  td->exact_match = search_options.exact_match;
+  td->options = search_options;
 
   GCancellable *c = widgets_make_task_cancellable_for(GTK_WIDGET(widgets->query.entry));
   package_query_begin_package_list_request(widgets, c, td->request_id, PackageListRequestKind::SEARCH);
