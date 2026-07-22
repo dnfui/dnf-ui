@@ -90,6 +90,45 @@ ui_helpers_set_status(GtkLabel *label, const std::string &text, const std::strin
 }
 
 // -----------------------------------------------------------------------------
+// Hide a timing label.
+// -----------------------------------------------------------------------------
+void
+ui_helpers_clear_duration_label(GtkLabel *label)
+{
+  if (!label) {
+    return;
+  }
+
+  gtk_label_set_text(label, "");
+  gtk_widget_set_visible(GTK_WIDGET(label), FALSE);
+}
+
+// -----------------------------------------------------------------------------
+// Show elapsed time in a timing label.
+// -----------------------------------------------------------------------------
+void
+ui_helpers_show_duration_label(GtkLabel *label, const char *title, const char *fallback_title, gint64 started_at_us)
+{
+  if (!label || started_at_us <= 0) {
+    return;
+  }
+
+  gint64 elapsed_us = g_get_monotonic_time() - started_at_us;
+  if (elapsed_us < 0) {
+    elapsed_us = 0;
+  }
+
+  const double elapsed_seconds = static_cast<double>(elapsed_us) / 1000000.0;
+  const char *display_title = title;
+  if (!display_title || display_title[0] == '\0') {
+    display_title = fallback_title ? fallback_title : "";
+  }
+  std::string text = dnfui_i18n_format(_("%s: %.1f s"), display_title, elapsed_seconds);
+  gtk_label_set_text(label, text.c_str());
+  gtk_widget_set_visible(GTK_WIDGET(label), TRUE);
+}
+
+// -----------------------------------------------------------------------------
 // Return true when one pending action matches the requested package and type.
 // -----------------------------------------------------------------------------
 static bool

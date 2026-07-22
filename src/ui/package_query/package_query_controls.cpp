@@ -113,8 +113,7 @@ package_query_clear_duration_label(MainWindowUiState *widgets)
     return;
   }
 
-  gtk_label_set_text(widgets->window_state.query_duration_label, "");
-  gtk_widget_set_visible(GTK_WIDGET(widgets->window_state.query_duration_label), FALSE);
+  ui_helpers_clear_duration_label(widgets->window_state.query_duration_label);
 }
 
 // -----------------------------------------------------------------------------
@@ -127,16 +126,7 @@ package_query_show_duration_label(MainWindowUiState *widgets, const char *title,
     return;
   }
 
-  gint64 elapsed_us = g_get_monotonic_time() - started_at_us;
-  if (elapsed_us < 0) {
-    elapsed_us = 0;
-  }
-
-  const double elapsed_seconds = static_cast<double>(elapsed_us) / 1000000.0;
-  const char *display_title = title ? title : _("Query");
-  std::string text = dnfui_i18n_format(_("%s: %.1f s"), display_title, elapsed_seconds);
-  gtk_label_set_text(widgets->window_state.query_duration_label, text.c_str());
-  gtk_widget_set_visible(GTK_WIDGET(widgets->window_state.query_duration_label), TRUE);
+  ui_helpers_show_duration_label(widgets->window_state.query_duration_label, title, _("Query"), started_at_us);
 }
 
 // -----------------------------------------------------------------------------
