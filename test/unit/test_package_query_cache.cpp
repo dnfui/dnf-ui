@@ -217,5 +217,32 @@ TEST_CASE("Package query cache evicts oldest entries")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that reading a cached entry keeps it from being the next entry evicted.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package query cache lookup updates entry recency")
+{
+  package_query_cache_clear();
+  const uint64_t cache_epoch = package_query_cache_current_epoch();
+
+  std::vector<PackageRow> stored = {
+    make_cache_row("demo-1-1.x86_64", "demo"),
+  };
+  std::vector<PackageRow> loaded;
+
+  package_query_cache_store("name:contains:one", 7, cache_epoch, stored);
+  package_query_cache_store("name:contains:two", 7, cache_epoch, stored);
+  package_query_cache_store("name:contains:three", 7, cache_epoch, stored);
+
+  REQUIRE(package_query_cache_lookup("name:contains:one", 7, cache_epoch, loaded));
+
+  package_query_cache_store("name:contains:four", 7, cache_epoch, stored);
+
+  REQUIRE(package_query_cache_lookup("name:contains:one", 7, cache_epoch, loaded));
+  REQUIRE_FALSE(package_query_cache_lookup("name:contains:two", 7, cache_epoch, loaded));
+  REQUIRE(package_query_cache_lookup("name:contains:three", 7, cache_epoch, loaded));
+  REQUIRE(package_query_cache_lookup("name:contains:four", 7, cache_epoch, loaded));
+}
+
+// -----------------------------------------------------------------------------
 // EOF
 // -----------------------------------------------------------------------------
