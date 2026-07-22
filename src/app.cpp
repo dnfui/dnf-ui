@@ -299,6 +299,13 @@ on_backend_warmup_task_finished(GObject *, GAsyncResult *result, gpointer user_d
 {
   MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
   GTask *task = G_TASK(result);
+  GCancellable *task_cancellable = g_task_get_cancellable(task);
+  if (widgets && task_cancellable && widgets->window_state.backend_warmup_cancellable == task_cancellable) {
+    // The window keeps this reference only while startup warmup can still be cancelled.
+    g_object_unref(widgets->window_state.backend_warmup_cancellable);
+    widgets->window_state.backend_warmup_cancellable = nullptr;
+  }
+
   if (widgets_task_should_skip_completion(task, widgets)) {
     return;
   }
