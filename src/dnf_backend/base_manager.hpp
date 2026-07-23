@@ -130,14 +130,6 @@ class BaseManager {
   }
 
   // -----------------------------------------------------------------------------
-  // Return the repository snapshot generation used by lightweight cached rows.
-  // -----------------------------------------------------------------------------
-  uint64_t current_snapshot_generation() const
-  {
-    return snapshot_generation.load(std::memory_order_relaxed);
-  }
-
-  // -----------------------------------------------------------------------------
   // Return the repo state of the cached Base.
   // -----------------------------------------------------------------------------
   BaseRepoState current_repo_state() const;
@@ -193,10 +185,8 @@ class BaseManager {
 
   std::shared_ptr<libdnf5::Base> base_ptr;
   BaseRepoState repo_state = BaseRepoState::LIVE_METADATA;
-  bool base_dropped_since_last_load = false;
 
   std::atomic<uint64_t> generation { 0 };
-  std::atomic<uint64_t> snapshot_generation { 0 };
 
   // Serializes Base queries, rebuilds, and Base destruction.
   mutable std::mutex base_mutex;

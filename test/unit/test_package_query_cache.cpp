@@ -141,7 +141,7 @@ TEST_CASE("Package query cache rejects rows from an older cache epoch")
 }
 
 // -----------------------------------------------------------------------------
-// Verify that cached rows survive Base drops while the generation still matches.
+// Verify that cached rows survive Base drops when package state has not changed.
 // -----------------------------------------------------------------------------
 TEST_CASE("Package query cache keeps rows after Base drops")
 {
@@ -152,7 +152,7 @@ TEST_CASE("Package query cache keeps rows after Base drops")
   REQUIRE(manager.has_cached_base_for_tests());
 
   const uint64_t cache_epoch = package_query_cache_current_epoch();
-  const uint64_t generation = manager.current_snapshot_generation();
+  const uint64_t generation = manager.current_generation();
 
   const std::string key = "name:contains:demo";
   std::vector<PackageRow> stored = {
@@ -161,41 +161,12 @@ TEST_CASE("Package query cache keeps rows after Base drops")
   std::vector<PackageRow> loaded;
 
   package_query_cache_store(key, generation, cache_epoch, stored);
-  package_query_cache_drop_cached_base();
+  manager.drop_cached_base();
 
   REQUIRE_FALSE(manager.has_cached_base_for_tests());
   REQUIRE(package_query_cache_lookup(key, generation, cache_epoch, loaded));
   REQUIRE(loaded.size() == 1);
   REQUIRE(loaded[0].nevra == "demo-1-1.x86_64");
-}
-
-// -----------------------------------------------------------------------------
-// Verify that cached rows from a dropped Base are rejected after the Base is rebuilt.
-// -----------------------------------------------------------------------------
-TEST_CASE("Package query cache rejects rows after Base recreation")
-{
-  package_query_cache_clear();
-  auto &manager = BaseManager::instance();
-  manager.reset_for_tests();
-  manager.initialize_system_only_base_for_tests();
-  REQUIRE(manager.has_cached_base_for_tests());
-
-  const uint64_t cache_epoch = package_query_cache_current_epoch();
-  const uint64_t generation = manager.current_snapshot_generation();
-
-  const std::string key = "name:contains:demo";
-  std::vector<PackageRow> stored = {
-    make_cache_row("demo-1-1.x86_64", "demo"),
-  };
-  std::vector<PackageRow> loaded;
-
-  package_query_cache_store(key, generation, cache_epoch, stored);
-  package_query_cache_drop_cached_base();
-  REQUIRE(package_query_cache_lookup(key, generation, cache_epoch, loaded));
-
-  REQUIRE_NOTHROW(manager.acquire_read());
-  REQUIRE(manager.current_snapshot_generation() > generation);
-  REQUIRE_FALSE(package_query_cache_lookup(key, manager.current_snapshot_generation(), cache_epoch, loaded));
 }
 
 // -----------------------------------------------------------------------------

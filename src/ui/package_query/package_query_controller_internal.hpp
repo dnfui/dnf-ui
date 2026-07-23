@@ -88,7 +88,6 @@ void package_query_start_search_task(MainWindowUiState *widgets,
                                      const std::string &term,
                                      const std::string &cache_key,
                                      uint64_t generation,
-                                     uint64_t cache_generation,
                                      uint64_t cache_epoch,
                                      const DnfBackendSearchOptions &search_options);
 // -----------------------------------------------------------------------------

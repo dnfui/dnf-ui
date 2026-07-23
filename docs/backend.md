@@ -46,22 +46,15 @@ Installed-package snapshot refresh uses `BaseManager::acquire_system_only_read`.
 That creates a short-lived Base for the local rpm database and does not replace
 the shared cached Base used by later package queries.
 
-The Base has a task generation counter. When the Base is explicitly rebuilt, the
-generation is incremented. UI tasks use that value to reject outdated results
-after refreshes and transactions.
-
-The search cache uses a separate snapshot generation. Recreating a Base after it
-was dropped advances that snapshot generation, so lightweight cached rows from
-the old repository snapshot are rejected without rejecting the worker that
-recreated the Base.
+The Base has a generation counter. When the Base is rebuilt, the generation is
+incremented. UI tasks use that value to reject outdated results after refreshes
+and transactions.
 
 The package search cache also keeps its own cache epoch. That epoch advances
 when the UI explicitly clears cached search rows, even if the backend Base
 generation has not changed yet. This keeps older search workers from storing
 old rows back into a cache state the UI already invalidated. Search cache
-validity depends on the snapshot generation and this cache epoch. Dropping the
-Base releases memory but keeps lightweight cached rows available until the next
-Base load advances the snapshot generation.
+validity depends on the Base generation and this cache epoch.
 
 ## Repository refresh
 
