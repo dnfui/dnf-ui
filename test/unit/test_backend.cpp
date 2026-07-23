@@ -78,6 +78,24 @@ TEST_CASE("BaseManager cache drop keeps generation stable")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that recreating a dropped Base advances the cache snapshot marker.
+// -----------------------------------------------------------------------------
+TEST_CASE("BaseManager snapshot generation increments on lazy Base recreation")
+{
+  auto &mgr = BaseManager::instance();
+
+  REQUIRE_NOTHROW(mgr.acquire_read());
+  const auto task_generation = mgr.current_generation();
+  const auto snapshot_before = mgr.current_snapshot_generation();
+
+  mgr.drop_cached_base();
+  REQUIRE_NOTHROW(mgr.acquire_read());
+
+  REQUIRE(mgr.current_generation() == task_generation);
+  REQUIRE(mgr.current_snapshot_generation() > snapshot_before);
+}
+
+// -----------------------------------------------------------------------------
 // Verify that startup still exposes installed packages when repo loading fails.
 // -----------------------------------------------------------------------------
 TEST_CASE("BaseManager falls back to installed-package-only initialization when repo-backed startup fails")

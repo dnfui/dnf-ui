@@ -637,10 +637,12 @@ BaseManager::rebuild(BaseRefreshMode refresh_mode,
 
   base_ptr = rebuilt.base;
   repo_state = rebuilt.repo_state;
+  base_dropped_since_last_load = false;
 
   // Publish the generation change only after the new Base is ready so readers
   // never drop their cached results without a replacement snapshot to use.
   generation.fetch_add(1, std::memory_order_relaxed);
+  snapshot_generation.fetch_add(1, std::memory_order_relaxed);
   return rebuilt.repo_state;
 }
 
@@ -656,6 +658,7 @@ BaseManager::drop_cached_base()
       return;
     }
     base_ptr.reset();
+    base_dropped_since_last_load = true;
   }
 
   trim_free_heap();
@@ -672,6 +675,7 @@ BaseManager::initialize_system_only_base_for_tests()
   if (!base_ptr) {
     base_ptr = build_initialized_system_only_base();
     repo_state = BaseRepoState::INSTALLED_ONLY;
+    base_dropped_since_last_load = false;
   }
 }
 #endif
@@ -692,9 +696,14 @@ void
 BaseManager::ensure_base_initialized(std::shared_ptr<std::atomic<bool>> cancel_requested)
 {
   if (!base_ptr) {
+    const bool replacing_dropped_base = base_dropped_since_last_load;
     BuiltBase built = build_base_with_offline_fallback(BaseRefreshMode::NORMAL, std::move(cancel_requested));
     base_ptr = built.base;
     repo_state = built.repo_state;
+    base_dropped_since_last_load = false;
+    if (replacing_dropped_base) {
+      snapshot_generation.fetch_add(1, std::memory_order_relaxed);
+    }
   }
 }
 
@@ -717,7 +726,9 @@ BaseManager::reset_for_tests()
 {
   std::unique_lock<std::mutex> lock(base_mutex);
   base_ptr.reset();
+  base_dropped_since_last_load = false;
   generation.store(0, std::memory_order_relaxed);
+  snapshot_generation.store(0, std::memory_order_relaxed);
 }
 #endif
 

@@ -250,6 +250,11 @@ struct DnfBackendSearchOptions {
   bool exact_match = false;
 };
 
+struct DnfBackendPackageSearchResult {
+  std::vector<PackageRow> rows;
+  uint64_t snapshot_generation = 0;
+};
+
 // -----------------------------------------------------------------------------
 // Refresh the installed-package snapshot used by the UI for exact-installed
 // checks and upgrade-state classification. Returns true when the snapshot changed.
@@ -324,6 +329,10 @@ dnf_backend_get_available_package_metadata_by_nevras_interruptible(const std::ve
 // -----------------------------------------------------------------------------
 // Search the merged browse view using one request-local option snapshot.
 // -----------------------------------------------------------------------------
+DnfBackendPackageSearchResult
+dnf_backend_search_package_rows_with_snapshot_interruptible(const std::string &pattern,
+                                                            const DnfBackendSearchOptions &search_options,
+                                                            GCancellable *cancellable);
 std::vector<PackageRow> dnf_backend_search_package_rows_interruptible(const std::string &pattern,
                                                                       const DnfBackendSearchOptions &search_options,
                                                                       GCancellable *cancellable);

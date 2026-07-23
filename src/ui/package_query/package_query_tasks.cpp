@@ -46,6 +46,9 @@ struct SearchTaskData {
   // BaseManager generation recorded when the task starts.
   // Used to drop outdated results if the backend Base is rebuilt before the task ends.
   uint64_t generation;
+  // Repository snapshot generation recorded after the worker query completes.
+  // Cached rows use this value so lazy Base recreation can invalidate older rows without rejecting the current task.
+  uint64_t cache_generation;
   // Search-cache epoch recorded when the task starts.
   // Used to avoid storing rows back into a cache state the UI invalidated while the worker was still running.
   uint64_t cache_epoch;
@@ -119,7 +122,7 @@ struct QueryBackendBaseDropGuard {
     if (cancellable && g_cancellable_is_cancelled(cancellable)) {
       return;
     }
-    BaseManager::instance().drop_cached_base();
+    package_query_cache_drop_cached_base();
   }
 
   private:
@@ -572,20 +575,23 @@ on_search_task(GTask *task, gpointer, gpointer task_data, GCancellable *cancella
 {
   QueryBackendBaseDropGuard base_drop_guard(cancellable);
 
-  const SearchTaskData *td = static_cast<const SearchTaskData *>(task_data);
+  SearchTaskData *td = static_cast<SearchTaskData *>(task_data);
   const std::string pattern = td ? td->term : "";
   try {
     DNFUI_TRACE("Search task start request=%llu pattern=%s",
                 td ? static_cast<unsigned long long>(td->request_id) : 0,
                 pattern.c_str());
     const DnfBackendSearchOptions search_options = td ? td->options : DnfBackendSearchOptions {};
-    auto *results = new std::vector<PackageRow>(
-        dnf_backend_search_package_rows_interruptible(pattern, search_options, cancellable));
+    auto *results = new DnfBackendPackageSearchResult(
+        dnf_backend_search_package_rows_with_snapshot_interruptible(pattern, search_options, cancellable));
+    if (td) {
+      td->cache_generation = results->snapshot_generation;
+    }
     DNFUI_TRACE("Search task done request=%llu results=%zu",
                 td ? static_cast<unsigned long long>(td->request_id) : 0,
-                results->size());
+                results->rows.size());
     // Let GTask free results if completion is skipped or cancelled.
-    g_task_return_pointer(task, results, [](gpointer p) { delete static_cast<std::vector<PackageRow> *>(p); });
+    g_task_return_pointer(task, results, [](gpointer p) { delete static_cast<DnfBackendPackageSearchResult *>(p); });
   } catch (const std::exception &e) {
     DNFUI_TRACE(
         "Search task failed request=%llu error=%s", td ? static_cast<unsigned long long>(td->request_id) : 0, e.what());
@@ -619,8 +625,8 @@ on_search_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
   }
 
   GError *error = nullptr;
-  std::unique_ptr<std::vector<PackageRow>> packages(
-      static_cast<std::vector<PackageRow> *>(g_task_propagate_pointer(task, &error)));
+  std::unique_ptr<DnfBackendPackageSearchResult> search_result(
+      static_cast<DnfBackendPackageSearchResult *>(g_task_propagate_pointer(task, &error)));
 
   // Release this task's spinner slot.
   widgets_spinner_release(widgets->query.spinner);
@@ -629,11 +635,11 @@ on_search_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
     package_query_end_package_list_request(widgets, td->request_id, PackageListRequestKind::SEARCH);
   }
 
-  if (packages) {
-    // Save rows so the same search can be shown faster next time.
-    // Dropping the cached Base releases memory, but it does not make this result stale.
+  if (search_result) {
+    const std::vector<PackageRow> &packages = search_result->rows;
+    // Save rows only if no newer cache invalidation happened while the worker ran.
     if (td && !td->cache_key.empty()) {
-      package_query_cache_store(td->cache_key, td->generation, td->cache_epoch, *packages);
+      package_query_cache_store(td->cache_key, td->cache_generation, td->cache_epoch, packages);
     }
 
     if (td) {
@@ -648,8 +654,8 @@ on_search_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
       widgets->results.selected_nevra.clear();
     }
     package_table_fill_package_view(
-        widgets, *packages, packages->empty() ? PackageTableEmptyState::NO_RESULTS : PackageTableEmptyState::READY);
-    std::string msg = dnfui_i18n_format_count(packages->size(), "Found %zu package.", "Found %zu packages.");
+        widgets, packages, packages.empty() ? PackageTableEmptyState::NO_RESULTS : PackageTableEmptyState::READY);
+    std::string msg = dnfui_i18n_format_count(packages.size(), "Found %zu package.", "Found %zu packages.");
     ui_helpers_set_status(widgets->query.status_label, msg, "green");
     package_query_show_duration_label(widgets, _("Search"), td ? td->started_at_us : 0);
     package_query_finish_results_refresh(widgets);
@@ -834,6 +840,7 @@ package_query_start_search_task(MainWindowUiState *widgets,
                                 const std::string &term,
                                 const std::string &cache_key,
                                 uint64_t generation,
+                                uint64_t cache_generation,
                                 uint64_t cache_epoch,
                                 const DnfBackendSearchOptions &search_options)
 {
@@ -845,6 +852,7 @@ package_query_start_search_task(MainWindowUiState *widgets,
   td->request_id = widgets->query_state.next_package_list_request_id++;
   td->started_at_us = g_get_monotonic_time();
   td->generation = generation;
+  td->cache_generation = cache_generation;
   td->cache_epoch = cache_epoch;
   td->options = search_options;
 

@@ -12,6 +12,7 @@
 #include "i18n.hpp"
 #include "ui/package_query/package_query_controller.hpp"
 #include "ui/package_query/package_query_controller_internal.hpp"
+#include "ui/package_query/package_query_cache.hpp"
 #include "ui/window/main_window.hpp"
 #include "ui/transaction/pending_transaction_apply.hpp"
 #include "ui/refresh/repository_refresh_controller.hpp"
@@ -63,10 +64,13 @@ struct StartupWarmupData {
   GCancellable *startup_cancellable = nullptr;
 };
 
+// Keep this guard even though installed refresh uses a system-only Base.
+// The periodic task also releases any shared repository Base left from
+// earlier UI work so metadata memory does not stay resident.
 struct AppBackendBaseDropGuard {
   ~AppBackendBaseDropGuard()
   {
-    BaseManager::instance().drop_cached_base();
+    package_query_cache_drop_cached_base();
   }
 };
 

@@ -80,14 +80,14 @@ perform_search(MainWindowUiState *widgets, const std::string &term)
   }
 
   // Look up saved rows before starting a new backend query.
-  // Base drops do not invalidate search results because they only release memory.
-  // Generation and cache epoch still reject rows after refreshes, transactions, or explicit cache clears.
+  // Cached rows are valid only while the snapshot generation and cache epoch match.
   const std::string key = package_query_cache_key_for(term, search_options);
   const uint64_t generation = BaseManager::instance().current_generation();
+  const uint64_t cache_generation = BaseManager::instance().current_snapshot_generation();
   const uint64_t cache_epoch = package_query_cache_current_epoch();
   const gint64 started_at_us = g_get_monotonic_time();
   std::vector<PackageRow> cached_packages;
-  if (package_query_cache_lookup(key, generation, cache_epoch, cached_packages)) {
+  if (package_query_cache_lookup(key, cache_generation, cache_epoch, cached_packages)) {
     // Show saved rows and skip the worker thread.
     package_query_set_displayed_search_query(
         widgets, term, search_options.search_in_description, search_options.exact_match);
@@ -107,7 +107,7 @@ perform_search(MainWindowUiState *widgets, const std::string &term)
   }
 
   // No cache match, so start a worker thread search.
-  package_query_start_search_task(widgets, term, key, generation, cache_epoch, search_options);
+  package_query_start_search_task(widgets, term, key, generation, cache_generation, cache_epoch, search_options);
 }
 
 // -----------------------------------------------------------------------------
@@ -257,7 +257,7 @@ package_query_reload_current_view(MainWindowUiState *widgets)
   case DisplayedPackageQueryKind::SEARCH:
     if (view_state.search_term.empty()) {
       widgets->query_state.reload_selected_nevra.clear();
-      BaseManager::instance().drop_cached_base();
+      package_query_cache_drop_cached_base();
       return;
     }
 
@@ -284,7 +284,7 @@ package_query_reload_current_view(MainWindowUiState *widgets)
   // refresh the selected NEVRA directly so removed rows disappear without extra global view state.
   if (widgets->results.selected_nevra.empty()) {
     widgets->query_state.reload_selected_nevra.clear();
-    BaseManager::instance().drop_cached_base();
+    package_query_cache_drop_cached_base();
     return;
   }
 

@@ -301,7 +301,7 @@ repository_refresh_on_force_rebuild_task_finished(GObject *, GAsyncResult *res, 
 
   if (refresh_state) {
     DNFUI_TRACE("Repository refresh completion done state=%d", static_cast<int>(*refresh_state));
-    // Search caches are bound to the old Base generation and must be dropped
+    // Search caches are bound to the old snapshot generation and must be dropped
     // before the user can query against freshly refreshed repositories.
     package_query_clear_search_cache();
     bool cleared_upgradeable_table = package_query_clear_displayed_upgradeable_table(widgets);

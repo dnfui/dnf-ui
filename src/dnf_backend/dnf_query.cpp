@@ -421,17 +421,18 @@ using namespace dnf_backend_internal;
 // -----------------------------------------------------------------------------
 // Search merged repo and installed-only package rows and stop early when the task cancellable is set.
 // -----------------------------------------------------------------------------
-std::vector<PackageRow>
-dnf_backend_search_package_rows_interruptible(const std::string &pattern,
-                                              const DnfBackendSearchOptions &search_options,
-                                              GCancellable *cancellable)
+DnfBackendPackageSearchResult
+dnf_backend_search_package_rows_with_snapshot_interruptible(const std::string &pattern,
+                                                            const DnfBackendSearchOptions &search_options,
+                                                            GCancellable *cancellable)
 {
-  std::vector<PackageRow> rows;
+  DnfBackendPackageSearchResult result;
   InstalledQueryResult installed_snapshot;
   std::set<std::string> protected_names;
   {
     try {
       auto [base, guard] = acquire_interruptible_base_read(cancellable);
+      result.snapshot_generation = BaseManager::instance().current_snapshot_generation();
       auto available_rows = collect_available_rows_by_name_arch(base, cancellable, search_options, &pattern);
       if (package_query_cancelled(cancellable)) {
         return {};
@@ -455,14 +456,25 @@ dnf_backend_search_package_rows_interruptible(const std::string &pattern,
       }
 
       protected_names = collect_self_protected_package_names(base);
-      rows = visible_rows_from_maps(std::move(available_rows), filtered_installed.rows_by_name_arch);
+      result.rows = visible_rows_from_maps(std::move(available_rows), filtered_installed.rows_by_name_arch);
     } catch (const BaseOperationCancelled &) {
       return {};
     }
   }
 
   publish_installed_snapshot(std::move(installed_snapshot), std::move(protected_names));
-  return rows;
+  return result;
+}
+
+// -----------------------------------------------------------------------------
+// Search merged repo and installed-only package rows.
+// -----------------------------------------------------------------------------
+std::vector<PackageRow>
+dnf_backend_search_package_rows_interruptible(const std::string &pattern,
+                                              const DnfBackendSearchOptions &search_options,
+                                              GCancellable *cancellable)
+{
+  return dnf_backend_search_package_rows_with_snapshot_interruptible(pattern, search_options, cancellable).rows;
 }
 
 // -----------------------------------------------------------------------------

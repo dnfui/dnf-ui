@@ -98,12 +98,13 @@ The bottom bar shows the visible row count on the left and the last completed
 package query time on the right.
 
 Search results are cached in [src/ui/package_query/package_query_cache.cpp](../src/ui/package_query/package_query_cache.cpp).
-The cache is tied to the current backend Base generation and a cache epoch kept
-by the query cache layer. Repository refreshes, transaction follow-up refreshes,
-and installed-state refreshes clear cached search rows and advance that epoch,
-so older search workers cannot repopulate the cache with rows the UI has already
-invalidated. Dropping the cached Base to save memory does not invalidate search
-rows by itself.
+The cache is tied to the current repository snapshot generation and a cache
+epoch kept by the query cache layer. Repository refreshes, transaction follow-up
+refreshes, and installed-state refreshes clear cached search rows and advance
+that epoch, so older search workers cannot repopulate the cache with rows the UI
+has already invalidated. Releasing the shared Base keeps lightweight cached rows,
+but the next Base load advances the snapshot generation so rows from the old
+repository snapshot are rejected.
 
 [src/ui/refresh/repository_refresh_controller.cpp](../src/ui/refresh/repository_refresh_controller.cpp)
 owns the Refresh Repositories button workflow. It refreshes dnf5daemon metadata,

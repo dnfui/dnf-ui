@@ -5,9 +5,9 @@
 // -----------------------------------------------------------------------------
 #include "ui/transaction/pending_transaction_request.hpp"
 
-#include "dnf_backend/base_manager.hpp"
 #include "dnf_backend/dnf_backend.hpp"
 #include "i18n.hpp"
+#include "ui/package_query/package_query_cache.hpp"
 
 #include <exception>
 
@@ -16,7 +16,7 @@ namespace {
 struct PendingRequestBaseDropGuard {
   ~PendingRequestBaseDropGuard()
   {
-    BaseManager::instance().drop_cached_base();
+    package_query_cache_drop_cached_base();
   }
 };
 

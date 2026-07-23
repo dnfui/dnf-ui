@@ -57,7 +57,8 @@ This file states the rules that should stay true as DNF UI changes.
 - A system-only Base should be used for installed-only checks.
 - Dropping the cached Base is a memory choice and should be reviewed when query
   speed or memory use changes.
-- Base generation changes matter because cached query results depend on them.
+- Recreating a dropped shared Base must advance the snapshot generation so
+  cached rows from the old snapshot are rejected.
 
 ## Transactions
 
