@@ -141,9 +141,9 @@ TEST_CASE("Package query cache rejects rows from an older cache epoch")
 }
 
 // -----------------------------------------------------------------------------
-// Verify that cached rows survive Base drops when package state has not changed.
+// Verify that cached search snapshots survive shared Base memory release.
 // -----------------------------------------------------------------------------
-TEST_CASE("Package query cache keeps rows after Base drops")
+TEST_CASE("Search cache survives shared Base memory release")
 {
   package_query_cache_clear();
   auto &manager = BaseManager::instance();

@@ -58,6 +58,8 @@ This file states the rules that should stay true as DNF UI changes.
 - Dropping the cached Base is a memory choice and should be reviewed when query
   speed or memory use changes.
 - Base generation changes matter because cached query results depend on them.
+- Search cache entries are bounded UI snapshots. They may survive shared Base
+  memory release, but known package-state changes must explicitly clear them.
 
 ## Transactions
 

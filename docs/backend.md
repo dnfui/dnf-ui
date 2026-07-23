@@ -56,6 +56,13 @@ generation has not changed yet. This keeps older search workers from storing
 old rows back into a cache state the UI already invalidated. Search cache
 validity depends on the Base generation and this cache epoch.
 
+Search cache entries are lightweight snapshots of completed searches. They do
+not own libdnf5 objects and may survive shared Base destruction. Explicit
+repository refresh, installed-state refresh, transaction completion, and Clear
+Cache invalidate them. Backend operations that need current package data resolve
+that data through the current Base instead of treating cached rows as
+authoritative libdnf5 state.
+
 ## Repository refresh
 
 The manual Refresh Repositories button refreshes both package-management paths
