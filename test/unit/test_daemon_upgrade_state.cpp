@@ -86,7 +86,7 @@ TEST_CASE("daemon upgrade state publishes successful targets")
 
   std::optional<DaemonUpgradeRefreshId> refresh_id = state.begin_refresh();
   REQUIRE(refresh_id.has_value());
-  REQUIRE(state.publish_success(refresh_id.value(), targets, error));
+  REQUIRE(state.publish_success(refresh_id.value(), targets, error) == DaemonUpgradePublishResult::PUBLISHED);
   REQUIRE(error.empty());
 
   DaemonUpgradeSnapshot snapshot = state.snapshot();
@@ -111,7 +111,7 @@ TEST_CASE("daemon upgrade state validates current targets")
 
   std::optional<DaemonUpgradeRefreshId> refresh_id = state.begin_refresh();
   REQUIRE(refresh_id.has_value());
-  REQUIRE(state.publish_success(refresh_id.value(), targets, error));
+  REQUIRE(state.publish_success(refresh_id.value(), targets, error) == DaemonUpgradePublishResult::PUBLISHED);
 
   DaemonUpgradeSnapshot snapshot = state.snapshot();
   REQUIRE(state.is_current_target(target, snapshot.generation));
@@ -135,7 +135,7 @@ TEST_CASE("daemon upgrade state publishes empty successful targets")
 
   std::optional<DaemonUpgradeRefreshId> refresh_id = state.begin_refresh();
   REQUIRE(refresh_id.has_value());
-  REQUIRE(state.publish_success(refresh_id.value(), {}, error));
+  REQUIRE(state.publish_success(refresh_id.value(), {}, error) == DaemonUpgradePublishResult::PUBLISHED);
   REQUIRE(error.empty());
 
   DaemonUpgradeSnapshot snapshot = state.snapshot();
@@ -174,7 +174,7 @@ TEST_CASE("daemon upgrade state marks snapshots stale")
 
   std::optional<DaemonUpgradeRefreshId> refresh_id = state.begin_refresh();
   REQUIRE(refresh_id.has_value());
-  REQUIRE(state.publish_success(refresh_id.value(), targets, error));
+  REQUIRE(state.publish_success(refresh_id.value(), targets, error) == DaemonUpgradePublishResult::PUBLISHED);
   state.mark_stale();
 
   DaemonUpgradeSnapshot snapshot = state.snapshot();
@@ -197,7 +197,7 @@ TEST_CASE("daemon upgrade state collapses exact duplicate targets")
 
   std::optional<DaemonUpgradeRefreshId> refresh_id = state.begin_refresh();
   REQUIRE(refresh_id.has_value());
-  REQUIRE(state.publish_success(refresh_id.value(), targets, error));
+  REQUIRE(state.publish_success(refresh_id.value(), targets, error) == DaemonUpgradePublishResult::PUBLISHED);
 
   DaemonUpgradeSnapshot snapshot = state.snapshot();
   REQUIRE(snapshot.status == DaemonUpgradeSnapshotStatus::READY);
@@ -222,10 +222,12 @@ TEST_CASE("daemon upgrade state rejects conflicting duplicate targets")
 
   std::optional<DaemonUpgradeRefreshId> first_refresh_id = state.begin_refresh();
   REQUIRE(first_refresh_id.has_value());
-  REQUIRE(state.publish_success(first_refresh_id.value(), first_targets, error));
+  REQUIRE(state.publish_success(first_refresh_id.value(), first_targets, error) ==
+          DaemonUpgradePublishResult::PUBLISHED);
   std::optional<DaemonUpgradeRefreshId> second_refresh_id = state.begin_refresh();
   REQUIRE(second_refresh_id.has_value());
-  REQUIRE_FALSE(state.publish_success(second_refresh_id.value(), conflicting_targets, error));
+  REQUIRE(state.publish_success(second_refresh_id.value(), conflicting_targets, error) ==
+          DaemonUpgradePublishResult::CONFLICTING_TARGETS);
   REQUIRE(error.find("demo.x86_64") != std::string::npos);
 
   DaemonUpgradeSnapshot snapshot = state.snapshot();
@@ -251,7 +253,7 @@ TEST_CASE("daemon upgrade state recovers after error and stale states")
   error = "old error";
   std::optional<DaemonUpgradeRefreshId> error_recovery_id = state.begin_refresh();
   REQUIRE(error_recovery_id.has_value());
-  REQUIRE(state.publish_success(error_recovery_id.value(), targets, error));
+  REQUIRE(state.publish_success(error_recovery_id.value(), targets, error) == DaemonUpgradePublishResult::PUBLISHED);
   REQUIRE(error.empty());
   REQUIRE(state.snapshot().status == DaemonUpgradeSnapshotStatus::READY);
   REQUIRE(state.snapshot().generation == 1);
@@ -259,7 +261,7 @@ TEST_CASE("daemon upgrade state recovers after error and stale states")
   state.mark_stale();
   std::optional<DaemonUpgradeRefreshId> stale_recovery_id = state.begin_refresh();
   REQUIRE(stale_recovery_id.has_value());
-  REQUIRE(state.publish_success(stale_recovery_id.value(), targets, error));
+  REQUIRE(state.publish_success(stale_recovery_id.value(), targets, error) == DaemonUpgradePublishResult::PUBLISHED);
   REQUIRE(state.snapshot().status == DaemonUpgradeSnapshotStatus::READY);
   REQUIRE(state.snapshot().generation == 2);
 }
@@ -278,8 +280,9 @@ TEST_CASE("daemon upgrade state rejects publication after stale")
   std::optional<DaemonUpgradeRefreshId> refresh_id = state.begin_refresh();
   REQUIRE(refresh_id.has_value());
   state.mark_stale();
-  REQUIRE_FALSE(state.publish_success(refresh_id.value(), targets, error));
-  REQUIRE(error.find("no longer active") != std::string::npos);
+  REQUIRE(state.publish_success(refresh_id.value(), targets, error) ==
+          DaemonUpgradePublishResult::REFRESH_NO_LONGER_ACTIVE);
+  REQUIRE(error.empty());
   state.publish_failure(refresh_id.value());
 
   DaemonUpgradeSnapshot snapshot = state.snapshot();
@@ -335,7 +338,7 @@ TEST_CASE("daemon upgrade state abandons later refresh as stale")
 
   std::optional<DaemonUpgradeRefreshId> first_refresh_id = state.begin_refresh();
   REQUIRE(first_refresh_id.has_value());
-  REQUIRE(state.publish_success(first_refresh_id.value(), targets, error));
+  REQUIRE(state.publish_success(first_refresh_id.value(), targets, error) == DaemonUpgradePublishResult::PUBLISHED);
 
   std::optional<DaemonUpgradeRefreshId> second_refresh_id = state.begin_refresh();
   REQUIRE(second_refresh_id.has_value());
@@ -386,11 +389,12 @@ TEST_CASE("daemon upgrade state rejects old success during newer refresh")
   std::optional<DaemonUpgradeRefreshId> new_refresh_id = state.begin_refresh();
   REQUIRE(new_refresh_id.has_value());
 
-  REQUIRE_FALSE(state.publish_success(old_refresh_id.value(), old_targets, error));
-  REQUIRE(error.find("no longer active") != std::string::npos);
+  REQUIRE(state.publish_success(old_refresh_id.value(), old_targets, error) ==
+          DaemonUpgradePublishResult::REFRESH_NO_LONGER_ACTIVE);
+  REQUIRE(error.empty());
   REQUIRE(state.snapshot().status == DaemonUpgradeSnapshotStatus::REFRESHING);
 
-  REQUIRE(state.publish_success(new_refresh_id.value(), new_targets, error));
+  REQUIRE(state.publish_success(new_refresh_id.value(), new_targets, error) == DaemonUpgradePublishResult::PUBLISHED);
 
   DaemonUpgradeSnapshot snapshot = state.snapshot();
   REQUIRE(snapshot.status == DaemonUpgradeSnapshotStatus::READY);
@@ -419,7 +423,7 @@ TEST_CASE("daemon upgrade state ignores old failure during newer refresh")
   state.publish_failure(old_refresh_id.value());
   REQUIRE(state.snapshot().status == DaemonUpgradeSnapshotStatus::REFRESHING);
 
-  REQUIRE(state.publish_success(new_refresh_id.value(), targets, error));
+  REQUIRE(state.publish_success(new_refresh_id.value(), targets, error) == DaemonUpgradePublishResult::PUBLISHED);
 
   DaemonUpgradeSnapshot snapshot = state.snapshot();
   REQUIRE(snapshot.status == DaemonUpgradeSnapshotStatus::READY);
@@ -446,9 +450,9 @@ TEST_CASE("daemon upgrade state reports inactive old conflict during newer refre
   std::optional<DaemonUpgradeRefreshId> new_refresh_id = state.begin_refresh();
   REQUIRE(new_refresh_id.has_value());
 
-  REQUIRE_FALSE(state.publish_success(old_refresh_id.value(), conflicting_targets, error));
-  REQUIRE(error.find("no longer active") != std::string::npos);
-  REQUIRE(error.find("more than one upgrade target") == std::string::npos);
+  REQUIRE(state.publish_success(old_refresh_id.value(), conflicting_targets, error) ==
+          DaemonUpgradePublishResult::REFRESH_NO_LONGER_ACTIVE);
+  REQUIRE(error.empty());
 
   DaemonUpgradeSnapshot snapshot = state.snapshot();
   REQUIRE(snapshot.status == DaemonUpgradeSnapshotStatus::REFRESHING);
@@ -466,8 +470,8 @@ TEST_CASE("daemon upgrade state rejects publication without refresh")
     make_target("demo", "x86_64", "2.0", "demo-0:2.0-1.fc44.x86_64"),
   };
 
-  REQUIRE_FALSE(state.publish_success(1, targets, error));
-  REQUIRE(error.find("no longer active") != std::string::npos);
+  REQUIRE(state.publish_success(1, targets, error) == DaemonUpgradePublishResult::REFRESH_NO_LONGER_ACTIVE);
+  REQUIRE(error.empty());
   state.publish_failure(1);
 
   DaemonUpgradeSnapshot snapshot = state.snapshot();
@@ -509,7 +513,7 @@ TEST_CASE("daemon upgrade refresh owner keeps accepted results")
   REQUIRE(refresh_id.has_value());
   {
     DaemonUpgradeRefreshOwner owner(refresh_id.value());
-    REQUIRE(state.publish_success(owner.id(), targets, error));
+    REQUIRE(state.publish_success(owner.id(), targets, error) == DaemonUpgradePublishResult::PUBLISHED);
     owner.close();
   }
 

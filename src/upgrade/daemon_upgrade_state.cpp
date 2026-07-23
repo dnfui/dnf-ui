@@ -113,7 +113,7 @@ DaemonUpgradeState::begin_refresh()
 // -----------------------------------------------------------------------------
 // Replace the shared snapshot with one complete daemon result.
 // -----------------------------------------------------------------------------
-bool
+DaemonUpgradePublishResult
 DaemonUpgradeState::publish_success(DaemonUpgradeRefreshId refresh_id,
                                     const std::vector<TransactionServiceUpgradeTarget> &targets,
                                     std::string &error_out)
@@ -137,29 +137,27 @@ DaemonUpgradeState::publish_success(DaemonUpgradeRefreshId refresh_id,
     std::lock_guard<std::mutex> lock(mutex);
     if (!active_refresh_id.has_value() || active_refresh_id.value() != refresh_id ||
         current.status != DaemonUpgradeSnapshotStatus::REFRESHING) {
-      error_out = "dnf5daemon upgrade refresh is no longer active.";
-      return false;
+      return DaemonUpgradePublishResult::REFRESH_NO_LONGER_ACTIVE;
     }
 
     error_out = "dnf5daemon returned more than one upgrade target for " + target.upgrade_spec() + ".";
     active_refresh_id.reset();
     current.status = DaemonUpgradeSnapshotStatus::ERROR;
     current.targets_by_name_arch.clear();
-    return false;
+    return DaemonUpgradePublishResult::CONFLICTING_TARGETS;
   }
 
   std::lock_guard<std::mutex> lock(mutex);
   if (!active_refresh_id.has_value() || active_refresh_id.value() != refresh_id ||
       current.status != DaemonUpgradeSnapshotStatus::REFRESHING) {
-    error_out = "dnf5daemon upgrade refresh is no longer active.";
-    return false;
+    return DaemonUpgradePublishResult::REFRESH_NO_LONGER_ACTIVE;
   }
 
   active_refresh_id.reset();
   current.generation += 1;
   current.status = DaemonUpgradeSnapshotStatus::READY;
   current.targets_by_name_arch = std::move(next_targets);
-  return true;
+  return DaemonUpgradePublishResult::PUBLISHED;
 }
 
 // -----------------------------------------------------------------------------

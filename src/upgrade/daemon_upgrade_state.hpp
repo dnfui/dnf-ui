@@ -30,6 +30,12 @@ struct DaemonUpgradeSnapshot {
 
 using DaemonUpgradeRefreshId = uint64_t;
 
+enum class DaemonUpgradePublishResult {
+  PUBLISHED,
+  REFRESH_NO_LONGER_ACTIVE,
+  CONFLICTING_TARGETS,
+};
+
 // The shared state holds the last List Upgradable result accepted by GTK.
 // It does not fetch data from dnf5daemon. Workers load targets, then GTK
 // publishes the result only after cancellation and state checks pass.
@@ -69,9 +75,9 @@ class DaemonUpgradeState {
   DaemonUpgradeSnapshot snapshot() const;
   bool is_current_target(const TransactionServiceUpgradeTarget &target, uint64_t generation) const;
   std::optional<DaemonUpgradeRefreshId> begin_refresh();
-  bool publish_success(DaemonUpgradeRefreshId refresh_id,
-                       const std::vector<TransactionServiceUpgradeTarget> &targets,
-                       std::string &error_out);
+  DaemonUpgradePublishResult publish_success(DaemonUpgradeRefreshId refresh_id,
+                                             const std::vector<TransactionServiceUpgradeTarget> &targets,
+                                             std::string &error_out);
   void publish_failure(DaemonUpgradeRefreshId refresh_id);
   bool abandon_refresh(DaemonUpgradeRefreshId refresh_id);
   void mark_stale();

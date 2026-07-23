@@ -151,7 +151,7 @@ TEST_CASE("Pending transaction action rows resolve daemon upgrade target")
   REQUIRE(refresh_id.has_value());
 
   std::string error;
-  REQUIRE(state.publish_success(refresh_id.value(), { target }, error));
+  REQUIRE(state.publish_success(refresh_id.value(), { target }, error) == DaemonUpgradePublishResult::PUBLISHED);
   DaemonUpgradeSnapshot snapshot = state.snapshot();
 
   PendingTransactionActionRows rows =
@@ -182,7 +182,7 @@ TEST_CASE("Pending transaction action rows resolve daemon target without install
   REQUIRE(refresh_id.has_value());
 
   std::string error;
-  REQUIRE(state.publish_success(refresh_id.value(), { target }, error));
+  REQUIRE(state.publish_success(refresh_id.value(), { target }, error) == DaemonUpgradePublishResult::PUBLISHED);
   DaemonUpgradeSnapshot snapshot = state.snapshot();
 
   PendingTransactionActionRows rows =
@@ -215,7 +215,7 @@ TEST_CASE("Pending transaction action rows reject stale daemon upgrade target")
   REQUIRE(refresh_id.has_value());
 
   std::string error;
-  REQUIRE(state.publish_success(refresh_id.value(), { target }, error));
+  REQUIRE(state.publish_success(refresh_id.value(), { target }, error) == DaemonUpgradePublishResult::PUBLISHED);
   DaemonUpgradeSnapshot snapshot = state.snapshot();
   state.mark_stale();
 
@@ -250,7 +250,7 @@ TEST_CASE("Pending transaction upgrade marking uses daemon target")
   REQUIRE(refresh_id.has_value());
 
   std::string error;
-  REQUIRE(state.publish_success(refresh_id.value(), { target }, error));
+  REQUIRE(state.publish_success(refresh_id.value(), { target }, error) == DaemonUpgradePublishResult::PUBLISHED);
   DaemonUpgradeSnapshot snapshot = state.snapshot();
 
   std::vector<PendingAction> actions;

@@ -502,19 +502,23 @@ on_list_upgradeable_task_finished(GObject *, GAsyncResult *res, gpointer user_da
     }
 
     std::string publish_error;
-    if (!DaemonUpgradeState::instance().publish_success(result->refresh_owner.id(), result->targets, publish_error)) {
+    DaemonUpgradePublishResult publish_result =
+        DaemonUpgradeState::instance().publish_success(result->refresh_owner.id(), result->targets, publish_error);
+    switch (publish_result) {
+    case DaemonUpgradePublishResult::PUBLISHED:
+      break;
+    case DaemonUpgradePublishResult::REFRESH_NO_LONGER_ACTIVE:
       result->refresh_owner.close();
-      const bool refresh_no_longer_active = publish_error == "dnf5daemon upgrade refresh is no longer active.";
-      if (refresh_no_longer_active) {
-        ui_helpers_set_status(widgets->query.status_label,
-                              _("Package state changed while loading upgrades. Press List Upgradable to try again."),
-                              "blue");
-      } else {
-        ui_helpers_set_status(widgets->query.status_label,
-                              publish_error.empty() ? _("Unable to publish dnf5daemon upgrade information.")
-                                                    : publish_error.c_str(),
-                              "red");
-      }
+      ui_helpers_set_status(widgets->query.status_label,
+                            _("Package state changed while loading upgrades. Press List Upgradable to try again."),
+                            "blue");
+      return;
+    case DaemonUpgradePublishResult::CONFLICTING_TARGETS:
+      result->refresh_owner.close();
+      ui_helpers_set_status(widgets->query.status_label,
+                            publish_error.empty() ? _("Unable to publish dnf5daemon upgrade information.")
+                                                  : publish_error.c_str(),
+                            "red");
       return;
     }
     result->refresh_owner.close();
