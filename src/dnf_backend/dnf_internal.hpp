@@ -84,6 +84,7 @@ std::vector<PackageRow> visible_rows_from_maps(std::map<std::string, PackageRow>
 std::set<std::string> collect_self_protected_package_names(libdnf5::Base &base);
 // -----------------------------------------------------------------------------
 // Publish a completed installed-package scan to shared backend state.
+// Returns true when installed NEVRAs or self-protected package names changed.
 // -----------------------------------------------------------------------------
 bool publish_installed_snapshot(InstalledQueryResult installed, std::set<std::string> protected_names);
 

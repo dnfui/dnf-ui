@@ -252,7 +252,8 @@ struct DnfBackendSearchOptions {
 
 // -----------------------------------------------------------------------------
 // Refresh the installed-package snapshot used by the UI for exact-installed
-// checks and upgrade-state classification. Returns true when the snapshot changed.
+// checks and upgrade-state classification. Returns true when installed NEVRAs
+// or self-protected package names changed.
 // -----------------------------------------------------------------------------
 bool dnf_backend_refresh_installed_nevras();
 

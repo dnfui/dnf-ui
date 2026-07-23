@@ -153,6 +153,42 @@ TEST_CASE("dnf_backend_refresh_installed_nevras populates installed NEVRA cache"
 }
 
 // -----------------------------------------------------------------------------
+// Verify that installed row metadata is published without reporting an identity change.
+// -----------------------------------------------------------------------------
+TEST_CASE("Installed snapshot publish ignores metadata-only row changes")
+{
+  reset_backend_globals();
+
+  PackageRow first;
+  first.nevra = "demo-1.0-1.fc44.x86_64";
+  first.name = "demo";
+  first.arch = "x86_64";
+  first.repo = "@System";
+  first.installed_from_repo = "fedora";
+
+  dnf_backend_internal::InstalledQueryResult first_result;
+  first_result.rows = { first };
+  first_result.nevras = { first.nevra };
+  first_result.rows_by_name_arch.emplace(first.name_arch_key(), first);
+
+  REQUIRE(dnf_backend_internal::publish_installed_snapshot(std::move(first_result), {}));
+
+  PackageRow second = first;
+  second.installed_from_repo = "updates";
+
+  dnf_backend_internal::InstalledQueryResult second_result;
+  second_result.rows = { second };
+  second_result.nevras = { second.nevra };
+  second_result.rows_by_name_arch.emplace(second.name_arch_key(), second);
+
+  REQUIRE_FALSE(dnf_backend_internal::publish_installed_snapshot(std::move(second_result), {}));
+
+  PackageRow published;
+  REQUIRE(dnf_backend_get_installed_package_row_by_name_arch(second, published));
+  REQUIRE(published.installed_from_repo == "updates");
+}
+
+// -----------------------------------------------------------------------------
 // Verify that installed-only refresh does not require or cache repository metadata.
 // -----------------------------------------------------------------------------
 TEST_CASE("Installed package refresh uses a short-lived system-only Base")

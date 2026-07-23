@@ -144,6 +144,7 @@ self_protected_package_name_snapshot()
 // -----------------------------------------------------------------------------
 // Publish installed-package state only after callers have finished all libdnf
 // Base reads. Do not hold the Base lock while taking g_installed_mutex.
+// The return value tracks installed identities and self-protection changes.
 // -----------------------------------------------------------------------------
 bool
 publish_installed_snapshot(InstalledQueryResult installed, std::set<std::string> protected_names)
@@ -193,7 +194,7 @@ dnf_backend_installed_snapshot_contains_for_tests(const std::string &nevra)
 
 // -----------------------------------------------------------------------------
 // Refresh the exact-installed and self-protection snapshots used by UI state classification.
-// Returns true when the published snapshot differs from the previous one.
+// Returns true when installed NEVRAs or self-protected package names changed.
 // This path uses only the local rpmdb.
 // The short-lived system-only Base prevents future queries from inheriting that mode.
 //
