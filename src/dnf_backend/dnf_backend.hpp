@@ -240,6 +240,13 @@ TransactionHistoryPage dnf_backend_list_transaction_history_page(TransactionHist
                                                                  size_t max_package_rows,
                                                                  GCancellable *cancellable);
 
+#ifdef DNFUI_BUILD_TESTS
+// -----------------------------------------------------------------------------
+// Return true when one history text value matches the same case-insensitive filter used by history searches.
+// -----------------------------------------------------------------------------
+bool dnf_backend_history_text_matches_filter_for_tests(const std::string &text, const std::string &filter_text);
+#endif
+
 // -----------------------------------------------------------------------------
 // Search flags used by backend search queries.
 // Each search request carries its own options so worker tasks do not depend on

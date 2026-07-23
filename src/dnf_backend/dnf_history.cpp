@@ -8,7 +8,6 @@
 #include "i18n.hpp"
 
 #include <algorithm>
-#include <cctype>
 #include <stdexcept>
 #include <utility>
 
@@ -93,14 +92,19 @@ make_history_row(libdnf5::transaction::Transaction &transaction,
 }
 
 // -----------------------------------------------------------------------------
-// Return ASCII-lowercase text for simple history filtering.
+// Return UTF-8 case-folded text for history filtering.
 // -----------------------------------------------------------------------------
 std::string
-history_filter_text(std::string text)
+history_filter_text(const std::string &text)
 {
-  std::transform(
-      text.begin(), text.end(), text.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-  return text;
+  char *folded = g_utf8_casefold(text.c_str(), -1);
+  if (!folded) {
+    return text;
+  }
+
+  std::string result = folded;
+  g_free(folded);
+  return result;
 }
 
 // -----------------------------------------------------------------------------
@@ -109,8 +113,8 @@ history_filter_text(std::string text)
 TransactionHistoryFilter
 normalize_history_filter(TransactionHistoryFilter filter)
 {
-  filter.package_text = history_filter_text(std::move(filter.package_text));
-  filter.detail_text = history_filter_text(std::move(filter.detail_text));
+  filter.package_text = history_filter_text(filter.package_text);
+  filter.detail_text = history_filter_text(filter.detail_text);
   return filter;
 }
 
@@ -187,6 +191,14 @@ sort_history_transactions_newest_first(std::vector<libdnf5::transaction::Transac
 }
 
 }
+
+#ifdef DNFUI_BUILD_TESTS
+bool
+dnf_backend_history_text_matches_filter_for_tests(const std::string &text, const std::string &filter_text)
+{
+  return history_text_contains_filter(text, history_filter_text(filter_text));
+}
+#endif
 
 // -----------------------------------------------------------------------------
 // Convert one transaction history action to user-facing text.

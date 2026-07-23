@@ -27,5 +27,15 @@ TEST_CASE("Transaction history cursor maps pages to row offsets")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that history filtering compares UTF-8 text case-insensitively.
+// -----------------------------------------------------------------------------
+TEST_CASE("Transaction history filter uses UTF-8 case folding")
+{
+  REQUIRE(dnf_backend_history_text_matches_filter_for_tests("Ångström", "ång"));
+  REQUIRE(dnf_backend_history_text_matches_filter_for_tests("MÜNCHEN", "mün"));
+  REQUIRE_FALSE(dnf_backend_history_text_matches_filter_for_tests("Ångström", "mun"));
+}
+
+// -----------------------------------------------------------------------------
 // EOF
 // -----------------------------------------------------------------------------
