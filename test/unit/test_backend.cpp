@@ -1,4 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
 #include "dnf_backend/base_manager.hpp"
 #include "dnf_backend/dnf_backend.hpp"
@@ -8,6 +9,8 @@
 #include <atomic>
 #include <chrono>
 #include <future>
+#include <filesystem>
+#include <fstream>
 #include <map>
 #include <set>
 #include <stdexcept>
@@ -15,6 +18,32 @@
 #include <thread>
 
 namespace {
+
+// -----------------------------------------------------------------------------
+// Supply an enabled plugin that cannot be loaded without changing system configuration.
+// -----------------------------------------------------------------------------
+struct UnloadablePluginConfig {
+  std::filesystem::path directory;
+
+  UnloadablePluginConfig()
+  {
+    gchar *temporary_directory = g_dir_make_tmp("dnfui-plugin-test-XXXXXX", nullptr);
+    REQUIRE(temporary_directory != nullptr);
+    directory = temporary_directory;
+    g_free(temporary_directory);
+
+    std::ofstream config(directory / "dnfui-unloadable.conf");
+    config << "[main]\nname=dnfui-unloadable\nenabled=1\n";
+    config.close();
+    REQUIRE(config.good());
+  }
+
+  ~UnloadablePluginConfig()
+  {
+    std::error_code error;
+    std::filesystem::remove_all(directory, error);
+  }
+};
 
 // -----------------------------------------------------------------------------
 // Find a real available update candidate from installed-row repository annotation.
@@ -167,6 +196,57 @@ TEST_CASE("BaseManager generation increments on rebuild")
   auto after = mgr.current_generation();
 
   REQUIRE(after > before);
+}
+
+// -----------------------------------------------------------------------------
+// Verify that unloadable plugins cannot break local package data after an upgrade.
+// -----------------------------------------------------------------------------
+TEST_CASE("BaseManager reads package data without loading libdnf5 plugins")
+{
+  UnloadablePluginConfig config;
+  ScopedEnvVar plugin_directory("LIBDNF_PLUGINS_CONFIG_DIR", config.directory.c_str());
+  auto &mgr = BaseManager::instance();
+  mgr.reset_for_tests();
+
+  // Verify that this configuration really fails when libdnf5 plugins are enabled.
+  {
+    libdnf5::Base base;
+    base.load_config();
+    base.get_config().get_plugins_option().set(true);
+    REQUIRE_THROWS_WITH(base.setup(), Catch::Matchers::ContainsSubstring("dnfui-unloadable.conf"));
+  }
+
+  SECTION("Search and repository rebuild")
+  {
+    auto rows = dnf_backend_search_package_rows_interruptible("bash", backend_search_options(false, true), nullptr);
+    REQUIRE_FALSE(rows.empty());
+    REQUIRE_NOTHROW(mgr.rebuild());
+  }
+
+  SECTION("Installed package reads")
+  {
+    auto rows = dnf_backend_get_installed_package_rows_interruptible(nullptr);
+    REQUIRE_FALSE(rows.empty());
+  }
+
+  SECTION("History Base")
+  {
+    REQUIRE(mgr.build_transaction_history_base() != nullptr);
+  }
+
+  SECTION("Changelog Base")
+  {
+    REQUIRE(mgr.build_changelog_base() != nullptr);
+  }
+
+  SECTION("Installed-only fallback")
+  {
+    ScopedEnvVar full_failure("DNFUI_TEST_FORCE_FULL_REPO_LOAD_FAILURE", "1");
+    ScopedEnvVar cache_failure("DNFUI_TEST_FORCE_CACHEONLY_REPO_LOAD_FAILURE", "1");
+    REQUIRE(mgr.rebuild() == BaseRepoState::INSTALLED_ONLY);
+  }
+
+  mgr.reset_for_tests();
 }
 
 // -----------------------------------------------------------------------------

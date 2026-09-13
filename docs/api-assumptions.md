@@ -75,6 +75,61 @@ Maintenance check:
 - If installed-row annotation or daemon-target metadata loading changes,
   verify `package_query.hpp` in the build image and rerun the backend tests.
 
+## Local libdnf5 plugin policy
+
+Code:
+
+- [src/dnf_backend/base_manager.cpp](../src/dnf_backend/base_manager.cpp)
+
+Assumptions:
+
+- Local `Base` objects serve package queries, installed-state snapshots,
+  repository metadata refresh, details, changelogs, and history. They do not
+  resolve or execute package transactions.
+- Every local `Base` disables libdnf5 plugins after loading configuration and
+  before `Base::setup()`. This also applies to temporary Bases and fallback modes.
+- dnf5daemon uses its own configuration and continues to load its configured
+  plugins for transaction preview and execution.
+
+Sources:
+
+- [DNF5 plugins configuration](https://dnf5.readthedocs.io/en/latest/dnf5.conf.5.html#plugins)
+- [libdnf5 plugin API in 5.4.4.0](https://github.com/rpm-software-management/dnf5/blob/5.4.4.0/include/libdnf5/plugin/iplugin.hpp)
+
+Why this matters:
+
+- Upgrading libdnf5 does not replace the library already loaded into DNF UI.
+  Creating another `Base` can otherwise load a new plugin from disk against
+  the old library. For example, the 5.4.4.0 systemd-inhibit plugin requires
+  `IPlugin2_2`, which is absent from libdnf5 5.4.3.0.
+- Retrying repository loading cannot repair that mismatch. Disabling plugins
+  in local Bases prevents it without changing system plugin configuration or
+  disabling daemon transaction hooks.
+- Local queries read repository configuration from disk. Custom plugins that
+  supply repository configuration only in memory are not executed locally;
+  their daemon results may therefore differ from local browsing. Supporting
+  those plugins requires a separate solution that keeps their library lifetime
+  consistent. Do not silently re-enable plugins as a query fallback.
+- This policy does not prevent a package scriptlet from restarting
+  dnf5daemon-server during its own upgrade. That is a separate transaction
+  lifecycle issue, not a repository refresh failure.
+
+Tests:
+
+- `BaseManager reads package data without loading libdnf5 plugins` supplies an
+  enabled, unloadable plugin through `LIBDNF_PLUGINS_CONFIG_DIR`. It first
+  verifies that a normal plugin-enabled `Base::setup()` rejects the fixture,
+  then checks local search, rebuild, installed reads, history and changelog
+  Base construction, and installed-only fallback.
+
+Maintenance check:
+
+- Keep plugin disabling in the shared local Base factory. Do not apply it to
+  daemon session configuration.
+- Verify the full backend suite after changing this policy. Tests of daemon
+  self-upgrades additionally need a disposable Fedora VM with systemd; the
+  ordinary Docker daemon tests do not reproduce service restart scriptlets.
+
 ## dnf5daemon package action requests
 
 Code:

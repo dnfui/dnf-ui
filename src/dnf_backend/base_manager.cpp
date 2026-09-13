@@ -246,6 +246,10 @@ create_configured_base(RepoLoadMode mode, bool load_changelog_metadata = false)
   base->load_config();
   DNFUI_TRACE("BaseManager load config done");
 
+  // Local Bases only read package data. The daemon owns transaction plugin execution.
+  // Do not load updated plugin libraries into a process still using the previous libdnf5 version.
+  base->get_config().get_plugins_option().set(false);
+
   if (mode == RepoLoadMode::CACHE_ONLY_METADATA) {
     // When live repo refresh is not available, keep repo-backed queries working
     // from cached metadata instead of dropping immediately to installed-only mode.
