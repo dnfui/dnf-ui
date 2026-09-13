@@ -40,6 +40,7 @@ struct TransactionProgressWindow {
   GtkProgressBar *progress_bar = nullptr;
   GtkButton *close_button = nullptr;
   bool finished = false;
+  bool offline = false;
 };
 
 struct ProgressAppendData {
@@ -139,10 +140,11 @@ transaction_progress_release(TransactionProgressWindow *progress)
 // Build the transaction popup used for streaming package install output
 // -----------------------------------------------------------------------------
 TransactionProgressWindow *
-transaction_progress_create_window(MainWindowUiState *widgets, size_t pending_count)
+transaction_progress_create_window(MainWindowUiState *widgets, size_t pending_count, bool offline)
 {
   auto *progress = new TransactionProgressWindow();
   progress->finished = false;
+  progress->offline = offline;
 
   progress->window = GTK_WINDOW(gtk_window_new());
   gtk_window_set_title(progress->window, _("Transaction Progress"));
@@ -167,7 +169,11 @@ transaction_progress_create_window(MainWindowUiState *widgets, size_t pending_co
 
   progress->title_label = GTK_LABEL(gtk_label_new(nullptr));
   std::string title_text;
-  if (pending_count == 0) {
+  if (offline) {
+    char *markup = g_markup_printf_escaped("<b>%s</b>", _("Preparing changes for reboot"));
+    title_text = markup ? markup : "";
+    g_free(markup);
+  } else if (pending_count == 0) {
     char *markup = g_markup_printf_escaped("<b>%s</b>", _("Applying package transaction"));
     title_text = markup ? markup : "";
     g_free(markup);
@@ -384,9 +390,19 @@ transaction_progress_finish(TransactionProgressWindow *progress, bool success, c
   if (progress->close_button) {
     gtk_widget_set_sensitive(GTK_WIDGET(progress->close_button), TRUE);
   }
+  const char *stage = _("Transaction finished with errors.");
+  const char *title = _("Transaction Failed");
+  if (success) {
+    if (progress->offline) {
+      stage = _("Changes prepared. Restart when you are ready to install them.");
+      title = _("Ready for Reboot");
+    } else {
+      stage = _("Transaction finished successfully.");
+      title = _("Transaction Complete");
+    }
+  }
   if (progress->stage_label) {
-    gtk_label_set_text(progress->stage_label,
-                       success ? _("Transaction finished successfully.") : _("Transaction finished with errors."));
+    gtk_label_set_text(progress->stage_label, stage);
   }
   if (progress->progress_bar && success) {
     gtk_progress_bar_set_show_text(progress->progress_bar, TRUE);
@@ -394,7 +410,7 @@ transaction_progress_finish(TransactionProgressWindow *progress, bool success, c
     gtk_progress_bar_set_fraction(progress->progress_bar, 1.0);
   }
   if (progress->window) {
-    gtk_window_set_title(progress->window, success ? _("Transaction Complete") : _("Transaction Failed"));
+    gtk_window_set_title(progress->window, title);
   }
 }
 

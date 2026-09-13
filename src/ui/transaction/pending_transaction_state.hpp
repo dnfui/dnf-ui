@@ -33,6 +33,7 @@ struct PendingTransactionState {
   bool preview_request_in_progress = false;
   bool apply_in_progress = false;
   bool preview_upgrade_all = false;
+  bool preview_requires_offline = false;
   std::vector<PendingAction> actions;
   std::string preview_transaction_path;
 };

@@ -899,5 +899,63 @@ TEST_CASE("dnf5daemon client reports unavailable daemon", "[dnf5daemon]")
 }
 
 // -----------------------------------------------------------------------------
+// Exercise offline preparation and cleanup only in an explicitly disposable system.
+// The daemon itself is included, but no package scriptlets should execute here.
+// -----------------------------------------------------------------------------
+TEST_CASE("dnf5daemon client prepares daemon changes for reboot", "[dnf5daemon]")
+{
+  require_dnf5daemon_test_enabled();
+  const char *enabled = g_getenv("DNFUI_TEST_DNF5DAEMON_OFFLINE");
+  if (!enabled || std::string(enabled) != "1") {
+    SKIP("Set DNFUI_TEST_DNF5DAEMON_OFFLINE=1 only in a disposable test system.");
+  }
+  transaction_service_client_reset_for_tests();
+  std::string error;
+  OfflineTransactionStatus status;
+  REQUIRE(transaction_service_client_get_offline_status(status, error));
+  REQUIRE_FALSE(status.has_transaction());
+  const auto installed_before = package_row_nevras(dnf_backend_get_installed_package_rows_interruptible(nullptr));
+
+  TransactionRequest request;
+  request.reinstall.push_back("dnf5daemon-server");
+  request.install.push_back(dnf5daemon_test_install_spec());
+  TransactionPreview preview;
+  std::string path;
+  bool previewed = transaction_service_client_preview_request(request, preview, path, error);
+  INFO(error);
+  REQUIRE(previewed);
+  REQUIRE(preview.requires_offline);
+  REQUIRE_FALSE(preview.install.empty());
+  bool started = false;
+  REQUIRE_FALSE(transaction_service_client_apply_started_request(path, {}, {}, {}, error, started));
+  REQUIRE_FALSE(started);
+
+  std::vector<std::string> progress;
+  bool prepared = transaction_service_client_apply_started_request(
+      path, [&](const std::string &line) { progress.push_back(line); }, {}, {}, error, started, nullptr, true);
+  INFO(error);
+  REQUIRE(prepared);
+  REQUIRE_FALSE(started);
+  REQUIRE(progress_contains(progress, "prepared for the next reboot"));
+  REQUIRE_FALSE(progress_contains(progress, "applied successfully"));
+  transaction_service_client_release_request(path);
+  transaction_service_client_reset_for_tests();
+
+  REQUIRE(transaction_service_client_get_offline_status(status, error));
+  REQUIRE(status.scheduled);
+  REQUIRE(status.state == "ready");
+  REQUIRE(package_row_nevras(dnf_backend_get_installed_package_rows_interruptible(nullptr)) == installed_before);
+
+  REQUIRE_FALSE(transaction_service_client_preview_request(request, preview, path, error));
+  REQUIRE(path.empty());
+  REQUIRE(transaction_service_client_clear_offline_transaction(error));
+  REQUIRE(transaction_service_client_get_offline_status(status, error));
+  REQUIRE_FALSE(status.has_transaction());
+  REQUIRE(transaction_service_client_preview_request(request, preview, path, error));
+  transaction_service_client_release_request(path);
+  transaction_service_client_reset_for_tests();
+}
+
+// -----------------------------------------------------------------------------
 // EOF
 // -----------------------------------------------------------------------------

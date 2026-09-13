@@ -150,7 +150,8 @@ remove, or replace the running app package. A normal upgrade may list the old
 package as replaced, so replacement is checked against the complete preview
 before it is treated as unsafe. DNF UI also rejects transactions that would
 remove dnf5daemon-server or replace it without a same-name successor in the
-preview. Normal upgrades are allowed.
+preview. Changes that keep the daemon package installed are allowed, but must
+use offline preparation as described below.
 
 The preview is still authoritative. A pending downgrade records an exact NEVRA
 chosen from the table, but the user must still review the resolved daemon
@@ -174,6 +175,57 @@ dnf5daemon loads the normal DNF configuration and then its own
 `/etc/dnf/dnf5daemon-server.conf` file. Package downloads during Apply are done
 by dnf5daemon, so they may use the daemon cache instead of the cache used by an
 interactive `dnf` command.
+
+## Updating the package service
+
+A resolved transaction that installs, upgrades, downgrades, reinstalls, or replaces
+`dnf5daemon-server` is prepared for the next reboot. This includes daemon changes
+pulled in as dependencies. Other transactions still apply immediately.
+
+The daemon package's RPM scriptlet can request a service restart while that same
+service is executing the transaction. Losing the D-Bus connection is not the only
+problem: systemd can terminate an RPM scriptlet in the daemon's control group.
+Reconnecting or seeing the new package versions afterward does not prove that
+all transaction scripts completed.
+
+DNF UI uses DNF's existing offline implementation:
+
+1. The summary shows every resolved change, explains the reboot requirement, and
+   labels its approval button **Prepare for Reboot**.
+2. The client records the required apply mode with the prepared daemon session.
+   Apply must use that same session and mode; there is no live fallback.
+3. `Goal.do_transaction` receives `offline=true` and `interactive=true`. The
+   daemon downloads and tests the complete transaction and schedules it for the
+   next boot. The app does not restart the computer.
+4. The client checks `Offline.get_status` before reporting readiness. A successful
+   preparation is displayed as **Ready for Reboot**, not as an installation.
+   Marked actions are cleared, while installed package state remains unchanged.
+5. At the next boot, DNF's offline service executes the stored transaction through
+   the DNF command-line process, separately from the package daemon. A restart of
+   the daemon therefore cannot kill the process applying these updates.
+
+**Package > Updates Prepared for Reboot** reads the daemon's current status even
+when the app has been restarted. It distinguishes ready, incomplete, unscheduled,
+and absent transaction data. **Discard Prepared Changes** asks the daemon to
+cancel and clean its stored transaction and downloaded packages through Polkit.
+Discarding does not undo installed package changes. Completed or interrupted RPM
+work can be reviewed in **Transaction History**.
+
+Before preview and again before apply, the client checks for stored offline data
+and systemd's update boot triggers. Further transactions are rejected until those
+updates have been applied or explicitly discarded, so a normal Apply does not
+silently invalidate an earlier prepared transaction. Browsing remains available.
+Updates scheduled by other tools must be managed with those tools.
+
+Preparation errors preserve the marked actions and point to the prepared-update
+view. A lost reply can leave stored data behind, so the app never retries the same
+submitted session or falls back to live execution. A fresh preview is required.
+
+The DNF API does not provide an atomic reservation covering another package
+manager and this app's status check. It remains possible for an external tool to
+change package or offline state concurrently. The daemon owns RPM locking and
+offline transaction validity; this UI does not add service overrides, manipulate
+system files, or implement a second privileged backend.
 
 ## Repository Signing Keys
 

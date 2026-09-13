@@ -112,7 +112,7 @@ Why this matters:
   consistent. Do not silently re-enable plugins as a query fallback.
 - This policy does not prevent a package scriptlet from restarting
   dnf5daemon-server during its own upgrade. That is a separate transaction
-  lifecycle issue, not a repository refresh failure.
+  lifecycle issue, handled by the offline transaction policy below.
 
 Tests:
 
@@ -129,6 +129,66 @@ Maintenance check:
 - Verify the full backend suite after changing this policy. Tests of daemon
   self-upgrades additionally need a disposable Fedora VM with systemd; the
   ordinary Docker daemon tests do not reproduce service restart scriptlets.
+
+## Daemon self-upgrades and offline transactions
+
+Code:
+
+- [Transaction client](../src/dnf5daemon_client/transaction_service_client_dbus.cpp)
+- [Preview and apply controller](../src/ui/transaction/pending_transaction_apply.cpp)
+- [Prepared-update view](../src/ui/transaction/offline_transaction_view.cpp)
+
+Sources:
+
+- [DNF daemon D-Bus API](https://dnf5.readthedocs.io/en/latest/dnf_daemon/dnf5daemon_dbus_api.8.html)
+- [DNF 5.4.4.0 offline preparation](https://github.com/rpm-software-management/dnf5/blob/5.4.4.0/dnf5daemon-server/session.cpp)
+- [DNF 5.4.4.0 offline status and cleanup](https://github.com/rpm-software-management/dnf5/blob/5.4.4.0/dnf5daemon-server/services/offline/offline.cpp)
+- [DNF offline command](https://dnf5.readthedocs.io/en/latest/commands/offline.8.html)
+- [systemd offline update boot](https://www.freedesktop.org/software/systemd/man/latest/systemd.offline-updates.html)
+
+Assumptions:
+
+- `Goal.do_transaction` accepts `offline=true`. It prepares the resolved session
+  for the next boot without executing its package changes now. The whole resolved
+  transaction is stored; the client does not split it or exclude packages.
+- `Offline.get_status` returns `(b, a{sv})`. The boolean confirms a valid scheduled
+  DNF transaction. The `status` field can describe stored data even when the
+  boolean is false. Nonempty states must therefore also block a new transaction.
+- `ready`, `download-incomplete`, `download-complete`, and `transaction-incomplete`
+  are the installed API's state names. Unknown nonempty states also block apply.
+- `Offline.clean_with_options` accepts `interactive=true` and returns `(b, s)`.
+  It removes DNF's stored transaction and packages and its own boot symlink. It
+  does not remove another tool's symlink. Both the D-Bus error and returned boolean
+  must be checked.
+- The unprivileged client only checks whether systemd's documented boot triggers
+  exist. It never writes them. The daemon API alone does not identify every
+  update scheduled by another tool.
+- No offline API failure permits falling back to live self-upgrade. The supported
+  daemon must provide the documented offline methods.
+
+Tests:
+
+- `[offline-transaction]` uses a private D-Bus daemon fixture to verify resolved
+  package detection, approved mode enforcement, existing-data protection,
+  single submission, and preparation error handling without package changes.
+- GTK summary tests verify that reboot preparation is explicitly labeled.
+- `dnf5daemon client prepares daemon changes for reboot` runs only with the
+  additional `DNFUI_TEST_DNF5DAEMON_OFFLINE=1` opt-in in a disposable system. The
+  Docker daemon test script enables it, verifies preparation without installed
+  version changes, checks status across client reconnection, and discards the
+  stored transaction before verifying that a fresh preview works again.
+
+Release verification:
+
+- Use a disposable Fedora VM with systemd and an older daemon package. Prepare a
+  real daemon upgrade through the UI, check that nothing installs before reboot,
+  then reboot and verify RPM history and script completion. Confirm that the UI
+  works again and that no prepared update remains.
+- Also test discarding before reboot and a preparation failure. The ordinary
+  Docker environment cannot validate boot execution or service restart scriptlets.
+- Do not change `KillMode` to work around the package restart. Avoiding child
+  signals alone does not resolve a scriptlet waiting for a restart while the
+  daemon waits for that same scriptlet to finish.
 
 ## dnf5daemon package action requests
 

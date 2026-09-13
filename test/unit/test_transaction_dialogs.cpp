@@ -3,6 +3,7 @@
 #include "transaction/transaction_preview.hpp"
 #include "ui/common/widgets.hpp"
 #include "ui/transaction/transaction_dialogs.hpp"
+#include "ui/transaction/transaction_progress.hpp"
 
 #include <memory>
 
@@ -112,6 +113,64 @@ TEST_CASE("Transaction summary cancellation restores the main controls", "[gtk]"
   REQUIRE(gtk_widget_is_sensitive(GTK_WIDGET(widgets->query.entry)));
   REQUIRE(widgets->transaction_state.preview_transaction_path.empty());
 
+  g_object_unref(dialog);
+  gtk_window_destroy(parent);
+}
+
+// -----------------------------------------------------------------------------
+// The reboot requirement must be visible before the user approves the transaction.
+// -----------------------------------------------------------------------------
+TEST_CASE("Transaction summary identifies preparation for reboot", "[gtk]")
+{
+  if (!transaction_dialog_display_available()) {
+    SKIP("A GTK display is required for transaction dialog tests.");
+  }
+  auto widgets = std::make_shared<MainWindowUiState>();
+  GtkWindow *parent = GTK_WINDOW(gtk_window_new());
+  widgets->query.entry = GTK_ENTRY(gtk_entry_new());
+  gtk_window_set_child(parent, GTK_WIDGET(widgets->query.entry));
+  TransactionPreview preview;
+  SECTION("ordinary changes")
+  {
+    preview.requires_offline = false;
+  }
+  SECTION("daemon changes")
+  {
+    preview.requires_offline = true;
+  }
+  transaction_dialogs_show_summary_dialog(widgets.get(), preview, nullptr, nullptr);
+  GtkWindow *dialog = find_summary_dialog(parent);
+  REQUIRE(dialog != nullptr);
+  GtkWidget *apply = find_apply_button(GTK_WIDGET(dialog));
+  REQUIRE(apply != nullptr);
+  REQUIRE(std::string(gtk_button_get_label(GTK_BUTTON(apply))) ==
+          (preview.requires_offline ? "Prepare for Reboot" : "Apply"));
+  gtk_window_destroy(dialog);
+  g_object_run_dispose(G_OBJECT(dialog));
+  REQUIRE(gtk_widget_is_sensitive(GTK_WIDGET(parent)));
+  g_object_unref(dialog);
+  gtk_window_destroy(parent);
+}
+
+// -----------------------------------------------------------------------------
+// A successful preparation must not be presented as a completed installation.
+// -----------------------------------------------------------------------------
+TEST_CASE("Offline progress completion reports readiness for reboot", "[gtk]")
+{
+  if (!transaction_dialog_display_available()) {
+    SKIP("A GTK display is required for transaction dialog tests.");
+  }
+  auto widgets = std::make_shared<MainWindowUiState>();
+  GtkWindow *parent = GTK_WINDOW(gtk_window_new());
+  widgets->query.entry = GTK_ENTRY(gtk_entry_new());
+  gtk_window_set_child(parent, GTK_WIDGET(widgets->query.entry));
+  auto *progress = transaction_progress_create_window(widgets.get(), 2, true);
+  GtkWindow *dialog = find_summary_dialog(parent);
+  REQUIRE(dialog != nullptr);
+  transaction_progress_finish(progress, true, "");
+  REQUIRE(std::string(gtk_window_get_title(dialog)) == "Ready for Reboot");
+  gtk_window_destroy(dialog);
+  g_object_run_dispose(G_OBJECT(dialog));
   g_object_unref(dialog);
   gtk_window_destroy(parent);
 }

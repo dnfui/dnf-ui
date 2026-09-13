@@ -39,6 +39,7 @@ struct ApplyTaskData {
   std::string transaction_path;
   TransactionProgressWindow *progress_window;
   bool transaction_started = false;
+  bool offline = false;
 };
 
 // Data passed to the transaction preview worker.
@@ -126,6 +127,7 @@ pending_transaction_invalidate_service_preview(MainWindowUiState *widgets)
 
   widgets->transaction_state.preview_transaction_path.clear();
   widgets->transaction_state.preview_upgrade_all = false;
+  widgets->transaction_state.preview_requires_offline = false;
 }
 
 // -----------------------------------------------------------------------------
@@ -391,12 +393,13 @@ start_apply_transaction(MainWindowUiState *widgets)
 
   ApplyTaskData *td = new ApplyTaskData;
   td->widgets = widgets;
+  td->offline = widgets->transaction_state.preview_requires_offline;
   // Apply now owns this dnf5daemon session path.
   // Pending action changes must not release it while the daemon is applying the transaction.
   td->transaction_path = std::move(widgets->transaction_state.preview_transaction_path);
   widgets->transaction_state.preview_transaction_path.clear();
   size_t pending_count = widgets->transaction_state.preview_upgrade_all ? 0 : widgets->transaction_state.actions.size();
-  td->progress_window = transaction_progress_create_window(widgets, pending_count);
+  td->progress_window = transaction_progress_create_window(widgets, pending_count, td->offline);
   // Keep the progress state alive while the apply worker may still receive service progress.
   // Closing the window only removes the GTK widgets.
   transaction_progress_retain(td->progress_window);
@@ -405,6 +408,9 @@ start_apply_transaction(MainWindowUiState *widgets)
   const char *status_message = widgets->transaction_state.preview_upgrade_all
       ? _("Applying package upgrades. See transaction window for details.")
       : _("Applying pending changes. See transaction window for details.");
+  if (td->offline) {
+    status_message = _("Preparing changes for reboot. See transaction window for details.");
+  }
   ui_helpers_set_status(widgets->query.status_label, status_message, "blue");
   widgets_spinner_acquire(widgets->query.spinner);
 
@@ -427,6 +433,21 @@ start_apply_transaction(MainWindowUiState *widgets)
         transaction_history_set_transaction_busy(false);
         set_main_window_sensitive_for_apply(widgets, true);
 
+        if (success && td && td->offline) {
+          transaction_progress_finish(
+              td->progress_window,
+              true,
+              _("No packages have been changed yet. Restart when you are ready to install the prepared changes. "
+                "You can discard them from Package > Updates Prepared for Reboot."));
+          pending_transaction_invalidate_service_preview(widgets);
+          widgets->transaction_state.actions.clear();
+          pending_transaction_set_preview_controls_sensitive(widgets, true);
+          refresh_package_table_statuses_after_apply(widgets);
+          package_details_refresh_selected_package_actions(widgets);
+          ui_helpers_set_status(widgets->query.status_label, _("Updates prepared. Restart to install them."), "blue");
+          return;
+        }
+
         if (success) {
           transaction_progress_finish(td ? td->progress_window : nullptr, true, "");
           mark_package_state_uncertain_after_apply(widgets);
@@ -443,6 +464,11 @@ start_apply_transaction(MainWindowUiState *widgets)
           rebuild_after_tx_async(widgets);
         } else {
           std::string details = error ? error->message : _("Transaction failed.");
+          if (td && td->offline) {
+            details += "\n";
+            details += _("Preparation did not complete normally. Check Package > Updates Prepared for Reboot "
+                         "before retrying; the daemon may have stored all or part of the transaction.");
+          }
           transaction_progress_finish(td ? td->progress_window : nullptr, false, details);
           mark_package_state_uncertain_after_apply(widgets);
           pending_transaction_invalidate_service_preview(widgets);
@@ -481,7 +507,8 @@ start_apply_transaction(MainWindowUiState *widgets)
             },
             err,
             td->transaction_started,
-            cancellable);
+            cancellable,
+            td->offline);
         if (ok) {
           g_task_return_boolean(t, TRUE);
         } else {
@@ -581,6 +608,7 @@ start_preview_request(MainWindowUiState *widgets, TransactionRequest request)
 
         widgets->transaction_state.preview_transaction_path = td->transaction_path;
         widgets->transaction_state.preview_upgrade_all = td->request.upgrade_all;
+        widgets->transaction_state.preview_requires_offline = td->preview.requires_offline;
         td->transaction_path_transferred = true;
         DNFUI_TRACE("Transaction preview request ready upgrade_all=%d path=%s",
                     td->request.upgrade_all ? 1 : 0,

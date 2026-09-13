@@ -435,7 +435,8 @@ transaction_dialogs_show_summary_dialog(MainWindowUiState *widgets,
   gtk_label_set_xalign(GTK_LABEL(title), 0.0f);
   gtk_box_append(GTK_BOX(outer), title);
 
-  GtkWidget *question = gtk_label_new(_("Apply the following changes?"));
+  GtkWidget *question = gtk_label_new(preview.requires_offline ? _("Prepare the following changes for the next reboot?")
+                                                               : _("Apply the following changes?"));
   gtk_label_set_xalign(GTK_LABEL(question), 0.0f);
   gtk_box_append(GTK_BOX(outer), question);
 
@@ -444,6 +445,16 @@ transaction_dialogs_show_summary_dialog(MainWindowUiState *widgets,
   gtk_label_set_xalign(GTK_LABEL(intro), 0.0f);
   gtk_label_set_wrap(GTK_LABEL(intro), TRUE);
   gtk_box_append(GTK_BOX(outer), intro);
+
+  if (preview.requires_offline) {
+    GtkWidget *notice = gtk_label_new(
+        _("These changes update the package service itself. To prevent it from restarting during installation, "
+          "all changes listed here will be applied at your next reboot. The computer will not restart now. "
+          "You can discard the prepared changes from Package > Updates Prepared for Reboot."));
+    gtk_label_set_xalign(GTK_LABEL(notice), 0.0f);
+    gtk_label_set_wrap(GTK_LABEL(notice), TRUE);
+    gtk_box_append(GTK_BOX(outer), notice);
+  }
 
   GtkWidget *scroller = gtk_scrolled_window_new();
   gtk_widget_set_hexpand(scroller, TRUE);
@@ -509,7 +520,7 @@ transaction_dialogs_show_summary_dialog(MainWindowUiState *widgets,
   GtkWidget *cancel_button = gtk_button_new_with_label(_("Cancel"));
   gtk_box_append(GTK_BOX(button_box), cancel_button);
 
-  GtkWidget *apply_button = gtk_button_new_with_label(_("Apply"));
+  GtkWidget *apply_button = gtk_button_new_with_label(preview.requires_offline ? _("Prepare for Reboot") : _("Apply"));
   gtk_widget_add_css_class(apply_button, "suggested-action");
   gtk_box_append(GTK_BOX(button_box), apply_button);
 

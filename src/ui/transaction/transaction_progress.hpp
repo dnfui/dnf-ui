@@ -16,7 +16,8 @@ struct TransactionProgressWindow;
 // -----------------------------------------------------------------------------
 // Create a transaction progress window for the pending action count.
 // -----------------------------------------------------------------------------
-TransactionProgressWindow *transaction_progress_create_window(MainWindowUiState *widgets, size_t pending_count);
+TransactionProgressWindow *
+transaction_progress_create_window(MainWindowUiState *widgets, size_t pending_count, bool offline = false);
 // -----------------------------------------------------------------------------
 // Add one reference to a transaction progress window.
 // -----------------------------------------------------------------------------

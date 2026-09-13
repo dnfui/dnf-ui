@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <cctype>
 #include <mutex>
+#include <map>
 #include <set>
 #include <sstream>
 #include <string>
@@ -34,6 +35,7 @@ constexpr const char *kDnfDaemonBaseInterface = "org.rpm.dnf.v0.Base";
 constexpr const char *kDnfDaemonRpmInterface = "org.rpm.dnf.v0.rpm.Rpm";
 constexpr const char *kDnfDaemonRpmRepoInterface = "org.rpm.dnf.v0.rpm.Repo";
 constexpr const char *kDnfDaemonGoalInterface = "org.rpm.dnf.v0.Goal";
+constexpr const char *kDnfDaemonOfflineInterface = "org.rpm.dnf.v0.Offline";
 
 // -----------------------------------------------------------------------------
 // DNF UI needs this package for future transaction previews and applies.
@@ -79,6 +81,24 @@ preview_keeps_required_daemon_server_package(const TransactionPreview &preview, 
   return true;
 }
 
+// -----------------------------------------------------------------------------
+// The daemon package can restart its service from an RPM scriptlet.
+// Inspect the resolved actions so dependency changes receive the same protection.
+// -----------------------------------------------------------------------------
+bool
+preview_requires_offline(const TransactionPreview &preview)
+{
+  for (const auto *section :
+       { &preview.install, &preview.upgrade, &preview.downgrade, &preview.reinstall, &preview.replaced }) {
+    for (const auto &package : *section) {
+      if (package.name == kRequiredDaemonServerPackage) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 #ifdef DNFUI_DEBUG_TRACE
 static long long
 elapsed_ms_since(gint64 started_at_us)
@@ -91,6 +111,7 @@ struct TransactionServiceConnectionCache {
   std::mutex mutex;
   GDBusConnection *connection = nullptr;
   std::set<std::string> allow_erasing_sessions;
+  std::map<std::string, bool> preview_offline_modes;
 };
 
 // -----------------------------------------------------------------------------
@@ -232,6 +253,7 @@ forget_daemon_session(const std::string &transaction_path)
   TransactionServiceConnectionCache &cache = get_transaction_service_connection_cache();
   std::lock_guard<std::mutex> lock(cache.mutex);
   cache.allow_erasing_sessions.erase(transaction_path);
+  cache.preview_offline_modes.erase(transaction_path);
 }
 
 // -----------------------------------------------------------------------------
@@ -256,11 +278,12 @@ package_specs_parameters(const std::vector<std::string> &specs)
 // Return dnf5daemon transaction options for an interactive apply.
 // -----------------------------------------------------------------------------
 GVariant *
-apply_options_parameters()
+apply_options_parameters(bool offline)
 {
   GVariantBuilder options;
   g_variant_builder_init(&options, G_VARIANT_TYPE("a{sv}"));
   g_variant_builder_add(&options, "{sv}", "interactive", g_variant_new_boolean(TRUE));
+  g_variant_builder_add(&options, "{sv}", "offline", g_variant_new_boolean(offline));
   return g_variant_new("(a{sv})", &options);
 }
 
@@ -871,6 +894,75 @@ open_daemon_session(GDBusConnection *connection,
   return open_daemon_session_with_options(connection, empty_options(), cancellable, transaction_path_out, error_out);
 }
 
+// -----------------------------------------------------------------------------
+// Read daemon state and the systemd boot trigger before preparing more changes.
+// The daemon pending flag alone omits incomplete, invalid, and unscheduled data.
+// -----------------------------------------------------------------------------
+bool
+get_offline_status(GDBusConnection *connection,
+                   const std::string &session_path,
+                   OfflineTransactionStatus &status_out,
+                   std::string &error_out,
+                   GCancellable *cancellable)
+{
+  status_out = {};
+  GError *error = nullptr;
+  GVariant *reply = g_dbus_connection_call_sync(connection,
+                                                kDnfDaemonName,
+                                                session_path.c_str(),
+                                                kDnfDaemonOfflineInterface,
+                                                "get_status",
+                                                nullptr,
+                                                G_VARIANT_TYPE("(ba{sv})"),
+                                                G_DBUS_CALL_FLAGS_NONE,
+                                                -1,
+                                                cancellable,
+                                                &error);
+  if (!reply) {
+    error_out = error ? error->message : _("Could not check updates prepared for reboot.");
+    g_clear_error(&error);
+    return false;
+  }
+
+  gboolean scheduled = FALSE;
+  GVariant *fields = nullptr;
+  g_variant_get(reply, "(b@a{sv})", &scheduled, &fields);
+  const gchar *state = nullptr;
+  bool valid =
+      g_variant_n_children(fields) == 0 || (g_variant_lookup(fields, "status", "&s", &state) && state && *state);
+  if (valid) {
+    status_out.scheduled = scheduled;
+    status_out.state = state ? state : "";
+    // systemd also accepts a boot trigger from another update tool.
+    status_out.boot_trigger_present =
+        g_file_test("/system-update", static_cast<GFileTest>(G_FILE_TEST_EXISTS | G_FILE_TEST_IS_SYMLINK)) ||
+        g_file_test("/etc/system-update", static_cast<GFileTest>(G_FILE_TEST_EXISTS | G_FILE_TEST_IS_SYMLINK));
+  } else {
+    error_out = _("dnf5daemon returned an unsupported offline transaction status.");
+  }
+  g_variant_unref(fields);
+  g_variant_unref(reply);
+  return valid;
+}
+
+bool
+verify_no_offline_transaction(GDBusConnection *connection,
+                              const std::string &session_path,
+                              std::string &error_out,
+                              GCancellable *cancellable)
+{
+  OfflineTransactionStatus status;
+  if (!get_offline_status(connection, session_path, status, error_out, cancellable)) {
+    return false;
+  }
+  if (status.has_transaction()) {
+    error_out = _("An offline transaction already exists. Open Package > Updates Prepared for Reboot to review "
+                  "or discard it before applying more changes. If another update tool scheduled it, use that tool.");
+    return false;
+  }
+  return true;
+}
+
 } // namespace
 
 #ifdef DNFUI_BUILD_TESTS
@@ -1013,6 +1105,7 @@ transaction_service_client_connect(std::string &error_out)
     cache.connection = nullptr;
     // Remembered daemon session options belong to the connection that created them.
     cache.allow_erasing_sessions.clear();
+    cache.preview_offline_modes.clear();
   }
 
   DNFUI_TRACE("dnf5daemon connection open start");
@@ -1289,6 +1382,10 @@ transaction_service_client_get_transaction_preview(GDBusConnection *connection,
     return false;
   }
 
+  if (!verify_no_offline_transaction(connection, transaction_path, error_out, cancellable)) {
+    return false;
+  }
+
   struct PreviewWaitState {
     bool done = false;
     GVariant *reply = nullptr;
@@ -1455,6 +1552,12 @@ transaction_service_client_get_transaction_preview(GDBusConnection *connection,
     return false;
   }
 
+  built_preview.requires_offline = preview_requires_offline(built_preview);
+  {
+    TransactionServiceConnectionCache &cache = get_transaction_service_connection_cache();
+    std::lock_guard<std::mutex> lock(cache.mutex);
+    cache.preview_offline_modes[transaction_path] = built_preview.requires_offline;
+  }
   preview_out = std::move(built_preview);
   DNFUI_TRACE("dnf5daemon preview built path=%s install=%zu upgrade=%zu downgrade=%zu reinstall=%zu remove=%zu "
               "replaced=%zu total_ms=%lld",
@@ -1480,12 +1583,28 @@ transaction_service_client_start_apply_request(GDBusConnection *connection,
                                                const std::string &transaction_path,
                                                TransactionServiceProgressForwarder *progress_forwarder,
                                                GCancellable *cancellable,
-                                               std::string &error_out)
+                                               std::string &error_out,
+                                               bool offline)
 {
   error_out.clear();
 
   if (!connection || transaction_path.empty()) {
     error_out = _("dnf5daemon transaction session is not available.");
+    return false;
+  }
+
+  {
+    TransactionServiceConnectionCache &cache = get_transaction_service_connection_cache();
+    std::lock_guard<std::mutex> lock(cache.mutex);
+    auto prepared = cache.preview_offline_modes.find(transaction_path);
+    if (prepared == cache.preview_offline_modes.end() || prepared->second != offline) {
+      error_out = _("The apply mode does not match a prepared preview. Prepare the transaction preview again.");
+      return false;
+    }
+    // A prepared session may be submitted only once, including after an uncertain reply.
+    cache.preview_offline_modes.erase(prepared);
+  }
+  if (!verify_no_offline_transaction(connection, transaction_path, error_out, cancellable)) {
     return false;
   }
 
@@ -1525,7 +1644,7 @@ transaction_service_client_start_apply_request(GDBusConnection *connection,
       transaction_path.c_str(),
       kDnfDaemonGoalInterface,
       "do_transaction",
-      apply_options_parameters(),
+      apply_options_parameters(offline),
       nullptr,
       G_DBUS_CALL_FLAGS_NONE,
       G_MAXINT,
@@ -1583,7 +1702,92 @@ transaction_service_client_start_apply_request(GDBusConnection *connection,
     return false;
   }
 
+  if (offline) {
+    OfflineTransactionStatus status;
+    if (!get_offline_status(connection, transaction_path, status, error_out, cancellable)) {
+      return false;
+    }
+    if (!status.scheduled || status.state != "ready") {
+      error_out = _("The daemon did not confirm that the changes are ready for reboot. "
+                    "Check Package > Updates Prepared for Reboot before retrying.");
+      return false;
+    }
+  }
+
   return true;
+}
+
+// -----------------------------------------------------------------------------
+// Query stored updates using a short session without repository loading.
+// -----------------------------------------------------------------------------
+bool
+transaction_service_client_get_offline_status(OfflineTransactionStatus &status_out,
+                                              std::string &error_out,
+                                              GCancellable *cancellable)
+{
+  status_out = {};
+  error_out.clear();
+  GDBusConnection *connection = transaction_service_client_connect(error_out);
+  if (!connection) {
+    return false;
+  }
+  std::string path;
+  bool ok = open_daemon_session_with_options(connection, refresh_session_options(), cancellable, path, error_out);
+  if (ok) {
+    ok = get_offline_status(connection, path, status_out, error_out, cancellable);
+    std::string release_error;
+    transaction_service_client_release_transaction_request(connection, path, release_error);
+  }
+  g_object_unref(connection);
+  return ok;
+}
+
+// -----------------------------------------------------------------------------
+// Let the daemon authorize and discard its stored offline transaction.
+// No files or boot triggers are modified by the unprivileged application.
+// -----------------------------------------------------------------------------
+bool
+transaction_service_client_clear_offline_transaction(std::string &error_out, GCancellable *cancellable)
+{
+  error_out.clear();
+  GDBusConnection *connection = transaction_service_client_connect(error_out);
+  if (!connection) {
+    return false;
+  }
+  std::string path;
+  bool ok = open_daemon_session_with_options(connection, refresh_session_options(), cancellable, path, error_out);
+  if (ok) {
+    GError *error = nullptr;
+    GVariant *reply = g_dbus_connection_call_sync(connection,
+                                                  kDnfDaemonName,
+                                                  path.c_str(),
+                                                  kDnfDaemonOfflineInterface,
+                                                  "clean_with_options",
+                                                  g_variant_new("(@a{sv})", interactive_options()),
+                                                  G_VARIANT_TYPE("(bs)"),
+                                                  G_DBUS_CALL_FLAGS_NONE,
+                                                  G_MAXINT,
+                                                  cancellable,
+                                                  &error);
+    ok = reply != nullptr;
+    if (reply) {
+      gboolean success = FALSE;
+      const gchar *message = nullptr;
+      g_variant_get(reply, "(b&s)", &success, &message);
+      ok = success;
+      if (!ok) {
+        error_out = message && *message ? message : _("Could not discard the prepared updates.");
+      }
+      g_variant_unref(reply);
+    } else {
+      error_out = error ? error->message : _("Could not discard the prepared updates.");
+      g_clear_error(&error);
+    }
+    std::string release_error;
+    transaction_service_client_release_transaction_request(connection, path, release_error);
+  }
+  g_object_unref(connection);
+  return ok;
 }
 
 // -----------------------------------------------------------------------------
@@ -1708,6 +1912,7 @@ transaction_service_client_reset_for_tests()
   g_object_unref(cache.connection);
   cache.connection = nullptr;
   cache.allow_erasing_sessions.clear();
+  cache.preview_offline_modes.clear();
 }
 
 // -----------------------------------------------------------------------------

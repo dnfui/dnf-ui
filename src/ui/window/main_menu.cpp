@@ -13,6 +13,7 @@
 #include "ui/package_table/package_table_view.hpp"
 #include "ui/repository/repository_view.hpp"
 #include "ui/transaction/pending_transaction_controller.hpp"
+#include "ui/transaction/offline_transaction_view.hpp"
 #include "ui/common/ui_helpers.hpp"
 #include "ui/common/widgets.hpp"
 
@@ -338,6 +339,7 @@ main_menu_create()
   g_menu_append(package_menu, _("Clear List"), "win.clear-list");
   g_menu_append(package_menu, _("Clear Search Cache"), "win.clear-cache");
   g_menu_append(package_menu, _("Transaction History..."), "win.transaction-history");
+  g_menu_append(package_menu, _("Updates Prepared for Reboot..."), "win.offline-updates");
   g_menu_append_submenu(menu_bar, _("Package"), G_MENU_MODEL(package_menu));
   g_object_unref(package_menu);
 
@@ -368,7 +370,7 @@ main_menu_connect_actions(const MainMenuWidgets &menu_widgets, MainWindowUiState
         delete static_cast<MainMenuActionData *>(p);
       });
 
-  GActionEntry entries[11] = {};
+  GActionEntry entries[12] = {};
   entries[0].name = "quit";
   entries[0].activate = on_menu_quit;
   entries[1].name = "clear-list";
@@ -393,6 +395,13 @@ main_menu_connect_actions(const MainMenuWidgets &menu_widgets, MainWindowUiState
   entries[9].activate = on_menu_apply_transactions;
   entries[10].name = "repositories";
   entries[10].activate = on_menu_repositories;
+  entries[11].name = "offline-updates";
+  entries[11].activate = +[](GSimpleAction *, GVariant *, gpointer user_data) {
+    auto *data = static_cast<MainMenuActionData *>(user_data);
+    if (data) {
+      offline_transaction_view_show(data->widgets);
+    }
+  };
 
   GSimpleActionGroup *actions = g_simple_action_group_new();
   g_action_map_add_action_entries(G_ACTION_MAP(actions), entries, G_N_ELEMENTS(entries), data);

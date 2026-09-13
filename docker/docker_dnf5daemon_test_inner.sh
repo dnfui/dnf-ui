@@ -65,6 +65,10 @@ run_daemon_test() {
   "$TEST_BIN" "$test_name"
 }
 
+# Reinstall tests need the installed daemon version to remain available in the repositories.
+# Update it before activation so the daemon starts with the matching installed libraries.
+dnf5 -y upgrade dnf5daemon-server >/dev/null
+
 echo "*** Building tests ***"
 "$PROJECT_ROOT/utils/meson_build.sh" tests
 
@@ -118,6 +122,8 @@ install_test_package
 run_daemon_test "dnf5daemon client previews remove requests"
 run_daemon_test "dnf5daemon client previews reinstall requests"
 remove_test_package
+
+DNFUI_TEST_DNF5DAEMON_OFFLINE=1 run_daemon_test "dnf5daemon client prepares daemon changes for reboot"
 
 run_daemon_test "dnf5daemon client rejects removing dnf5daemon-server"
 run_daemon_test "dnf5daemon client reports resolve failure"
