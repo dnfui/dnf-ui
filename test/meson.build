@@ -19,6 +19,7 @@ dnfui_tests = executable(
     'unit/test_search.cpp',
     'unit/test_daemon_upgrade_state.cpp',
     'unit/test_transaction_request.cpp',
+    'unit/test_transaction_dialogs.cpp',
     'unit/test_transaction_history.cpp',
     'unit/test_repository_service_client.cpp',
     'unit/test_repository_apply_model.cpp',
@@ -39,6 +40,7 @@ dnfui_tests = executable(
     '../src/ui/package_table/package_table_status.cpp',
     '../src/ui/package_query/package_query_cache.cpp',
     '../src/ui/transaction/pending_transaction_request.cpp',
+    '../src/ui/transaction/transaction_dialogs.cpp',
   ),
   include_directories: src_inc,
   dependencies: [

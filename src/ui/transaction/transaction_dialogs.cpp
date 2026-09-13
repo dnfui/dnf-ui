@@ -533,7 +533,9 @@ transaction_dialogs_show_summary_dialog(MainWindowUiState *widgets,
                    G_CALLBACK(+[](GtkWidget *widget, gpointer) {
                      SummaryDialogApplyData *data = static_cast<SummaryDialogApplyData *>(
                          g_object_get_data(G_OBJECT(widget), "summary-dialog-apply-data"));
-                     if (data && data->widgets && !data->widgets->window_state.destroyed) {
+                     // Destruction can be delayed until after Apply has disabled the main window.
+                     if (data && data->widgets && !data->widgets->window_state.destroyed &&
+                         !data->widgets->transaction_state.apply_in_progress) {
                        set_main_window_sensitive_for_summary(data->widgets.get(), true);
                      }
                      if (!data || data->apply_requested || !data->widgets || data->widgets->window_state.destroyed ||
