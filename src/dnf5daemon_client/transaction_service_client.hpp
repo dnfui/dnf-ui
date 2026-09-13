@@ -69,6 +69,7 @@ bool transaction_service_client_refresh_repositories(std::string &error_out, GCa
 // -----------------------------------------------------------------------------
 // Apply one previously prepared transaction request and forward its progress.
 // transaction_started_out is true when daemon progress reported that the RPM transaction began.
+// Offline apply only prepares changes for reboot and must match the approved preview.
 // -----------------------------------------------------------------------------
 bool transaction_service_client_apply_started_request(const std::string &transaction_path,
                                                       const std::function<void(const std::string &)> &progress_callback,
@@ -76,7 +77,8 @@ bool transaction_service_client_apply_started_request(const std::string &transac
                                                       const TransactionKeyImportCallback &key_import_callback,
                                                       std::string &error_out,
                                                       bool &transaction_started_out,
-                                                      GCancellable *cancellable = nullptr);
+                                                      GCancellable *cancellable = nullptr,
+                                                      bool offline = false);
 
 // -----------------------------------------------------------------------------
 // Release one finished transaction request that is no longer needed.

@@ -6,6 +6,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "test_utils.hpp"
+#include "dnf_backend/base_manager.hpp"
 #include "transaction/transaction_preview.hpp"
 #include "transaction/transaction_request.hpp"
 #include "dnf5daemon_client/transaction_service_client.hpp"
@@ -995,6 +996,55 @@ TEST_CASE("dnf5daemon client reports unavailable daemon", "[dnf5daemon]")
   REQUIRE_FALSE(error.empty());
   REQUIRE(preview.empty());
 
+  transaction_service_client_reset_for_tests();
+}
+
+// -----------------------------------------------------------------------------
+// Exercise offline preparation only in an explicitly disposable system.
+// The daemon itself is included, but no package scriptlets should execute here.
+// -----------------------------------------------------------------------------
+TEST_CASE("dnf5daemon client prepares daemon changes for reboot", "[dnf5daemon]")
+{
+  require_dnf5daemon_test_enabled();
+  const char *enabled = g_getenv("DNFUI_TEST_DNF5DAEMON_OFFLINE");
+  if (!enabled || std::string(enabled) != "1") {
+    SKIP("Set DNFUI_TEST_DNF5DAEMON_OFFLINE=1 only in a disposable test system.");
+  }
+  transaction_service_client_reset_for_tests();
+  std::string error;
+  const auto installed_before = package_row_nevras(dnf_backend_get_installed_package_rows_interruptible(nullptr));
+
+  TransactionRequest request;
+  request.reinstall.push_back("dnf5daemon-server");
+  request.install.push_back(dnf5daemon_test_install_spec());
+  TransactionPreview preview;
+  std::string path;
+  bool previewed = transaction_service_client_preview_request(request, preview, path, error);
+  INFO(error);
+  REQUIRE(previewed);
+  REQUIRE(preview.requires_offline);
+  REQUIRE_FALSE(preview.install.empty());
+  bool started = false;
+  REQUIRE_FALSE(transaction_service_client_apply_started_request(path, {}, {}, {}, error, started));
+  REQUIRE_FALSE(started);
+
+  std::vector<std::string> progress;
+  bool prepared = transaction_service_client_apply_started_request(
+      path, [&](const std::string &line) { progress.push_back(line); }, {}, {}, error, started, nullptr, true);
+  INFO(error);
+  REQUIRE(prepared);
+  REQUIRE_FALSE(started);
+  REQUIRE(progress_contains(progress, "prepared for the next reboot"));
+  REQUIRE_FALSE(progress_contains(progress, "applied successfully"));
+  transaction_service_client_release_request(path);
+  transaction_service_client_reset_for_tests();
+
+  BaseManager::instance().drop_cached_base();
+  REQUIRE(package_row_nevras(dnf_backend_get_installed_package_rows_interruptible(nullptr)) == installed_before);
+
+  REQUIRE_FALSE(transaction_service_client_preview_request(request, preview, path, error));
+  REQUIRE(path.empty());
+  REQUIRE(error.find("already exists") != std::string::npos);
   transaction_service_client_reset_for_tests();
 }
 

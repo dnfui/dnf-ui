@@ -323,7 +323,8 @@ transaction_service_client_apply_started_request(const std::string &transaction_
                                                  const TransactionKeyImportCallback &key_import_callback,
                                                  std::string &error_out,
                                                  bool &transaction_started_out,
-                                                 GCancellable *cancellable)
+                                                 GCancellable *cancellable,
+                                                 bool offline)
 {
   error_out.clear();
   transaction_started_out = false;
@@ -365,19 +366,21 @@ transaction_service_client_apply_started_request(const std::string &transaction_
         transaction_service_client_subscribe_progress(connection, transaction_path, &progress_forwarder);
 
     append_progress(_("Privileged transaction preview ready."));
-    append_progress(_("Requesting authorization and starting apply..."));
+    append_progress(offline ? _("Requesting authorization and preparing changes for reboot...")
+                            : _("Requesting authorization and starting apply..."));
 
     if (!transaction_service_client_start_apply_request(
-            connection, transaction_path, &progress_forwarder, cancellable, error_out)) {
+            connection, transaction_path, &progress_forwarder, cancellable, error_out, offline)) {
       break;
     }
 
-    append_progress(_("Transaction applied successfully."));
+    append_progress(offline ? _("Changes prepared for the next reboot. No packages have been changed yet.")
+                            : _("Transaction applied successfully."));
     DNFUI_TRACE("Transaction service client apply done path=%s", transaction_path.c_str());
     ok = true;
   } while (false);
 
-  transaction_started_out = progress_forwarder.transaction_started;
+  transaction_started_out = !offline && progress_forwarder.transaction_started;
 
   if (!ok) {
     DNFUI_TRACE(

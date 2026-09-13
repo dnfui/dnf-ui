@@ -32,6 +32,7 @@ struct TransactionPreview {
   std::vector<TransactionPreviewPackage> remove;
   std::vector<TransactionPreviewPackage> replaced;
   long long disk_space_delta = 0;
+  bool requires_offline = false;
 
   // -----------------------------------------------------------------------------
   // Return true when the preview contains no resolved package actions.

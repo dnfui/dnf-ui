@@ -62,7 +62,8 @@ bool transaction_service_client_start_apply_request(GDBusConnection *connection,
                                                     const std::string &transaction_path,
                                                     TransactionServiceProgressForwarder *progress_forwarder,
                                                     GCancellable *cancellable,
-                                                    std::string &error_out);
+                                                    std::string &error_out,
+                                                    bool offline);
 
 bool transaction_service_client_release_transaction_request(GDBusConnection *connection,
                                                             const std::string &transaction_path,

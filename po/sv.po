@@ -12,6 +12,92 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
+msgid "Requesting authorization and preparing changes for reboot..."
+msgstr "Begär behörighet och förbereder ändringar för omstart..."
+
+msgid "Changes prepared for the next reboot. No packages have been changed yet."
+msgstr "Ändringar förberedda för nästa omstart. Inga paket har ändrats ännu."
+
+msgid "Could not check updates prepared for reboot."
+msgstr "Kunde inte kontrollera uppdateringar förberedda för omstart."
+
+msgid "dnf5daemon returned an unsupported offline transaction status."
+msgstr "dnf5daemon returnerade en status för offlinetransaktionen som inte stöds."
+
+msgid ""
+"An offline transaction already exists. Use 'dnf5 offline status' to review "
+"it and 'dnf5 offline clean' to discard it before applying more changes. If "
+"another update tool scheduled it, use that tool."
+msgstr ""
+"En offlinetransaktion finns redan. Använd 'dnf5 offline status' för att granska "
+"den och 'dnf5 offline clean' för att ta bort den innan fler ändringar verkställs. "
+"Om ett annat uppdateringsverktyg schemalade den, använd det verktyget."
+
+msgid ""
+"The apply mode does not match a prepared preview. Prepare the transaction "
+"preview again."
+msgstr ""
+"Verkställningsläget stämmer inte överens med en förberedd förhandsgranskning. "
+"Förbered transaktionens förhandsgranskning igen."
+
+msgid ""
+"The daemon did not confirm that the changes are ready for reboot. Use 'dnf5 "
+"offline status' to check and 'dnf5 offline clean' to discard stored changes "
+"before retrying."
+msgstr ""
+"Pakettjänsten bekräftade inte att ändringarna är redo för omstart. Använd "
+"'dnf5 offline status' för att kontrollera och 'dnf5 offline clean' för att ta "
+"bort lagrade ändringar innan du försöker igen."
+
+msgid "Preparing changes for reboot. See transaction window for details."
+msgstr "Förbereder ändringar för omstart. Se transaktionsfönstret för detaljer."
+
+msgid ""
+"No packages have been changed yet. Restart when you are ready to install the "
+"prepared changes."
+msgstr ""
+"Inga paket har ändrats ännu. Starta om när du är redo att installera de "
+"förberedda ändringarna."
+
+msgid "Updates prepared. Restart to install them."
+msgstr "Uppdateringar förberedda. Starta om för att installera dem."
+
+msgid ""
+"Preparation did not complete normally. Use 'dnf5 offline status' to check "
+"and 'dnf5 offline clean' to discard stored changes before retrying; the "
+"daemon may have stored all or part of the transaction."
+msgstr ""
+"Förberedelsen slutfördes inte normalt. Använd 'dnf5 offline status' för att "
+"kontrollera och 'dnf5 offline clean' för att ta bort lagrade ändringar innan "
+"du försöker igen; pakettjänsten kan ha lagrat hela eller delar av transaktionen."
+
+msgid "Preparation failed. See the transaction window for details."
+msgstr "Förberedelsen misslyckades. Se transaktionsfönstret för detaljer."
+
+msgid "Prepare the following changes for the next reboot?"
+msgstr "Förbered följande ändringar för nästa omstart?"
+
+msgid ""
+"These changes update the package service itself. To prevent it from "
+"restarting during installation, all changes listed here will be applied at "
+"your next reboot. The computer will not restart now."
+msgstr ""
+"Dessa ändringar uppdaterar själva pakettjänsten. För att förhindra att den "
+"startas om under installationen kommer alla ändringar som listas här att "
+"verkställas vid nästa omstart. Datorn startas inte om nu."
+
+msgid "Prepare for Reboot"
+msgstr "Förbered för omstart"
+
+msgid "Preparing changes for reboot"
+msgstr "Förbereder ändringar för omstart"
+
+msgid "Changes prepared. Restart when you are ready to install them."
+msgstr "Ändringar förberedda. Starta om när du är redo att installera dem."
+
+msgid "Ready for Reboot"
+msgstr "Redo för omstart"
+
 msgid "DNF UI"
 msgstr "DNF UI"
 

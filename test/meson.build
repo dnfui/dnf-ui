@@ -10,6 +10,7 @@ dnfui_tests = executable(
     'unit/test_config.cpp',
     'unit/test_dnf5daemon_client.cpp',
     'unit/test_offline.cpp',
+    'unit/test_offline_transaction.cpp',
     'unit/test_pending_transaction_action_rows.cpp',
     'unit/test_package_table_sort.cpp',
     'unit/test_package_table_status.cpp',
@@ -41,6 +42,7 @@ dnfui_tests = executable(
     '../src/ui/package_query/package_query_cache.cpp',
     '../src/ui/transaction/pending_transaction_request.cpp',
     '../src/ui/transaction/transaction_dialogs.cpp',
+    '../src/ui/transaction/transaction_progress.cpp',
   ),
   include_directories: src_inc,
   dependencies: [
