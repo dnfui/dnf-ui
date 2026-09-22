@@ -1,5 +1,5 @@
 Name:           dnf-ui
-Version:        0.6.3
+Version:        0.6.4
 Release:        1%{?dist}
 Summary:        GTK interface for DNF5
 
@@ -56,6 +56,15 @@ appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/io.github.dnfui.
 %{_datadir}/metainfo/io.github.dnfui.dnfui.metainfo.xml
 
 %changelog
+* Tue Sep 22 2026 ErikMN <dnfui@proton.me> - 0.6.4-1
+- Show skipped packages as warnings instead of failing transaction previews
+- Allow valid package changes to proceed when other packages are skipped
+- Avoid reporting skipped upgrades as already up to date
+- Show Release and Update Release columns by default
+- Keep package browsing working after libdnf5 is upgraded while DNF UI is running
+- Keep the main window disabled while package transactions are being applied
+- Improve shutdown responsiveness while startup package data is loading
+
 * Mon Sep 07 2026 ErikMN <dnfui@proton.me> - 0.6.3-1
 - Show phase progress while applying package transactions
 - Keep the available upgrade count current after package, repository, and transaction changes
