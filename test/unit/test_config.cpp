@@ -206,7 +206,8 @@ TEST_CASE("Package table columns use default visibility when missing")
 
   REQUIRE(visible == default_visible_package_table_columns());
   REQUIRE(visible.count("package") == 1);
-  REQUIRE(visible.count("release") == 0);
+  REQUIRE(visible.count("release") == 1);
+  REQUIRE(visible.count("update-release") == 1);
   REQUIRE(visible.count("unknown-column") == 0);
 }
 
