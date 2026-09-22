@@ -397,6 +397,15 @@ Assumptions:
   `install(as, a{sv})`, `upgrade(as, a{sv})`, `downgrade(as, a{sv})`,
   `remove(as, a{sv})`, and `reinstall(as, a{sv})`.
 - Preview is resolved through `org.rpm.dnf.v0.Goal.resolve(a{sv}) -> (a(sssa{sv}a{sv})u)`.
+- `Goal.resolve()` can also return `Skipped` items with a package object and a
+  `reason_skipped` transaction attribute describing why it was excluded.
+  Current [upstream reasons](https://github.com/rpm-software-management/dnf5/blob/main/dnf5daemon-server/services/goal/goal.cpp)
+  include `conflict`, `broken_dependency`, and `vendor_change`.
+- Skipped items are not executable actions. DNF UI appends them to preview
+  warnings without changing action counts or disk-space calculations. Unknown
+  skipped reasons are retained in the warning; missing reasons use generic text.
+  Remaining valid actions may still be applied. An all-skipped result remains
+  an empty preview and is not applied.
 - Resolver result `0` means success, `1` means success with warnings, and `2`
   means resolve failure.
 - Resolve warnings and failures are read through `org.rpm.dnf.v0.Goal.get_transaction_problems_string() -> (as)`.

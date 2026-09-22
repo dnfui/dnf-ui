@@ -106,7 +106,8 @@ bool transaction_service_client_testonly_build_preview_from_item(const std::stri
                                                                  const std::string &action,
                                                                  const std::string &name,
                                                                  TransactionPreview &preview,
-                                                                 std::string &error_out);
+                                                                 std::string &error_out,
+                                                                 const char *reason_skipped = nullptr);
 // -----------------------------------------------------------------------------
 // Check the completed-preview daemon-server protection rule used by daemon previews.
 // -----------------------------------------------------------------------------

@@ -517,11 +517,12 @@ bool
 append_daemon_preview_item(TransactionPreview &preview,
                            const std::string &object_type,
                            const std::string &action,
+                           GVariant *attributes,
                            GVariant *object,
                            std::string &error_out)
 {
   const std::string lower_object_type = ascii_lower(object_type);
-  if (lower_object_type != "package") {
+  if (lower_object_type != "package" && lower_object_type != "skipped") {
     error_out = "Unsupported dnf5daemon transaction item type: " + object_type + ".";
     return false;
   }
@@ -531,6 +532,28 @@ append_daemon_preview_item(TransactionPreview &preview,
   TransactionPreviewPackage package;
   if (!package_from_daemon_object(object, package, error_out)) {
     return false;
+  }
+
+  if (lower_object_type == "skipped") {
+    const std::string reason_skipped = map_lookup_string(attributes, "reason_skipped");
+    std::string warning;
+    if (reason_skipped == "conflict") {
+      warning = dnfui_i18n_format(_("%s was skipped because of a package conflict."), package.label.c_str());
+    } else if (reason_skipped == "broken_dependency") {
+      warning = dnfui_i18n_format(_("%s was skipped because of broken dependencies."), package.label.c_str());
+    } else if (reason_skipped == "vendor_change") {
+      warning = dnfui_i18n_format(_("%s was skipped because of a vendor change restriction."), package.label.c_str());
+    } else if (!reason_skipped.empty()) {
+      warning = dnfui_i18n_format(_("%s was skipped by dnf5daemon: %s"), package.label.c_str(), reason_skipped.c_str());
+    } else {
+      warning = dnfui_i18n_format(_("%s was skipped by dnf5daemon."), package.label.c_str());
+    }
+
+    if (!preview.resolve_warnings.empty()) {
+      preview.resolve_warnings += "\n";
+    }
+    preview.resolve_warnings += warning;
+    return true;
   }
 
   const long long install_size = map_lookup_int64(object, "install_size");
@@ -882,9 +905,16 @@ transaction_service_client_testonly_build_preview_from_item(const std::string &o
                                                             const std::string &action,
                                                             const std::string &name,
                                                             TransactionPreview &preview,
-                                                            std::string &error_out)
+                                                            std::string &error_out,
+                                                            const char *reason_skipped)
 {
-  TransactionPreview built_preview;
+  TransactionPreview built_preview = preview;
+
+  GVariantBuilder attributes_builder;
+  g_variant_builder_init(&attributes_builder, G_VARIANT_TYPE("a{sv}"));
+  if (reason_skipped) {
+    g_variant_builder_add(&attributes_builder, "{sv}", "reason_skipped", g_variant_new_string(reason_skipped));
+  }
 
   GVariantBuilder object_builder;
   g_variant_builder_init(&object_builder, G_VARIANT_TYPE("a{sv}"));
@@ -896,7 +926,9 @@ transaction_service_client_testonly_build_preview_from_item(const std::string &o
   g_variant_builder_add(&object_builder, "{sv}", "install_size", g_variant_new_int64(4096));
 
   GVariant *object = g_variant_ref_sink(g_variant_builder_end(&object_builder));
-  bool ok = append_daemon_preview_item(built_preview, object_type, action, object, error_out);
+  GVariant *attributes = g_variant_ref_sink(g_variant_builder_end(&attributes_builder));
+  bool ok = append_daemon_preview_item(built_preview, object_type, action, attributes, object, error_out);
+  g_variant_unref(attributes);
   g_variant_unref(object);
 
   if (!ok) {
@@ -1434,7 +1466,7 @@ transaction_service_client_get_transaction_preview(GDBusConnection *connection,
 
     g_variant_get(item, "(&s&s&s@a{sv}@a{sv})", &object_type, &action, &reason, &attributes, &object);
     bool ok = append_daemon_preview_item(
-        built_preview, object_type ? object_type : "", action ? action : "", object, error_out);
+        built_preview, object_type ? object_type : "", action ? action : "", attributes, object, error_out);
 
     g_variant_unref(attributes);
     g_variant_unref(object);

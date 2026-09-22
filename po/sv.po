@@ -137,6 +137,26 @@ msgstr "dnf5daemon returnerade ett ofullständigt paketobjekt."
 msgid "dnf5daemon returned an incomplete upgrade item."
 msgstr "dnf5daemon returnerade ett ofullständigt uppgraderingsobjekt."
 
+#, c-format
+msgid "%s was skipped because of a package conflict."
+msgstr "%s hoppades över på grund av en paketkonflikt."
+
+#, c-format
+msgid "%s was skipped because of broken dependencies."
+msgstr "%s hoppades över på grund av trasiga beroenden."
+
+#, c-format
+msgid "%s was skipped because of a vendor change restriction."
+msgstr "%s hoppades över på grund av en begränsning för leverantörsbyte."
+
+#, c-format
+msgid "%s was skipped by dnf5daemon: %s"
+msgstr "%s hoppades över av dnf5daemon: %s"
+
+#, c-format
+msgid "%s was skipped by dnf5daemon."
+msgstr "%s hoppades över av dnf5daemon."
+
 msgid "This transaction would remove dnf5daemon-server, which DNF UI needs to apply package changes."
 msgstr ""
 "Den här transaktionen skulle ta bort dnf5daemon-server, som DNF UI behöver "

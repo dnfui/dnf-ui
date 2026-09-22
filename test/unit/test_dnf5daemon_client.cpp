@@ -208,6 +208,106 @@ TEST_CASE("dnf5daemon preview parser represents downgrade package actions")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that skipped packages produce warnings without executable actions or disk changes.
+// -----------------------------------------------------------------------------
+TEST_CASE("dnf5daemon preview parser represents skipped packages as warnings")
+{
+  const char *reason_skipped = nullptr;
+  std::string expected_warning;
+
+  SECTION("conflict")
+  {
+    reason_skipped = "conflict";
+    expected_warning = "test-package-2.0-3.x86_64 was skipped because of a package conflict.";
+  }
+  SECTION("broken dependency")
+  {
+    reason_skipped = "broken_dependency";
+    expected_warning = "test-package-2.0-3.x86_64 was skipped because of broken dependencies.";
+  }
+  SECTION("vendor change")
+  {
+    reason_skipped = "vendor_change";
+    expected_warning = "test-package-2.0-3.x86_64 was skipped because of a vendor change restriction.";
+  }
+  SECTION("unknown reason")
+  {
+    reason_skipped = "future_reason";
+    expected_warning = "test-package-2.0-3.x86_64 was skipped by dnf5daemon: future_reason";
+  }
+  SECTION("missing reason")
+  {
+    expected_warning = "test-package-2.0-3.x86_64 was skipped by dnf5daemon.";
+  }
+  SECTION("empty reason")
+  {
+    reason_skipped = "";
+    expected_warning = "test-package-2.0-3.x86_64 was skipped by dnf5daemon.";
+  }
+
+  TransactionPreview preview;
+  std::string error;
+  REQUIRE(transaction_service_client_testonly_build_preview_from_item(
+      "Skipped", "", "test-package", preview, error, reason_skipped));
+  REQUIRE(error.empty());
+  REQUIRE(preview.empty());
+  REQUIRE(preview.disk_space_delta == 0);
+  REQUIRE(preview.resolve_warnings == expected_warning);
+}
+
+// -----------------------------------------------------------------------------
+// Verify that skipped warnings preserve daemon warnings and surrounding package actions.
+// -----------------------------------------------------------------------------
+TEST_CASE("dnf5daemon preview parser preserves mixed transactions with skipped packages")
+{
+  TransactionPreview preview;
+  preview.resolve_warnings = "Existing daemon warning.";
+  std::string error;
+
+  REQUIRE(transaction_service_client_testonly_build_preview_from_item(
+      "Package", "upgrade", "first-upgrade", preview, error));
+  REQUIRE(transaction_service_client_testonly_build_preview_from_item(
+      "Skipped", "", "conflicting-package", preview, error, "conflict"));
+  REQUIRE(transaction_service_client_testonly_build_preview_from_item(
+      "Skipped", "", "broken-package", preview, error, "broken_dependency"));
+  REQUIRE(preview.disk_space_delta == 4096);
+  REQUIRE(transaction_service_client_testonly_build_preview_from_item(
+      "Package", "upgrade", "second-upgrade", preview, error));
+
+  REQUIRE(error.empty());
+  REQUIRE_FALSE(preview.empty());
+  REQUIRE(preview.upgrade.size() == 2);
+  REQUIRE(preview.upgrade[0].name == "first-upgrade");
+  REQUIRE(preview.upgrade[1].name == "second-upgrade");
+  REQUIRE(preview.install.empty());
+  REQUIRE(preview.downgrade.empty());
+  REQUIRE(preview.reinstall.empty());
+  REQUIRE(preview.remove.empty());
+  REQUIRE(preview.replaced.empty());
+  REQUIRE(preview.disk_space_delta == 8192);
+  REQUIRE(preview.resolve_warnings ==
+          "Existing daemon warning.\n"
+          "conflicting-package-2.0-3.x86_64 was skipped because of a package conflict.\n"
+          "broken-package-2.0-3.x86_64 was skipped because of broken dependencies.");
+}
+
+// -----------------------------------------------------------------------------
+// Verify that skipped items still require a valid package identity.
+// -----------------------------------------------------------------------------
+TEST_CASE("dnf5daemon preview parser rejects malformed skipped packages")
+{
+  TransactionPreview preview;
+  std::string error;
+
+  REQUIRE_FALSE(
+      transaction_service_client_testonly_build_preview_from_item("Skipped", "", "", preview, error, "conflict"));
+  REQUIRE(error.find("incomplete package item") != std::string::npos);
+  REQUIRE(preview.empty());
+  REQUIRE(preview.disk_space_delta == 0);
+  REQUIRE(preview.resolve_warnings.empty());
+}
+
+// -----------------------------------------------------------------------------
 // Verify that unsupported daemon item types fail the whole preview.
 // -----------------------------------------------------------------------------
 TEST_CASE("dnf5daemon preview parser rejects unsupported item types")
