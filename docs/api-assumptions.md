@@ -157,11 +157,20 @@ Assumptions:
   are the installed API's state names. Unknown nonempty states also block apply.
 - Status checks before preview and apply reject existing offline state. After
   preparation, success requires both the scheduled boolean and the `ready` state.
-  Manual recovery uses `dnf5 offline status` and `dnf5 offline clean`; the client
-  does not expose an offline transaction manager.
+- DNF UI exposes one narrow cleanup action rather than a general offline transaction
+  manager. It calls `Offline.clean_with_options(a{sv}) -> (bs)` with
+  `interactive=true`, then verifies through `Offline.get_status` that no stored
+  DNF transaction remains. This uses clean rather than cancel because cancel only
+  removes the reboot schedule while retaining the stored transaction.
+- An empty `Offline.get_status` result can mean missing or unreadable state.
+  Confirmed discard therefore always requests daemon cleanup, even when status
+  appears empty, and requires a successful cleanup reply before checking status.
+- DNF's cleanup removes its own systemd boot trigger but deliberately leaves a
+  trigger owned by another update tool untouched. DNF UI reports that remaining
+  trigger instead of deleting it itself. Manual recovery still uses
+  `dnf5 offline status` and `dnf5 offline clean`.
 - The unprivileged client only checks whether systemd's documented boot triggers
-  exist. It never writes them. The daemon API alone does not identify every
-  update scheduled by another tool.
+  exist. It never writes them directly.
 - No offline API failure permits falling back to live self-upgrade. The supported
   daemon must provide the documented offline methods.
 
@@ -169,14 +178,19 @@ Tests:
 
 - `[offline-transaction]` uses a private D-Bus daemon fixture to verify resolved
   package detection, approved mode enforcement, existing-data protection,
-  single submission, and preparation error handling without package changes.
+  single submission, preparation error handling, and authenticated cleanup
+  without package changes.
 - GTK tests verify that confirmation and progress explicitly describe reboot preparation.
 - `dnf5daemon client prepares daemon changes for reboot` runs only with the
   additional `DNFUI_TEST_DNF5DAEMON_OFFLINE=1` opt-in in a disposable system. The
   Docker daemon test script enables it. The test verifies preparation without
   installed version changes and rejects a second transaction after reconnecting.
-  The harness uses `dnf5 offline status` and `dnf5 offline clean`, then verifies
-  that a fresh preview works again.
+  A second real-daemon test discards that prepared transaction through the same
+  D-Bus cleanup path used by the UI and verifies that a fresh preview works again.
+  Another test checks that cleanup removes malformed state and leftover package
+  data even though the daemon cannot report a transaction from that state.
+  The harness then prepares one more transaction and uses the CLI status/clean
+  commands as an independent cleanup check.
 
 Release verification:
 

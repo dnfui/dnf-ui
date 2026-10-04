@@ -580,6 +580,81 @@ transaction_dialogs_show_summary_dialog(MainWindowUiState *widgets,
 }
 
 // -----------------------------------------------------------------------------
+// Confirm removal of the stored DNF transaction without claiming ownership of it.
+// -----------------------------------------------------------------------------
+void
+transaction_dialogs_confirm_discard(MainWindowUiState *widgets, TransactionApplyCallback on_discard)
+{
+  GtkRoot *root = gtk_widget_get_root(GTK_WIDGET(widgets->query.entry));
+  if (!root || !GTK_IS_WINDOW(root)) {
+    return;
+  }
+
+  GtkWindow *dialog = GTK_WINDOW(gtk_window_new());
+  gtk_window_set_title(dialog, _("Discard Prepared Updates"));
+  gtk_window_set_default_size(dialog, 480, -1);
+  gtk_window_set_transient_for(dialog, GTK_WINDOW(root));
+  gtk_window_set_destroy_with_parent(dialog, TRUE);
+  gtk_window_set_modal(dialog, TRUE);
+
+  GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 12);
+  gtk_widget_set_margin_start(box, 16);
+  gtk_widget_set_margin_end(box, 16);
+  gtk_widget_set_margin_top(box, 16);
+  gtk_widget_set_margin_bottom(box, 16);
+  gtk_window_set_child(dialog, box);
+
+  GtkWidget *notice = gtk_label_new(
+      _("Discard the updates prepared for the next reboot? This removes DNF's stored transaction and downloaded "
+        "packages, even if another application prepared them. It does not undo installed changes or clear your "
+        "current package marks."));
+  gtk_label_set_wrap(GTK_LABEL(notice), TRUE);
+  gtk_label_set_xalign(GTK_LABEL(notice), 0.0f);
+  gtk_box_append(GTK_BOX(box), notice);
+
+  GtkWidget *buttons = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+  gtk_widget_set_halign(buttons, GTK_ALIGN_END);
+  gtk_box_append(GTK_BOX(box), buttons);
+  GtkWidget *cancel = gtk_button_new_with_label(_("Cancel"));
+  GtkWidget *discard = gtk_button_new_with_label(_("Discard"));
+  gtk_widget_add_css_class(discard, "destructive-action");
+  gtk_box_append(GTK_BOX(buttons), cancel);
+  gtk_box_append(GTK_BOX(buttons), discard);
+
+  auto *data = new SummaryDialogApplyData { widgets->shared_from_this(), on_discard, nullptr, false };
+  g_object_set_data_full(G_OBJECT(dialog), "discard-dialog-data", data, summary_dialog_apply_data_free);
+  set_main_window_sensitive_for_summary(widgets, false);
+  g_signal_connect_swapped(cancel, "clicked", G_CALLBACK(gtk_window_destroy), dialog);
+  g_signal_connect(dialog,
+                   "destroy",
+                   G_CALLBACK(+[](GtkWidget *, gpointer user_data) {
+                     auto *data = static_cast<SummaryDialogApplyData *>(user_data);
+                     if (!data->widgets->window_state.destroyed &&
+                         !data->widgets->transaction_state.apply_in_progress) {
+                       set_main_window_sensitive_for_summary(data->widgets.get(), true);
+                     }
+                   }),
+                   data);
+  g_signal_connect(discard,
+                   "clicked",
+                   G_CALLBACK(+[](GtkButton *button, gpointer user_data) {
+                     auto *data = static_cast<SummaryDialogApplyData *>(user_data);
+                     if (data->apply_requested) {
+                       return;
+                     }
+                     data->apply_requested = true;
+                     GtkRoot *root = gtk_widget_get_root(GTK_WIDGET(button));
+                     if (!data->widgets->window_state.destroyed && data->on_apply) {
+                       data->on_apply(data->widgets.get());
+                     }
+                     gtk_window_destroy(GTK_WINDOW(root));
+                   }),
+                   data);
+  gtk_widget_grab_focus(cancel);
+  gtk_window_present(dialog);
+}
+
+// -----------------------------------------------------------------------------
 // Ask for repository key approval when dnf5daemon requests it.
 // The daemon signal is handled on the preview or apply worker thread.
 // Show the GTK dialog on the main thread and wait for the user answer.

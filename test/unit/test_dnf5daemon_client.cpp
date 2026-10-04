@@ -12,8 +12,11 @@
 #include "dnf5daemon_client/transaction_service_client.hpp"
 
 #include <glib.h>
+#include <libdnf5/transaction/offline.hpp>
 
 #include <algorithm>
+#include <filesystem>
+#include <fstream>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -1044,7 +1047,77 @@ TEST_CASE("dnf5daemon client prepares daemon changes for reboot", "[dnf5daemon]"
 
   REQUIRE_FALSE(transaction_service_client_preview_request(request, preview, path, error));
   REQUIRE(path.empty());
-  REQUIRE(error.find("already exists") != std::string::npos);
+  REQUIRE(error.find("already prepared for reboot") != std::string::npos);
+  REQUIRE(error.find("Discard Prepared Updates") != std::string::npos);
+  transaction_service_client_reset_for_tests();
+}
+
+// -----------------------------------------------------------------------------
+// Verify the user-facing discard operation in the disposable container after preparation.
+// -----------------------------------------------------------------------------
+TEST_CASE("dnf5daemon client discards prepared updates", "[dnf5daemon]")
+{
+  require_dnf5daemon_test_enabled();
+  const char *enabled = g_getenv("DNFUI_TEST_DNF5DAEMON_OFFLINE");
+  if (!enabled || std::string(enabled) != "1") {
+    SKIP("Set DNFUI_TEST_DNF5DAEMON_OFFLINE=1 only in a disposable test system.");
+  }
+  transaction_service_client_reset_for_tests();
+  const auto installed_before = package_row_nevras(dnf_backend_get_installed_package_rows_interruptible(nullptr));
+  TransactionRequest request;
+  request.install.push_back(dnf5daemon_test_install_spec());
+  TransactionPreview preview;
+  std::string path;
+  std::string error;
+  REQUIRE_FALSE(transaction_service_client_preview_request(request, preview, path, error));
+  REQUIRE(error.find("already prepared for reboot") != std::string::npos);
+  REQUIRE(error.find("Discard Prepared Updates") != std::string::npos);
+  bool discarded = transaction_service_client_discard_offline_transaction(error);
+  INFO(error);
+  REQUIRE(discarded);
+  BaseManager::instance().drop_cached_base();
+  REQUIRE(package_row_nevras(dnf_backend_get_installed_package_rows_interruptible(nullptr)) == installed_before);
+  REQUIRE(transaction_service_client_preview_request(request, preview, path, error));
+  REQUIRE_FALSE(preview.requires_offline);
+  transaction_service_client_release_request(path);
+  transaction_service_client_reset_for_tests();
+}
+
+// -----------------------------------------------------------------------------
+// Verify that unreadable offline state still reaches the daemon cleanup method.
+// -----------------------------------------------------------------------------
+TEST_CASE("dnf5daemon client discards unreadable offline updates", "[dnf5daemon]")
+{
+  require_dnf5daemon_test_enabled();
+  const char *enabled = g_getenv("DNFUI_TEST_DNF5DAEMON_OFFLINE");
+  if (!enabled || std::string(enabled) != "1") {
+    SKIP("Set DNFUI_TEST_DNF5DAEMON_OFFLINE=1 only in a disposable test system.");
+  }
+  transaction_service_client_reset_for_tests();
+  const auto &data_dir = libdnf5::offline::DEFAULT_DATADIR;
+  const auto &package_dir = libdnf5::offline::DEFAULT_DESTDIR;
+  std::filesystem::create_directories(data_dir);
+  std::filesystem::create_directories(package_dir);
+  REQUIRE(std::filesystem::is_empty(data_dir));
+  REQUIRE(std::filesystem::is_empty(package_dir));
+
+  const auto state_path = data_dir / libdnf5::offline::TRANSACTION_STATE_FILENAME;
+  const auto package_path = package_dir / "dnfui-cleanup-test.rpm";
+  {
+    std::ofstream state_file(state_path);
+    state_file << "invalid state data\n";
+    REQUIRE(state_file.good());
+    std::ofstream package_file(package_path);
+    package_file << "placeholder package data\n";
+    REQUIRE(package_file.good());
+  }
+
+  std::string error;
+  bool discarded = transaction_service_client_discard_offline_transaction(error);
+  INFO(error);
+  REQUIRE(discarded);
+  REQUIRE(std::filesystem::is_empty(data_dir));
+  REQUIRE(std::filesystem::is_empty(package_dir));
   transaction_service_client_reset_for_tests();
 }
 

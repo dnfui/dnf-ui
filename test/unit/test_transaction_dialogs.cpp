@@ -174,3 +174,64 @@ TEST_CASE("Offline progress completion reports readiness for reboot", "[gtk]")
   g_object_unref(dialog);
   gtk_window_destroy(parent);
 }
+
+static GtkWidget *
+find_button_with_label(GtkWidget *widget, const char *label)
+{
+  if (GTK_IS_BUTTON(widget) && g_strcmp0(gtk_button_get_label(GTK_BUTTON(widget)), label) == 0) {
+    return widget;
+  }
+  for (GtkWidget *child = gtk_widget_get_first_child(widget); child; child = gtk_widget_get_next_sibling(child)) {
+    if (GtkWidget *button = find_button_with_label(child, label)) {
+      return button;
+    }
+  }
+  return nullptr;
+}
+
+TEST_CASE("Discard requires confirmation and preserves the transaction lock", "[gtk]")
+{
+  if (!transaction_dialog_display_available()) {
+    SKIP("A GTK display is required for transaction dialog tests.");
+  }
+  auto widgets = std::make_shared<MainWindowUiState>();
+  GtkWindow *parent = GTK_WINDOW(gtk_window_new());
+  widgets->query.entry = GTK_ENTRY(gtk_entry_new());
+  gtk_window_set_child(parent, GTK_WIDGET(widgets->query.entry));
+  transaction_dialogs_confirm_discard(
+      widgets.get(), +[](MainWindowUiState *widgets) { widgets->transaction_state.apply_in_progress = true; });
+  GtkWindow *dialog = find_summary_dialog(parent);
+  REQUIRE(dialog != nullptr);
+  REQUIRE_FALSE(widgets->transaction_state.apply_in_progress);
+  REQUIRE_FALSE(gtk_widget_is_sensitive(GTK_WIDGET(parent)));
+  GtkWidget *cancel = find_button_with_label(GTK_WIDGET(dialog), "Cancel");
+  GtkWidget *discard = find_button_with_label(GTK_WIDGET(dialog), "Discard");
+  REQUIRE(cancel != nullptr);
+  REQUIRE(discard != nullptr);
+  REQUIRE(gtk_window_get_focus(dialog) == cancel);
+  REQUIRE(gtk_widget_has_css_class(discard, "destructive-action"));
+
+  SECTION("cancel")
+  {
+    g_signal_emit_by_name(cancel, "clicked");
+    g_object_run_dispose(G_OBJECT(dialog));
+    REQUIRE_FALSE(widgets->transaction_state.apply_in_progress);
+    REQUIRE(gtk_widget_is_sensitive(GTK_WIDGET(parent)));
+  }
+  SECTION("confirm")
+  {
+    g_signal_emit_by_name(discard, "clicked");
+    g_object_run_dispose(G_OBJECT(dialog));
+    REQUIRE(widgets->transaction_state.apply_in_progress);
+    REQUIRE_FALSE(gtk_widget_is_sensitive(GTK_WIDGET(parent)));
+  }
+  SECTION("close dialog")
+  {
+    gtk_window_destroy(dialog);
+    g_object_run_dispose(G_OBJECT(dialog));
+    REQUIRE_FALSE(widgets->transaction_state.apply_in_progress);
+    REQUIRE(gtk_widget_is_sensitive(GTK_WIDGET(parent)));
+  }
+  g_object_unref(dialog);
+  gtk_window_destroy(parent);
+}

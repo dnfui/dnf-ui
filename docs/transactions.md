@@ -212,7 +212,14 @@ Before preview and again before apply, the client checks for stored offline data
 and systemd's update boot triggers. Further transactions are rejected until those
 updates have been applied or explicitly discarded, so a normal Apply does not
 silently invalidate an earlier prepared transaction. Browsing remains available.
-Updates scheduled by other tools must be managed with those tools.
+
+**Package > Discard Prepared Updates** abandons DNF's stored offline transaction
+without changing installed packages or clearing the user's current marks. The
+operation uses dnf5daemon's authenticated cleanup method and verifies afterward
+that the DNF state is gone. DNF UI uses cleanup rather than DNF's cancel operation
+because cancel only unschedules the reboot and leaves the stored transaction
+behind. A boot trigger owned by another update tool is left untouched and still
+blocks package changes until it is handled by that tool.
 
 Preparation errors preserve the marked actions and restore transaction controls.
 They do not mark installed package state uncertain or rebuild package data because

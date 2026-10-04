@@ -31,6 +31,10 @@ void transaction_dialogs_show_summary_dialog(MainWindowUiState *widgets,
                                              TransactionApplyCallback on_apply,
                                              TransactionApplyCallback on_cancel);
 // -----------------------------------------------------------------------------
+// Ask before discarding DNF's stored offline transaction, regardless of its origin.
+// -----------------------------------------------------------------------------
+void transaction_dialogs_confirm_discard(MainWindowUiState *widgets, TransactionApplyCallback on_discard);
+// -----------------------------------------------------------------------------
 // Ask the user whether dnf5daemon may import one repository signing key.
 // -----------------------------------------------------------------------------
 bool transaction_dialogs_confirm_key_import(MainWindowUiState *widgets,

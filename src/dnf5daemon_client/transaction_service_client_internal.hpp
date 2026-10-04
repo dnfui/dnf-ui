@@ -69,6 +69,11 @@ bool transaction_service_client_release_transaction_request(GDBusConnection *con
                                                             const std::string &transaction_path,
                                                             std::string &error_out);
 
+bool transaction_service_client_discard_offline_request(GDBusConnection *connection,
+                                                        const std::string &session_path,
+                                                        std::string &error_out,
+                                                        GCancellable *cancellable);
+
 bool transaction_service_client_confirm_key(GDBusConnection *connection,
                                             const std::string &transaction_path,
                                             const std::string &key_id,

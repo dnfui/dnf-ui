@@ -10,6 +10,11 @@
 struct MainWindowUiState;
 
 // -----------------------------------------------------------------------------
+// Confirm and discard DNF's prepared offline updates.
+// -----------------------------------------------------------------------------
+void pending_transaction_discard_prepared_updates(MainWindowUiState *widgets);
+
+// -----------------------------------------------------------------------------
 // Release any prepared service preview because the pending actions changed.
 // -----------------------------------------------------------------------------
 void pending_transaction_invalidate_service_preview(MainWindowUiState *widgets);

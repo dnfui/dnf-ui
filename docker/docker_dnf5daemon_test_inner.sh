@@ -124,6 +124,9 @@ run_daemon_test "dnf5daemon client previews reinstall requests"
 remove_test_package
 
 DNFUI_TEST_DNF5DAEMON_OFFLINE=1 run_daemon_test "dnf5daemon client prepares daemon changes for reboot"
+DNFUI_TEST_DNF5DAEMON_OFFLINE=1 run_daemon_test "dnf5daemon client discards prepared updates"
+DNFUI_TEST_DNF5DAEMON_OFFLINE=1 run_daemon_test "dnf5daemon client discards unreadable offline updates"
+DNFUI_TEST_DNF5DAEMON_OFFLINE=1 run_daemon_test "dnf5daemon client prepares daemon changes for reboot"
 dnf5 offline status
 dnf5 offline clean
 run_daemon_test "dnf5daemon client previews install requests"

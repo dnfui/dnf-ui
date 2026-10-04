@@ -993,9 +993,14 @@ verify_no_offline_transaction(GDBusConnection *connection,
     return false;
   }
   if (status.has_transaction()) {
-    error_out = _("An offline transaction already exists. Use 'dnf5 offline status' to review it and "
-                  "'dnf5 offline clean' to discard it before applying more changes. "
-                  "If another update tool scheduled it, use that tool.");
+    if (status.scheduled && status.state == "ready") {
+      error_out = _("Updates are already prepared for reboot. Restart to install them, or use "
+                    "Package > Discard Prepared Updates to remove them before applying other package changes.");
+    } else {
+      error_out =
+          _("DNF has stored offline update data. Use Package > Discard Prepared Updates before applying more changes. "
+            "For manual recovery, use 'dnf5 offline status' and 'dnf5 offline clean'.");
+    }
     return false;
   }
   return true;
@@ -1763,6 +1768,87 @@ transaction_service_client_start_apply_request(GDBusConnection *connection,
   }
 
   return true;
+}
+
+// -----------------------------------------------------------------------------
+// Clean stored changes through DNF and verify that new transactions are unblocked.
+// -----------------------------------------------------------------------------
+bool
+transaction_service_client_discard_offline_request(GDBusConnection *connection,
+                                                   const std::string &session_path,
+                                                   std::string &error_out,
+                                                   GCancellable *cancellable)
+{
+  error_out.clear();
+
+  // Empty daemon status can also mean unreadable stored data. Always request cleanup.
+  GError *error = nullptr;
+  GVariant *reply = g_dbus_connection_call_sync(connection,
+                                                kDnfDaemonName,
+                                                session_path.c_str(),
+                                                kDnfDaemonOfflineInterface,
+                                                "clean_with_options",
+                                                g_variant_new("(@a{sv})", interactive_options()),
+                                                G_VARIANT_TYPE("(bs)"),
+                                                G_DBUS_CALL_FLAGS_NONE,
+                                                G_MAXINT,
+                                                cancellable,
+                                                &error);
+  if (!reply) {
+    error_out = error ? error->message : _("Could not discard the prepared updates.");
+    g_clear_error(&error);
+    return false;
+  }
+
+  gboolean success = FALSE;
+  const gchar *message = nullptr;
+  g_variant_get(reply, "(b&s)", &success, &message);
+  if (!success) {
+    error_out = message && *message ? message : _("Could not discard the prepared updates.");
+  }
+  g_variant_unref(reply);
+  if (!success) {
+    return false;
+  }
+
+  // A successful method reply alone does not prove that the stored update was removed.
+  OfflineTransactionStatus status;
+  if (!get_offline_status(connection, session_path, status, error_out, cancellable)) {
+    return false;
+  }
+  if (status.has_transaction()) {
+    if (status.boot_trigger_present && !status.scheduled && status.state.empty()) {
+      error_out = _("Another application still has an update scheduled for reboot. Use that application to manage it.");
+    } else {
+      error_out = _("Prepared update data still exists. Use 'dnf5 offline status' to inspect it and "
+                    "'dnf5 offline clean' for manual recovery.");
+    }
+    return false;
+  }
+  return true;
+}
+
+// -----------------------------------------------------------------------------
+// Cleanup uses a fresh daemon session and does not need repository metadata.
+// -----------------------------------------------------------------------------
+bool
+transaction_service_client_discard_offline_transaction(std::string &error_out, GCancellable *cancellable)
+{
+  error_out.clear();
+  GDBusConnection *connection = transaction_service_client_connect(error_out);
+  if (!connection) {
+    return false;
+  }
+
+  std::string path;
+  bool ok = open_daemon_session_with_options(connection, refresh_session_options(), cancellable, path, error_out);
+  if (ok) {
+    ok = transaction_service_client_discard_offline_request(connection, path, error_out, cancellable);
+    std::string release_error;
+    transaction_service_client_release_transaction_request(connection, path, release_error);
+  }
+  g_object_unref(connection);
+  return ok;
 }
 
 // -----------------------------------------------------------------------------

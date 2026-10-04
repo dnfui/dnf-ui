@@ -1612,3 +1612,49 @@ msgstr "Väntande"
 #. Passive startup note shown only while the backend is warming up.
 msgid "Loading package data..."
 msgstr "Läser in paketdata..."
+
+
+msgid "Another application still has an update scheduled for reboot. Use that application to manage it."
+msgstr "Ett annat program har fortfarande en uppdatering schemalagd för omstart. Hantera den i det programmet."
+
+msgid "Could Not Discard Prepared Updates"
+msgstr "Kunde inte ta bort förberedda uppdateringar"
+
+msgid "Could not discard the prepared updates."
+msgstr "Kunde inte ta bort de förberedda uppdateringarna."
+
+msgid "DNF UI could not remove the stored offline transaction. Use 'dnf5 offline status' to inspect it and 'dnf5 offline clean' for manual recovery."
+msgstr "DNF UI kunde inte ta bort den lagrade offlinetransaktionen. Använd 'dnf5 offline status' för att granska den och 'dnf5 offline clean' för manuell återställning."
+
+msgid "DNF has stored offline update data. Use Package > Discard Prepared Updates before applying more changes. For manual recovery, use 'dnf5 offline status' and 'dnf5 offline clean'."
+msgstr "DNF har lagrat data för en offlineuppdatering. Använd Paket > Ta bort förberedda uppdateringar innan fler ändringar verkställs. För manuell återställning, använd 'dnf5 offline status' och 'dnf5 offline clean'."
+
+msgid "Discard"
+msgstr "Ta bort"
+
+msgid "Discard Prepared Updates"
+msgstr "Ta bort förberedda uppdateringar"
+
+msgid "Discard Prepared Updates..."
+msgstr "Ta bort förberedda uppdateringar..."
+
+msgid "Discard the updates prepared for the next reboot? This removes DNF's stored transaction and downloaded packages, even if another application prepared them. It does not undo installed changes or clear your current package marks."
+msgstr "Ta bort uppdateringarna som förberetts för nästa omstart? Detta tar bort DNF:s lagrade transaktion och hämtade paket, även om ett annat program förberedde dem. Det ångrar inte installerade ändringar och rensar inte dina nuvarande paketmarkeringar."
+
+msgid "Discarding prepared updates..."
+msgstr "Tar bort förberedda uppdateringar..."
+
+msgid "No packages have been changed yet. Restart when you are ready to install the prepared changes. To change the selection, use Package > Discard Prepared Updates."
+msgstr "Inga paket har ändrats ännu. Starta om när du är redo att installera de förberedda ändringarna. Om du vill ändra urvalet, använd Paket > Ta bort förberedda uppdateringar."
+
+msgid "Preparation did not complete normally. The daemon may have stored all or part of the transaction. Use Package > Discard Prepared Updates before retrying. If that fails, use 'dnf5 offline status' and 'dnf5 offline clean' for manual recovery."
+msgstr "Förberedelsen slutfördes inte normalt. Demonen kan ha lagrat hela eller delar av transaktionen. Använd Paket > Ta bort förberedda uppdateringar innan du försöker igen. Om det misslyckas, använd 'dnf5 offline status' och 'dnf5 offline clean' för manuell återställning."
+
+msgid "Prepared update data still exists. Use 'dnf5 offline status' to inspect it and 'dnf5 offline clean' for manual recovery."
+msgstr "Data för förberedda uppdateringar finns fortfarande kvar. Använd 'dnf5 offline status' för att granska dem och 'dnf5 offline clean' för manuell återställning."
+
+msgid "Prepared updates discarded."
+msgstr "Förberedda uppdateringar borttagna."
+
+msgid "Updates are already prepared for reboot. Restart to install them, or use Package > Discard Prepared Updates to remove them before applying other package changes."
+msgstr "Uppdateringar är redan förberedda för omstart. Starta om för att installera dem, eller använd Paket > Ta bort förberedda uppdateringar för att ta bort dem innan andra paketändringar verkställs."

@@ -282,6 +282,77 @@ set_preview_request_busy_state(MainWindowUiState *widgets, bool busy)
 }
 
 // -----------------------------------------------------------------------------
+// Discard stored updates without changing installed state or current package marks.
+// -----------------------------------------------------------------------------
+static void
+discard_prepared_updates_async(MainWindowUiState *widgets)
+{
+  if (pending_transaction_preview_is_busy(widgets) || pending_transaction_apply_is_busy(widgets)) {
+    return;
+  }
+
+  pending_transaction_invalidate_service_preview(widgets);
+  widgets->transaction_state.apply_in_progress = true;
+  set_main_window_sensitive_for_apply(widgets, false);
+  pending_transaction_set_preview_controls_sensitive(widgets, false);
+  widgets_spinner_acquire(widgets->query.spinner);
+  ui_helpers_set_status(widgets->query.status_label, _("Discarding prepared updates..."), "blue");
+
+  GCancellable *c = widgets_make_task_cancellable_for(GTK_WIDGET(widgets->query.entry));
+  GTask *task = widgets_task_new_for_main_window_ui_state(
+      widgets, c, +[](GObject *, GAsyncResult *result, gpointer user_data) {
+        GTask *task = G_TASK(result);
+        auto *widgets = static_cast<MainWindowUiState *>(user_data);
+        if (widgets_task_should_skip_completion(task, widgets)) {
+          return;
+        }
+
+        GError *error = nullptr;
+        bool success = g_task_propagate_boolean(task, &error);
+        widgets->transaction_state.apply_in_progress = false;
+        set_main_window_sensitive_for_apply(widgets, true);
+        pending_transaction_set_preview_controls_sensitive(widgets, true);
+        widgets_spinner_release(widgets->query.spinner);
+        if (success) {
+          ui_helpers_set_status(widgets->query.status_label, _("Prepared updates discarded."), "green");
+        } else {
+          ui_helpers_set_status(widgets->query.status_label, _("Could not discard the prepared updates."), "red");
+          transaction_dialogs_show_error_dialog(
+              widgets,
+              _("Could Not Discard Prepared Updates"),
+              _("DNF UI could not remove the stored offline transaction. Use 'dnf5 offline status' to inspect it and "
+                "'dnf5 offline clean' for manual recovery."),
+              error ? error->message : _("Could not discard the prepared updates."));
+        }
+        g_clear_error(&error);
+      });
+  g_task_run_in_thread(
+      task, +[](GTask *task, gpointer, gpointer, GCancellable *cancellable) {
+        std::string error;
+        if (transaction_service_client_discard_offline_transaction(error, cancellable)) {
+          g_task_return_boolean(task, TRUE);
+        } else {
+          g_task_return_new_error(task, G_IO_ERROR, G_IO_ERROR_FAILED, "%s", error.c_str());
+        }
+      });
+  g_object_unref(task);
+  g_object_unref(c);
+}
+
+void
+pending_transaction_discard_prepared_updates(MainWindowUiState *widgets)
+{
+  if (!widgets || !widgets->query.entry || widgets->window_state.destroyed) {
+    return;
+  }
+  if (pending_transaction_preview_is_busy(widgets) || pending_transaction_apply_is_busy(widgets)) {
+    ui_helpers_set_status(widgets->query.status_label, _("Wait for the current transaction to finish."), "blue");
+    return;
+  }
+  transaction_dialogs_confirm_discard(widgets, discard_prepared_updates_async);
+}
+
+// -----------------------------------------------------------------------------
 // Finish the post-transaction repository rebuild.
 // -----------------------------------------------------------------------------
 static void
@@ -437,7 +508,8 @@ start_apply_transaction(MainWindowUiState *widgets)
           transaction_progress_finish(
               td->progress_window,
               true,
-              _("No packages have been changed yet. Restart when you are ready to install the prepared changes."));
+              _("No packages have been changed yet. Restart when you are ready to install the prepared changes. "
+                "To change the selection, use Package > Discard Prepared Updates."));
           pending_transaction_invalidate_service_preview(widgets);
           widgets->transaction_state.actions.clear();
           pending_transaction_set_preview_controls_sensitive(widgets, true);
@@ -465,9 +537,10 @@ start_apply_transaction(MainWindowUiState *widgets)
           std::string details = error ? error->message : _("Transaction failed.");
           if (td && td->offline) {
             details += "\n";
-            details += _("Preparation did not complete normally. Use 'dnf5 offline status' to check and "
-                         "'dnf5 offline clean' to discard stored changes before retrying; "
-                         "the daemon may have stored all or part of the transaction.");
+            details +=
+                _("Preparation did not complete normally. The daemon may have stored all or part of the transaction. "
+                  "Use Package > Discard Prepared Updates before retrying. If that fails, use "
+                  "'dnf5 offline status' and 'dnf5 offline clean' for manual recovery.");
             transaction_progress_finish(td->progress_window, false, details);
             // Offline preparation does not run an RPM transaction, so preserve marks and installed package state.
             pending_transaction_invalidate_service_preview(widgets);

@@ -67,6 +67,13 @@ bool transaction_service_client_list_upgrade_targets(std::vector<DaemonUpgradeTa
 bool transaction_service_client_refresh_repositories(std::string &error_out, GCancellable *cancellable = nullptr);
 
 // -----------------------------------------------------------------------------
+// Discard DNF's stored offline transaction after explicit user confirmation.
+// Success means no stored transaction or boot trigger remains.
+// -----------------------------------------------------------------------------
+bool transaction_service_client_discard_offline_transaction(std::string &error_out,
+                                                            GCancellable *cancellable = nullptr);
+
+// -----------------------------------------------------------------------------
 // Apply one previously prepared transaction request and forward its progress.
 // transaction_started_out is true when daemon progress reported that the RPM transaction began.
 // Offline apply only prepares changes for reboot and must match the approved preview.

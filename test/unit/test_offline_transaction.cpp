@@ -29,6 +29,10 @@ constexpr const char *kInterfaces = R"xml(
     <method name="get_status">
       <arg type="b" direction="out"/><arg type="a{sv}" direction="out"/>
     </method>
+    <method name="clean_with_options">
+      <arg type="a{sv}" direction="in"/>
+      <arg type="b" direction="out"/><arg type="s" direction="out"/>
+    </method>
   </interface>
 </node>)xml";
 
@@ -37,6 +41,10 @@ struct OfflineScenario {
   bool fail_apply = false;
   bool prepared_scheduled = true;
   std::string prepared_state = "ready";
+  bool clean_dbus_error = false;
+  bool clean_rejected = false;
+  bool clean_retains_state = false;
+  bool clean_status_error = false;
 };
 
 // -----------------------------------------------------------------------------
@@ -172,6 +180,13 @@ class OfflineDaemonFixture {
     return transaction_service_client_start_apply_request(client, kSessionPath, nullptr, nullptr, error, offline);
   }
 
+  bool discard(std::string &error, GCancellable *cancellable = nullptr)
+  {
+    return transaction_service_client_discard_offline_request(client, kSessionPath, error, cancellable);
+  }
+
+  std::atomic<unsigned> clean_calls { 0 };
+  std::atomic<bool> clean_interactive { false };
   std::atomic<unsigned> apply_calls { 0 };
   std::atomic<bool> applied_offline { false };
   std::atomic<bool> interactive { false };
@@ -181,12 +196,33 @@ class OfflineDaemonFixture {
   {
     std::lock_guard<std::mutex> lock(mutex);
     if (method == "get_status") {
+      if (scenario.clean_status_error && clean_calls > 0) {
+        g_dbus_method_invocation_return_dbus_error(invocation, "org.rpm.dnf.v0.Error", "Status unavailable.");
+        return;
+      }
       GVariantBuilder fields;
       g_variant_builder_init(&fields, G_VARIANT_TYPE("a{sv}"));
       if (!state.empty()) {
         g_variant_builder_add(&fields, "{sv}", "status", g_variant_new_string(state.c_str()));
       }
       g_dbus_method_invocation_return_value(invocation, g_variant_new("(ba{sv})", scheduled, &fields));
+    } else if (method == "clean_with_options") {
+      ++clean_calls;
+      GVariant *options = g_variant_get_child_value(parameters, 0);
+      gboolean allow_interactive = FALSE;
+      g_variant_lookup(options, "interactive", "b", &allow_interactive);
+      g_variant_unref(options);
+      clean_interactive = allow_interactive;
+      if (scenario.clean_dbus_error) {
+        g_dbus_method_invocation_return_dbus_error(invocation, "org.rpm.dnf.v0.Error", "Not authorized.");
+      } else {
+        if (!scenario.clean_rejected && !scenario.clean_retains_state) {
+          state.clear();
+          scheduled = false;
+        }
+        g_dbus_method_invocation_return_value(invocation,
+                                              g_variant_new("(bs)", !scenario.clean_rejected, "Cleanup refused."));
+      }
     } else if (method == "resolve") {
       GVariantBuilder items;
       g_variant_builder_init(&items, G_VARIANT_TYPE("a(sssa{sv}a{sv})"));
@@ -343,9 +379,21 @@ TEST_CASE("Stored offline changes are not overwritten by a new transaction", "[o
   daemon.set_status(state, state == "ready");
   REQUIRE_FALSE(daemon.apply(true, error));
   REQUIRE(daemon.apply_calls == 0);
-  REQUIRE(error.find("already exists") != std::string::npos);
+  REQUIRE_FALSE(error.empty());
   REQUIRE_FALSE(daemon.preview(preview, error));
   REQUIRE(preview.empty());
+}
+
+TEST_CASE("Ready offline changes explain reboot and in-app discard", "[offline-transaction]")
+{
+  OfflineDaemonFixture daemon;
+  daemon.set_status("ready", true);
+  TransactionPreview preview;
+  std::string error;
+  REQUIRE_FALSE(daemon.preview(preview, error));
+  REQUIRE(error.find("Restart to install them") != std::string::npos);
+  REQUIRE(error.find("Package > Discard Prepared Updates") != std::string::npos);
+  REQUIRE(error.find("dnf5 offline status") == std::string::npos);
 }
 
 TEST_CASE("Offline errors never fall back to live apply", "[offline-transaction]")
@@ -378,4 +426,95 @@ TEST_CASE("Offline errors never fall back to live apply", "[offline-transaction]
   REQUIRE(daemon.applied_offline);
   REQUIRE_FALSE(daemon.apply(true, error));
   REQUIRE(daemon.apply_calls == 1);
+}
+
+TEST_CASE("Discarding stored DNF updates unblocks a fresh transaction", "[offline-transaction]")
+{
+  OfflineDaemonFixture daemon;
+  SECTION("ready")
+  {
+    daemon.set_status("ready", true);
+  }
+  SECTION("partial preparation")
+  {
+    daemon.set_status("download-incomplete", false);
+  }
+  SECTION("cancelled but still stored")
+  {
+    daemon.set_status("download-complete", false);
+  }
+  TransactionPreview preview;
+  std::string error;
+  REQUIRE_FALSE(daemon.preview(preview, error));
+  REQUIRE(daemon.discard(error));
+  REQUIRE(error.empty());
+  REQUIRE(daemon.clean_calls == 1);
+  REQUIRE(daemon.clean_interactive);
+  REQUIRE(daemon.apply_calls == 0);
+  REQUIRE(daemon.preview(preview, error));
+  REQUIRE(daemon.discard(error));
+  REQUIRE(daemon.clean_calls == 2);
+}
+
+TEST_CASE("Discard requests cleanup when offline status is empty", "[offline-transaction]")
+{
+  OfflineScenario scenario;
+  SECTION("cleanup succeeds")
+  {
+  }
+  SECTION("cleanup fails")
+  {
+    scenario.clean_rejected = true;
+  }
+  OfflineDaemonFixture daemon(scenario);
+  std::string error;
+  REQUIRE(daemon.discard(error) == !scenario.clean_rejected);
+  REQUIRE(error.empty() == !scenario.clean_rejected);
+  REQUIRE(daemon.clean_calls == 1);
+  REQUIRE(daemon.clean_interactive);
+  REQUIRE(daemon.apply_calls == 0);
+}
+
+TEST_CASE("Discard errors and unverified cleanup do not report success", "[offline-transaction]")
+{
+  OfflineScenario scenario;
+  SECTION("authorization or D-Bus failure")
+  {
+    scenario.clean_dbus_error = true;
+  }
+  SECTION("daemon reports cleanup failure")
+  {
+    scenario.clean_rejected = true;
+  }
+  SECTION("daemon leaves stored state behind")
+  {
+    scenario.clean_retains_state = true;
+  }
+  SECTION("status check fails after cleanup")
+  {
+    scenario.clean_status_error = true;
+  }
+  OfflineDaemonFixture daemon(scenario);
+  daemon.set_status("ready", true);
+  std::string error;
+  REQUIRE_FALSE(daemon.discard(error));
+  REQUIRE_FALSE(error.empty());
+  REQUIRE(daemon.clean_calls == 1);
+  REQUIRE(daemon.apply_calls == 0);
+  TransactionPreview preview;
+  REQUIRE_FALSE(daemon.preview(preview, error));
+}
+
+TEST_CASE("Cancelled discard does not send a cleanup request", "[offline-transaction]")
+{
+  OfflineDaemonFixture daemon;
+  daemon.set_status("ready", true);
+  GCancellable *cancellable = g_cancellable_new();
+  g_cancellable_cancel(cancellable);
+  std::string error;
+  bool discarded = daemon.discard(error, cancellable);
+  g_object_unref(cancellable);
+  REQUIRE_FALSE(discarded);
+  REQUIRE_FALSE(error.empty());
+  REQUIRE(daemon.clean_calls == 0);
 }
