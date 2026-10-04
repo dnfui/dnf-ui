@@ -180,6 +180,12 @@ class OfflineDaemonFixture {
     return transaction_service_client_start_apply_request(client, kSessionPath, nullptr, nullptr, error, offline);
   }
 
+  bool prepared(bool &prepared_out, std::string &error, GCancellable *cancellable = nullptr)
+  {
+    return transaction_service_client_has_prepared_offline_updates_request(
+        client, kSessionPath, prepared_out, error, cancellable);
+  }
+
   bool discard(std::string &error, GCancellable *cancellable = nullptr)
   {
     return transaction_service_client_discard_offline_request(client, kSessionPath, error, cancellable);
@@ -426,6 +432,28 @@ TEST_CASE("Offline errors never fall back to live apply", "[offline-transaction]
   REQUIRE(daemon.applied_offline);
   REQUIRE_FALSE(daemon.apply(true, error));
   REQUIRE(daemon.apply_calls == 1);
+}
+
+TEST_CASE("Prepared update status requires ready and scheduled state", "[offline-transaction]")
+{
+  OfflineDaemonFixture daemon;
+  bool prepared = true;
+  std::string error;
+
+  REQUIRE(daemon.prepared(prepared, error));
+  REQUIRE_FALSE(prepared);
+
+  daemon.set_status("ready", true);
+  REQUIRE(daemon.prepared(prepared, error));
+  REQUIRE(prepared);
+
+  daemon.set_status("ready", false);
+  REQUIRE(daemon.prepared(prepared, error));
+  REQUIRE_FALSE(prepared);
+
+  daemon.set_status("download-complete", true);
+  REQUIRE(daemon.prepared(prepared, error));
+  REQUIRE_FALSE(prepared);
 }
 
 TEST_CASE("Discarding stored DNF updates unblocks a fresh transaction", "[offline-transaction]")

@@ -416,6 +416,9 @@ activate(GtkApplication *app, gpointer)
   // Show the fully initialized window
   gtk_window_present(GTK_WINDOW(main_window.window));
 
+  // Restore the persistent reboot cue if DNF already has a prepared transaction.
+  pending_transaction_refresh_prepared_updates_indicator(main_window.widgets);
+
   // Warm up the shared backend after the window is on screen
   StartupWarmupData *warmup = new StartupWarmupData();
   warmup->widgets = main_window.widgets;

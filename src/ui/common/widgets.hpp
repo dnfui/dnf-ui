@@ -71,6 +71,8 @@ struct MainWindowState {
   bool pending_quit_dialog_open = false;
   // Passive bottom-bar label used for quiet startup backend status.
   GtkLabel *backend_warmup_label = nullptr;
+  // Persistent top-of-window cue shown while DNF has updates ready for reboot.
+  GtkWidget *prepared_updates_banner = nullptr;
   // Passive bottom-bar label showing how long the last package query took.
   GtkLabel *query_duration_label = nullptr;
   // Cancellable owned by the startup backend warm up task.

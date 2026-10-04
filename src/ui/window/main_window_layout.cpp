@@ -203,6 +203,37 @@ main_window_build_layout(AppWidgets *ui)
   gtk_box_append(GTK_BOX(hbox_tx_buttons), clear_pending_button);
   ui->clear_pending_button = clear_pending_button;
 
+  // Persistent cue for a ready offline transaction. The ordinary status label
+  // below is transient and may be replaced by search or package-detail messages.
+  GtkWidget *prepared_updates_banner = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
+  gtk_widget_add_css_class(prepared_updates_banner, "prepared-updates-banner");
+  gtk_widget_set_visible(prepared_updates_banner, FALSE);
+  gtk_box_append(GTK_BOX(controls_box), prepared_updates_banner);
+  ui->prepared_updates_banner = prepared_updates_banner;
+
+  GtkWidget *prepared_updates_icon = gtk_image_new_from_icon_name("system-reboot-symbolic");
+  gtk_widget_set_valign(prepared_updates_icon, GTK_ALIGN_CENTER);
+  gtk_box_append(GTK_BOX(prepared_updates_banner), prepared_updates_icon);
+
+  GtkWidget *prepared_updates_text = gtk_box_new(GTK_ORIENTATION_VERTICAL, 2);
+  gtk_widget_set_hexpand(prepared_updates_text, TRUE);
+  gtk_box_append(GTK_BOX(prepared_updates_banner), prepared_updates_text);
+
+  GtkWidget *prepared_updates_title = gtk_label_new(_("Ready for Reboot"));
+  gtk_label_set_xalign(GTK_LABEL(prepared_updates_title), 0.0f);
+  gtk_widget_add_css_class(prepared_updates_title, "prepared-updates-title");
+  gtk_box_append(GTK_BOX(prepared_updates_text), prepared_updates_title);
+
+  GtkWidget *prepared_updates_message = gtk_label_new(_("Updates prepared. Restart to install them."));
+  gtk_label_set_xalign(GTK_LABEL(prepared_updates_message), 0.0f);
+  gtk_label_set_wrap(GTK_LABEL(prepared_updates_message), TRUE);
+  gtk_box_append(GTK_BOX(prepared_updates_text), prepared_updates_message);
+
+  GtkWidget *discard_prepared_button = gtk_button_new_with_label(_("Discard Prepared Updates"));
+  gtk_widget_set_valign(discard_prepared_button, GTK_ALIGN_CENTER);
+  gtk_actionable_set_action_name(GTK_ACTIONABLE(discard_prepared_button), "win.discard-prepared-updates");
+  gtk_box_append(GTK_BOX(prepared_updates_banner), discard_prepared_button);
+
   GtkWidget *status_label = gtk_label_new(_("Ready."));
   gtk_label_set_xalign(GTK_LABEL(status_label), 0.0);
   gtk_label_set_selectable(GTK_LABEL(status_label), TRUE);

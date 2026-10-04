@@ -204,6 +204,8 @@ DNF UI uses DNF's existing offline implementation:
 4. The client checks `Offline.get_status` before reporting readiness. A successful
    preparation is displayed as **Ready for Reboot**, not as an installation.
    Marked actions are cleared, while installed package state remains unchanged.
+   A persistent main-window banner stays visible while that ready transaction is
+   scheduled, including after DNF UI is reopened before the reboot.
 5. At the next boot, DNF's offline service executes the stored transaction through
    the DNF command-line process, separately from the package daemon. A restart of
    the daemon therefore cannot kill the process applying these updates.

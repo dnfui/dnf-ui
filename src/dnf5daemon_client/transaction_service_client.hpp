@@ -67,6 +67,13 @@ bool transaction_service_client_list_upgrade_targets(std::vector<DaemonUpgradeTa
 bool transaction_service_client_refresh_repositories(std::string &error_out, GCancellable *cancellable = nullptr);
 
 // -----------------------------------------------------------------------------
+// Return whether DNF has a ready offline transaction scheduled for reboot.
+// -----------------------------------------------------------------------------
+bool transaction_service_client_has_prepared_offline_updates(bool &prepared_out,
+                                                             std::string &error_out,
+                                                             GCancellable *cancellable = nullptr);
+
+// -----------------------------------------------------------------------------
 // Discard DNF's stored offline transaction after explicit user confirmation.
 // Success means no stored transaction or boot trigger remains.
 // -----------------------------------------------------------------------------

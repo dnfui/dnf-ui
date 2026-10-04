@@ -41,6 +41,7 @@ struct AppWidgets {
   GtkWidget *apply_button = NULL;
   GtkWidget *clear_pending_button = NULL;
 
+  GtkWidget *prepared_updates_banner = NULL;
   GtkWidget *status_label = NULL;
   GtkWidget *inner_paned = NULL;
 

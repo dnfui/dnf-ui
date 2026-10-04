@@ -1771,6 +1771,30 @@ transaction_service_client_start_apply_request(GDBusConnection *connection,
 }
 
 // -----------------------------------------------------------------------------
+// Report only the normal ready-and-scheduled state used by the main-window cue.
+// Other stored states still block transactions, but are recovery cases rather
+// than a successfully prepared update.
+// -----------------------------------------------------------------------------
+bool
+transaction_service_client_has_prepared_offline_updates_request(GDBusConnection *connection,
+                                                                const std::string &session_path,
+                                                                bool &prepared_out,
+                                                                std::string &error_out,
+                                                                GCancellable *cancellable)
+{
+  prepared_out = false;
+  error_out.clear();
+
+  OfflineTransactionStatus status;
+  if (!get_offline_status(connection, session_path, status, error_out, cancellable)) {
+    return false;
+  }
+
+  prepared_out = status.scheduled && status.state == "ready";
+  return true;
+}
+
+// -----------------------------------------------------------------------------
 // Clean stored changes through DNF and verify that new transactions are unblocked.
 // -----------------------------------------------------------------------------
 bool
@@ -1826,6 +1850,35 @@ transaction_service_client_discard_offline_request(GDBusConnection *connection,
     return false;
   }
   return true;
+}
+
+// -----------------------------------------------------------------------------
+// Read prepared-update state through a short-lived daemon session.
+// -----------------------------------------------------------------------------
+bool
+transaction_service_client_has_prepared_offline_updates(bool &prepared_out,
+                                                        std::string &error_out,
+                                                        GCancellable *cancellable)
+{
+  prepared_out = false;
+  error_out.clear();
+
+  GDBusConnection *connection = transaction_service_client_connect(error_out);
+  if (!connection) {
+    return false;
+  }
+
+  std::string path;
+  bool ok = open_daemon_session_with_options(connection, refresh_session_options(), cancellable, path, error_out);
+  if (ok) {
+    ok = transaction_service_client_has_prepared_offline_updates_request(
+        connection, path, prepared_out, error_out, cancellable);
+    std::string release_error;
+    transaction_service_client_release_transaction_request(connection, path, release_error);
+  }
+
+  g_object_unref(connection);
+  return ok;
 }
 
 // -----------------------------------------------------------------------------

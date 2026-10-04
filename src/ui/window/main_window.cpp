@@ -249,6 +249,7 @@ create_main_window_ui_state(const AppWidgets *ui)
   widgets->transaction_widgets.clear_pending_button = GTK_BUTTON(ui->clear_pending_button);
   widgets->transaction_widgets.pending_list = GTK_LIST_BOX(ui->pending_list);
 
+  widgets->window_state.prepared_updates_banner = ui->prepared_updates_banner;
   widgets->window_state.backend_warmup_label = GTK_LABEL(ui->warmup_label);
   widgets->window_state.query_duration_label = GTK_LABEL(ui->query_duration_label);
 
@@ -275,6 +276,16 @@ setup_css(MainWindowUiState *widgets)
                                     "} "
                                     ".button-group-separator { "
                                     "  background-color: @borders; "
+                                    "} "
+                                    ".prepared-updates-banner { "
+                                    "  padding: 8px 10px; "
+                                    "  border: 1px solid #d6b862; "
+                                    "  border-radius: 6px; "
+                                    "  background-color: #f3e5bf; "
+                                    "  color: #4a3505; "
+                                    "} "
+                                    ".prepared-updates-title { "
+                                    "  font-weight: 700; "
                                     "} "
                                     ".history-sidebar { "
                                     "  padding: 10px; "

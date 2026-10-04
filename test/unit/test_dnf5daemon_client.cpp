@@ -1072,9 +1072,16 @@ TEST_CASE("dnf5daemon client discards prepared updates", "[dnf5daemon]")
   REQUIRE_FALSE(transaction_service_client_preview_request(request, preview, path, error));
   REQUIRE(error.find("already prepared for reboot") != std::string::npos);
   REQUIRE(error.find("Discard Prepared Updates") != std::string::npos);
+
+  bool prepared = false;
+  REQUIRE(transaction_service_client_has_prepared_offline_updates(prepared, error));
+  REQUIRE(prepared);
+
   bool discarded = transaction_service_client_discard_offline_transaction(error);
   INFO(error);
   REQUIRE(discarded);
+  REQUIRE(transaction_service_client_has_prepared_offline_updates(prepared, error));
+  REQUIRE_FALSE(prepared);
   BaseManager::instance().drop_cached_base();
   REQUIRE(package_row_nevras(dnf_backend_get_installed_package_rows_interruptible(nullptr)) == installed_before);
   REQUIRE(transaction_service_client_preview_request(request, preview, path, error));

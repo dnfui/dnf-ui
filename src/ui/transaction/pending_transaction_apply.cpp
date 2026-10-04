@@ -282,6 +282,61 @@ set_preview_request_busy_state(MainWindowUiState *widgets, bool busy)
 }
 
 // -----------------------------------------------------------------------------
+// Keep the prepared-update cue separate from the transient status label.
+// -----------------------------------------------------------------------------
+static void
+set_prepared_updates_indicator_visible(MainWindowUiState *widgets, bool visible)
+{
+  if (widgets && widgets->window_state.prepared_updates_banner) {
+    gtk_widget_set_visible(widgets->window_state.prepared_updates_banner, visible);
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Refresh prepared-update state without blocking startup or replacing status text.
+// -----------------------------------------------------------------------------
+void
+pending_transaction_refresh_prepared_updates_indicator(MainWindowUiState *widgets)
+{
+  if (!widgets || !widgets->query.entry || widgets->window_state.destroyed) {
+    return;
+  }
+
+  GCancellable *c = widgets_make_task_cancellable_for(GTK_WIDGET(widgets->query.entry));
+  GTask *task = widgets_task_new_for_main_window_ui_state(
+      widgets, c, +[](GObject *, GAsyncResult *result, gpointer user_data) {
+        GTask *task = G_TASK(result);
+        auto *widgets = static_cast<MainWindowUiState *>(user_data);
+        if (widgets_task_should_skip_completion(task, widgets)) {
+          return;
+        }
+
+        GError *error = nullptr;
+        const gssize prepared = g_task_propagate_int(task, &error);
+        if (error) {
+          DNFUI_TRACE("Prepared-update status check failed: %s", error->message);
+          g_clear_error(&error);
+          return;
+        }
+
+        set_prepared_updates_indicator_visible(widgets, prepared != 0);
+      });
+
+  g_task_run_in_thread(
+      task, +[](GTask *task, gpointer, gpointer, GCancellable *cancellable) {
+        bool prepared = false;
+        std::string error;
+        if (!transaction_service_client_has_prepared_offline_updates(prepared, error, cancellable)) {
+          g_task_return_new_error(task, G_IO_ERROR, G_IO_ERROR_FAILED, "%s", error.c_str());
+          return;
+        }
+        g_task_return_int(task, prepared ? 1 : 0);
+      });
+  g_object_unref(task);
+  g_object_unref(c);
+}
+
+// -----------------------------------------------------------------------------
 // Discard stored updates without changing installed state or current package marks.
 // -----------------------------------------------------------------------------
 static void
@@ -314,6 +369,7 @@ discard_prepared_updates_async(MainWindowUiState *widgets)
         pending_transaction_set_preview_controls_sensitive(widgets, true);
         widgets_spinner_release(widgets->query.spinner);
         if (success) {
+          set_prepared_updates_indicator_visible(widgets, false);
           ui_helpers_set_status(widgets->query.status_label, _("Prepared updates discarded."), "green");
         } else {
           ui_helpers_set_status(widgets->query.status_label, _("Could not discard the prepared updates."), "red");
@@ -515,6 +571,7 @@ start_apply_transaction(MainWindowUiState *widgets)
           pending_transaction_set_preview_controls_sensitive(widgets, true);
           refresh_package_table_statuses_after_apply(widgets);
           package_details_refresh_selected_package_actions(widgets);
+          set_prepared_updates_indicator_visible(widgets, true);
           ui_helpers_set_status(widgets->query.status_label, _("Updates prepared. Restart to install them."), "blue");
           return;
         }
@@ -648,6 +705,9 @@ start_preview_request(MainWindowUiState *widgets, TransactionRequest request)
               error && error->message ? error->message : _("Unable to prepare transaction preview.");
           DNFUI_TRACE("Transaction preview request failed error=%s", status_message);
           widgets->transaction_state.preview_upgrade_all = false;
+          // A preview can fail because another process prepared an offline
+          // transaction while this window was open. Refresh the persistent cue.
+          pending_transaction_refresh_prepared_updates_indicator(widgets);
           ui_helpers_set_status(widgets->query.status_label, status_message, "red");
           transaction_dialogs_show_error_dialog(widgets,
                                                 _("Transaction Preview Failed"),
@@ -658,6 +718,10 @@ start_preview_request(MainWindowUiState *widgets, TransactionRequest request)
           }
           return;
         }
+
+        // A successful preview passed the offline-state guard, so any older
+        // prepared-update cue is stale (for example after external cleanup).
+        set_prepared_updates_indicator_visible(widgets, false);
 
         if (td->preview.empty()) {
           DNFUI_TRACE(

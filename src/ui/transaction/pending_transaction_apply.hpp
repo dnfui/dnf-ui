@@ -10,6 +10,11 @@
 struct MainWindowUiState;
 
 // -----------------------------------------------------------------------------
+// Refresh the persistent main-window cue for updates prepared for reboot.
+// -----------------------------------------------------------------------------
+void pending_transaction_refresh_prepared_updates_indicator(MainWindowUiState *widgets);
+
+// -----------------------------------------------------------------------------
 // Confirm and discard DNF's prepared offline updates.
 // -----------------------------------------------------------------------------
 void pending_transaction_discard_prepared_updates(MainWindowUiState *widgets);
