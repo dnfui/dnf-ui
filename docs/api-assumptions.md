@@ -153,6 +153,11 @@ Assumptions:
 - `Offline.get_status` returns `(b, a{sv})`. The boolean confirms a valid scheduled
   DNF transaction. The `status` field can describe stored data even when the
   boolean is false. Nonempty states must therefore also block a new transaction.
+  The API does not expose the stored package items, so the UI does not keep a
+  shadow package list after preparation.
+- The persistent main-window banner is presentation state only. Transaction
+  permission is decided by fresh daemon status checks before preview and apply,
+  so external cleanup cannot leave the UI permanently blocking package actions.
 - `ready`, `download-incomplete`, `download-complete`, and `transaction-incomplete`
   are the installed API's state names. Unknown nonempty states also block apply.
 - Status checks before preview and apply reject existing offline state. After

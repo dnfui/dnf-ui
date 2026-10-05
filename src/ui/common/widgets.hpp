@@ -7,6 +7,7 @@
 // -----------------------------------------------------------------------------
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <vector>
 #include <memory>
@@ -73,6 +74,8 @@ struct MainWindowState {
   GtkLabel *backend_warmup_label = nullptr;
   // Persistent top-of-window cue shown while DNF has updates ready for reboot.
   GtkWidget *prepared_updates_banner = nullptr;
+  // Ignore status replies superseded by a newer check or a confirmed state change.
+  uint64_t prepared_updates_revision = 0;
   // Passive bottom-bar label showing how long the last package query took.
   GtkLabel *query_duration_label = nullptr;
   // Cancellable owned by the startup backend warm up task.

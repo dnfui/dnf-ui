@@ -287,7 +287,12 @@ set_preview_request_busy_state(MainWindowUiState *widgets, bool busy)
 static void
 set_prepared_updates_indicator_visible(MainWindowUiState *widgets, bool visible)
 {
-  if (widgets && widgets->window_state.prepared_updates_banner) {
+  if (!widgets) {
+    return;
+  }
+
+  ++widgets->window_state.prepared_updates_revision;
+  if (widgets->window_state.prepared_updates_banner) {
     gtk_widget_set_visible(widgets->window_state.prepared_updates_banner, visible);
   }
 }
@@ -311,6 +316,11 @@ pending_transaction_refresh_prepared_updates_indicator(MainWindowUiState *widget
           return;
         }
 
+        const auto *revision = static_cast<const uint64_t *>(g_task_get_task_data(task));
+        if (*revision != widgets->window_state.prepared_updates_revision) {
+          return;
+        }
+
         GError *error = nullptr;
         const gssize prepared = g_task_propagate_int(task, &error);
         if (error) {
@@ -321,6 +331,8 @@ pending_transaction_refresh_prepared_updates_indicator(MainWindowUiState *widget
 
         set_prepared_updates_indicator_visible(widgets, prepared != 0);
       });
+  auto *revision = new uint64_t(++widgets->window_state.prepared_updates_revision);
+  g_task_set_task_data(task, revision, +[](gpointer data) { delete static_cast<uint64_t *>(data); });
 
   g_task_run_in_thread(
       task, +[](GTask *task, gpointer, gpointer, GCancellable *cancellable) {

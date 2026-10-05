@@ -219,12 +219,14 @@ main_window_build_layout(AppWidgets *ui)
   gtk_widget_set_hexpand(prepared_updates_text, TRUE);
   gtk_box_append(GTK_BOX(prepared_updates_banner), prepared_updates_text);
 
-  GtkWidget *prepared_updates_title = gtk_label_new(_("Ready for Reboot"));
+  GtkWidget *prepared_updates_title = gtk_label_new(_("Updates Prepared for Reboot"));
   gtk_label_set_xalign(GTK_LABEL(prepared_updates_title), 0.0f);
   gtk_widget_add_css_class(prepared_updates_title, "prepared-updates-title");
   gtk_box_append(GTK_BOX(prepared_updates_text), prepared_updates_title);
 
-  GtkWidget *prepared_updates_message = gtk_label_new(_("Updates prepared. Restart to install them."));
+  GtkWidget *prepared_updates_message = gtk_label_new(
+      _("A package transaction is already prepared for reboot. Other package changes cannot be applied until it is "
+        "installed or discarded."));
   gtk_label_set_xalign(GTK_LABEL(prepared_updates_message), 0.0f);
   gtk_label_set_wrap(GTK_LABEL(prepared_updates_message), TRUE);
   gtk_box_append(GTK_BOX(prepared_updates_text), prepared_updates_message);

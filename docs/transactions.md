@@ -205,7 +205,9 @@ DNF UI uses DNF's existing offline implementation:
    preparation is displayed as **Ready for Reboot**, not as an installation.
    Marked actions are cleared, while installed package state remains unchanged.
    A persistent main-window banner stays visible while that ready transaction is
-   scheduled, including after DNF UI is reopened before the reboot.
+   scheduled, including after DNF UI is reopened before the reboot. The banner is
+   a visual cue only; dnf5daemon status checks before preview and apply remain the
+   authority for whether another transaction may proceed.
 5. At the next boot, DNF's offline service executes the stored transaction through
    the DNF command-line process, separately from the package daemon. A restart of
    the daemon therefore cannot kill the process applying these updates.

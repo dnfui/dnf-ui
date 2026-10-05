@@ -1658,3 +1658,9 @@ msgstr "Förberedda uppdateringar borttagna."
 
 msgid "Updates are already prepared for reboot. Restart to install them, or use Package > Discard Prepared Updates to remove them before applying other package changes."
 msgstr "Uppdateringar är redan förberedda för omstart. Starta om för att installera dem, eller använd Paket > Ta bort förberedda uppdateringar för att ta bort dem innan andra paketändringar verkställs."
+
+msgid "Updates Prepared for Reboot"
+msgstr "Uppdateringar förberedda för omstart"
+
+msgid "A package transaction is already prepared for reboot. Other package changes cannot be applied until it is installed or discarded."
+msgstr "En pakettransaktion är redan förberedd för omstart. Andra paketändringar kan inte verkställas förrän den har installerats eller tagits bort."
