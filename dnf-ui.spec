@@ -1,5 +1,5 @@
 Name:           dnf-ui
-Version:        0.6.4
+Version:        0.7.0
 Release:        1%{?dist}
 Summary:        GTK interface for DNF5
 
@@ -56,6 +56,13 @@ appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/io.github.dnfui.
 %{_datadir}/metainfo/io.github.dnfui.dnfui.metainfo.xml
 
 %changelog
+* Tue Oct 06 2026 ErikMN <dnfui@proton.me> - 0.7.0-1
+- Prepare transactions that update the package service for installation at the next reboot
+- Clearly show all changes that will be prepared for reboot before confirmation
+- Show a persistent reminder when updates are prepared, including after reopening DNF UI
+- Add Discard Prepared Updates to remove prepared updates without clearing current package marks
+- Explain when prepared updates must be installed or discarded before applying other package changes
+
 * Tue Sep 22 2026 ErikMN <dnfui@proton.me> - 0.6.4-1
 - Show skipped packages as warnings instead of failing transaction previews
 - Allow valid package changes to proceed when other packages are skipped
