@@ -1102,12 +1102,12 @@ TEST_CASE("dnf5daemon client discards unreadable offline updates", "[dnf5daemon]
   }
   transaction_service_client_reset_for_tests();
   const auto &data_dir = libdnf5::offline::DEFAULT_DATADIR;
-  const auto &package_dir = libdnf5::offline::DEFAULT_DESTDIR;
   std::filesystem::create_directories(data_dir);
-  std::filesystem::create_directories(package_dir);
   REQUIRE(std::filesystem::is_empty(data_dir));
-  REQUIRE(std::filesystem::is_empty(package_dir));
 
+  // NOTE: DNF 5.2 stores offline packages under the data directory.
+  const auto package_dir = data_dir / "packages";
+  std::filesystem::create_directories(package_dir);
   const auto state_path = data_dir / libdnf5::offline::TRANSACTION_STATE_FILENAME;
   const auto package_path = package_dir / "dnfui-cleanup-test.rpm";
   {
@@ -1124,7 +1124,6 @@ TEST_CASE("dnf5daemon client discards unreadable offline updates", "[dnf5daemon]
   INFO(error);
   REQUIRE(discarded);
   REQUIRE(std::filesystem::is_empty(data_dir));
-  REQUIRE(std::filesystem::is_empty(package_dir));
   transaction_service_client_reset_for_tests();
 }
 
