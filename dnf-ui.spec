@@ -1,5 +1,5 @@
 Name:           dnf-ui
-Version:        0.7.0
+Version:        0.7.1
 Release:        1%{?dist}
 Summary:        GTK interface for DNF5
 
@@ -56,6 +56,11 @@ appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/io.github.dnfui.
 %{_datadir}/metainfo/io.github.dnfui.dnfui.metainfo.xml
 
 %changelog
+* Thu Oct 15 2026 ErikMN <dnfui@proton.me> - 0.7.1-1
+- Follow GNOME's light and dark appearance preference at startup and while running
+- Prevent transparent window backgrounds when switching appearance on GNOME
+- Allow user CSS to override application styling
+
 * Tue Oct 06 2026 ErikMN <dnfui@proton.me> - 0.7.0-1
 - Prepare transactions that update the package service for installation at the next reboot
 - Clearly show all changes that will be prepared for reboot before confirmation
