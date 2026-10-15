@@ -464,7 +464,7 @@ setup_css(MainWindowUiState *widgets)
                                     "  margin: 6px; "
                                     "} ");
   gtk_style_context_add_provider_for_display(
-      gdk_display_get_default(), GTK_STYLE_PROVIDER(css), GTK_STYLE_PROVIDER_PRIORITY_USER);
+      gdk_display_get_default(), GTK_STYLE_PROVIDER(css), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
   gtk_widget_add_css_class(GTK_WIDGET(widgets->query.status_label), "status-bar");
   g_object_unref(css);
 }
