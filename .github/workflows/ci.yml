@@ -15,8 +15,11 @@ concurrency:
 
 jobs:
   build-test:
-    name: Fedora build and tests
+    name: Fedora ${{ matrix.fedora }} build and tests
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        fedora: [44, 45]
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -28,7 +31,7 @@ jobs:
             -e HOST_GID="$(id -g)" \
             -v "$PWD:/workspace" \
             -w /workspace \
-            fedora:latest \
+            fedora:${{ matrix.fedora }} \
             bash -lc '
               set -euo pipefail
               trap '\''chown -R "${HOST_UID}:${HOST_GID}" build dnfui dnfui-tests 2>/dev/null || true'\'' EXIT
@@ -45,7 +48,9 @@ jobs:
                 gtk4-devel \
                 libdnf5-devel \
                 meson \
-                ninja-build
+                ninja-build \
+                xorg-x11-server-Xvfb \
+                xorg-x11-xauth
 
               meson setup build/ci \
                 --prefix /usr \
@@ -59,6 +64,8 @@ jobs:
               desktop-file-validate build/ci/packaging/io.github.dnfui.dnfui.desktop
               appstreamcli validate --no-net build/ci/packaging/io.github.dnfui.dnfui.metainfo.xml
               meson test -C build/ci --print-errorlogs
+              DNFUI_TEST_REQUIRE_DISPLAY=1 xvfb-run -a dbus-run-session -- \
+                meson test -C build/ci dnfui-color-scheme-tests --print-errorlogs
 
               meson setup build/final \
                 --prefix /usr \

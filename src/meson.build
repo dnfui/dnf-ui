@@ -50,6 +50,7 @@ app_sources = files(
   'ui/transaction/transaction_progress.cpp',
   'ui/transaction/transaction_dialogs.cpp',
   'upgrade/daemon_upgrade_state.cpp',
+  'ui/common/color_scheme.cpp',
   'ui/common/ui_helpers.cpp',
   'ui/common/widgets.cpp',
 )

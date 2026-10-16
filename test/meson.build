@@ -57,3 +57,26 @@ dnfui_tests = executable(
 )
 
 test('dnfui-tests', dnfui_tests, timeout: 120)
+
+dnfui_color_scheme_tests = executable(
+  'dnfui-color-scheme-tests',
+  files(
+    'unit/test_color_scheme.cpp',
+    '../src/ui/common/color_scheme.cpp',
+  ),
+  include_directories: src_inc,
+  dependencies: [gtk4_dep, catch2_dep],
+)
+
+test(
+  'dnfui-color-scheme-tests',
+  dnfui_color_scheme_tests,
+  args: ['--allow-running-no-tests'],
+  env: [
+    'GSETTINGS_BACKEND=memory',
+    'XDG_CURRENT_DESKTOP=GNOME',
+    'GTK_THEME=',
+    'GTK_A11Y=none',
+  ],
+  timeout: 15,
+)
