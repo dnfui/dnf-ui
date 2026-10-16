@@ -1,6 +1,11 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "dnf_backend/dnf_backend.hpp"
+#include "dnf_backend/base_manager.hpp"
+#include "dnf_backend/dnf_internal.hpp"
+
+#include <libdnf5/repo/repo.hpp>
+#include <libdnf5/repo/repo_sack.hpp>
 #include "test_utils.hpp"
 
 #include <string>
@@ -159,6 +164,84 @@ TEST_CASE("Search returns empty for impossible package name")
       "___definitely_not_a_real_package_987654___", backend_search_options(false, false), nullptr);
 
   REQUIRE(results.empty());
+}
+
+// -----------------------------------------------------------------------------
+// Find providers by installed file ownership, not package names.
+// -----------------------------------------------------------------------------
+TEST_CASE("Find Provider resolves an installed executable path")
+{
+  reset_backend_globals();
+  auto options = backend_search_options(false, false);
+  options.find_provider = true;
+  auto results = dnf_backend_search_package_rows_interruptible("/usr/bin/bash", options, nullptr);
+  REQUIRE(contains_package_name(results, "bash"));
+}
+
+// -----------------------------------------------------------------------------
+// Find an RPM capability supplied by a package.
+// -----------------------------------------------------------------------------
+TEST_CASE("Find Provider resolves a package capability")
+{
+  reset_backend_globals();
+  auto options = backend_search_options(false, false);
+  options.find_provider = true;
+  auto results = dnf_backend_search_package_rows_interruptible("bash", options, nullptr);
+  REQUIRE(contains_package_name(results, "bash"));
+}
+
+// -----------------------------------------------------------------------------
+// Unknown providers must not fall back to package-text search.
+// -----------------------------------------------------------------------------
+TEST_CASE("Find Provider returns no matches for an unknown capability")
+{
+  reset_backend_globals();
+  auto options = backend_search_options(false, false);
+  options.find_provider = true;
+  auto results =
+      dnf_backend_search_package_rows_interruptible("___dnfui_nonexistent_capability_987654___", options, nullptr);
+  REQUIRE(results.empty());
+}
+
+// -----------------------------------------------------------------------------
+// A package absent from the installed rpmdb must still be found when its file
+// appears only in repository filelists metadata (not primary metadata).
+// -----------------------------------------------------------------------------
+TEST_CASE("Find Provider resolves a repository-only file from filelists metadata")
+{
+  libdnf5::Base base;
+  base.load_config();
+  base.get_config().get_plugins_option().set(false);
+  base_manager_enable_filelists_metadata(base);
+  base.setup();
+
+  auto repo_sack = base.get_repo_sack();
+  auto repo = repo_sack->create_repo("dnfui-filelists-test");
+  const std::string baseurl = std::string("file://") + DNFUI_TEST_PROVIDER_REPO;
+  repo->get_config().get_baseurl_option().set(std::vector<std::string> { baseurl });
+  repo_sack->load_repos(libdnf5::repo::Repo::Type::AVAILABLE);
+
+  auto empty_repo = repo_sack->create_repo("dnfui-empty-filelists-test");
+  empty_repo->get_config().get_enabled_option().set(true);
+
+  auto matches =
+      dnf_backend_internal::collect_provider_matching_nevras(base, "/usr/share/dnfui-review/file-2", nullptr);
+  REQUIRE(matches.size() == 1);
+
+  // Bare file names and filename globs must also find repository-only files.
+  REQUIRE(dnf_backend_internal::collect_provider_matching_nevras(base, "file-2", nullptr) == matches);
+  REQUIRE(dnf_backend_internal::collect_provider_matching_nevras(base, "file-*", nullptr) == matches);
+  REQUIRE(dnf_backend_internal::collect_provider_matching_nevras(base, "file-[12]", nullptr) == matches);
+  REQUIRE(dnf_backend_internal::collect_provider_matching_nevras(base, "/usr/share/dnfui-review/file-[12]", nullptr) ==
+          matches);
+  REQUIRE(dnf_backend_internal::collect_provider_matching_nevras(base, "file", nullptr).empty());
+
+  libdnf5::rpm::PackageQuery query(base);
+  query.filter_name(std::vector<std::string> { "dnfui-filelists-fixture" }, libdnf5::sack::QueryCmp::EQ);
+  REQUIRE(query.size() == 1);
+  for (auto package : query) {
+    REQUIRE(matches.count(package.get_nevra()) == 1);
+  }
 }
 
 // -----------------------------------------------------------------------------

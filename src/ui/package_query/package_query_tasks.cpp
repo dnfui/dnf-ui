@@ -793,9 +793,12 @@ on_list_upgradeable_task_finished(GObject *, GAsyncResult *res, gpointer user_da
 static void
 on_search_task(GTask *task, gpointer, gpointer task_data, GCancellable *cancellable)
 {
-  QueryBackendBaseDropGuard base_drop_guard(cancellable);
-
   const SearchTaskData *td = static_cast<const SearchTaskData *>(task_data);
+  std::optional<QueryBackendBaseDropGuard> base_drop_guard;
+  if (!td || !td->options.find_provider) {
+    base_drop_guard.emplace(cancellable);
+  }
+
   const std::string pattern = td ? td->term : "";
   try {
     DNFUI_TRACE("Search task start request=%llu pattern=%s",
@@ -859,8 +862,12 @@ on_search_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
     }
 
     if (td) {
-      package_query_set_displayed_search_query(
-          widgets, td->term, td->options.search_in_description, td->options.exact_match, td->options.latest_only);
+      package_query_set_displayed_search_query(widgets,
+                                               td->term,
+                                               td->options.search_in_description,
+                                               td->options.exact_match,
+                                               td->options.latest_only,
+                                               td->options.find_provider);
     }
 
     // Fill the package table and display the result count.

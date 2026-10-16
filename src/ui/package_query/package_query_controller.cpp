@@ -62,11 +62,12 @@ add_to_history(MainWindowUiState *widgets, const std::string &term)
 static DnfBackendSearchOptions
 package_query_options_from_controls(MainWindowUiState *widgets)
 {
+  const bool provider = gtk_drop_down_get_selected(widgets->query.mode_dropdown) == 1;
   return {
-    .search_in_description =
-        static_cast<bool>(gtk_check_button_get_active(GTK_CHECK_BUTTON(widgets->query.desc_checkbox))),
-    .exact_match = static_cast<bool>(gtk_check_button_get_active(GTK_CHECK_BUTTON(widgets->query.exact_checkbox))),
+    .search_in_description = !provider && gtk_check_button_get_active(GTK_CHECK_BUTTON(widgets->query.desc_checkbox)),
+    .exact_match = !provider && gtk_check_button_get_active(GTK_CHECK_BUTTON(widgets->query.exact_checkbox)),
     .latest_only = static_cast<bool>(gtk_check_button_get_active(GTK_CHECK_BUTTON(widgets->query.latest_checkbox))),
+    .find_provider = provider,
   };
 }
 
@@ -81,7 +82,9 @@ perform_search(MainWindowUiState *widgets, const std::string &term, const DnfBac
   }
 
   gtk_editable_set_text(GTK_EDITABLE(widgets->query.entry), term.c_str());
-  std::string searching_message = dnfui_i18n_format(_("Searching for '%s'..."), term.c_str());
+  std::string searching_message = search_options.find_provider
+      ? dnfui_i18n_format(_("Finding providers for '%s'..."), term.c_str())
+      : dnfui_i18n_format(_("Searching for '%s'..."), term.c_str());
   ui_helpers_set_status(widgets->query.status_label, searching_message, "blue");
   package_query_clear_duration_label(widgets);
   if (widgets->query_state.reload_selected_nevra.empty()) {
@@ -99,8 +102,12 @@ perform_search(MainWindowUiState *widgets, const std::string &term, const DnfBac
   std::vector<PackageRow> cached_packages;
   if (use_cache && package_query_cache_lookup(key, generation, cache_epoch, cached_packages)) {
     // Show saved rows and skip the worker thread.
-    package_query_set_displayed_search_query(
-        widgets, term, search_options.search_in_description, search_options.exact_match, search_options.latest_only);
+    package_query_set_displayed_search_query(widgets,
+                                             term,
+                                             search_options.search_in_description,
+                                             search_options.exact_match,
+                                             search_options.latest_only,
+                                             search_options.find_provider);
 
     package_table_fill_package_view(widgets,
                                     cached_packages,
@@ -118,6 +125,21 @@ perform_search(MainWindowUiState *widgets, const std::string &term, const DnfBac
 
   // No cache match, so start a worker thread search.
   package_query_start_search_task(widgets, term, key, generation, cache_epoch, search_options);
+}
+
+// -----------------------------------------------------------------------------
+// Provides mode uses the same search entry, worker and results table.
+// -----------------------------------------------------------------------------
+void
+package_query_on_search_mode_changed(GObject *, GParamSpec *, gpointer user_data)
+{
+  MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
+  const bool provider = gtk_drop_down_get_selected(widgets->query.mode_dropdown) == 1;
+  gtk_entry_set_placeholder_text(widgets->query.entry,
+                                 provider ? _("File path or capability...") : _("Search packages..."));
+  const bool idle = !package_query_has_active_package_list_request(widgets);
+  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.desc_checkbox), idle && !provider);
+  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.exact_checkbox), idle && !provider);
 }
 
 // -----------------------------------------------------------------------------
@@ -283,6 +305,7 @@ package_query_reload_current_view(MainWindowUiState *widgets)
       .search_in_description = view_state.search_in_description,
       .exact_match = view_state.exact_match,
       .latest_only = view_state.latest_only,
+      .find_provider = view_state.find_provider,
     };
     perform_search(widgets, view_state.search_term, options);
     return;

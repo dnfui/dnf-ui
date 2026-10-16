@@ -24,9 +24,12 @@ struct CachedSearchResults {
   std::vector<PackageRow> packages;
 };
 
+using SearchCacheEntries = std::map<std::string, CachedSearchResults>;
+
 struct SearchCacheState {
   std::mutex mutex;
-  std::map<std::string, CachedSearchResults> entries;
+  SearchCacheEntries package_entries;
+  SearchCacheEntries provider_entries;
   uint64_t use_counter = 0;
   uint64_t epoch = 0;
 };
@@ -34,19 +37,32 @@ struct SearchCacheState {
 static SearchCacheState g_search_cache;
 
 // -----------------------------------------------------------------------------
+// Select storage by the search mode encoded in the cache key.
+// Each mode retains its own entry limit so Provides cannot evict ordinary searches.
+// -----------------------------------------------------------------------------
+static SearchCacheEntries &
+package_query_cache_entries_locked(const std::string &key)
+{
+  if (key.starts_with("provides:")) {
+    return g_search_cache.provider_entries;
+  }
+  return g_search_cache.package_entries;
+}
+
+// -----------------------------------------------------------------------------
 // Drop the oldest cached search rows when the cache reaches its entry limit.
 // -----------------------------------------------------------------------------
 static void
-package_query_cache_prune_locked()
+package_query_cache_prune_locked(SearchCacheEntries &entries)
 {
-  while (g_search_cache.entries.size() > kMaxSearchCacheEntries) {
-    auto oldest = g_search_cache.entries.begin();
-    for (auto it = g_search_cache.entries.begin(); it != g_search_cache.entries.end(); ++it) {
+  while (entries.size() > kMaxSearchCacheEntries) {
+    auto oldest = entries.begin();
+    for (auto it = entries.begin(); it != entries.end(); ++it) {
       if (it->second.last_used < oldest->second.last_used) {
         oldest = it;
       }
     }
-    g_search_cache.entries.erase(oldest);
+    entries.erase(oldest);
   }
 }
 
@@ -58,7 +74,7 @@ package_query_cache_prune_locked()
 std::string
 package_query_cache_key_for(const std::string &term, const DnfBackendSearchOptions &options)
 {
-  std::string key = (options.search_in_description ? "desc:" : "name:");
+  std::string key = options.find_provider ? "provides:" : (options.search_in_description ? "desc:" : "name:");
   key += (options.exact_match ? "exact:" : "contains:");
   key += (options.latest_only ? "latest:" : "all:");
   key += term;
@@ -86,7 +102,8 @@ void
 package_query_cache_clear()
 {
   std::lock_guard<std::mutex> lock(g_search_cache.mutex);
-  g_search_cache.entries.clear();
+  g_search_cache.package_entries.clear();
+  g_search_cache.provider_entries.clear();
   g_search_cache.use_counter = 0;
   g_search_cache.epoch++;
 }
@@ -113,13 +130,14 @@ package_query_cache_lookup(const std::string &key,
                            std::vector<PackageRow> &out_packages)
 {
   std::lock_guard<std::mutex> lock(g_search_cache.mutex);
-  auto it = g_search_cache.entries.find(key);
-  if (it == g_search_cache.entries.end()) {
+  auto &entries = package_query_cache_entries_locked(key);
+  auto it = entries.find(key);
+  if (it == entries.end()) {
     return false;
   }
 
   if (it->second.generation != generation || it->second.cache_epoch != cache_epoch) {
-    g_search_cache.entries.erase(it);
+    entries.erase(it);
     return false;
   }
 
@@ -143,8 +161,9 @@ package_query_cache_store(const std::string &key,
     return;
   }
 
-  g_search_cache.entries[key] = CachedSearchResults { generation, cache_epoch, ++g_search_cache.use_counter, packages };
-  package_query_cache_prune_locked();
+  auto &entries = package_query_cache_entries_locked(key);
+  entries[key] = CachedSearchResults { generation, cache_epoch, ++g_search_cache.use_counter, packages };
+  package_query_cache_prune_locked(entries);
 }
 
 // -----------------------------------------------------------------------------

@@ -11,6 +11,7 @@
 #include <libdnf5/repo/download_callbacks.hpp>
 #include <libdnf5/repo/repo.hpp>
 #include <libdnf5/repo/repo_cache.hpp>
+#include <libdnf5/repo/repo_query.hpp>
 
 #include <algorithm>
 #include <cstdlib>
@@ -27,14 +28,25 @@
 #include <malloc.h>
 #endif
 
+// Request complete file ownership metadata for repository-backed package searches.
+// This option must be set before repository metadata is loaded.
+void
+base_manager_enable_filelists_metadata(libdnf5::Base &base)
+{
+  base.get_config().get_optional_metadata_types_option().add_item(libdnf5::Option::Priority::RUNTIME,
+                                                                  libdnf5::METADATA_TYPE_FILELISTS);
+}
+
 namespace {
 
 // Controls which repository sources are loaded into a temporary libdnf5 Base.
 // FULL uses the normal enabled repositories.
+// CONFIGURED_CACHE_ONLY_METADATA reads the same cache as normal repository loading.
 // CACHE_ONLY_METADATA uses already cached repository metadata when live repo loading failed.
 // SYSTEM_ONLY loads only the local installed package database and skips available repositories.
 enum class RepoLoadMode {
   FULL,
+  CONFIGURED_CACHE_ONLY_METADATA,
   CACHE_ONLY_METADATA,
   SYSTEM_ONLY,
 };
@@ -237,7 +249,7 @@ throw_if_rebuild_cancelled(const std::shared_ptr<std::atomic<bool>> &cancel_requ
 // Build one fully configured Base before any repo metadata is loaded.
 // -----------------------------------------------------------------------------
 static std::shared_ptr<libdnf5::Base>
-create_configured_base(RepoLoadMode mode, bool load_changelog_metadata = false)
+create_configured_base(RepoLoadMode mode, bool load_changelog_metadata = false, bool load_filelists_metadata = false)
 {
   DNFUI_TRACE("BaseManager initialize start");
 
@@ -250,17 +262,38 @@ create_configured_base(RepoLoadMode mode, bool load_changelog_metadata = false)
   // Do not load updated plugin libraries into a process still using the previous libdnf5 version.
   base->get_config().get_plugins_option().set(false);
 
-  if (mode == RepoLoadMode::CACHE_ONLY_METADATA) {
+  if (mode == RepoLoadMode::CACHE_ONLY_METADATA || mode == RepoLoadMode::CONFIGURED_CACHE_ONLY_METADATA) {
     // When live repo refresh is not available, keep repo-backed queries working
     // from cached metadata instead of dropping immediately to installed-only mode.
     base->get_config().get_cacheonly_option().set("metadata");
-    base->get_config().get_cachedir_option().set(base->get_config().get_system_cachedir_option().get_value());
+    if (mode == RepoLoadMode::CACHE_ONLY_METADATA) {
+      base->get_config().get_cachedir_option().set(base->get_config().get_system_cachedir_option().get_value());
+    }
+  }
+
+  if (load_filelists_metadata && mode != RepoLoadMode::SYSTEM_ONLY) {
+    base_manager_enable_filelists_metadata(*base);
   }
 
   if (load_changelog_metadata && mode != RepoLoadMode::SYSTEM_ONLY) {
     base->get_config().get_optional_metadata_types_option().add_item(libdnf5::Option::Priority::RUNTIME,
                                                                      libdnf5::METADATA_TYPE_OTHER);
   }
+
+#ifdef DNFUI_BUILD_TESTS
+  // Keep the cache-only fallback regression isolated from host repositories.
+  if (const char *repos_dir = std::getenv("DNFUI_TEST_REPOS_DIR")) {
+    base->get_config().get_reposdir_option().set(std::vector<std::string> { repos_dir });
+  }
+  if (const char *cache_dir = std::getenv("DNFUI_TEST_CACHE_DIR")) {
+    base->get_config().get_cachedir_option().set(cache_dir);
+  }
+  if (mode == RepoLoadMode::CACHE_ONLY_METADATA) {
+    if (const char *system_cache_dir = std::getenv("DNFUI_TEST_SYSTEM_CACHE_DIR")) {
+      base->get_config().get_cachedir_option().set(system_cache_dir);
+    }
+  }
+#endif
 
   DNFUI_TRACE("BaseManager setup start");
   base->setup();
@@ -269,6 +302,25 @@ create_configured_base(RepoLoadMode mode, bool load_changelog_metadata = false)
   auto repo_sack = base->get_repo_sack();
   DNFUI_TRACE("BaseManager create repos start");
   repo_sack->create_repos_from_system_configuration();
+#ifdef DNFUI_BUILD_TESTS
+  if (const char *repo_url = std::getenv("DNFUI_TEST_PROVIDER_REPO_URL")) {
+    auto repo = repo_sack->create_repo("dnfui-filelists-cache-test");
+    repo->get_config().get_baseurl_option().set(std::vector<std::string> { repo_url });
+    repo->get_config().get_enabled_option().set(true);
+    repo->get_config().get_skip_if_unavailable_option().set(true);
+  }
+#endif
+
+  if (load_filelists_metadata && mode != RepoLoadMode::SYSTEM_ONLY) {
+    // Provider searches must report missing metadata rather than silently skip an enabled repository.
+    libdnf5::repo::RepoQuery enabled_repos(*base);
+    enabled_repos.filter_enabled(true);
+    enabled_repos.filter_type(libdnf5::repo::Repo::Type::AVAILABLE);
+    for (auto repo : enabled_repos) {
+      repo->get_config().get_skip_if_unavailable_option().set(false);
+    }
+  }
+
   DNFUI_TRACE("BaseManager create repos done");
 
   return base;
@@ -347,7 +399,7 @@ load_repo_data(libdnf5::Base &base, RepoLoadMode mode, const std::shared_ptr<std
     if (force_failure && std::string(force_failure) == "1") {
       throw std::runtime_error("forced full repo load failure");
     }
-  } else if (mode == RepoLoadMode::CACHE_ONLY_METADATA) {
+  } else if (mode == RepoLoadMode::CACHE_ONLY_METADATA || mode == RepoLoadMode::CONFIGURED_CACHE_ONLY_METADATA) {
     const char *force_failure = std::getenv("DNFUI_TEST_FORCE_CACHEONLY_REPO_LOAD_FAILURE");
     if (force_failure && std::string(force_failure) == "1") {
       throw std::runtime_error("forced cache-only repo load failure");
@@ -376,13 +428,14 @@ build_base_for_mode(RepoLoadMode mode,
                     BaseRefreshMode refresh_mode,
                     const std::shared_ptr<std::atomic<bool>> &cancel_requested,
                     BaseProgressCallback progress_callback,
-                    bool load_changelog_metadata = false)
+                    bool load_changelog_metadata = false,
+                    bool load_filelists_metadata = false)
 {
   BuiltBase result;
   DNFUI_TRACE(
       "BaseManager build base start mode=%d refresh=%d", static_cast<int>(mode), static_cast<int>(refresh_mode));
   throw_if_rebuild_cancelled(cancel_requested);
-  result.base = create_configured_base(mode, load_changelog_metadata);
+  result.base = create_configured_base(mode, load_changelog_metadata, load_filelists_metadata);
   const bool has_download_callbacks = cancel_requested || static_cast<bool>(progress_callback);
   if (has_download_callbacks) {
     result.base->set_download_callbacks(
@@ -397,7 +450,7 @@ build_base_for_mode(RepoLoadMode mode,
     expire_repository_metadata_cache(*result.base);
   }
   load_repo_data(*result.base, mode, cancel_requested);
-  if (mode == RepoLoadMode::CACHE_ONLY_METADATA) {
+  if (mode == RepoLoadMode::CACHE_ONLY_METADATA || mode == RepoLoadMode::CONFIGURED_CACHE_ONLY_METADATA) {
     result.repo_state = BaseRepoState::CACHED_METADATA;
   } else if (mode == RepoLoadMode::SYSTEM_ONLY) {
     result.repo_state = BaseRepoState::INSTALLED_ONLY;
@@ -405,6 +458,39 @@ build_base_for_mode(RepoLoadMode mode,
   DNFUI_TRACE(
       "BaseManager initialize done mode=%d state=%d", static_cast<int>(mode), static_cast<int>(result.repo_state));
   return result;
+}
+
+// -----------------------------------------------------------------------------
+// Load file lists only for provider searches and retain the normal cached Base.
+// Offline provider searches require a complete cached file list.
+// -----------------------------------------------------------------------------
+static BuiltBase
+build_provider_base(const std::shared_ptr<std::atomic<bool>> &cancel_requested)
+{
+  try {
+    return build_base_for_mode(RepoLoadMode::FULL, BaseRefreshMode::NORMAL, cancel_requested, {}, false, true);
+  } catch (const BaseOperationCancelled &) {
+    throw;
+  } catch (const std::exception &error) {
+    throw_if_rebuild_cancelled(cancel_requested);
+    DNFUI_TRACE("BaseManager provider repo load failed, trying cached filelists: %s", error.what());
+  }
+
+  // Reuse file lists downloaded by this user before trying the system cache.
+  for (const RepoLoadMode mode : { RepoLoadMode::CONFIGURED_CACHE_ONLY_METADATA, RepoLoadMode::CACHE_ONLY_METADATA }) {
+    try {
+      return build_base_for_mode(mode, BaseRefreshMode::NORMAL, cancel_requested, {}, false, true);
+    } catch (const BaseOperationCancelled &) {
+      throw;
+    } catch (const std::exception &cache_error) {
+      throw_if_rebuild_cancelled(cancel_requested);
+      DNFUI_TRACE(
+          "BaseManager cached provider repo load failed mode=%d: %s", static_cast<int>(mode), cache_error.what());
+    }
+  }
+
+  throw std::runtime_error(
+      _("Provides search needs file lists that are unavailable in the cached repository metadata."));
 }
 
 // -----------------------------------------------------------------------------
@@ -558,6 +644,25 @@ BaseManager::acquire_read(std::shared_ptr<std::atomic<bool>> cancel_requested)
   }
 
   return { *base_ptr, BaseGuard(std::move(lock)) };
+}
+
+// -----------------------------------------------------------------------------
+// Return serialized access to a temporary Base for provider searches.
+// -----------------------------------------------------------------------------
+TemporaryBaseRead
+BaseManager::acquire_provider_read(std::shared_ptr<std::atomic<bool>> cancel_requested)
+{
+  std::unique_lock<std::mutex> lock(base_mutex, std::defer_lock);
+  while (!lock.try_lock()) {
+    throw_if_base_operation_cancelled(cancel_requested, "Package query was cancelled.");
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+  }
+
+  throw_if_base_operation_cancelled(cancel_requested, "Package query was cancelled.");
+  BuiltBase provider_base = build_provider_base(cancel_requested);
+  throw_if_base_operation_cancelled(cancel_requested, "Package query was cancelled.");
+
+  return TemporaryBaseRead(std::move(provider_base.base), BaseGuard(std::move(lock)));
 }
 
 // -----------------------------------------------------------------------------

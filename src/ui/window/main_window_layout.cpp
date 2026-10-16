@@ -118,6 +118,14 @@ main_window_build_layout(AppWidgets *ui)
   gtk_box_append(GTK_BOX(hbox_search), search_button);
   ui->search_button = search_button;
 
+  append_button_group_separator(hbox_search);
+
+  const char *search_modes[] = { _("Packages"), _("Provides"), nullptr };
+  GtkWidget *mode_dropdown = gtk_drop_down_new_from_strings(search_modes);
+  gtk_widget_set_tooltip_text(mode_dropdown, _("Search package names or find packages by file path and capability."));
+  gtk_box_append(GTK_BOX(hbox_search), mode_dropdown);
+  ui->mode_dropdown = mode_dropdown;
+
   GtkWidget *desc_checkbox = gtk_check_button_new_with_label(_("Search in description"));
   gtk_box_append(GTK_BOX(hbox_search), desc_checkbox);
   ui->desc_checkbox = desc_checkbox;

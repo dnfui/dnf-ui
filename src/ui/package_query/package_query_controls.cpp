@@ -68,7 +68,8 @@ package_query_set_displayed_search_query(MainWindowUiState *widgets,
                                          const std::string &term,
                                          bool search_in_description,
                                          bool exact_match,
-                                         bool latest_only)
+                                         bool latest_only,
+                                         bool find_provider)
 {
   if (!widgets) {
     return;
@@ -80,6 +81,7 @@ package_query_set_displayed_search_query(MainWindowUiState *widgets,
   widgets->query_state.displayed_query.search_in_description = search_in_description;
   widgets->query_state.displayed_query.exact_match = exact_match;
   widgets->query_state.displayed_query.latest_only = latest_only;
+  widgets->query_state.displayed_query.find_provider = find_provider;
 }
 
 // -----------------------------------------------------------------------------
@@ -197,8 +199,10 @@ package_query_set_idle_controls_sensitive(MainWindowUiState *widgets, bool sensi
   }
 
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.entry), sensitive);
-  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.desc_checkbox), sensitive);
-  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.exact_checkbox), sensitive);
+  const bool package_search = gtk_drop_down_get_selected(widgets->query.mode_dropdown) == 0;
+  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.mode_dropdown), sensitive);
+  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.desc_checkbox), sensitive && package_search);
+  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.exact_checkbox), sensitive && package_search);
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.latest_checkbox), sensitive);
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.history_list), sensitive);
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.list_button), sensitive);

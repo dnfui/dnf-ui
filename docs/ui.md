@@ -96,6 +96,14 @@ of the public callback file:
 Long-running package queries run on worker threads through `GTask`. Completion
 callbacks run on the GTK thread before they update widgets.
 
+The search-mode selector switches between normal package-text search and **Provides** lookup.
+Provides accepts an RPM capability (for example `pkgconfig(openssl)`), an absolute file path
+(for example `/usr/bin/bash`), or a filename (for example `zshrc`). Filename searches also accept
+wildcards. Matches come from installed packages
+and enabled repository metadata and use the existing package table, details, and transaction actions.
+Description and Exact match checkboxes apply only to package-text searches. Both search modes
+share the same cancellation, cache, and view refresh behavior.
+
 The Latest only checkbox is enabled by default. It keeps Search and List
 Packages in the compact one-row-per-package view. When disabled, those two
 queries show exact package versions. Older repository versions can then be

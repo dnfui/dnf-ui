@@ -44,6 +44,10 @@ TEST_CASE("Package query cache key includes search options")
   REQUIRE(package_query_cache_key_for("bash", backend_search_options(true, true)) == "desc:exact:latest:bash");
 
   REQUIRE(package_query_cache_key_for("bash", backend_search_options(false, false, false)) == "name:contains:all:bash");
+
+  auto provider_options = backend_search_options(false, false);
+  provider_options.find_provider = true;
+  REQUIRE(package_query_cache_key_for("bash", provider_options) == "provides:contains:latest:bash");
 }
 
 // -----------------------------------------------------------------------------
@@ -113,9 +117,11 @@ TEST_CASE("Package query cache clear removes stored rows")
   std::vector<PackageRow> loaded;
 
   package_query_cache_store(key, 7, cache_epoch, stored);
+  package_query_cache_store("provides:contains:latest:demo", 7, cache_epoch, stored);
   package_query_cache_clear();
 
   REQUIRE_FALSE(package_query_cache_lookup(key, 7, cache_epoch, loaded));
+  REQUIRE_FALSE(package_query_cache_lookup("provides:contains:latest:demo", 7, cache_epoch, loaded));
 }
 
 // -----------------------------------------------------------------------------
@@ -252,6 +258,62 @@ TEST_CASE("Package query cache lookup updates entry recency")
   REQUIRE_FALSE(package_query_cache_lookup("name:contains:two", 7, cache_epoch, loaded));
   REQUIRE(package_query_cache_lookup("name:contains:three", 7, cache_epoch, loaded));
   REQUIRE(package_query_cache_lookup("name:contains:four", 7, cache_epoch, loaded));
+}
+
+// -----------------------------------------------------------------------------
+// Each search mode must retain its own three entries when the other mode fills its cache.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package query cache modes have independent capacity")
+{
+  package_query_cache_clear();
+  const uint64_t epoch = package_query_cache_current_epoch();
+  const auto packages = backend_search_options(false, false);
+  auto providers = packages;
+  providers.find_provider = true;
+  const std::vector<PackageRow> rows = { make_cache_row("demo-1-1.x86_64", "demo") };
+  std::vector<PackageRow> loaded;
+
+  for (const std::string term : { "one", "two", "three" }) {
+    package_query_cache_store(package_query_cache_key_for(term, packages), 7, epoch, rows);
+  }
+  for (const std::string term : { "one", "two", "three", "four" }) {
+    package_query_cache_store(package_query_cache_key_for(term, providers), 7, epoch, rows);
+  }
+  for (const std::string term : { "one", "two", "three" }) {
+    REQUIRE(package_query_cache_lookup(package_query_cache_key_for(term, packages), 7, epoch, loaded));
+  }
+  REQUIRE_FALSE(package_query_cache_lookup(package_query_cache_key_for("one", providers), 7, epoch, loaded));
+
+  for (const std::string term : { "five", "six", "seven", "eight" }) {
+    package_query_cache_store(package_query_cache_key_for(term, packages), 7, epoch, rows);
+  }
+  for (const std::string term : { "two", "three", "four" }) {
+    REQUIRE(package_query_cache_lookup(package_query_cache_key_for(term, providers), 7, epoch, loaded));
+  }
+  REQUIRE_FALSE(package_query_cache_lookup(package_query_cache_key_for("five", packages), 7, epoch, loaded));
+}
+
+// -----------------------------------------------------------------------------
+// Repository changes must invalidate provider rows and reject results from earlier searches.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package query cache validates provider generation and epoch")
+{
+  package_query_cache_clear();
+  const uint64_t epoch = package_query_cache_current_epoch();
+  const std::string key = "provides:contains:latest:demo";
+  const std::vector<PackageRow> rows = { make_cache_row("demo-1-1.x86_64", "demo") };
+  std::vector<PackageRow> loaded;
+
+  package_query_cache_store(key, 7, epoch, rows);
+  REQUIRE_FALSE(package_query_cache_lookup(key, 8, epoch, loaded));
+  REQUIRE_FALSE(package_query_cache_lookup(key, 7, epoch, loaded));
+
+  package_query_cache_clear();
+  const uint64_t new_epoch = package_query_cache_current_epoch();
+  package_query_cache_store(key, 7, epoch, rows);
+  REQUIRE_FALSE(package_query_cache_lookup(key, 7, new_epoch, loaded));
+  package_query_cache_store(key, 7, new_epoch, rows);
+  REQUIRE(package_query_cache_lookup(key, 7, new_epoch, loaded));
 }
 
 // -----------------------------------------------------------------------------

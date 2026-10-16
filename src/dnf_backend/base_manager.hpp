@@ -12,6 +12,9 @@
 
 #include <libdnf5/base/base.hpp>
 
+// Request repository file-list metadata before the Base loads enabled repositories.
+void base_manager_enable_filelists_metadata(libdnf5::Base &base);
+
 // -----------------------------------------------------------------------------
 // Lock guard helpers for thread-safe Base access.
 // libdnf Base queries are serialized because PackageQuery work can touch
@@ -108,6 +111,10 @@ class BaseManager {
   // Return serialized read access, stopping while waiting or initializing Base.
   // -----------------------------------------------------------------------------
   BaseRead acquire_read(std::shared_ptr<std::atomic<bool>> cancel_requested);
+  // -----------------------------------------------------------------------------
+  // Return serialized access to a temporary Base with repository file lists.
+  // -----------------------------------------------------------------------------
+  TemporaryBaseRead acquire_provider_read(std::shared_ptr<std::atomic<bool>> cancel_requested);
   // -----------------------------------------------------------------------------
   // Build a temporary Base that includes repository changelog metadata.
   // -----------------------------------------------------------------------------

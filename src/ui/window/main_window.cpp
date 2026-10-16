@@ -218,6 +218,7 @@ create_main_window_ui_state(const AppWidgets *ui)
 {
   auto widgets = std::make_shared<MainWindowUiState>();
   widgets->query.entry = GTK_ENTRY(ui->entry);
+  widgets->query.mode_dropdown = GTK_DROP_DOWN(ui->mode_dropdown);
   widgets->query.history_list = GTK_LIST_BOX(ui->history_list);
   widgets->query.spinner = GTK_SPINNER(ui->spinner);
   widgets->query.search_button = GTK_BUTTON(ui->search_button);
@@ -518,6 +519,7 @@ connect_signals(const AppWidgets *ui, MainWindowUiState *widgets)
                    G_CALLBACK(pending_transaction_on_mark_listed_upgrades_button_clicked),
                    widgets);
 
+  g_signal_connect(ui->mode_dropdown, "notify::selected", G_CALLBACK(package_query_on_search_mode_changed), widgets);
   g_signal_connect(ui->search_button, "clicked", G_CALLBACK(package_query_on_search_button_clicked), widgets);
 
   g_signal_connect(ui->entry, "activate", G_CALLBACK(package_query_on_search_button_clicked), widgets);

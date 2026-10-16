@@ -30,6 +30,10 @@ void package_query_on_list_upgradeable_button_clicked(GtkButton *, gpointer user
 // -----------------------------------------------------------------------------
 void package_query_on_search_button_clicked(GtkButton *, gpointer user_data);
 // -----------------------------------------------------------------------------
+// Update the search controls when switching between package and provider lookup.
+// -----------------------------------------------------------------------------
+void package_query_on_search_mode_changed(GObject *, GParamSpec *, gpointer user_data);
+// -----------------------------------------------------------------------------
 // Restore and run a search from a selected history row.
 // -----------------------------------------------------------------------------
 void package_query_on_history_row_selected(GtkListBox *, GtkListBoxRow *row, gpointer user_data);
