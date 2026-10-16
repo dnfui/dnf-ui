@@ -221,6 +221,9 @@ TEST_CASE("Find Provider resolves a repository-only file from filelists metadata
   repo->get_config().get_baseurl_option().set(std::vector<std::string> { baseurl });
   repo_sack->load_repos(libdnf5::repo::Repo::Type::AVAILABLE);
 
+  auto empty_repo = repo_sack->create_repo("dnfui-empty-filelists-test");
+  empty_repo->get_config().get_enabled_option().set(true);
+
   auto matches =
       dnf_backend_internal::collect_provider_matching_nevras(base, "/usr/share/dnfui-review/file-2", nullptr);
   REQUIRE(matches.size() == 1);
@@ -228,6 +231,9 @@ TEST_CASE("Find Provider resolves a repository-only file from filelists metadata
   // Bare file names and filename globs must also find repository-only files.
   REQUIRE(dnf_backend_internal::collect_provider_matching_nevras(base, "file-2", nullptr) == matches);
   REQUIRE(dnf_backend_internal::collect_provider_matching_nevras(base, "file-*", nullptr) == matches);
+  REQUIRE(dnf_backend_internal::collect_provider_matching_nevras(base, "file-[12]", nullptr) == matches);
+  REQUIRE(dnf_backend_internal::collect_provider_matching_nevras(base, "/usr/share/dnfui-review/file-[12]", nullptr) ==
+          matches);
   REQUIRE(dnf_backend_internal::collect_provider_matching_nevras(base, "file", nullptr).empty());
 
   libdnf5::rpm::PackageQuery query(base);

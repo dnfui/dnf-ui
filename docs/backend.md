@@ -77,6 +77,8 @@ repository refresh keep their existing metadata requirements and offline fallbac
 Provides retries with cached file lists if live loading fails, and reports an error when those
 lists are unavailable rather than silently returning incomplete results. Downloading and loading
 file lists adds work only to Provides searches unless the user's DNF configuration already requests them.
+Repositories containing queryable packages must actually supply file-list metadata; requesting
+the optional metadata alone is not sufficient.
 
 ## Base lifetime and search cache
 
@@ -96,6 +98,9 @@ Search cache entries are lightweight snapshots of completed Search results.
 They store copied `PackageRow` values, not libdnf5 package objects. They can
 therefore survive shared Base destruction. Base object lifetime is not the
 search cache lifetime.
+
+Ordinary searches and Provides searches each retain up to three entries with independent eviction.
+They share the same generation and invalidation epoch, so refresh and Clear Cache invalidate both modes.
 
 Search cache validity depends on two values:
 

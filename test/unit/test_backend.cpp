@@ -492,6 +492,35 @@ TEST_CASE("BaseManager preserves offline cached packages without cached filelist
 }
 
 // -----------------------------------------------------------------------------
+// Repositories may omit optional filelists even when the caller requested them.
+// Provider searches must report incomplete metadata rather than a false negative.
+// -----------------------------------------------------------------------------
+TEST_CASE("Provider searches reject repositories that omit filelists metadata")
+{
+  TemporaryTestDirectory repo_dir;
+  TemporaryTestDirectory cache_dir;
+  const auto fixture =
+      std::filesystem::path(DNFUI_TEST_PROVIDER_REPO).parent_path() / "provider_repo_without_filelists";
+  const std::string repo_url = std::string("file://") + fixture.string();
+  ScopedEnvVar isolated_repos("DNFUI_TEST_REPOS_DIR", repo_dir.path.c_str());
+  ScopedEnvVar isolated_cache("DNFUI_TEST_CACHE_DIR", cache_dir.path.c_str());
+  ScopedEnvVar fixture_repo("DNFUI_TEST_PROVIDER_REPO_URL", repo_url.c_str());
+  auto &manager = BaseManager::instance();
+  manager.reset_for_tests();
+
+  auto options = backend_search_options(false, false);
+  options.find_provider = true;
+  REQUIRE_THROWS_WITH(dnf_backend_search_package_rows_interruptible("/usr/share/dnfui-review/file-2", options, nullptr),
+                      Catch::Matchers::ContainsSubstring("file lists"));
+  REQUIRE_FALSE(manager.has_cached_base_for_tests());
+
+  const auto rows = dnf_backend_search_package_rows_interruptible(
+      "dnfui-filelists-fixture", backend_search_options(false, true), nullptr);
+  REQUIRE(rows.size() == 1);
+  manager.reset_for_tests();
+}
+
+// -----------------------------------------------------------------------------
 // Installed package cache consistency tests (read-only)
 // -----------------------------------------------------------------------------
 

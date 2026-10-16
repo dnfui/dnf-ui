@@ -28,7 +28,9 @@
 
 #include <libdnf5/base/base.hpp>
 #include <libdnf5/conf/const.hpp>
+#include <libdnf5/repo/repo_query.hpp>
 #include <libdnf5/rpm/package_query.hpp>
+#include <libdnf5/utils/patterns.hpp>
 
 namespace dnf_backend_internal {
 
@@ -203,22 +205,34 @@ package_matches_search(const libdnf5::rpm::Package &pkg,
 }
 
 // -----------------------------------------------------------------------------
-// Resolve provider matches once, before building merged installed/repository rows.
+// Resolve provider matches once, before building merged installed and repository rows.
 // -----------------------------------------------------------------------------
 std::set<std::string>
 collect_provider_matching_nevras(libdnf5::Base &base, const std::string &pattern, GCancellable *cancellable)
 {
-  // A cache lacking filelists cannot prove that an available package does not own a file.
-  const auto &metadata_types = base.get_config().get_optional_metadata_types_option().get_value();
-  if (std::find(metadata_types.begin(), metadata_types.end(), libdnf5::METADATA_TYPE_FILELISTS) ==
-          metadata_types.end() &&
-      std::find(metadata_types.begin(), metadata_types.end(), "all") == metadata_types.end()) {
-    throw std::runtime_error(
-        _("Provides search needs file lists that are unavailable in the cached repository metadata."));
+  // Requesting filelists does not guarantee that each repository supplies them.
+  libdnf5::repo::RepoQuery repositories(base);
+  repositories.filter_enabled(true);
+  repositories.filter_type(libdnf5::repo::Repo::Type::AVAILABLE);
+  for (auto repo : repositories) {
+    if (package_query_cancelled(cancellable)) {
+      return {};
+    }
+    if (!repo->get_metadata_path(libdnf5::METADATA_TYPE_FILELISTS).empty()) {
+      continue;
+    }
+
+    libdnf5::rpm::PackageQuery packages(base);
+    packages.filter_repo_id(std::vector<std::string> { repo->get_id() });
+    if (!packages.empty()) {
+      throw std::runtime_error(
+          _("Provides search needs file lists that are unavailable in the cached repository metadata."));
+    }
   }
 
   std::set<std::string> matches;
-  const auto cmp = search_pattern_uses_wildcards(pattern) ? libdnf5::sack::QueryCmp::GLOB : libdnf5::sack::QueryCmp::EQ;
+  const auto cmp =
+      libdnf5::utils::is_glob_pattern(pattern.c_str()) ? libdnf5::sack::QueryCmp::GLOB : libdnf5::sack::QueryCmp::EQ;
   auto collect = [&](libdnf5::rpm::PackageQuery &query) {
     for (auto pkg : query) {
       if (package_query_cancelled(cancellable)) {
