@@ -256,6 +256,8 @@ struct DnfBackendSearchOptions {
   bool exact_match = false;
   // Keep the current one-row-per-package view unless the caller asks for exact versions.
   bool latest_only = true;
+  // Search for the package providing a capability or owning a file.
+  bool find_provider = false;
 };
 
 // -----------------------------------------------------------------------------

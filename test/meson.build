@@ -53,6 +53,7 @@ dnfui_tests = executable(
   ],
   cpp_args: [
     '-DDNFUI_BUILD_TESTS=1',
+    '-DDNFUI_TEST_PROVIDER_REPO="@0@/test/fixtures/provider_repo"'.format(meson.project_source_root()),
   ],
 )
 

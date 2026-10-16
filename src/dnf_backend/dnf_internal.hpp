@@ -23,6 +23,10 @@
 
 namespace dnf_backend_internal {
 
+// Collect packages that provide a capability or own a requested path.
+std::set<std::string>
+collect_provider_matching_nevras(libdnf5::Base &base, const std::string &pattern, GCancellable *cancellable);
+
 // Installed package scan result published into the shared UI cache only after a full uncancelled scan.
 // Keeping rows, exact NEVRAs, and name and architecture lookup together avoids partial cache updates.
 struct InstalledQueryResult {
@@ -56,16 +60,19 @@ bool package_query_cancelled(GCancellable *cancellable);
 // Collect query rows keyed by package name and architecture.
 // The caller supplies the Base so related libdnf5 queries stay under the same Base lock.
 // -----------------------------------------------------------------------------
-std::map<std::string, PackageRow> collect_available_rows_by_name_arch(libdnf5::Base &base,
-                                                                      GCancellable *cancellable,
-                                                                      const DnfBackendSearchOptions &search_options,
-                                                                      const std::string *pattern = nullptr);
+std::map<std::string, PackageRow>
+collect_available_rows_by_name_arch(libdnf5::Base &base,
+                                    GCancellable *cancellable,
+                                    const DnfBackendSearchOptions &search_options,
+                                    const std::string *pattern = nullptr,
+                                    const std::set<std::string> *provider_nevras = nullptr);
 // Collect installed rows and exact NEVRA cache data in one scan.
 // -----------------------------------------------------------------------------
 InstalledQueryResult collect_installed_rows(libdnf5::Base &base,
                                             GCancellable *cancellable,
                                             const DnfBackendSearchOptions &search_options,
-                                            const std::string *pattern = nullptr);
+                                            const std::string *pattern = nullptr,
+                                            const std::set<std::string> *provider_nevras = nullptr);
 
 // -----------------------------------------------------------------------------
 // Repo-candidate annotation and row merge helpers used by query code and tests.

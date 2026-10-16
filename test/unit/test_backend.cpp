@@ -6,6 +6,10 @@
 #include "dnf_backend/dnf_internal.hpp"
 #include "test_utils.hpp"
 
+#include <libdnf5/conf/const.hpp>
+#include <libdnf5/repo/repo.hpp>
+#include <libdnf5/repo/repo_sack.hpp>
+
 #include <atomic>
 #include <chrono>
 #include <future>
@@ -16,6 +20,7 @@
 #include <stdexcept>
 #include <string>
 #include <thread>
+#include <vector>
 
 namespace {
 
@@ -42,6 +47,27 @@ struct UnloadablePluginConfig {
   {
     std::error_code error;
     std::filesystem::remove_all(directory, error);
+  }
+};
+
+// -----------------------------------------------------------------------------
+// Keep repository cache regression fixtures isolated from the host filesystem.
+// -----------------------------------------------------------------------------
+struct TemporaryTestDirectory {
+  std::filesystem::path path;
+
+  TemporaryTestDirectory()
+  {
+    gchar *directory = g_dir_make_tmp("dnfui-provider-cache-XXXXXX", nullptr);
+    REQUIRE(directory != nullptr);
+    path = directory;
+    g_free(directory);
+  }
+
+  ~TemporaryTestDirectory()
+  {
+    std::error_code error;
+    std::filesystem::remove_all(path, error);
   }
 };
 
@@ -347,6 +373,76 @@ TEST_CASE("BaseManager rebuild keeps the app usable when repo-backed refresh fai
   REQUIRE_NOTHROW(dnf_backend_refresh_installed_snapshot());
   REQUIRE(dnf_backend_installed_snapshot_size_for_tests() > 0);
   mgr.reset_for_tests();
+}
+
+// -----------------------------------------------------------------------------
+// Clearing configured filelists must override the append-only option semantics.
+// -----------------------------------------------------------------------------
+TEST_CASE("BaseManager disables configured filelists in its primary-only metadata fallback")
+{
+  libdnf5::Base base;
+  base.load_config();
+
+  auto &option = base.get_config().get_optional_metadata_types_option();
+  option.add_item(libdnf5::Option::Priority::RUNTIME, libdnf5::METADATA_TYPE_FILELISTS);
+  option.add_item(libdnf5::Option::Priority::RUNTIME, libdnf5::METADATA_TYPE_OTHER);
+
+  base_manager_disable_filelists_metadata(base);
+
+  const auto &types = option.get_value();
+  REQUIRE(types.count(libdnf5::METADATA_TYPE_FILELISTS) == 0);
+  REQUIRE(types.count(libdnf5::METADATA_TYPE_ALL) == 0);
+  REQUIRE(types.count(libdnf5::METADATA_TYPE_OTHER) == 1);
+}
+
+// -----------------------------------------------------------------------------
+// Cached primary metadata must survive a missing optional filelists cache.
+// Provides must report that file search is incomplete rather than returning empty results.
+// -----------------------------------------------------------------------------
+TEST_CASE("BaseManager preserves offline cached packages without cached filelists")
+{
+  TemporaryTestDirectory repo_dir;
+  TemporaryTestDirectory cache_dir;
+  const std::string repo_url = std::string("file://") + DNFUI_TEST_PROVIDER_REPO;
+
+  {
+    // Prime only primary metadata for the fixture repository.
+    libdnf5::Base base;
+    base.load_config();
+    base.get_config().get_plugins_option().set(false);
+    base.get_config().get_cachedir_option().set(cache_dir.path.string());
+    base.get_config().get_optional_metadata_types_option().set(std::set<std::string> {});
+    base.setup();
+    auto sack = base.get_repo_sack();
+    auto repo = sack->create_repo("dnfui-filelists-cache-test");
+    repo->get_config().get_baseurl_option().set(std::vector<std::string> { repo_url });
+    sack->load_repos(libdnf5::repo::Repo::Type::AVAILABLE);
+
+    libdnf5::rpm::PackageQuery query(base);
+    query.filter_name("dnfui-filelists-fixture", libdnf5::sack::QueryCmp::EQ);
+    REQUIRE(query.size() == 1);
+  }
+
+  auto &manager = BaseManager::instance();
+  manager.reset_for_tests();
+  {
+    ScopedEnvVar isolated_repos("DNFUI_TEST_REPOS_DIR", repo_dir.path.c_str());
+    ScopedEnvVar isolated_cache("DNFUI_TEST_CACHE_DIR", cache_dir.path.c_str());
+    ScopedEnvVar fixture_repo("DNFUI_TEST_PROVIDER_REPO_URL", repo_url.c_str());
+    ScopedEnvVar offline("DNFUI_TEST_FORCE_FULL_REPO_LOAD_FAILURE", "1");
+
+    REQUIRE(manager.rebuild() == BaseRepoState::CACHED_METADATA);
+
+    auto rows = dnf_backend_search_package_rows_interruptible(
+        "dnfui-filelists-fixture", backend_search_options(false, true), nullptr);
+    REQUIRE_FALSE(rows.empty());
+
+    auto provider_options = backend_search_options(false, false);
+    provider_options.find_provider = true;
+    REQUIRE_THROWS_WITH(dnf_backend_search_package_rows_interruptible("file-2", provider_options, nullptr),
+                        Catch::Matchers::ContainsSubstring("file lists"));
+  }
+  manager.reset_for_tests();
 }
 
 // -----------------------------------------------------------------------------

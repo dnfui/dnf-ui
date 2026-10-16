@@ -12,6 +12,10 @@
 
 #include <libdnf5/base/base.hpp>
 
+// Request repository file-list metadata before the Base loads enabled repositories.
+void base_manager_enable_filelists_metadata(libdnf5::Base &base);
+void base_manager_disable_filelists_metadata(libdnf5::Base &base);
+
 // -----------------------------------------------------------------------------
 // Lock guard helpers for thread-safe Base access.
 // libdnf Base queries are serialized because PackageQuery work can touch

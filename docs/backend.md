@@ -69,6 +69,15 @@ The Base has a generation counter. When the Base is rebuilt, the generation is
 incremented. UI tasks use that value to reject outdated results after refreshes
 and transactions.
 
+Repository-backed Bases request DNF5's optional `filelists` metadata before loading repositories.
+This makes Provides searches find files belonging to uninstalled packages, including paths
+not listed in primary metadata. If cache-only loading fails because optional metadata is
+missing (including repositories configured to skip failures), BaseManager retries without filelists
+and keeps cached primary package searches usable.
+Provides reports that file lists are unavailable rather than silently returning incomplete results.
+Installed-only Bases do not require repository filelists. Downloading the additional metadata can
+increase the cost of loading enabled repositories.
+
 ## Base lifetime and search cache
 
 The shared Base is heavyweight libdnf5 state. Normal package-query workers drop

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<filelists xmlns="http://linux.duke.edu/metadata/filelists" packages="1">
+  <package pkgid="5c68c96697c51eac283051588c8eb8ab9df6edad6b84b15215f2d286d8154039" name="dnfui-filelists-fixture" arch="noarch">
+    <version epoch="0" ver="1" rel="1"/>
+    <file>/usr/share/dnfui-review/file-2</file>
+  </package>
+</filelists>
