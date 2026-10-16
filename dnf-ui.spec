@@ -1,6 +1,6 @@
 Name:           dnf-ui
 Version:        0.7.1
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        GTK interface for DNF5
 
 License:        MIT
@@ -56,6 +56,9 @@ appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/io.github.dnfui.
 %{_datadir}/metainfo/io.github.dnfui.dnfui.metainfo.xml
 
 %changelog
+* Fri Oct 16 2026 ErikMN <dnfui@proton.me> - 0.7.1-2
+- Fix startup hang on Fedora 45 with GTK 4.24
+
 * Thu Oct 15 2026 ErikMN <dnfui@proton.me> - 0.7.1-1
 - Follow GNOME's light and dark appearance preference at startup and while running
 - Prevent transparent window backgrounds when switching appearance on GNOME
