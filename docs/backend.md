@@ -74,9 +74,9 @@ This finds files belonging to uninstalled packages, including paths not listed i
 The temporary Base uses the same serialization lock and is released when the search finishes.
 It does not replace or discard the normal cached Base. Ordinary package queries, startup, and
 repository refresh keep their existing metadata requirements and offline fallback behavior.
-Provides retries with cached file lists if live loading fails, and reports an error when those
-lists are unavailable rather than silently returning incomplete results. Downloading and loading
-file lists adds work only to Provides searches unless the user's DNF configuration already requests them.
+Provides retries with file lists from its configured cache, then the system cache if live loading fails,
+and reports an error when those lists are unavailable rather than silently returning incomplete results.
+Downloading and loading file lists adds work only to Provides searches unless the user's DNF configuration already requests them.
 Repositories containing queryable packages must actually supply file-list metadata; requesting
 the optional metadata alone is not sufficient.
 

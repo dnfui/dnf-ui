@@ -442,6 +442,66 @@ TEST_CASE("Provider searches keep filelists separate from normal package queries
 }
 
 // -----------------------------------------------------------------------------
+// Provider searches must reuse their own cached metadata before trying the system cache.
+// -----------------------------------------------------------------------------
+TEST_CASE("Provider searches use separate configured and system metadata caches")
+{
+  TemporaryTestDirectory repo_dir;
+  TemporaryTestDirectory cache_dir;
+  TemporaryTestDirectory system_cache_dir;
+  const std::string repo_url = std::string("file://") + DNFUI_TEST_PROVIDER_REPO;
+  ScopedEnvVar isolated_repos("DNFUI_TEST_REPOS_DIR", repo_dir.path.c_str());
+  ScopedEnvVar isolated_cache("DNFUI_TEST_CACHE_DIR", cache_dir.path.c_str());
+  ScopedEnvVar isolated_system_cache("DNFUI_TEST_SYSTEM_CACHE_DIR", system_cache_dir.path.c_str());
+  ScopedEnvVar fixture_repo("DNFUI_TEST_PROVIDER_REPO_URL", repo_url.c_str());
+  auto &manager = BaseManager::instance();
+  manager.reset_for_tests();
+  auto options = backend_search_options(false, false);
+  options.find_provider = true;
+
+  SECTION("A previous provider search supplies the offline metadata")
+  {
+    auto rows = dnf_backend_search_package_rows_interruptible("file-2", options, nullptr);
+    REQUIRE(rows.size() == 1);
+    REQUIRE(std::filesystem::is_empty(system_cache_dir.path));
+
+    ScopedEnvVar offline("DNFUI_TEST_FORCE_FULL_REPO_LOAD_FAILURE", "1");
+    rows = dnf_backend_search_package_rows_interruptible("file-2", options, nullptr);
+    REQUIRE(rows.size() == 1);
+    REQUIRE(rows[0].name == "dnfui-filelists-fixture");
+    REQUIRE(std::filesystem::is_empty(system_cache_dir.path));
+  }
+
+  SECTION("System metadata remains available when the configured cache is empty")
+  {
+    {
+      libdnf5::Base base;
+      base.load_config();
+      base.get_config().get_plugins_option().set(false);
+      base.get_config().get_cachedir_option().set(system_cache_dir.path.string());
+      base_manager_enable_filelists_metadata(base);
+      base.setup();
+      auto repo_sack = base.get_repo_sack();
+      auto repo = repo_sack->create_repo("dnfui-filelists-cache-test");
+      repo->get_config().get_baseurl_option().set(std::vector<std::string> { repo_url });
+      repo_sack->load_repos(libdnf5::repo::Repo::Type::AVAILABLE);
+    }
+
+    REQUIRE(std::filesystem::is_empty(cache_dir.path));
+    ScopedEnvVar offline("DNFUI_TEST_FORCE_FULL_REPO_LOAD_FAILURE", "1");
+    const auto rows = dnf_backend_search_package_rows_interruptible("file-2", options, nullptr);
+    REQUIRE(rows.size() == 1);
+    REQUIRE(rows[0].name == "dnfui-filelists-fixture");
+    {
+      auto read = manager.acquire_read();
+      REQUIRE(read.base.get_config().get_cachedir_option().get_value() == system_cache_dir.path.string());
+    }
+  }
+
+  manager.reset_for_tests();
+}
+
+// -----------------------------------------------------------------------------
 // Cached primary metadata must survive a missing optional filelists cache.
 // Provides must report that file search is incomplete rather than returning empty results.
 // -----------------------------------------------------------------------------

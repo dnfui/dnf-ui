@@ -41,10 +41,12 @@ namespace {
 
 // Controls which repository sources are loaded into a temporary libdnf5 Base.
 // FULL uses the normal enabled repositories.
+// CONFIGURED_CACHE_ONLY_METADATA reads the same cache as normal repository loading.
 // CACHE_ONLY_METADATA uses already cached repository metadata when live repo loading failed.
 // SYSTEM_ONLY loads only the local installed package database and skips available repositories.
 enum class RepoLoadMode {
   FULL,
+  CONFIGURED_CACHE_ONLY_METADATA,
   CACHE_ONLY_METADATA,
   SYSTEM_ONLY,
 };
@@ -260,11 +262,13 @@ create_configured_base(RepoLoadMode mode, bool load_changelog_metadata = false, 
   // Do not load updated plugin libraries into a process still using the previous libdnf5 version.
   base->get_config().get_plugins_option().set(false);
 
-  if (mode == RepoLoadMode::CACHE_ONLY_METADATA) {
+  if (mode == RepoLoadMode::CACHE_ONLY_METADATA || mode == RepoLoadMode::CONFIGURED_CACHE_ONLY_METADATA) {
     // When live repo refresh is not available, keep repo-backed queries working
     // from cached metadata instead of dropping immediately to installed-only mode.
     base->get_config().get_cacheonly_option().set("metadata");
-    base->get_config().get_cachedir_option().set(base->get_config().get_system_cachedir_option().get_value());
+    if (mode == RepoLoadMode::CACHE_ONLY_METADATA) {
+      base->get_config().get_cachedir_option().set(base->get_config().get_system_cachedir_option().get_value());
+    }
   }
 
   if (load_filelists_metadata && mode != RepoLoadMode::SYSTEM_ONLY) {
@@ -283,6 +287,11 @@ create_configured_base(RepoLoadMode mode, bool load_changelog_metadata = false, 
   }
   if (const char *cache_dir = std::getenv("DNFUI_TEST_CACHE_DIR")) {
     base->get_config().get_cachedir_option().set(cache_dir);
+  }
+  if (mode == RepoLoadMode::CACHE_ONLY_METADATA) {
+    if (const char *system_cache_dir = std::getenv("DNFUI_TEST_SYSTEM_CACHE_DIR")) {
+      base->get_config().get_cachedir_option().set(system_cache_dir);
+    }
   }
 #endif
 
@@ -390,7 +399,7 @@ load_repo_data(libdnf5::Base &base, RepoLoadMode mode, const std::shared_ptr<std
     if (force_failure && std::string(force_failure) == "1") {
       throw std::runtime_error("forced full repo load failure");
     }
-  } else if (mode == RepoLoadMode::CACHE_ONLY_METADATA) {
+  } else if (mode == RepoLoadMode::CACHE_ONLY_METADATA || mode == RepoLoadMode::CONFIGURED_CACHE_ONLY_METADATA) {
     const char *force_failure = std::getenv("DNFUI_TEST_FORCE_CACHEONLY_REPO_LOAD_FAILURE");
     if (force_failure && std::string(force_failure) == "1") {
       throw std::runtime_error("forced cache-only repo load failure");
@@ -441,7 +450,7 @@ build_base_for_mode(RepoLoadMode mode,
     expire_repository_metadata_cache(*result.base);
   }
   load_repo_data(*result.base, mode, cancel_requested);
-  if (mode == RepoLoadMode::CACHE_ONLY_METADATA) {
+  if (mode == RepoLoadMode::CACHE_ONLY_METADATA || mode == RepoLoadMode::CONFIGURED_CACHE_ONLY_METADATA) {
     result.repo_state = BaseRepoState::CACHED_METADATA;
   } else if (mode == RepoLoadMode::SYSTEM_ONLY) {
     result.repo_state = BaseRepoState::INSTALLED_ONLY;
@@ -465,18 +474,23 @@ build_provider_base(const std::shared_ptr<std::atomic<bool>> &cancel_requested)
   } catch (const std::exception &error) {
     throw_if_rebuild_cancelled(cancel_requested);
     DNFUI_TRACE("BaseManager provider repo load failed, trying cached filelists: %s", error.what());
+  }
+
+  // Reuse file lists downloaded by this user before trying the system cache.
+  for (const RepoLoadMode mode : { RepoLoadMode::CONFIGURED_CACHE_ONLY_METADATA, RepoLoadMode::CACHE_ONLY_METADATA }) {
     try {
-      return build_base_for_mode(
-          RepoLoadMode::CACHE_ONLY_METADATA, BaseRefreshMode::NORMAL, cancel_requested, {}, false, true);
+      return build_base_for_mode(mode, BaseRefreshMode::NORMAL, cancel_requested, {}, false, true);
     } catch (const BaseOperationCancelled &) {
       throw;
     } catch (const std::exception &cache_error) {
       throw_if_rebuild_cancelled(cancel_requested);
-      DNFUI_TRACE("BaseManager cached provider repo load failed: %s", cache_error.what());
-      throw std::runtime_error(
-          _("Provides search needs file lists that are unavailable in the cached repository metadata."));
+      DNFUI_TRACE(
+          "BaseManager cached provider repo load failed mode=%d: %s", static_cast<int>(mode), cache_error.what());
     }
   }
+
+  throw std::runtime_error(
+      _("Provides search needs file lists that are unavailable in the cached repository metadata."));
 }
 
 // -----------------------------------------------------------------------------
