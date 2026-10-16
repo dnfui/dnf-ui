@@ -16,6 +16,7 @@
 #include <atomic>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <stdexcept>
 #include <string>
@@ -85,6 +86,16 @@ acquire_interruptible_base_read(GCancellable *cancellable)
 {
   BaseCancelToken cancel_token(cancellable);
   return BaseManager::instance().acquire_read(cancel_token.token());
+}
+
+// -----------------------------------------------------------------------------
+// Keep provider metadata separate from the Base used by ordinary package queries.
+// -----------------------------------------------------------------------------
+static TemporaryBaseRead
+acquire_interruptible_provider_read(GCancellable *cancellable)
+{
+  BaseCancelToken cancel_token(cancellable);
+  return BaseManager::instance().acquire_provider_read(cancel_token.token());
 }
 
 // -----------------------------------------------------------------------------
@@ -742,7 +753,14 @@ dnf_backend_search_package_rows_interruptible(const std::string &pattern,
   std::set<std::string> protected_names;
   {
     try {
-      auto [base, guard] = acquire_interruptible_base_read(cancellable);
+      std::optional<TemporaryBaseRead> provider_read;
+      std::optional<BaseRead> normal_read;
+      if (search_options.find_provider) {
+        provider_read.emplace(acquire_interruptible_provider_read(cancellable));
+      } else {
+        normal_read.emplace(acquire_interruptible_base_read(cancellable));
+      }
+      libdnf5::Base &base = provider_read ? *provider_read->base : normal_read->base;
       // The shared installed snapshot must contain every installed package, not
       // only the rows that matched this search.
       // The UI uses it later for package status, action buttons, and pending action handling.

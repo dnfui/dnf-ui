@@ -376,23 +376,69 @@ TEST_CASE("BaseManager rebuild keeps the app usable when repo-backed refresh fai
 }
 
 // -----------------------------------------------------------------------------
-// Clearing configured filelists must override the append-only option semantics.
+// Ordinary package queries must retain their metadata requirements before and after provider searches.
 // -----------------------------------------------------------------------------
-TEST_CASE("BaseManager disables configured filelists in its primary-only metadata fallback")
+TEST_CASE("Provider searches keep filelists separate from normal package queries")
 {
-  libdnf5::Base base;
-  base.load_config();
+  TemporaryTestDirectory repo_dir;
+  TemporaryTestDirectory cache_dir;
+  const std::string repo_url = std::string("file://") + DNFUI_TEST_PROVIDER_REPO;
+  ScopedEnvVar isolated_repos("DNFUI_TEST_REPOS_DIR", repo_dir.path.c_str());
+  ScopedEnvVar isolated_cache("DNFUI_TEST_CACHE_DIR", cache_dir.path.c_str());
+  ScopedEnvVar fixture_repo("DNFUI_TEST_PROVIDER_REPO_URL", repo_url.c_str());
 
-  auto &option = base.get_config().get_optional_metadata_types_option();
-  option.add_item(libdnf5::Option::Priority::RUNTIME, libdnf5::METADATA_TYPE_FILELISTS);
-  option.add_item(libdnf5::Option::Priority::RUNTIME, libdnf5::METADATA_TYPE_OTHER);
+  libdnf5::Base configured_base;
+  configured_base.load_config();
+  const auto configured_types = configured_base.get_config().get_optional_metadata_types_option().get_value();
+  auto &manager = BaseManager::instance();
+  manager.reset_for_tests();
+  libdnf5::Base *normal_base = nullptr;
+  {
+    auto read = manager.acquire_read();
+    normal_base = &read.base;
+    REQUIRE(read.base.get_config().get_optional_metadata_types_option().get_value() == configured_types);
+  }
 
-  base_manager_disable_filelists_metadata(base);
+  auto rows = dnf_backend_search_package_rows_interruptible(
+      "dnfui-filelists-fixture", backend_search_options(false, true), nullptr);
+  REQUIRE_FALSE(rows.empty());
+  if (configured_types.count(libdnf5::METADATA_TYPE_FILELISTS) == 0 &&
+      configured_types.count(libdnf5::METADATA_TYPE_ALL) == 0) {
+    for (const auto &entry : std::filesystem::recursive_directory_iterator(cache_dir.path)) {
+      if (entry.path().parent_path().filename() == "repodata") {
+        REQUIRE(entry.path().filename().string().find("filelists") == std::string::npos);
+      }
+    }
+  }
 
-  const auto &types = option.get_value();
-  REQUIRE(types.count(libdnf5::METADATA_TYPE_FILELISTS) == 0);
-  REQUIRE(types.count(libdnf5::METADATA_TYPE_ALL) == 0);
-  REQUIRE(types.count(libdnf5::METADATA_TYPE_OTHER) == 1);
+  const uint64_t generation = manager.current_generation();
+  auto provider_options = backend_search_options(false, false);
+  provider_options.find_provider = true;
+  rows = dnf_backend_search_package_rows_interruptible("file-2", provider_options, nullptr);
+  REQUIRE(rows.size() == 1);
+  REQUIRE(rows[0].name == "dnfui-filelists-fixture");
+  REQUIRE(manager.current_generation() == generation);
+  {
+    ScopedEnvVar offline("DNFUI_TEST_FORCE_FULL_REPO_LOAD_FAILURE", "1");
+    rows = dnf_backend_search_package_rows_interruptible("file-2", provider_options, nullptr);
+    REQUIRE(rows.size() == 1);
+  }
+
+  GCancellable *cancelled = g_cancellable_new();
+  g_cancellable_cancel(cancelled);
+  rows = dnf_backend_search_package_rows_interruptible("file-2", provider_options, cancelled);
+  g_object_unref(cancelled);
+  REQUIRE(rows.empty());
+  {
+    auto read = manager.acquire_read();
+    REQUIRE(&read.base == normal_base);
+    REQUIRE(read.base.get_config().get_optional_metadata_types_option().get_value() == configured_types);
+  }
+
+  manager.reset_for_tests();
+  rows = dnf_backend_search_package_rows_interruptible("file-2", provider_options, nullptr);
+  REQUIRE(rows.size() == 1);
+  REQUIRE_FALSE(manager.has_cached_base_for_tests());
 }
 
 // -----------------------------------------------------------------------------

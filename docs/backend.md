@@ -69,14 +69,14 @@ The Base has a generation counter. When the Base is rebuilt, the generation is
 incremented. UI tasks use that value to reject outdated results after refreshes
 and transactions.
 
-Repository-backed Bases request DNF5's optional `filelists` metadata before loading repositories.
-This makes Provides searches find files belonging to uninstalled packages, including paths
-not listed in primary metadata. If cache-only loading fails because optional metadata is
-missing (including repositories configured to skip failures), BaseManager retries without filelists
-and keeps cached primary package searches usable.
-Provides reports that file lists are unavailable rather than silently returning incomplete results.
-Installed-only Bases do not require repository filelists. Downloading the additional metadata can
-increase the cost of loading enabled repositories.
+Provides searches use a temporary Base that requests DNF5's optional `filelists` metadata.
+This finds files belonging to uninstalled packages, including paths not listed in primary metadata.
+The temporary Base uses the same serialization lock and is released when the search finishes.
+It does not replace or discard the normal cached Base. Ordinary package queries, startup, and
+repository refresh keep their existing metadata requirements and offline fallback behavior.
+Provides retries with cached file lists if live loading fails, and reports an error when those
+lists are unavailable rather than silently returning incomplete results. Downloading and loading
+file lists adds work only to Provides searches unless the user's DNF configuration already requests them.
 
 ## Base lifetime and search cache
 
