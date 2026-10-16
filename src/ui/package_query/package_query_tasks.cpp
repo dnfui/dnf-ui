@@ -859,8 +859,12 @@ on_search_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
     }
 
     if (td) {
-      package_query_set_displayed_search_query(
-          widgets, td->term, td->options.search_in_description, td->options.exact_match, td->options.latest_only);
+      package_query_set_displayed_search_query(widgets,
+                                               td->term,
+                                               td->options.search_in_description,
+                                               td->options.exact_match,
+                                               td->options.latest_only,
+                                               td->options.find_provider);
     }
 
     // Fill the package table and display the result count.

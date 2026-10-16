@@ -44,6 +44,10 @@ TEST_CASE("Package query cache key includes search options")
   REQUIRE(package_query_cache_key_for("bash", backend_search_options(true, true)) == "desc:exact:latest:bash");
 
   REQUIRE(package_query_cache_key_for("bash", backend_search_options(false, false, false)) == "name:contains:all:bash");
+
+  auto provider_options = backend_search_options(false, false);
+  provider_options.find_provider = true;
+  REQUIRE(package_query_cache_key_for("bash", provider_options) == "provides:contains:latest:bash");
 }
 
 // -----------------------------------------------------------------------------

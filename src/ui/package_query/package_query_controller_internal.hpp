@@ -32,7 +32,8 @@ void package_query_set_displayed_search_query(MainWindowUiState *widgets,
                                               const std::string &term,
                                               bool search_in_description,
                                               bool exact_match,
-                                              bool latest_only);
+                                              bool latest_only,
+                                              bool find_provider);
 // -----------------------------------------------------------------------------
 // Remember the List Packages options that produced the current table.
 // -----------------------------------------------------------------------------

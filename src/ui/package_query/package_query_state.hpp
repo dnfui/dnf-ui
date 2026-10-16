@@ -41,6 +41,7 @@ struct DisplayedPackageQueryState {
   bool search_in_description = false;
   bool exact_match = false;
   bool latest_only = true;
+  bool find_provider = false;
   bool exact_installonly_action = false;
 };
 

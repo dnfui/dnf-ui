@@ -108,6 +108,12 @@ main_window_build_layout(AppWidgets *ui)
   gtk_widget_add_css_class(hbox_search, "control-row");
   gtk_box_append(GTK_BOX(controls_box), hbox_search);
 
+  const char *search_modes[] = { _("Packages"), _("Provides"), nullptr };
+  GtkWidget *mode_dropdown = gtk_drop_down_new_from_strings(search_modes);
+  gtk_widget_set_tooltip_text(mode_dropdown, _("Search package names or find packages by file path and capability."));
+  gtk_box_append(GTK_BOX(hbox_search), mode_dropdown);
+  ui->mode_dropdown = mode_dropdown;
+
   GtkWidget *entry = gtk_entry_new();
   gtk_entry_set_placeholder_text(GTK_ENTRY(entry), _("Search packages..."));
   gtk_widget_set_hexpand(entry, TRUE);

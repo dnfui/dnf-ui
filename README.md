@@ -59,6 +59,7 @@ Applications such as [GNOME Software](https://apps.gnome.org/Software/) cover th
 ## Current features
 
 - Search packages from enabled repositories and installed local RPMs
+- Find packages providing a capability or owning a file
 - Browse available, installed, and upgradable packages
 - Switch between latest-version and exact-version views
 - Show the daemon-reported upgrade count after startup
