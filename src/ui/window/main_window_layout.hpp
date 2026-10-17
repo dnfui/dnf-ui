@@ -23,6 +23,7 @@ struct AppWidgets {
 
   GtkWidget *entry = NULL;
   GtkWidget *mode_dropdown = NULL;
+  GtkWidget *options_button = NULL;
   GtkWidget *search_button = NULL;
   GtkWidget *desc_checkbox = NULL;
   GtkWidget *exact_checkbox = NULL;

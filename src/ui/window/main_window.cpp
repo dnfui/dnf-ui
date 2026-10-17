@@ -219,6 +219,7 @@ create_main_window_ui_state(const AppWidgets *ui)
   auto widgets = std::make_shared<MainWindowUiState>();
   widgets->query.entry = GTK_ENTRY(ui->entry);
   widgets->query.mode_dropdown = GTK_DROP_DOWN(ui->mode_dropdown);
+  widgets->query.options_button = GTK_MENU_BUTTON(ui->options_button);
   widgets->query.history_list = GTK_LIST_BOX(ui->history_list);
   widgets->query.spinner = GTK_SPINNER(ui->spinner);
   widgets->query.search_button = GTK_BUTTON(ui->search_button);

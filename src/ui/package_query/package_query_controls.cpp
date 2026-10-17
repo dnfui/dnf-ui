@@ -201,8 +201,7 @@ package_query_set_idle_controls_sensitive(MainWindowUiState *widgets, bool sensi
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.entry), sensitive);
   const bool package_search = gtk_drop_down_get_selected(widgets->query.mode_dropdown) == 0;
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.mode_dropdown), sensitive);
-  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.desc_checkbox), sensitive && package_search);
-  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.exact_checkbox), sensitive && package_search);
+  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.options_button), sensitive && package_search);
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.latest_checkbox), sensitive);
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.history_list), sensitive);
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.list_button), sensitive);

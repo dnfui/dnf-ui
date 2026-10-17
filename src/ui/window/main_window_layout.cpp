@@ -126,13 +126,37 @@ main_window_build_layout(AppWidgets *ui)
   gtk_box_append(GTK_BOX(hbox_search), mode_dropdown);
   ui->mode_dropdown = mode_dropdown;
 
+  // Keep package-only search options accessible without crowding the search row.
+  GtkWidget *options_button = gtk_menu_button_new();
+  GtkWidget *options_button_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
+  gtk_widget_set_halign(options_button_box, GTK_ALIGN_CENTER);
+  gtk_widget_set_valign(options_button_box, GTK_ALIGN_CENTER);
+  GtkWidget *options_icon = gtk_image_new_from_icon_name("system-search-symbolic");
+  gtk_box_append(GTK_BOX(options_button_box), options_icon);
+  GtkWidget *options_label = gtk_label_new(_("Options"));
+  gtk_box_append(GTK_BOX(options_button_box), options_label);
+  gtk_menu_button_set_child(GTK_MENU_BUTTON(options_button), options_button_box);
+  gtk_menu_button_set_always_show_arrow(GTK_MENU_BUTTON(options_button), TRUE);
+
+  GtkWidget *options_popover = gtk_popover_new();
+  GtkWidget *options_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
+  gtk_widget_set_margin_start(options_box, 12);
+  gtk_widget_set_margin_end(options_box, 12);
+  gtk_widget_set_margin_top(options_box, 12);
+  gtk_widget_set_margin_bottom(options_box, 12);
+
   GtkWidget *desc_checkbox = gtk_check_button_new_with_label(_("Search in description"));
-  gtk_box_append(GTK_BOX(hbox_search), desc_checkbox);
+  gtk_box_append(GTK_BOX(options_box), desc_checkbox);
   ui->desc_checkbox = desc_checkbox;
 
   GtkWidget *exact_checkbox = gtk_check_button_new_with_label(_("Exact match"));
-  gtk_box_append(GTK_BOX(hbox_search), exact_checkbox);
+  gtk_box_append(GTK_BOX(options_box), exact_checkbox);
   ui->exact_checkbox = exact_checkbox;
+
+  gtk_popover_set_child(GTK_POPOVER(options_popover), options_box);
+  gtk_menu_button_set_popover(GTK_MENU_BUTTON(options_button), options_popover);
+  gtk_box_append(GTK_BOX(hbox_search), options_button);
+  ui->options_button = options_button;
 
   GtkWidget *latest_checkbox = gtk_check_button_new_with_label(_("Latest only"));
   gtk_check_button_set_active(GTK_CHECK_BUTTON(latest_checkbox), TRUE);

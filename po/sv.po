@@ -1679,3 +1679,6 @@ msgstr "Söker efter tillhandahållare av '%s'..."
 
 msgid "Provides search needs file lists that are unavailable in the cached repository metadata."
 msgstr "Provides-sökning kräver fillistor som saknas i cachad förrådsmetadata."
+
+msgid "Options"
+msgstr "Alternativ"

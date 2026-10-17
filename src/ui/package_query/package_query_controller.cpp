@@ -138,8 +138,7 @@ package_query_on_search_mode_changed(GObject *, GParamSpec *, gpointer user_data
   gtk_entry_set_placeholder_text(widgets->query.entry,
                                  provider ? _("File path or capability...") : _("Search packages..."));
   const bool idle = !package_query_has_active_package_list_request(widgets);
-  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.desc_checkbox), idle && !provider);
-  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.exact_checkbox), idle && !provider);
+  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.options_button), idle && !provider);
 }
 
 // -----------------------------------------------------------------------------
