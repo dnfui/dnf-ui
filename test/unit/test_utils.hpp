@@ -1,10 +1,14 @@
 #pragma once
 
+#include <catch2/catch_test_macros.hpp>
+
+#include "dnf_backend/base_manager.hpp"
 #include "dnf_backend/dnf_backend.hpp"
 
 #include <gio/gio.h>
 
 #include <cstdlib>
+#include <filesystem>
 #include <set>
 #include <string>
 #include <vector>
@@ -97,6 +101,53 @@ struct ScopedEnvVar {
   std::string key;
   std::string old_value;
   bool had_old_value = false;
+};
+
+// -----------------------------------------------------------------------------
+// Keep repository cache regression fixtures isolated from the host filesystem.
+// -----------------------------------------------------------------------------
+struct TemporaryTestDirectory {
+  std::filesystem::path path;
+
+  TemporaryTestDirectory()
+  {
+    gchar *directory = g_dir_make_tmp("dnfui-provider-cache-XXXXXX", nullptr);
+    REQUIRE(directory != nullptr);
+    path = directory;
+    g_free(directory);
+  }
+
+  ~TemporaryTestDirectory()
+  {
+    std::error_code error;
+    std::filesystem::remove_all(path, error);
+  }
+};
+
+// -----------------------------------------------------------------------------
+// Use local repository metadata without depending on host repositories or caches.
+// -----------------------------------------------------------------------------
+struct ProviderRepositoryFixture {
+  TemporaryTestDirectory repo_dir;
+  TemporaryTestDirectory cache_dir;
+  TemporaryTestDirectory system_cache_dir;
+  const std::string repo_url = std::string("file://") + DNFUI_TEST_PROVIDER_REPO;
+  ScopedEnvVar isolated_repos { "DNFUI_TEST_REPOS_DIR", repo_dir.path.c_str() };
+  ScopedEnvVar isolated_cache { "DNFUI_TEST_CACHE_DIR", cache_dir.path.c_str() };
+  ScopedEnvVar isolated_system_cache { "DNFUI_TEST_SYSTEM_CACHE_DIR", system_cache_dir.path.c_str() };
+  ScopedEnvVar fixture_repo { "DNFUI_TEST_PROVIDER_REPO_URL", repo_url.c_str() };
+
+  ProviderRepositoryFixture()
+  {
+    BaseManager::instance().reset_for_tests();
+    reset_backend_globals();
+  }
+
+  ~ProviderRepositoryFixture()
+  {
+    BaseManager::instance().reset_for_tests();
+    reset_backend_globals();
+  }
 };
 
 // -----------------------------------------------------------------------------

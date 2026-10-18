@@ -51,27 +51,6 @@ struct UnloadablePluginConfig {
 };
 
 // -----------------------------------------------------------------------------
-// Keep repository cache regression fixtures isolated from the host filesystem.
-// -----------------------------------------------------------------------------
-struct TemporaryTestDirectory {
-  std::filesystem::path path;
-
-  TemporaryTestDirectory()
-  {
-    gchar *directory = g_dir_make_tmp("dnfui-provider-cache-XXXXXX", nullptr);
-    REQUIRE(directory != nullptr);
-    path = directory;
-    g_free(directory);
-  }
-
-  ~TemporaryTestDirectory()
-  {
-    std::error_code error;
-    std::filesystem::remove_all(path, error);
-  }
-};
-
-// -----------------------------------------------------------------------------
 // Find a real available update candidate from installed-row repository annotation.
 // -----------------------------------------------------------------------------
 bool
@@ -695,7 +674,7 @@ TEST_CASE("Installed package refresh can preserve the cached Base")
 // -----------------------------------------------------------------------------
 // Verify that daemon-target metadata lookup does not refresh installed state.
 // -----------------------------------------------------------------------------
-TEST_CASE("Daemon upgrade metadata lookup does not publish installed state")
+TEST_CASE_METHOD(ProviderRepositoryFixture, "Daemon upgrade metadata lookup does not publish installed state")
 {
   reset_backend_globals();
 

@@ -169,7 +169,7 @@ TEST_CASE("Search returns empty for impossible package name")
 // -----------------------------------------------------------------------------
 // Find providers by installed file ownership, not package names.
 // -----------------------------------------------------------------------------
-TEST_CASE("Find Provider resolves an installed executable path")
+TEST_CASE_METHOD(ProviderRepositoryFixture, "Find Provider resolves an installed executable path")
 {
   reset_backend_globals();
   auto options = backend_search_options(false, false);
@@ -181,19 +181,19 @@ TEST_CASE("Find Provider resolves an installed executable path")
 // -----------------------------------------------------------------------------
 // Find an RPM capability supplied by a package.
 // -----------------------------------------------------------------------------
-TEST_CASE("Find Provider resolves a package capability")
+TEST_CASE_METHOD(ProviderRepositoryFixture, "Find Provider resolves a package capability")
 {
   reset_backend_globals();
   auto options = backend_search_options(false, false);
   options.find_provider = true;
-  auto results = dnf_backend_search_package_rows_interruptible("bash", options, nullptr);
-  REQUIRE(contains_package_name(results, "bash"));
+  auto results = dnf_backend_search_package_rows_interruptible("dnfui-filelists-fixture", options, nullptr);
+  REQUIRE(contains_package_name(results, "dnfui-filelists-fixture"));
 }
 
 // -----------------------------------------------------------------------------
 // Unknown providers must not fall back to package-text search.
 // -----------------------------------------------------------------------------
-TEST_CASE("Find Provider returns no matches for an unknown capability")
+TEST_CASE_METHOD(ProviderRepositoryFixture, "Find Provider returns no matches for an unknown capability")
 {
   reset_backend_globals();
   auto options = backend_search_options(false, false);
