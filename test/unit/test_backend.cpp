@@ -375,6 +375,13 @@ TEST_CASE("Provider searches keep filelists separate from normal package queries
   {
     auto read = manager.acquire_read();
     normal_base = &read.base;
+    libdnf5::repo::RepoQuery repositories(read.base);
+    repositories.filter_type(libdnf5::repo::Repo::Type::AVAILABLE);
+    std::set<std::string> repository_ids;
+    for (auto repo : repositories) {
+      repository_ids.insert(repo->get_id());
+    }
+    REQUIRE(repository_ids == std::set<std::string> { "dnfui-filelists-cache-test" });
     REQUIRE(read.base.get_config().get_optional_metadata_types_option().get_value() == configured_types);
   }
 

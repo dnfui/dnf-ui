@@ -301,7 +301,14 @@ create_configured_base(RepoLoadMode mode, bool load_changelog_metadata = false, 
 
   auto repo_sack = base->get_repo_sack();
   DNFUI_TRACE("BaseManager create repos start");
+#ifdef DNFUI_BUILD_TESTS
+  // An explicit fixture repository must also exclude repositories defined in the main DNF configuration.
+  if (!std::getenv("DNFUI_TEST_PROVIDER_REPO_URL")) {
+    repo_sack->create_repos_from_system_configuration();
+  }
+#else
   repo_sack->create_repos_from_system_configuration();
+#endif
 #ifdef DNFUI_BUILD_TESTS
   if (const char *repo_url = std::getenv("DNFUI_TEST_PROVIDER_REPO_URL")) {
     auto repo = repo_sack->create_repo("dnfui-filelists-cache-test");
