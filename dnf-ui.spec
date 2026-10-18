@@ -1,6 +1,6 @@
 Name:           dnf-ui
-Version:        0.7.1
-Release:        2%{?dist}
+Version:        0.7.2
+Release:        1%{?dist}
 Summary:        GTK interface for DNF5
 
 License:        MIT
@@ -56,6 +56,12 @@ appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/io.github.dnfui.
 %{_datadir}/metainfo/io.github.dnfui.dnfui.metainfo.xml
 
 %changelog
+* Sun Oct 18 2026 ErikMN <dnfui@proton.me> - 0.7.2-1
+- Add Provides search to find installed and available packages by file ownership or RPM capability
+- Support full file paths, filenames, and wildcard patterns in Provides searches
+- Use cached file lists for offline Provides searches and report when required metadata is unavailable
+- Move Search in description and Exact match into an Options menu while keeping Latest only visible
+
 * Fri Oct 16 2026 ErikMN <dnfui@proton.me> - 0.7.1-2
 - Fix startup hang on Fedora 45 with GTK 4.24
 
