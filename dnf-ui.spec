@@ -40,7 +40,7 @@ transaction changes, and applying package transactions through dnf5daemon.
 %check
 desktop-file-validate %{buildroot}%{_datadir}/applications/io.github.dnfui.dnfui.desktop
 appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/io.github.dnfui.dnfui.metainfo.xml
-%meson_test
+%meson_test --verbose
 
 %files -f %{name}.lang
 %license LICENSE
