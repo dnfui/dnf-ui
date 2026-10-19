@@ -2,16 +2,15 @@
 
 This document explains how package preview and apply work.
 
-For source-backed libdnf5, GDBus, and dnf5daemon assumptions, see
-[External API assumptions](api-assumptions.md).
+For source-backed libdnf5, GDBus, and dnf5daemon assumptions, see [External API assumptions][wrapped-link-1].
 
 ## Boundary
 
 The GUI process stays unprivileged.
 
-Package search and details happen in the GUI process through libdnf5. Package
-changes go through DNF5 dnf5daemon on the system bus. dnf5daemon owns the
-privileged package operation and its Polkit authorization behavior.
+Package search and details happen in the GUI process through libdnf5. Package changes go through DNF5
+dnf5daemon on the system bus. dnf5daemon owns the privileged package operation and its Polkit authorization
+behavior.
 
 Important files:
 
@@ -23,8 +22,8 @@ Important files:
 - [src/transaction/transaction_request.hpp](../src/transaction/transaction_request.hpp)
 - [src/transaction/transaction_preview.hpp](../src/transaction/transaction_preview.hpp)
 - [src/dnf5daemon_client/transaction_service_client.cpp](../src/dnf5daemon_client/transaction_service_client.cpp)
-- [src/dnf5daemon_client/transaction_service_client_dbus.cpp](../src/dnf5daemon_client/transaction_service_client_dbus.cpp)
-- [src/dnf5daemon_client/transaction_service_client_wait.cpp](../src/dnf5daemon_client/transaction_service_client_wait.cpp)
+- [src/dnf5daemon_client/transaction_service_client_dbus.cpp][wrapped-link-2]
+- [src/dnf5daemon_client/transaction_service_client_wait.cpp][wrapped-link-3]
 
 ## Request model
 
@@ -38,20 +37,17 @@ the GUI:
 - remove
 - reinstall
 
-Dependency changes are not stored in the request. dnf5daemon resolves those
-changes when the preview is built.
+Dependency changes are not stored in the request. dnf5daemon resolves those changes when the preview is built.
 
-Upgrade-all requests are separate from explicit package action lists. DNF UI
-asks dnf5daemon to prepare its native Upgrade All transaction. Selected package
-upgrades are sent as explicit upgrade specs. Selected downgrades are sent as
-exact NEVRA specs so the daemon is asked for the version the user selected.
+Upgrade-all requests are separate from explicit package action lists. DNF UI asks dnf5daemon to prepare its
+native Upgrade All transaction. Selected package upgrades are sent as explicit upgrade specs. Selected
+downgrades are sent as exact NEVRA specs so the daemon is asked for the version the user selected.
 
-Install, upgrade, and downgrade are install-side actions. Only one install-side
-action is kept for one package name and architecture at a time, except for
-exact install actions on install-only packages. DNF can install several exact
-versions of install-only packages such as kernels side by side. Remove and
-reinstall actions are tied to exact installed NEVRAs, so systems with parallel
-installed versions can mark those installed versions independently.
+Install, upgrade, and downgrade are install-side actions. Only one install-side action is kept for one package
+name and architecture at a time, except for exact install actions on install-only packages. DNF can install
+several exact versions of install-only packages such as kernels side by side. Remove and reinstall actions are
+tied to exact installed NEVRAs, so systems with parallel installed versions can mark those installed versions
+independently.
 
 ## GUI flow
 
@@ -69,24 +65,19 @@ When the user clicks Apply:
 10. dnf5daemon handles privileged apply work and Polkit behavior.
 11. The GUI refreshes package state and closes the daemon session.
 
-Pending actions are cleared after a successful apply. If apply fails after the
-daemon reports that RPM work started, pending actions are also cleared because
-the old request no longer describes what still needs to be done. Failures before
-RPM work starts keep pending actions so the user can retry.
+Pending actions are cleared after a successful apply. If apply fails after the daemon reports that RPM work
+started, pending actions are also cleared because the old request no longer describes what still needs to be
+done. Failures before RPM work starts keep pending actions so the user can retry.
 
-When the user clicks Upgrade All, the GUI skips the pending action list and asks
-the transaction client to prepare a daemon-side Upgrade All session. If the
-resolved preview is empty, the session is closed. The GUI reports that all
-packages are already up to date only when there are no resolver warnings.
-Otherwise, it shows the warnings and reports that no transaction changes were
-returned.
+When the user clicks Upgrade All, the GUI skips the pending action list and asks the transaction client to
+prepare a daemon-side Upgrade All session. If the resolved preview is empty, the session is closed. The GUI
+reports that all packages are already up to date only when there are no resolver warnings. Otherwise, it shows
+the warnings and reports that no transaction changes were returned.
 
-When the user clicks Mark Listed Upgrades, the GUI marks the upgrade candidates
-currently shown in the package table as normal pending upgrade actions. The user
-can then remove individual actions before clicking Apply. This path sends
-explicit upgrade specs to dnf5daemon instead of using the daemon-side Upgrade
-All shortcut. Downgradeable rows and intermediate newer rows are not included
-by Mark Listed Upgrades.
+When the user clicks Mark Listed Upgrades, the GUI marks the upgrade candidates currently shown in the package
+table as normal pending upgrade actions. The user can then remove individual actions before clicking Apply.
+This path sends explicit upgrade specs to dnf5daemon instead of using the daemon-side Upgrade All shortcut.
+Downgradeable rows and intermediate newer rows are not included by Mark Listed Upgrades.
 
 ```mermaid
 flowchart TD
@@ -106,9 +97,8 @@ flowchart TD
 
 ## dnf5daemon session lifetime
 
-dnf5daemon sessions are tied to the system bus connection that created them.
-The client keeps one shared system bus connection so prepared sessions stay
-valid between preview and apply.
+dnf5daemon sessions are tied to the system bus connection that created them. The client keeps one shared
+system bus connection so prepared sessions stay valid between preview and apply.
 
 Each prepared session must be closed when the GUI no longer needs it:
 
@@ -118,19 +108,16 @@ Each prepared session must be closed when the GUI no longer needs it:
 - apply failed
 - pending transaction replaced by a new request
 
-Session release is done away from the GTK thread so a slow D-Bus reply does not
-freeze the window.
+Session release is done away from the GTK thread so a slow D-Bus reply does not freeze the window.
 
 ## Preview
 
-Preview resolves the current daemon session and converts the daemon reply into
-`TransactionPreview`.
-Each preview package carries the label shown in the summary dialog together
-with the package name and architecture used by safety checks.
+Preview resolves the current daemon session and converts the daemon reply into `TransactionPreview`. Each
+preview package carries the label shown in the summary dialog together with the package name and architecture
+used by safety checks.
 
-The preview dialog does not lock DNF for other tools. If package state changes
-before Apply, dnf5daemon may reject the prepared transaction. DNF UI then closes
-that session and the user must prepare a new preview.
+The preview dialog does not lock DNF for other tools. If package state changes before Apply, dnf5daemon may
+reject the prepared transaction. DNF UI then closes that session and the user must prepare a new preview.
 
 The preview dialog only shows actions the app understands:
 
@@ -141,126 +128,111 @@ The preview dialog only shows actions the app understands:
 - remove
 - replaced
 
-If dnf5daemon resolves successfully with warnings, the preview shows its
-human-readable warning text without treating the transaction as failed.
+If dnf5daemon resolves successfully with warnings, the preview shows its human-readable warning text without
+treating the transaction as failed.
 
-If dnf5daemon returns an unsupported transaction item or action, preview fails
-instead of hiding part of the transaction from the user.
+If dnf5daemon returns an unsupported transaction item or action, preview fails instead of hiding part of the
+transaction from the user.
 
-After preview, DNF UI rejects transactions that would downgrade, reinstall,
-remove, or replace the running app package. A normal upgrade may list the old
-package as replaced, so replacement is checked against the complete preview
-before it is treated as unsafe. DNF UI also rejects transactions that would
-remove dnf5daemon-server or replace it without a same-name successor in the
-preview. Changes that keep the daemon package installed are allowed, but must
-use offline preparation as described below.
+After preview, DNF UI rejects transactions that would downgrade, reinstall, remove, or replace the running app
+package. A normal upgrade may list the old package as replaced, so replacement is checked against the complete
+preview before it is treated as unsafe. DNF UI also rejects transactions that would remove dnf5daemon-server
+or replace it without a same-name successor in the preview. Changes that keep the daemon package installed are
+allowed, but must use offline preparation as described below.
 
-The preview is still authoritative. A pending downgrade records an exact NEVRA
-chosen from the table, but the user must still review the resolved daemon
-transaction before apply.
+The preview is still authoritative. A pending downgrade records an exact NEVRA chosen from the table, but the
+user must still review the resolved daemon transaction before apply.
 
-If Upgrade All resolves to an empty preview without resolver warnings, the GUI
-reports that all packages are already up to date. If an empty preview contains
-warnings, the GUI shows them and reports that no transaction changes were
-returned. An empty preview for a selected package action also reports that no
-transaction changes were returned.
+If Upgrade All resolves to an empty preview without resolver warnings, the GUI reports that all packages are
+already up to date. If an empty preview contains warnings, the GUI shows them and reports that no transaction
+changes were returned. An empty preview for a selected package action also reports that no transaction changes
+were returned.
 
 ## Apply
 
 Apply uses the same daemon session that produced the preview.
 
-The `do_transaction` call is allowed to wait without a normal D-Bus timeout
-because the user may need time to answer a Polkit prompt. A short D-Bus timeout
-can make the GUI report failure while the authorization dialog is still open.
+The `do_transaction` call is allowed to wait without a normal D-Bus timeout because the user may need time to
+answer a Polkit prompt. A short D-Bus timeout can make the GUI report failure while the authorization dialog
+is still open.
 
 The GUI does not perform authorization itself. dnf5daemon owns that boundary.
 
-dnf5daemon loads the normal DNF configuration and then its own
-`/etc/dnf/dnf5daemon-server.conf` file. Package downloads during Apply are done
-by dnf5daemon, so they may use the daemon cache instead of the cache used by an
-interactive `dnf` command.
+dnf5daemon loads the normal DNF configuration and then its own `/etc/dnf/dnf5daemon-server.conf` file. Package
+downloads during Apply are done by dnf5daemon, so they may use the daemon cache instead of the cache used by
+an interactive `dnf` command.
 
 ## Updating the package service
 
-A resolved transaction that installs, upgrades, downgrades, reinstalls, or replaces
-`dnf5daemon-server` is prepared for the next reboot. This includes daemon changes
-pulled in as dependencies. Other transactions still apply immediately.
+A resolved transaction that installs, upgrades, downgrades, reinstalls, or replaces `dnf5daemon-server` is
+prepared for the next reboot. This includes daemon changes pulled in as dependencies. Other transactions still
+apply immediately.
 
-The daemon package's RPM scriptlet can request a service restart while that same
-service is executing the transaction. Losing the D-Bus connection is not the only
-problem: systemd can terminate an RPM scriptlet in the daemon's control group.
-Reconnecting or seeing the new package versions afterward does not prove that
-all transaction scripts completed.
+The daemon package's RPM scriptlet can request a service restart while that same service is executing the
+transaction. Losing the D-Bus connection is not the only problem: systemd can terminate an RPM scriptlet in
+the daemon's control group. Reconnecting or seeing the new package versions afterward does not prove that all
+transaction scripts completed.
 
 DNF UI uses DNF's existing offline implementation:
 
-1. The summary shows every resolved change, explains the reboot requirement, and
-   labels its approval button **Prepare for Reboot**.
-2. The client records the required apply mode with the prepared daemon session.
-   Apply must use that same session and mode; there is no live fallback.
-3. `Goal.do_transaction` receives `offline=true` and `interactive=true`. The
-   daemon downloads and tests the complete transaction and schedules it for the
-   next boot. The app does not restart the computer.
-4. The client checks `Offline.get_status` before reporting readiness. A successful
-   preparation is displayed as **Ready for Reboot**, not as an installation.
-   Marked actions are cleared, while installed package state remains unchanged.
-   A persistent main-window banner stays visible while that ready transaction is
-   scheduled, including after DNF UI is reopened before the reboot. The banner is
-   a visual cue only; dnf5daemon status checks before preview and apply remain the
-   authority for whether another transaction may proceed.
-5. At the next boot, DNF's offline service executes the stored transaction through
-   the DNF command-line process, separately from the package daemon. A restart of
-   the daemon therefore cannot kill the process applying these updates.
+1. The summary shows every resolved change, explains the reboot requirement, and labels its approval button
+   **Prepare for Reboot**.
+2. The client records the required apply mode with the prepared daemon session. Apply must use that same
+   session and mode; there is no live fallback.
+3. `Goal.do_transaction` receives `offline=true` and `interactive=true`. The daemon downloads and tests the
+   complete transaction and schedules it for the next boot. The app does not restart the computer.
+4. The client checks `Offline.get_status` before reporting readiness. A successful preparation is displayed as
+   **Ready for Reboot**, not as an installation. Marked actions are cleared, while installed package state
+   remains unchanged. A persistent main-window banner stays visible while that ready transaction is scheduled,
+   including after DNF UI is reopened before the reboot. The banner is a visual cue only; dnf5daemon status
+   checks before preview and apply remain the authority for whether another transaction may proceed.
+5. At the next boot, DNF's offline service executes the stored transaction through the DNF command-line
+   process, separately from the package daemon. A restart of the daemon therefore cannot kill the process
+   applying these updates.
 
-Before preview and again before apply, the client checks for stored offline data
-and systemd's update boot triggers. Further transactions are rejected until those
-updates have been applied or explicitly discarded, so a normal Apply does not
-silently invalidate an earlier prepared transaction. Browsing remains available.
+Before preview and again before apply, the client checks for stored offline data and systemd's update boot
+triggers. Further transactions are rejected until those updates have been applied or explicitly discarded, so
+a normal Apply does not silently invalidate an earlier prepared transaction. Browsing remains available.
 
-**Package > Discard Prepared Updates** abandons DNF's stored offline transaction
-without changing installed packages or clearing the user's current marks. The
-operation uses dnf5daemon's authenticated cleanup method and verifies afterward
-that the DNF state is gone. DNF UI uses cleanup rather than DNF's cancel operation
-because cancel only unschedules the reboot and leaves the stored transaction
-behind. A boot trigger owned by another update tool is left untouched and still
-blocks package changes until it is handled by that tool.
+**Package > Discard Prepared Updates** abandons DNF's stored offline transaction without changing installed
+packages or clearing the user's current marks. The operation uses dnf5daemon's authenticated cleanup method
+and verifies afterward that the DNF state is gone. DNF UI uses cleanup rather than DNF's cancel operation
+because cancel only unschedules the reboot and leaves the stored transaction behind. A boot trigger owned by
+another update tool is left untouched and still blocks package changes until it is handled by that tool.
 
-Preparation errors preserve the marked actions and restore transaction controls.
-They do not mark installed package state uncertain or rebuild package data because
-offline preparation does not execute an RPM transaction in the current boot.
-A lost reply can leave stored data behind, so the app never retries the same
-submitted session or falls back to live execution. A fresh preview is required.
-For manual recovery, use `dnf5 offline status` to inspect DNF's stored transaction
-and `dnf5 offline clean` to discard it. Cleanup does not undo installed changes.
+Preparation errors preserve the marked actions and restore transaction controls. They do not mark installed
+package state uncertain or rebuild package data because offline preparation does not execute an RPM
+transaction in the current boot. A lost reply can leave stored data behind, so the app never retries the same
+submitted session or falls back to live execution. A fresh preview is required. For manual recovery, use `dnf5
+offline status` to inspect DNF's stored transaction and `dnf5 offline clean` to discard it. Cleanup does not
+undo installed changes.
 
-The DNF API does not provide an atomic reservation covering another package
-manager and this app's status check. It remains possible for an external tool to
-change package or offline state concurrently. The daemon owns RPM locking and
-offline transaction validity; this UI does not add service overrides, manipulate
-system files, or implement a second privileged backend.
+The DNF API does not provide an atomic reservation covering another package manager and this app's status
+check. It remains possible for an external tool to change package or offline state concurrently. The daemon
+owns RPM locking and offline transaction validity; this UI does not add service overrides, manipulate system
+files, or implement a second privileged backend.
 
 ## Repository Signing Keys
 
-When dnf5daemon needs a repository signing key during preview or apply, DNF UI
-shows the key details and asks the user whether to trust it.
+When dnf5daemon needs a repository signing key during preview or apply, DNF UI shows the key details and asks
+the user whether to trust it.
 
-The transaction client still owns the daemon protocol. The UI only answers yes
-or no, and the client sends that answer back to the same daemon session.
+The transaction client still owns the daemon protocol. The UI only answers yes or no, and the client sends
+that answer back to the same daemon session.
 
-The same trust dialog is used during preview and apply. During preview it is
-shown before the transaction summary can be prepared.
+The same trust dialog is used during preview and apply. During preview it is shown before the transaction
+summary can be prepared.
 
-If the preview or apply task is cancelled while the trust dialog is waiting, DNF
-UI treats the key as rejected and wakes the worker. The app must never import a
-repository signing key after the user cancels the task.
+If the preview or apply task is cancelled while the trust dialog is waiting, DNF UI treats the key as rejected
+and wakes the worker. The app must never import a repository signing key after the user cancels the task.
 
 ## Progress
 
-The transaction client subscribes to dnf5daemon progress signals and forwards a
-small set of useful messages to the existing progress window.
+The transaction client subscribes to dnf5daemon progress signals and forwards a small set of useful messages
+to the existing progress window.
 
-The progress window should help the user understand what phase the transaction
-is in without becoming a debug log. Current messages cover:
+The progress window should help the user understand what phase the transaction is in without becoming a debug
+log. Current messages cover:
 
 - package downloads
 - mirror failures
@@ -274,6 +246,10 @@ is in without becoming a debug log. Current messages cover:
 
 DNF UI does not keep a local libdnf transaction apply path.
 
-The GTK process may query package metadata with libdnf5, but transaction preview
-and apply go through dnf5daemon. That keeps privileged package changes outside
-the GUI process and avoids carrying a second transaction implementation.
+The GTK process may query package metadata with libdnf5, but transaction preview and apply go through
+dnf5daemon. That keeps privileged package changes outside the GUI process and avoids carrying a second
+transaction implementation.
+
+[wrapped-link-1]: api-assumptions.md
+[wrapped-link-2]: ../src/dnf5daemon_client/transaction_service_client_dbus.cpp
+[wrapped-link-3]: ../src/dnf5daemon_client/transaction_service_client_wait.cpp

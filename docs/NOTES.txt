@@ -16,8 +16,7 @@ sudo dnf --disablerepo='rpmfusion*' install gtk4-devel
 Build and test:
 --------------------------------------------------------------------------------
 
-Meson handles the real build logic.
-The Makefile is a thin task runner for common commands.
+Meson handles the real build logic. The Makefile is a thin task runner for common commands.
 
 Native C++ tests:
 
@@ -44,19 +43,18 @@ Native Polkit test:
 make
 ./dnfui
 
-Run dnfui as a regular desktop user and apply a harmless transaction to test the
-desktop Polkit prompt through dnf5daemon.
+Run dnfui as a regular desktop user and apply a harmless transaction to test the desktop Polkit prompt through
+dnf5daemon.
 
-Use native Fedora for the real desktop Polkit prompt.
-Use Docker for container smoke testing with a system bus and dnf5daemon.
+Use native Fedora for the real desktop Polkit prompt. Use Docker for container smoke testing with a system bus
+and dnf5daemon.
 
 --------------------------------------------------------------------------------
 Transaction overview:
 --------------------------------------------------------------------------------
 
-The GUI runs as the regular user.
-Preview and apply go through DNF5 dnf5daemon.
-dnf5daemon owns the privileged package operation and Polkit behavior.
+The GUI runs as the regular user. Preview and apply go through DNF5 dnf5daemon. dnf5daemon owns the privileged
+package operation and Polkit behavior.
 
 --------------------------------------------------------------------------------
 Useful links:

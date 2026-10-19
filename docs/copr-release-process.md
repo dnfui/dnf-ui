@@ -22,8 +22,8 @@ Install the native build dependencies listed by the project:
 sudo dnf install $(grep -vE '^\s*(#|$)' docs/fedora-native-dependencies.txt)
 ```
 
-The dependency file covers native builds, tests, package validation, RPM builds,
-translations, mock builds, and dnf5daemon based app testing.
+The dependency file covers native builds, tests, package validation, RPM builds, translations, mock builds,
+and dnf5daemon based app testing.
 
 ## 2. Mock setup
 
@@ -64,13 +64,15 @@ make srpm
 make rpm
 ```
 
-The SRPM helper creates a source tarball from tracked Git files, builds the SRPM, and updates this convenience symlink:
+The SRPM helper creates a source tarball from tracked Git files, builds the SRPM, and updates this convenience
+symlink:
 
 ```text
 dnf-ui-latest.src.rpm
 ```
 
-Important: the SRPM helper uses Git tracked files. Before building a release, check for untracked or uncommitted files:
+Important: the SRPM helper uses Git tracked files. Before building a release, check for untracked or
+uncommitted files:
 
 ```bash
 git status --short
@@ -158,7 +160,8 @@ For this project it should print:
 erikmn
 ```
 
-The COPR API token expires after 180 days. If COPR CLI authentication starts failing later, renew the token from the same API page.
+The COPR API token expires after 180 days. If COPR CLI authentication starts failing later, renew the token
+from the same API page.
 
 ### GitHub Actions COPR publishing
 
@@ -168,9 +171,8 @@ The repository has a GitHub Actions workflow that publishes tagged releases to C
 .github/workflows/publish-copr.yml
 ```
 
-It runs when a tag like `0.1.0` is pushed. The workflow validates that the
-tag, Meson project version, and RPM spec version all match, builds the SRPM,
-and submits it to COPR.
+It runs when a tag like `0.1.0` is pushed. The workflow validates that the tag, Meson project version, and RPM
+spec version all match, builds the SRPM, and submits it to COPR.
 
 Set these GitHub repository secrets before using it:
 
@@ -180,8 +182,8 @@ COPR_USERNAME
 COPR_TOKEN
 ```
 
-Do not commit the generated COPR config file or token.
-The workflow writes the temporary COPR config inside the CI container from GitHub Secrets.
+Do not commit the generated COPR config file or token. The workflow writes the temporary COPR config inside
+the CI container from GitHub Secrets.
 
 ## 6. Create the COPR project
 
@@ -200,7 +202,8 @@ The created project is:
 https://copr.fedorainfracloud.org/coprs/erikmn/dnf-ui/
 ```
 
-For normal public builds, the current and previous supported Fedora releases are enough. Rawhide can be added later if early breakage detection is useful.
+For normal public builds, the current and previous supported Fedora releases are enough. Rawhide can be added
+later if early breakage detection is useful.
 
 ## 7. Upload a build to COPR
 
@@ -230,7 +233,8 @@ running    COPR is building for the enabled Fedora chroots
 succeeded  The build passed
 ```
 
-It is safe to stop watching with `Ctrl-C`. That only stops the local terminal from watching the build. It does not cancel the COPR build.
+It is safe to stop watching with `Ctrl-C`. That only stops the local terminal from watching the build. It does
+not cancel the COPR build.
 
 To monitor a build later, use the build id printed by COPR:
 
@@ -248,8 +252,7 @@ If a native development install exists, remove it first so the RPM package is te
 sudo dnf remove dnf-ui
 ```
 
-Enable the COPR and install the package using the commands from
-[User install instructions](#9-user-install-instructions).
+Enable the COPR and install the package using the commands from [User install instructions][wrapped-link-1].
 
 Then run the app:
 
@@ -265,8 +268,8 @@ rpm -ql dnf-ui
 rpm -q dnf5daemon-server
 ```
 
-The app should trigger package actions through dnf5daemon, and Polkit
-authorization should appear when a transaction is applied.
+The app should trigger package actions through dnf5daemon, and Polkit authorization should appear when a
+transaction is applied.
 
 ## 9. User install instructions
 
@@ -345,8 +348,7 @@ The GitHub release RPM workflow runs for tags that look like:
 <new-version>
 ```
 
-The release workflows validate that the Meson project version, spec version,
-and tag version all match.
+The release workflows validate that the Meson project version, spec version, and tag version all match.
 
 ## 11. Packaging rebuild without changing app version
 
@@ -397,8 +399,8 @@ dnf-ui-<next-version>-1
 dnf-ui-<next-next-version>-1
 ```
 
-DNF decides whether something is an update from the RPM epoch, version, and release.
-Since this package does not use an epoch, always move version or release forward for every public COPR upload.
+DNF decides whether something is an update from the RPM epoch, version, and release. Since this package does
+not use an epoch, always move version or release forward for every public COPR upload.
 
 ## 13. What users do when there is a new version
 
@@ -464,3 +466,5 @@ Mock setup documentation:
 ```text
 https://rpm-software-management.github.io/mock/#setup
 ```
+
+[wrapped-link-1]: #9-user-install-instructions

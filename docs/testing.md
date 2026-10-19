@@ -2,8 +2,7 @@
 
 This document explains the test layout and what each group protects.
 
-For the external API behavior these tests help protect, see
-[External API assumptions](api-assumptions.md).
+For the external API behavior these tests help protect, see [External API assumptions](api-assumptions.md).
 
 ## Test types
 
@@ -63,9 +62,9 @@ These tests protect:
 
 ## Daemon smoke tests
 
-The app now talks to DNF5 dnf5daemon for privileged transactions.
-Use Docker and native Fedora testing to verify upgrade-target listing, preview,
-apply, cancel, failure, session cleanup, and repository enable or disable behavior.
+The app now talks to DNF5 dnf5daemon for privileged transactions. Use Docker and native Fedora testing to
+verify upgrade-target listing, preview, apply, cancel, failure, session cleanup, and repository enable or
+disable behavior.
 
 ## Common commands
 
@@ -87,10 +86,9 @@ Run the dnf5daemon transaction client tests in Docker:
 make dockerdnf5daemontest
 ```
 
-That Docker target also creates a disposable disabled repository and verifies
-that the repository client can enable it and disable it again through fresh
-dnf5daemon sessions. The test repository does not need package metadata because
-repository listing and enabled-state changes do not load available package data.
+That Docker target also creates a disposable disabled repository and verifies that the repository client can
+enable it and disable it again through fresh dnf5daemon sessions. The test repository does not need package
+metadata because repository listing and enabled-state changes do not load available package data.
 
 Run the dnf5daemon transaction client tests on native Fedora:
 
@@ -98,30 +96,25 @@ Run the dnf5daemon transaction client tests on native Fedora:
 make dnf5daemontest
 ```
 
-The native dnf5daemon tests may install and remove `cowsay` unless
-`DNFUI_TEST_DNF5DAEMON_INSTALL_SPEC` is set to another package.
-The script restores whether the test package was installed before the run.
-The optional downgrade preview test runs when
-`DNFUI_TEST_DNF5DAEMON_DOWNGRADE_SPEC` names a safe installed package version
-that can be downgraded in the test environment.
-Native apply tests are skipped by default because they require dnf5daemon
-authorization. Run them explicitly with:
+The native dnf5daemon tests may install and remove `cowsay` unless `DNFUI_TEST_DNF5DAEMON_INSTALL_SPEC` is set
+to another package. The script restores whether the test package was installed before the run. The optional
+downgrade preview test runs when `DNFUI_TEST_DNF5DAEMON_DOWNGRADE_SPEC` names a safe installed package version
+that can be downgraded in the test environment. Native apply tests are skipped by default because they require
+dnf5daemon authorization. Run them explicitly with:
 
 ```sh
 make dnf5daemonapplytest
 ```
 
-On a native Fedora test machine, installing `dnf5daemon-server-polkit` lets the
-apply tests run without a desktop authorization prompt.
+On a native Fedora test machine, installing `dnf5daemon-server-polkit` lets the apply tests run without a
+desktop authorization prompt.
 
-Without that package, run `make dnf5daemonapplytest` from the desktop session
-where a Polkit authentication agent can show the authorization dialog. Running
-the apply target over SSH may fail with `Not authorized`.
+Without that package, run `make dnf5daemonapplytest` from the desktop session where a Polkit authentication
+agent can show the authorization dialog. Running the apply target over SSH may fail with `Not authorized`.
 
 ### Native repository key prompt test
 
-Use a disposable Fedora VM or test machine. Do not use your main system for this
-test.
+Use a disposable Fedora VM or test machine. Do not use your main system for this test.
 
 Create the local signed test repo:
 
@@ -141,27 +134,25 @@ Search for:
 dnfui-gpg-test-package
 ```
 
-The key prompt can appear while preparing the preview or while applying the
-transaction. Both paths must ask before trusting the key.
+The key prompt can appear while preparing the preview or while applying the transaction. Both paths must ask
+before trusting the key.
 
 Reject test:
 
 - Click `Reject` in the DNF UI key prompt.
 - The transaction should fail.
 - The package should not be installed.
-- `utils/setup_gpg_key_prompt_test_repo.sh status` should not list an imported
-  test key.
+- `utils/setup_gpg_key_prompt_test_repo.sh status` should not list an imported test key.
 
 Close test:
 
 - Start the same transaction in DNF UI again.
 - Close the DNF UI key prompt without trusting the key.
 - The package should not be installed.
-- `utils/setup_gpg_key_prompt_test_repo.sh status` should not list an imported
-  test key.
+- `utils/setup_gpg_key_prompt_test_repo.sh status` should not list an imported test key.
 
-The Apply progress window is not user-cancellable. Cancellation after UI
-approval but before daemon confirmation is covered by a unit test.
+The Apply progress window is not user-cancellable. Cancellation after UI approval but before daemon
+confirmation is covered by a unit test.
 
 Run `utils/setup_gpg_key_prompt_test_repo.sh restore` before the accept test.
 
@@ -171,8 +162,7 @@ Accept test:
 - Start the same transaction in DNF UI again.
 - Click `Trust Key` in the DNF UI key prompt.
 - The transaction should continue.
-- `utils/setup_gpg_key_prompt_test_repo.sh status` should show the package and
-  imported test key.
+- `utils/setup_gpg_key_prompt_test_repo.sh status` should show the package and imported test key.
 
 Restore the disposable test machine:
 
@@ -193,8 +183,7 @@ LANG=sv_SE.UTF-8 LANGUAGE=sv make dockerrun
 CONTAINER_RUNTIME=podman LANG=sv_SE.UTF-8 LANGUAGE=sv make dockerrun
 ```
 
-The Makefile is a task runner. Meson owns build configuration and test
-definitions.
+The Makefile is a task runner. Meson owns build configuration and test definitions.
 
 ## Memory checks
 
@@ -212,9 +201,8 @@ make memcheck-app
 
 Memcheck logs are written under `build/memcheck/`.
 
-The default Memcheck setup fails on definite and indirect leaks from this
-project. Reachable and possible leak noise from GLib, GTK, DNF, and related
-libraries is suppressed in `utils/valgrind-dnfui.supp`.
+The default Memcheck setup fails on definite and indirect leaks from this project. Reachable and possible leak
+noise from GLib, GTK, DNF, and related libraries is suppressed in `utils/valgrind-dnfui.supp`.
 
 Useful options:
 
@@ -226,8 +214,8 @@ MEMCHECK_SMOKE_TIMEOUT=10m make memcheck
 
 ### Package table memory regression check
 
-Use this before releases that change package table storage, package query
-workers, all-version listing, or List Upgradable row handling:
+Use this before releases that change package table storage, package query workers, all-version listing, or
+List Upgradable row handling:
 
 1. Start DNF UI and record process memory after the first window is idle:
 
@@ -239,28 +227,26 @@ grep -E 'Rss|Pss|Private' "/proc/$pid/smaps_rollup"
 2. Run `List Packages` ten times, waiting for each run to finish before recording memory again.
 3. Repeat with `List Installed`, a broad `Search`, and `List Upgradable`.
 4. Repeat Search and List Packages with Latest only disabled.
-5. Alternate Latest only and all-version searches to verify all-version rows do
-   not accumulate outside the visible table.
+5. Alternate Latest only and all-version searches to verify all-version rows do not accumulate outside the
+   visible table.
 6. Alternate `List Upgradable` and `List Packages` a few times to verify old daemon-backed rows are released.
-7. A high but stable value is acceptable. Continued substantial growth after every completed run is a release blocker.
+7. A high but stable value is acceptable. Continued substantial growth after every completed run is a release
+   blocker.
 8. Run `make memcheck-app` once if memory keeps growing or if table row ownership changed.
 
 ## Docker notes
 
 - `make dockerrun` starts a system bus in the container and uses dnf5daemon
-- `make dockerdnf5daemontest` runs upgrade-target listing, preview, downgrade
-  preview when configured, apply, remove, reinstall, and failure checks against
-  dnf5daemon
-- The dnf5daemon failure checks include applying a prepared session after another
-  session changed package state. The stale prepared session must fail and remain
-  releasable.
+- `make dockerdnf5daemontest` runs upgrade-target listing, preview, downgrade preview when configured, apply,
+  remove, reinstall, and failure checks against dnf5daemon
+- The dnf5daemon failure checks include applying a prepared session after another session changed package
+  state. The stale prepared session must fail and remain releasable.
 - Use native Fedora to test the real desktop Polkit prompt
 
 ## Fedora review checks
 
-Fedora package review expects `rpmlint` output for the source RPM and all binary
-RPMs produced by the build. It is also normal to check that the source RPM builds
-in `mock`.
+Fedora package review expects `rpmlint` output for the source RPM and all binary RPMs produced by the build.
+It is also normal to check that the source RPM builds in `mock`.
 
 Build RPMs with the Make targets and run `rpmlint`:
 
@@ -278,9 +264,8 @@ Build the source RPM in a clean Fedora build environment:
 mock -r fedora-rawhide-x86_64 --rebuild dnf-ui-latest.src.rpm
 ```
 
-Use the Fedora release and architecture that match the package review you are
-preparing. Running `mock` may require the user to be a member of the `mock`
-group.
+Use the Fedora release and architecture that match the package review you are preparing. Running `mock` may
+require the user to be a member of the `mock` group.
 
 Reference: <https://docs.fedoraproject.org/en-US/packaging-guidelines/ReviewGuidelines/>
 
@@ -288,21 +273,19 @@ Reference: <https://docs.fedoraproject.org/en-US/packaging-guidelines/ReviewGuid
 
 For documentation-only changes, run `git diff --check`.
 
-For comments inside C++ source files, also run a target that compiles the changed
-files.
+For comments inside C++ source files, also run a target that compiles the changed files.
 
 For backend query changes, run the relevant Catch2 tests.
 
-For transaction changes, test the dnf5daemon Docker path and then verify apply
-behavior on native Fedora with a real desktop Polkit prompt.
+For transaction changes, test the dnf5daemon Docker path and then verify apply behavior on native Fedora with
+a real desktop Polkit prompt.
 
-For package apply behavior, use test packages that are safe to install and
-remove in the test environment.
+For package apply behavior, use test packages that are safe to install and remove in the test environment.
 
 ## Multi-version package browsing checks
 
-Use these checks after changes to Latest only, package queries, package table
-display, or pending action identity:
+Use these checks after changes to Latest only, package queries, package table display, or pending action
+identity:
 
 1. Start with Latest only enabled.
 2. Run Search and List Packages and verify the compact one-row-per-package view.
@@ -310,25 +293,19 @@ display, or pending action identity:
 4. Verify that distinct exact NEVRAs can appear as separate rows.
 5. Verify that duplicate repository copies of the same exact NEVRA are hidden.
 6. Verify that older repository versions show `Older in repository`.
-7. Verify that intermediate newer versions can be selected for Details but
-   cannot be marked for upgrade.
-8. Verify that the newest available version remains the only normal upgrade
-   target.
-9. Verify that downgradeable rows mark a pending downgrade using the selected
-   exact NEVRA.
-10. Verify that removing or reinstalling one exact installed NEVRA does not
-    change pending actions for another installed NEVRA with the same name and
-    architecture.
-11. Verify that List Installed, List Upgradable, Upgrade All, and Mark Listed
-    Upgrades do not depend on the Latest only checkbox.
-12. For an install-only package such as a kernel, verify that two distinct exact
-    versions can be marked for installation together.
-13. Verify that marking the same exact install-only NEVRA twice does not add a
-    duplicate pending action.
-14. Verify that switching Latest only on or off does not convert a pending exact
-    install-only install into an upgrade or downgrade.
-15. Verify that Unmark removes a pending exact install-only action instead of
-    converting it to another action.
+7. Verify that intermediate newer versions can be selected for Details but cannot be marked for upgrade.
+8. Verify that the newest available version remains the only normal upgrade target.
+9. Verify that downgradeable rows mark a pending downgrade using the selected exact NEVRA.
+10. Verify that removing or reinstalling one exact installed NEVRA does not change pending actions for another
+    installed NEVRA with the same name and architecture.
+11. Verify that List Installed, List Upgradable, Upgrade All, and Mark Listed Upgrades do not depend on the
+    Latest only checkbox.
+12. For an install-only package such as a kernel, verify that two distinct exact versions can be marked for
+    installation together.
+13. Verify that marking the same exact install-only NEVRA twice does not add a duplicate pending action.
+14. Verify that switching Latest only on or off does not convert a pending exact install-only install into an
+    upgrade or downgrade.
+15. Verify that Unmark removes a pending exact install-only action instead of converting it to another action.
 16. Verify that normal package upgrade behavior is unchanged.
-17. Verify that the transaction preview contains both selected exact
-    install-only NEVRAs when two versions are selected.
+17. Verify that the transaction preview contains both selected exact install-only NEVRAs when two versions are
+    selected.
