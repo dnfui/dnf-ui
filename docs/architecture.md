@@ -15,9 +15,9 @@ Use it as the first map when reading the code. The deeper documents are:
 
 DNF UI is a GTK 4 package manager frontend for DNF5 systems.
 
-The main application stays unprivileged. It searches packages, shows package details, lets the user mark
-package actions, and shows a review step. Package changes are sent to DNF5 dnf5daemon, which owns the
-privileged package work and Polkit behavior.
+The main application stays unprivileged.
+It searches packages, shows package details, lets the user mark package actions, and shows a review step.
+Package changes are sent to DNF5 dnf5daemon, which owns the privileged package work and Polkit behavior.
 
 ## Key terms
 

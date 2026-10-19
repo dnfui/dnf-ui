@@ -134,10 +134,14 @@ Code:
 Sources:
 
 - [DNF daemon D-Bus API](https://dnf5.readthedocs.io/en/latest/dnf_daemon/dnf5daemon_dbus_api.8.html)
+- [DNF5 stable D-Bus API](https://dnf5.readthedocs.io/en/stable/dnf_daemon/dnf5daemon_dbus_api.8.html)
 - [DNF 5.4.4.0 offline preparation][wrapped-link-2]
 - [DNF 5.4.4.0 offline status][wrapped-link-3]
 - [DNF offline command](https://dnf5.readthedocs.io/en/latest/commands/offline.8.html)
 - [systemd offline update boot][wrapped-link-4]
+
+This section records the daemon contract. The UI policy and user-visible flow are documented in
+[Transaction flow](transactions.md).
 
 Assumptions:
 
@@ -146,29 +150,19 @@ Assumptions:
   exclude packages.
 - `Offline.get_status` returns `(b, a{sv})`. The boolean confirms a valid scheduled DNF transaction. The
   `status` field can describe stored data even when the boolean is false. Nonempty states must therefore also
-  block a new transaction. The API does not expose the stored package items, so the UI does not keep a shadow
-  package list after preparation.
-- The persistent main-window banner is presentation state only. Transaction permission is decided by fresh
-  daemon status checks before preview and apply, so external cleanup cannot leave the UI permanently blocking
-  package actions.
+  block a new transaction. Preparation succeeds only when the boolean is true and the state is `ready`. The
+  API does not expose the stored package items, so the UI does not keep a shadow package list after preparation.
 - `ready`, `download-incomplete`, `download-complete`, and `transaction-incomplete` are the installed API's
   state names. Unknown nonempty states also block apply.
-- Status checks before preview and apply reject existing offline state. After preparation, success requires
-  both the scheduled boolean and the `ready` state.
-- DNF UI exposes one narrow cleanup action rather than a general offline transaction manager. It calls
-  `Offline.clean_with_options(a{sv}) -> (bs)` with `interactive=true`, then verifies through
-  `Offline.get_status` that no stored DNF transaction remains. This uses clean rather than cancel because
-  cancel only removes the reboot schedule while retaining the stored transaction.
-- An empty `Offline.get_status` result can mean missing or unreadable state. Confirmed discard therefore
-  always requests daemon cleanup, even when status appears empty, and requires a successful cleanup reply
-  before checking status.
-- DNF's cleanup removes its own systemd boot trigger but deliberately leaves a trigger owned by another update
-  tool untouched. DNF UI reports that remaining trigger instead of deleting it itself. Manual recovery still
-  uses `dnf5 offline status` and `dnf5 offline clean`.
-- The unprivileged client only checks whether systemd's documented boot triggers exist. It never writes them
-  directly.
-- No offline API failure permits falling back to live self-upgrade. The supported daemon must provide the
-  documented offline methods.
+- The current client calls `Offline.clean_with_options(a{sv}) -> (bs)` with `interactive=true`. The private
+  D-Bus fixture mirrors that call. The stable API reference lists `clean_with_options()` with no arguments
+  and `clean(a{sv}) -> (bs)` with options. Treat this as a version compatibility point: verify the installed
+  daemon's introspection before describing the client's call as supported by that version.
+- Confirmed discard always requests daemon cleanup, even when status appears empty, because empty status can also
+  mean stored data is missing or unreadable. Success requires a successful cleanup reply and a fresh status check
+  that confirms no DNF state or update boot trigger remains. DNF cleanup removes its own stored transaction and
+  boot trigger, while cancellation only removes the reboot schedule. DNF cleanup leaves a boot trigger owned by
+  another update tool untouched. See [Transaction flow](transactions.md) for how the UI handles these states.
 
 Tests:
 
@@ -451,6 +445,10 @@ Checked against:
 - Fedora Docker image package `dnf5daemon-server-5.4.2.1-1.fc44.x86_64`
 - official dnf5daemon D-Bus API documentation linked above
 - local D-Bus introspection using the same connection that opened the session
+
+The Dockerfile uses the floating `fedora:latest` image. The package version above is an observation, not a
+pinned compatibility baseline. Recheck the introspected API whenever the image or target Fedora release
+changes.
 
 Assumptions:
 

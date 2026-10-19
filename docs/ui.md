@@ -12,8 +12,8 @@ behavior. Controller files own the behavior behind each part of the window.
 The shared widget state lives in [src/ui/common/widgets.hpp](../src/ui/common/widgets.hpp). Controller files
 receive a `MainWindowUiState` pointer and use it to update the parts of the window they own.
 
-This keeps widget construction, package query behavior, package details, repository refresh behavior, and
-pending transaction behavior in separate files.
+This keeps widget construction, package query behavior, package details, repository refresh behavior,
+and pending transaction behavior in separate files.
 
 The UI source tree is grouped by the part of the window it owns:
 
@@ -50,8 +50,7 @@ It should not contain package query logic or transaction apply logic. Those belo
 
 ## Shared widget state
 
-[src/ui/common/widgets.hpp](../src/ui/common/widgets.hpp) groups the widget pointers into
-smaller structs:
+[src/ui/common/widgets.hpp](../src/ui/common/widgets.hpp) groups the widget pointers into smaller structs:
 
 - `PackageQueryWidgets` for search controls and status
 - `PackageResultsWidgets` for the package table and details panel
