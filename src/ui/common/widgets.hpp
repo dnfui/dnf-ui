@@ -48,7 +48,8 @@ struct PackageResultsWidgets {
   GtkLabel *details_status_label = nullptr;
   // Text buffers owned by the details panel text views.
   GtkTextBuffer *details_buffer = nullptr;
-  GtkTextBuffer *files_buffer = nullptr;
+  GtkStringList *files_model = nullptr;
+  GtkSearchEntry *files_search_entry = nullptr;
   GtkTextBuffer *deps_buffer = nullptr;
   GtkTextBuffer *changelog_buffer = nullptr;
   GtkLabel *count_label = nullptr;

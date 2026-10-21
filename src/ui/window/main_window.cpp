@@ -237,7 +237,8 @@ create_main_window_ui_state(const AppWidgets *ui)
   widgets->results.details_stack = GTK_STACK(ui->details_stack);
   widgets->results.details_status_label = GTK_LABEL(ui->details_status_label);
   widgets->results.details_buffer = ui->details_buffer;
-  widgets->results.files_buffer = ui->files_buffer;
+  widgets->results.files_model = ui->files_model;
+  widgets->results.files_search_entry = ui->files_search_entry;
   widgets->results.deps_buffer = ui->deps_buffer;
   widgets->results.changelog_buffer = ui->changelog_buffer;
   widgets->results.count_label = GTK_LABEL(ui->count_label);

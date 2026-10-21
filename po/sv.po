@@ -1573,6 +1573,9 @@ msgstr "Sökhistorik"
 msgid "Search packages..."
 msgstr "Sök paket..."
 
+msgid "Filter files..."
+msgstr "Filtrera filer..."
+
 msgid "Search in description"
 msgstr "Sök i beskrivning"
 
