@@ -322,6 +322,7 @@ package_details_reset_details_view(MainWindowUiState *widgets)
   set_details_status_text(widgets, nullptr);
   widgets->results.files_total_count.reset();
   gtk_widget_set_visible(GTK_WIDGET(widgets->results.files_count_label), FALSE);
+  gtk_widget_set_sensitive(GTK_WIDGET(widgets->results.files_search_entry), FALSE);
   gtk_editable_set_text(GTK_EDITABLE(widgets->results.files_search_entry), "");
   set_details_text(widgets->results.details_buffer, _("Select a package for details."));
   set_files_text(widgets->results.files_model, _("Select an installed package to view its file list."));
@@ -653,6 +654,8 @@ on_deferred_details_task_finished(GObject *, GAsyncResult *res, gpointer user_da
   }
   if (td->page == DeferredDetailsPage::FILES) {
     gtk_widget_set_visible(GTK_WIDGET(widgets->results.files_count_label), td->file_paths.has_value());
+    gtk_widget_set_sensitive(GTK_WIDGET(widgets->results.files_search_entry),
+                             td->file_paths && !td->file_paths->empty());
   }
   g_free(text);
 }
@@ -688,8 +691,12 @@ load_selected_package_details_page(MainWindowUiState *widgets, DeferredDetailsPa
   if (page == DeferredDetailsPage::FILES) {
     widgets->results.files_total_count.reset();
     gtk_widget_set_visible(GTK_WIDGET(widgets->results.files_count_label), FALSE);
+    gtk_widget_set_sensitive(GTK_WIDGET(widgets->results.files_search_entry), FALSE);
   }
   set_deferred_details_text(ui, ui.loading_text);
+  if (page == DeferredDetailsPage::FILES) {
+    gtk_editable_set_text(GTK_EDITABLE(widgets->results.files_search_entry), "");
+  }
 
   GCancellable *c = widgets_make_task_cancellable_for(GTK_WIDGET(widgets->query.entry));
   GTask *task = widgets_task_new_for_main_window_ui_state(widgets, c, on_deferred_details_task_finished);
@@ -760,6 +767,7 @@ package_details_load_selected_package_info(MainWindowUiState *widgets, const Pac
   widgets->results.changelog_loaded_nevra.clear();
   widgets->results.files_total_count.reset();
   gtk_widget_set_visible(GTK_WIDGET(widgets->results.files_count_label), FALSE);
+  gtk_widget_set_sensitive(GTK_WIDGET(widgets->results.files_search_entry), FALSE);
   gtk_editable_set_text(GTK_EDITABLE(widgets->results.files_search_entry), "");
   set_files_text(widgets->results.files_model, _("Open the Files tab to load the file list."));
   set_details_text(widgets->results.deps_buffer, _("Open the Dependencies tab to load dependencies."));

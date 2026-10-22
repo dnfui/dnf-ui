@@ -421,6 +421,7 @@ main_window_build_layout(AppWidgets *ui)
 
   GtkWidget *files_search_entry = gtk_search_entry_new();
   gtk_search_entry_set_placeholder_text(GTK_SEARCH_ENTRY(files_search_entry), _("Filter files..."));
+  gtk_widget_set_sensitive(files_search_entry, FALSE);
   gtk_widget_set_hexpand(files_search_entry, TRUE);
   gtk_widget_set_margin_start(files_search_entry, 6);
   gtk_widget_set_margin_end(files_search_entry, 6);
