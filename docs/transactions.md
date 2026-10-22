@@ -23,6 +23,7 @@ Important files:
 - [src/transaction/transaction_preview.hpp](../src/transaction/transaction_preview.hpp)
 - [src/dnf5daemon_client/transaction_service_client.cpp](../src/dnf5daemon_client/transaction_service_client.cpp)
 - [src/dnf5daemon_client/transaction_service_client_dbus.cpp][wrapped-link-2]
+- [src/dnf5daemon_client/transaction_service_client_parser.cpp][wrapped-link-4]
 - [src/dnf5daemon_client/transaction_service_client_wait.cpp][wrapped-link-3]
 
 ## Request model
@@ -253,3 +254,4 @@ transaction implementation.
 [wrapped-link-1]: api-assumptions.md
 [wrapped-link-2]: ../src/dnf5daemon_client/transaction_service_client_dbus.cpp
 [wrapped-link-3]: ../src/dnf5daemon_client/transaction_service_client_wait.cpp
+[wrapped-link-4]: ../src/dnf5daemon_client/transaction_service_client_parser.cpp

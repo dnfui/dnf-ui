@@ -227,6 +227,8 @@ Preview and apply go through DNF5 dnf5daemon:
   [src/dnf5daemon_client/transaction_service_client.cpp](../src/dnf5daemon_client/transaction_service_client.cpp)
 - GUI client D-Bus calls:
   [src/dnf5daemon_client/transaction_service_client_dbus.cpp][wrapped-link-1]
+- GUI client daemon item parsing:
+  [src/dnf5daemon_client/transaction_service_client_parser.cpp][wrapped-link-5]
 - GUI client wait handling:
   [src/dnf5daemon_client/transaction_service_client_wait.cpp][wrapped-link-2]
 - shared transaction models: [src/transaction/](../src/transaction/)
@@ -275,10 +277,12 @@ A practical reading order for new contributors:
 13. [src/dnf_backend/dnf_query.cpp](../src/dnf_backend/dnf_query.cpp)
 14. [src/dnf5daemon_client/transaction_service_client.cpp](../src/dnf5daemon_client/transaction_service_client.cpp)
 15. [src/dnf5daemon_client/transaction_service_client_dbus.cpp][wrapped-link-3]
-16. [src/dnf5daemon_client/transaction_service_client_wait.cpp][wrapped-link-4]
-17. [docs/transactions.md](transactions.md)
+16. [src/dnf5daemon_client/transaction_service_client_parser.cpp][wrapped-link-5]
+17. [src/dnf5daemon_client/transaction_service_client_wait.cpp][wrapped-link-4]
+18. [docs/transactions.md](transactions.md)
 
 [wrapped-link-1]: ../src/dnf5daemon_client/transaction_service_client_dbus.cpp
 [wrapped-link-2]: ../src/dnf5daemon_client/transaction_service_client_wait.cpp
 [wrapped-link-3]: ../src/dnf5daemon_client/transaction_service_client_dbus.cpp
 [wrapped-link-4]: ../src/dnf5daemon_client/transaction_service_client_wait.cpp
+[wrapped-link-5]: ../src/dnf5daemon_client/transaction_service_client_parser.cpp

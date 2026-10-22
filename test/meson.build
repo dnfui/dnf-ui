@@ -28,6 +28,7 @@ dnfui_tests = executable(
     '../src/i18n.cpp',
     '../src/config.cpp',
     '../src/dnf5daemon_client/transaction_service_client_dbus.cpp',
+    '../src/dnf5daemon_client/transaction_service_client_parser.cpp',
     '../src/dnf5daemon_client/transaction_service_client.cpp',
     '../src/dnf5daemon_client/transaction_service_client_wait.cpp',
     '../src/dnf5daemon_client/repository_service_client.cpp',

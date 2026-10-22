@@ -239,6 +239,7 @@ Maintenance check:
 Code:
 
 - [src/dnf5daemon_client/transaction_service_client_dbus.cpp][wrapped-link-6]
+- [src/dnf5daemon_client/transaction_service_client_parser.cpp][wrapped-link-11]
 - [src/upgrade/daemon_upgrade_state.cpp](../src/upgrade/daemon_upgrade_state.cpp)
 
 Assumption:
@@ -438,6 +439,7 @@ Code:
 
 - [src/dnf5daemon_client/transaction_service_client.cpp](../src/dnf5daemon_client/transaction_service_client.cpp)
 - [src/dnf5daemon_client/transaction_service_client_dbus.cpp][wrapped-link-7]
+- [src/dnf5daemon_client/transaction_service_client_parser.cpp][wrapped-link-11]
 - [src/dnf5daemon_client/transaction_service_client_wait.cpp][wrapped-link-8]
 
 Checked against:
@@ -592,3 +594,4 @@ request or commit message.
 [wrapped-link-8]: ../src/dnf5daemon_client/transaction_service_client_wait.cpp
 [wrapped-link-9]: https://github.com/rpm-software-management/dnf5/blob/main/dnf5daemon-server/services/goal/goal.cpp
 [wrapped-link-10]: ../src/dnf5daemon_client/transaction_service_client_dbus.cpp
+[wrapped-link-11]: ../src/dnf5daemon_client/transaction_service_client_parser.cpp

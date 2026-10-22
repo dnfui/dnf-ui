@@ -307,7 +307,9 @@ Selected package upgrades are sent to dnf5daemon as explicit upgrade specs. Sele
 exact NEVRA specs through dnf5daemon's downgrade method. Upgrade All uses dnf5daemon's native upgrade-all
 behavior instead of building a local list of upgrade specs.
 
-The dnf5daemon client builds `TransactionPreview` values from daemon replies.
+The dnf5daemon client reads daemon replies and uses
+[src/dnf5daemon_client/transaction_service_client_parser.cpp](../src/dnf5daemon_client/transaction_service_client_parser.cpp)
+to add supported package items to `TransactionPreview`.
 The shared preview model is this header:
 [src/transaction/transaction_preview.hpp](../src/transaction/transaction_preview.hpp). It is not part of the
 libdnf backend facade. Preview parsing fails closed when a daemon transaction item cannot be represented by
