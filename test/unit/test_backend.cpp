@@ -16,6 +16,7 @@
 #include <filesystem>
 #include <fstream>
 #include <map>
+#include <optional>
 #include <set>
 #include <stdexcept>
 #include <string>
@@ -1320,16 +1321,50 @@ TEST_CASE("File list query is safe and returns valid state")
   auto results = dnf_backend_search_package_rows_interruptible("bash", backend_search_options(false, false), nullptr);
   REQUIRE(!results.empty());
 
-  auto files = dnf_backend_get_installed_package_files(results.front().nevra);
+  std::optional<std::vector<std::string>> file_paths;
+  auto files = dnf_backend_get_installed_package_files(
+      results.front().nevra, PackageDetailsContext::INSTALLED_CONTEXT, 0, &file_paths);
 
   // Either it is installed (returns file list)
   // or not installed (returns friendly message).
   bool is_not_installed_msg = files.find("File list available only for installed packages.") != std::string::npos;
+  REQUIRE(file_paths.has_value() != is_not_installed_msg);
 
   bool has_content = !files.empty();
   if (!is_not_installed_msg) {
     REQUIRE(has_content);
   }
+}
+
+// -----------------------------------------------------------------------------
+// Verify that an installed file list provides one path per recorded file.
+// -----------------------------------------------------------------------------
+TEST_CASE("Installed file list provides individual paths")
+{
+  reset_backend_globals();
+
+  auto installed_rows = dnf_backend_get_installed_package_rows_interruptible(nullptr);
+  REQUIRE(!installed_rows.empty());
+
+  std::optional<std::vector<std::string>> file_paths;
+  std::string files = dnf_backend_get_installed_package_files(
+      installed_rows.front().nevra, PackageDetailsContext::INSTALLED_CONTEXT, 0, &file_paths);
+  REQUIRE(file_paths.has_value());
+
+  if (file_paths->empty()) {
+    REQUIRE(files == "No files recorded for this installed package.");
+    return;
+  }
+
+  size_t offset = 0;
+  for (const std::string &path : *file_paths) {
+    REQUIRE(files.compare(offset, path.size(), path) == 0);
+    offset += path.size();
+    REQUIRE(offset < files.size());
+    REQUIRE(files[offset] == '\n');
+    ++offset;
+  }
+  REQUIRE(offset == files.size());
 }
 
 // -----------------------------------------------------------------------------

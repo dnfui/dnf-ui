@@ -46,6 +46,7 @@ struct DeferredDetailsTaskData {
   PackageDetailsContext details_context = PackageDetailsContext::INSTALLED_CONTEXT;
   uint64_t generation;
   DeferredDetailsPage page;
+  std::optional<std::vector<std::string>> file_paths;
 };
 
 // Widgets and request state used by one deferred details tab.
@@ -177,6 +178,23 @@ set_files_text(GtkStringList *model, const char *text)
 }
 
 // -----------------------------------------------------------------------------
+// Replace the file list with individual paths from the backend.
+// -----------------------------------------------------------------------------
+static void
+set_files_paths(GtkStringList *model, const std::vector<std::string> &paths)
+{
+  std::vector<const char *> entries;
+  entries.reserve(paths.size() + 1);
+  for (const std::string &path : paths) {
+    entries.push_back(path.c_str());
+  }
+  entries.push_back(nullptr);
+
+  guint current_count = g_list_model_get_n_items(G_LIST_MODEL(model));
+  gtk_string_list_splice(model, 0, current_count, entries.data());
+}
+
+// -----------------------------------------------------------------------------
 // Replace the content of one deferred details tab.
 // -----------------------------------------------------------------------------
 static void
@@ -302,6 +320,8 @@ package_details_reset_details_view(MainWindowUiState *widgets)
   widgets->results.details_query_nevra.clear();
   widgets->results.changelog_query_nevra.clear();
   set_details_status_text(widgets, nullptr);
+  widgets->results.files_total_count.reset();
+  gtk_widget_set_visible(GTK_WIDGET(widgets->results.files_count_label), FALSE);
   gtk_editable_set_text(GTK_EDITABLE(widgets->results.files_search_entry), "");
   set_details_text(widgets->results.details_buffer, _("Select a package for details."));
   set_files_text(widgets->results.files_model, _("Select an installed package to view its file list."));
@@ -532,7 +552,7 @@ on_deferred_details_task(GTask *task, gpointer, gpointer task_data, GCancellable
     case DeferredDetailsPage::FILES:
       DNFUI_TRACE("Package file list load start nevra=%s", td->details_query_nevra.c_str());
       // NOTE: Load every file path because the list view copies one selected path at a time.
-      text = dnf_backend_get_installed_package_files(td->details_query_nevra, td->details_context, 0);
+      text = dnf_backend_get_installed_package_files(td->details_query_nevra, td->details_context, 0, &td->file_paths);
       DNFUI_TRACE("Package file list loaded nevra=%s bytes=%zu", td->details_query_nevra.c_str(), text.size());
       break;
     case DeferredDetailsPage::DEPENDENCIES:
@@ -604,6 +624,10 @@ on_deferred_details_task_finished(GObject *, GAsyncResult *res, gpointer user_da
   }
 
   if (!text) {
+    if (td->page == DeferredDetailsPage::FILES) {
+      widgets->results.files_total_count.reset();
+      gtk_widget_set_visible(GTK_WIDGET(widgets->results.files_count_label), FALSE);
+    }
     set_deferred_details_text(ui, ui.error_text);
     if (error && error->message) {
       ui_helpers_set_status(widgets->query.status_label, error->message, "red");
@@ -615,7 +639,21 @@ on_deferred_details_task_finished(GObject *, GAsyncResult *res, gpointer user_da
   }
 
   *ui.loaded_nevra = td->details_query_nevra;
-  set_deferred_details_text(ui, text);
+  if (td->page == DeferredDetailsPage::FILES) {
+    if (td->file_paths) {
+      widgets->results.files_total_count = td->file_paths->size();
+    } else {
+      widgets->results.files_total_count.reset();
+    }
+  }
+  if (td->page == DeferredDetailsPage::FILES && td->file_paths && !td->file_paths->empty()) {
+    set_files_paths(ui.files_model, *td->file_paths);
+  } else {
+    set_deferred_details_text(ui, text);
+  }
+  if (td->page == DeferredDetailsPage::FILES) {
+    gtk_widget_set_visible(GTK_WIDGET(widgets->results.files_count_label), td->file_paths.has_value());
+  }
   g_free(text);
 }
 
@@ -647,6 +685,10 @@ load_selected_package_details_page(MainWindowUiState *widgets, DeferredDetailsPa
     return;
   }
 
+  if (page == DeferredDetailsPage::FILES) {
+    widgets->results.files_total_count.reset();
+    gtk_widget_set_visible(GTK_WIDGET(widgets->results.files_count_label), FALSE);
+  }
   set_deferred_details_text(ui, ui.loading_text);
 
   GCancellable *c = widgets_make_task_cancellable_for(GTK_WIDGET(widgets->query.entry));
@@ -716,6 +758,8 @@ package_details_load_selected_package_info(MainWindowUiState *widgets, const Pac
   widgets->results.files_loaded_nevra.clear();
   widgets->results.deps_loaded_nevra.clear();
   widgets->results.changelog_loaded_nevra.clear();
+  widgets->results.files_total_count.reset();
+  gtk_widget_set_visible(GTK_WIDGET(widgets->results.files_count_label), FALSE);
   gtk_editable_set_text(GTK_EDITABLE(widgets->results.files_search_entry), "");
   set_files_text(widgets->results.files_model, _("Open the Files tab to load the file list."));
   set_details_text(widgets->results.deps_buffer, _("Open the Dependencies tab to load dependencies."));

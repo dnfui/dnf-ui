@@ -69,5 +69,14 @@ dnfui_i18n_format_count(size_t count, const char *singular, const char *plural)
 }
 
 // -----------------------------------------------------------------------------
+// Format translated singular or plural text that contains two count placeholders.
+// -----------------------------------------------------------------------------
+std::string
+dnfui_i18n_format_two_counts(size_t first, size_t count, const char *singular, const char *plural)
+{
+  return dnfui_i18n_format_unchecked(g_dngettext(GETTEXT_PACKAGE, singular, plural, count), first, count);
+}
+
+// -----------------------------------------------------------------------------
 // EOF
 // -----------------------------------------------------------------------------

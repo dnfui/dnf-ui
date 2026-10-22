@@ -421,12 +421,22 @@ main_window_build_layout(AppWidgets *ui)
 
   GtkWidget *files_search_entry = gtk_search_entry_new();
   gtk_search_entry_set_placeholder_text(GTK_SEARCH_ENTRY(files_search_entry), _("Filter files..."));
+  gtk_widget_set_hexpand(files_search_entry, TRUE);
   gtk_widget_set_margin_start(files_search_entry, 6);
   gtk_widget_set_margin_end(files_search_entry, 6);
   gtk_widget_set_margin_top(files_search_entry, 4);
   gtk_widget_set_margin_bottom(files_search_entry, 4);
   ui->files_search_entry = GTK_SEARCH_ENTRY(files_search_entry);
-  gtk_box_append(GTK_BOX(files_box), files_search_entry);
+
+  GtkWidget *files_count_label = gtk_label_new(NULL);
+  gtk_widget_set_margin_end(files_count_label, 6);
+  gtk_widget_set_visible(files_count_label, FALSE);
+  ui->files_count_label = GTK_LABEL(files_count_label);
+
+  GtkWidget *files_search_row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+  gtk_box_append(GTK_BOX(files_search_row), files_search_entry);
+  gtk_box_append(GTK_BOX(files_search_row), files_count_label);
+  gtk_box_append(GTK_BOX(files_box), files_search_row);
 
   GtkWidget *scrolled_files = gtk_scrolled_window_new();
   gtk_widget_set_hexpand(scrolled_files, TRUE);
@@ -447,6 +457,7 @@ main_window_build_layout(AppWidgets *ui)
 
   GtkFilterListModel *filtered_files = gtk_filter_list_model_new(G_LIST_MODEL(files_model), GTK_FILTER(files_filter));
   gtk_filter_list_model_set_incremental(filtered_files, TRUE);
+  ui->filtered_files_model = filtered_files;
 
   GtkSingleSelection *files_selection = gtk_single_selection_new(G_LIST_MODEL(filtered_files));
   gtk_single_selection_set_autoselect(files_selection, FALSE);

@@ -54,7 +54,9 @@ struct AppWidgets {
 
   GtkTextBuffer *details_buffer = NULL;
   GtkStringList *files_model = NULL;
+  GtkFilterListModel *filtered_files_model = NULL;
   GtkSearchEntry *files_search_entry = NULL;
+  GtkLabel *files_count_label = NULL;
   GtkTextBuffer *deps_buffer = NULL;
   GtkTextBuffer *changelog_buffer = NULL;
   GtkWidget *pending_list = NULL;
