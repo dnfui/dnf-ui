@@ -1573,6 +1573,21 @@ msgstr "Sökhistorik"
 msgid "Search packages..."
 msgstr "Sök paket..."
 
+msgid "Filter files..."
+msgstr "Filtrera filer..."
+
+#, c-format
+msgid "%zu of %zu file"
+msgid_plural "%zu of %zu files"
+msgstr[0] "%zu av %zu fil"
+msgstr[1] "%zu av %zu filer"
+
+#, c-format
+msgid "%zu of %zu file (filtering)"
+msgid_plural "%zu of %zu files (filtering)"
+msgstr[0] "%zu av %zu fil (filtrerar)"
+msgstr[1] "%zu av %zu filer (filtrerar)"
+
 msgid "Search in description"
 msgstr "Sök i beskrivning"
 

@@ -45,6 +45,80 @@ create_scrolled_text_view(const char *text, GtkWrapMode wrap_mode, GtkTextBuffer
   return scrolled;
 }
 
+// -----------------------------------------------------------------------------
+// Create one path label for a visible file list row.
+// -----------------------------------------------------------------------------
+static void
+setup_file_list_item(GtkSignalListItemFactory *, GtkListItem *item, gpointer)
+{
+  GtkWidget *label = gtk_label_new(nullptr);
+  gtk_label_set_xalign(GTK_LABEL(label), 0.0f);
+  gtk_widget_set_margin_start(label, 10);
+  gtk_widget_set_margin_end(label, 10);
+  gtk_list_item_set_child(item, label);
+}
+
+// -----------------------------------------------------------------------------
+// Set a recycled file list row to its current path.
+// -----------------------------------------------------------------------------
+static void
+bind_file_list_item(GtkSignalListItemFactory *, GtkListItem *item, gpointer)
+{
+  GtkStringObject *path = GTK_STRING_OBJECT(gtk_list_item_get_item(item));
+  GtkWidget *label = gtk_list_item_get_child(item);
+  gtk_label_set_text(GTK_LABEL(label), gtk_string_object_get_string(path));
+}
+
+// -----------------------------------------------------------------------------
+// Copy the selected path without copying the entire file list.
+// -----------------------------------------------------------------------------
+static void
+copy_selected_file_path(GtkListView *view, guint position)
+{
+  GtkSingleSelection *selection = GTK_SINGLE_SELECTION(gtk_list_view_get_model(view));
+  GListModel *model = gtk_single_selection_get_model(selection);
+  GtkStringObject *item = GTK_STRING_OBJECT(g_list_model_get_item(model, position));
+  if (!item) {
+    return;
+  }
+
+  GdkClipboard *clipboard = gdk_display_get_clipboard(gtk_widget_get_display(GTK_WIDGET(view)));
+  gdk_clipboard_set_text(clipboard, gtk_string_object_get_string(item));
+  g_object_unref(item);
+}
+
+// -----------------------------------------------------------------------------
+// Update the visible file paths when the filter text changes.
+// -----------------------------------------------------------------------------
+static void
+on_file_search_changed(GtkSearchEntry *entry, gpointer user_data)
+{
+  GtkStringFilter *filter = GTK_STRING_FILTER(user_data);
+  gtk_string_filter_set_search(filter, gtk_editable_get_text(GTK_EDITABLE(entry)));
+}
+
+// -----------------------------------------------------------------------------
+// Copy the selected file from the keyboard.
+// -----------------------------------------------------------------------------
+static gboolean
+on_file_list_key_pressed(GtkEventControllerKey *, guint keyval, guint, GdkModifierType state, gpointer user_data)
+{
+  GdkModifierType modifiers = static_cast<GdkModifierType>(state & gtk_accelerator_get_default_mod_mask());
+  if (modifiers != GDK_CONTROL_MASK || gdk_keyval_to_lower(keyval) != GDK_KEY_c) {
+    return FALSE;
+  }
+
+  GtkListView *view = GTK_LIST_VIEW(user_data);
+  GtkSingleSelection *selection = GTK_SINGLE_SELECTION(gtk_list_view_get_model(view));
+  guint position = gtk_single_selection_get_selected(selection);
+  if (position == GTK_INVALID_LIST_POSITION) {
+    return FALSE;
+  }
+
+  copy_selected_file_path(view, position);
+  return TRUE;
+}
+
 static void
 append_button_group_separator(GtkWidget *box)
 {
@@ -341,12 +415,74 @@ main_window_build_layout(AppWidgets *ui)
   gtk_stack_add_titled(GTK_STACK(details_stack), info_box, "info", _("Info"));
 
   // File list tab.
-  GtkTextBuffer *files_buffer = NULL;
-  GtkWidget *scrolled_files =
-      create_scrolled_text_view(_("Select an installed package to view its file list."), GTK_WRAP_NONE, &files_buffer);
-  ui->files_buffer = files_buffer;
+  GtkWidget *files_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+  gtk_widget_set_hexpand(files_box, TRUE);
+  gtk_widget_set_vexpand(files_box, TRUE);
 
-  gtk_stack_add_titled(GTK_STACK(details_stack), scrolled_files, "files", _("Files"));
+  GtkWidget *files_search_entry = gtk_search_entry_new();
+  gtk_search_entry_set_placeholder_text(GTK_SEARCH_ENTRY(files_search_entry), _("Filter files..."));
+  gtk_widget_set_sensitive(files_search_entry, FALSE);
+  gtk_widget_set_hexpand(files_search_entry, TRUE);
+  gtk_widget_set_margin_start(files_search_entry, 6);
+  gtk_widget_set_margin_end(files_search_entry, 6);
+  gtk_widget_set_margin_top(files_search_entry, 4);
+  gtk_widget_set_margin_bottom(files_search_entry, 4);
+  ui->files_search_entry = GTK_SEARCH_ENTRY(files_search_entry);
+
+  GtkWidget *files_count_label = gtk_label_new(NULL);
+  gtk_widget_set_margin_end(files_count_label, 6);
+  gtk_widget_set_visible(files_count_label, FALSE);
+  ui->files_count_label = GTK_LABEL(files_count_label);
+
+  GtkWidget *files_search_row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+  gtk_box_append(GTK_BOX(files_search_row), files_search_entry);
+  gtk_box_append(GTK_BOX(files_search_row), files_count_label);
+  gtk_box_append(GTK_BOX(files_box), files_search_row);
+
+  GtkWidget *scrolled_files = gtk_scrolled_window_new();
+  gtk_widget_set_hexpand(scrolled_files, TRUE);
+  gtk_widget_set_vexpand(scrolled_files, TRUE);
+  gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled_files), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+  gtk_box_append(GTK_BOX(files_box), scrolled_files);
+
+  GtkStringList *files_model = gtk_string_list_new(nullptr);
+  gtk_string_list_append(files_model, _("Select an installed package to view its file list."));
+  ui->files_model = files_model;
+
+  GtkExpression *path_expression = gtk_property_expression_new(GTK_TYPE_STRING_OBJECT, nullptr, "string");
+  GtkStringFilter *files_filter = gtk_string_filter_new(path_expression);
+  gtk_string_filter_set_match_mode(files_filter, GTK_STRING_FILTER_MATCH_MODE_SUBSTRING);
+  gtk_string_filter_set_ignore_case(files_filter, TRUE);
+  g_signal_connect_object(
+      files_search_entry, "search-changed", G_CALLBACK(on_file_search_changed), files_filter, G_CONNECT_DEFAULT);
+
+  GtkFilterListModel *filtered_files = gtk_filter_list_model_new(G_LIST_MODEL(files_model), GTK_FILTER(files_filter));
+  gtk_filter_list_model_set_incremental(filtered_files, TRUE);
+  ui->filtered_files_model = filtered_files;
+
+  GtkSingleSelection *files_selection = gtk_single_selection_new(G_LIST_MODEL(filtered_files));
+  gtk_single_selection_set_autoselect(files_selection, FALSE);
+  gtk_single_selection_set_can_unselect(files_selection, TRUE);
+
+  GtkListItemFactory *files_factory = gtk_signal_list_item_factory_new();
+  g_signal_connect(files_factory, "setup", G_CALLBACK(setup_file_list_item), nullptr);
+  g_signal_connect(files_factory, "bind", G_CALLBACK(bind_file_list_item), nullptr);
+
+  GtkWidget *files_view = gtk_list_view_new(GTK_SELECTION_MODEL(files_selection), files_factory);
+  gtk_widget_set_hexpand(files_view, TRUE);
+  gtk_widget_set_vexpand(files_view, TRUE);
+  gtk_widget_set_focusable(files_view, TRUE);
+  gtk_widget_set_margin_top(files_view, 4);
+  gtk_widget_set_margin_bottom(files_view, 10);
+
+  GtkEventController *copy_key = GTK_EVENT_CONTROLLER(gtk_event_controller_key_new());
+  gtk_event_controller_set_propagation_phase(copy_key, GTK_PHASE_CAPTURE);
+  g_signal_connect(copy_key, "key-pressed", G_CALLBACK(on_file_list_key_pressed), files_view);
+  gtk_widget_add_controller(files_view, copy_key);
+
+  gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled_files), files_view);
+
+  gtk_stack_add_titled(GTK_STACK(details_stack), files_box, "files", _("Files"));
 
   // Dependencies tab.
   GtkTextBuffer *deps_buffer = NULL;

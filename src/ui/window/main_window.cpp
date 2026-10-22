@@ -237,7 +237,10 @@ create_main_window_ui_state(const AppWidgets *ui)
   widgets->results.details_stack = GTK_STACK(ui->details_stack);
   widgets->results.details_status_label = GTK_LABEL(ui->details_status_label);
   widgets->results.details_buffer = ui->details_buffer;
-  widgets->results.files_buffer = ui->files_buffer;
+  widgets->results.files_model = ui->files_model;
+  widgets->results.filtered_files_model = ui->filtered_files_model;
+  widgets->results.files_search_entry = ui->files_search_entry;
+  widgets->results.files_count_label = ui->files_count_label;
   widgets->results.deps_buffer = ui->deps_buffer;
   widgets->results.changelog_buffer = ui->changelog_buffer;
   widgets->results.count_label = GTK_LABEL(ui->count_label);
@@ -486,6 +489,46 @@ initialize_ui_state(MainWindowUiState *widgets)
 }
 
 // -----------------------------------------------------------------------------
+// Show matching and total file counts while the Files tab is filtered.
+// -----------------------------------------------------------------------------
+static void
+update_files_count(MainWindowUiState *widgets)
+{
+  if (!widgets->results.files_total_count) {
+    return;
+  }
+
+  size_t total = *widgets->results.files_total_count;
+  size_t matching = total == 0 ? 0 : g_list_model_get_n_items(G_LIST_MODEL(widgets->results.filtered_files_model));
+  bool filtering = total > 0 && gtk_filter_list_model_get_pending(widgets->results.filtered_files_model) > 0;
+  std::string text;
+  if (filtering) {
+    text = dnfui_i18n_format_two_counts(matching, total, "%zu of %zu file (filtering)", "%zu of %zu files (filtering)");
+  } else {
+    text = dnfui_i18n_format_two_counts(matching, total, "%zu of %zu file", "%zu of %zu files");
+  }
+  gtk_label_set_text(widgets->results.files_count_label, text.c_str());
+}
+
+// -----------------------------------------------------------------------------
+// Refresh the file count after either file model changes.
+// -----------------------------------------------------------------------------
+static void
+on_files_model_changed(GListModel *, guint, guint, guint, gpointer user_data)
+{
+  update_files_count(static_cast<MainWindowUiState *>(user_data));
+}
+
+// -----------------------------------------------------------------------------
+// Refresh the file count when incremental filtering finishes.
+// -----------------------------------------------------------------------------
+static void
+on_files_filter_pending_changed(GObject *, GParamSpec *, gpointer user_data)
+{
+  update_files_count(static_cast<MainWindowUiState *>(user_data));
+}
+
+// -----------------------------------------------------------------------------
 // Connect all GTK signals and callbacks
 // -----------------------------------------------------------------------------
 static void
@@ -534,6 +577,10 @@ connect_signals(const AppWidgets *ui, MainWindowUiState *widgets)
 
   g_signal_connect(
       ui->details_stack, "notify::visible-child-name", G_CALLBACK(package_details_on_details_page_changed), widgets);
+
+  g_signal_connect(ui->files_model, "items-changed", G_CALLBACK(on_files_model_changed), widgets);
+  g_signal_connect(ui->filtered_files_model, "items-changed", G_CALLBACK(on_files_model_changed), widgets);
+  g_signal_connect(ui->filtered_files_model, "notify::pending", G_CALLBACK(on_files_filter_pending_changed), widgets);
 
   // Intercept window close when pending or running transaction work needs attention.
   g_signal_connect(ui->window, "close-request", G_CALLBACK(on_main_window_close_request), widgets);

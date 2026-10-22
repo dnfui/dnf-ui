@@ -17,6 +17,7 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <utility>
 
 #include <gio/gio.h>
 
@@ -263,8 +264,13 @@ dnf_backend_get_installed_package_files(const std::string &pkg_nevra, size_t max
 std::string
 dnf_backend_get_installed_package_files(const std::string &pkg_nevra,
                                         PackageDetailsContext context,
-                                        size_t max_files_for_display)
+                                        size_t max_files_for_display,
+                                        std::optional<std::vector<std::string>> *file_paths)
 {
+  if (file_paths) {
+    *file_paths = std::nullopt;
+  }
+
   DNFUI_TRACE("Backend file list start nevra=%s max_display=%zu", pkg_nevra.c_str(), max_files_for_display);
   auto [base, guard] = BaseManager::instance().acquire_read();
   libdnf5::rpm::PackageQuery query(base);
@@ -335,18 +341,23 @@ dnf_backend_get_installed_package_files(const std::string &pkg_nevra,
 
   installed_files_query.filter_latest_evr();
   auto pkg = *installed_files_query.begin();
+  std::vector<std::string> paths = pkg.get_files();
 
   std::ostringstream files;
   size_t file_count = 0;
   size_t displayed_count = 0;
   const bool should_truncate = max_files_for_display > 0;
 
-  for (const auto &f : pkg.get_files()) {
+  for (const auto &f : paths) {
     ++file_count;
     if (!should_truncate || displayed_count < max_files_for_display) {
       files << f << "\n";
       ++displayed_count;
     }
+  }
+
+  if (file_paths) {
+    *file_paths = std::move(paths);
   }
 
   std::string result = files.str();

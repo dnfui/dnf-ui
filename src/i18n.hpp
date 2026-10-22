@@ -31,5 +31,11 @@ std::string dnfui_i18n_format(const char *format, ...) G_GNUC_PRINTF(1, 2);
 std::string dnfui_i18n_format_count(size_t count, const char *singular, const char *plural);
 
 // -----------------------------------------------------------------------------
+// Format translated singular or plural text that contains two count placeholders.
+// The second count selects the plural form.
+// -----------------------------------------------------------------------------
+std::string dnfui_i18n_format_two_counts(size_t first, size_t count, const char *singular, const char *plural);
+
+// -----------------------------------------------------------------------------
 // EOF
 // -----------------------------------------------------------------------------

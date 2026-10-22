@@ -12,6 +12,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <optional>
 #include <set>
 #include <string>
 #include <vector>
@@ -359,11 +360,13 @@ std::string dnf_backend_get_package_info(const std::string &pkg_nevra,
                                          const PackageRow *upgrade_row_override = nullptr);
 // -----------------------------------------------------------------------------
 // Return the installed file list for one NEVRA.
+// The optional paths are set only when an installed file list is available.
 // -----------------------------------------------------------------------------
 std::string dnf_backend_get_installed_package_files(const std::string &pkg_nevra, size_t max_files_for_display = 1500);
 std::string dnf_backend_get_installed_package_files(const std::string &pkg_nevra,
                                                     PackageDetailsContext context,
-                                                    size_t max_files_for_display = 1500);
+                                                    size_t max_files_for_display = 1500,
+                                                    std::optional<std::vector<std::string>> *file_paths = nullptr);
 // -----------------------------------------------------------------------------
 // Return formatted dependency details for one NEVRA.
 // -----------------------------------------------------------------------------
