@@ -1,5 +1,5 @@
 Name:           dnf-ui
-Version:        0.7.2
+Version:        0.7.3
 Release:        1%{?dist}
 Summary:        GTK interface for DNF5
 
@@ -56,6 +56,12 @@ appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/io.github.dnfui.
 %{_datadir}/metainfo/io.github.dnfui.dnfui.metainfo.xml
 
 %changelog
+* Thu Oct 22 2026 ErikMN <dnfui@proton.me> - 0.7.3-1
+- Show complete installed package file lists with a filter for finding paths
+- Allow selecting and copying individual file paths from large lists
+- Show matching and total file counts while filtering
+- Keep file list status messages visible when no file paths are available
+
 * Sun Oct 18 2026 ErikMN <dnfui@proton.me> - 0.7.2-1
 - Add Provides search to find installed and available packages by file ownership or RPM capability
 - Support full file paths, filenames, and wildcard patterns in Provides searches
