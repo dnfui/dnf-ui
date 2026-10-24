@@ -143,6 +143,8 @@ concern: `window`, `package_query`, `package_table`, `details`, `transaction`, `
   package table.
 - [src/ui/package_table/package_table_model.cpp](../src/ui/package_table/package_table_model.cpp) stores
   package rows and table display values in GTK objects.
+- [src/ui/package_table/package_table_upgrade_rows.cpp](../src/ui/package_table/package_table_upgrade_rows.cpp)
+  builds List Upgradable rows from accepted daemon targets and optional exact-version metadata.
 - [src/ui/package_table/package_table_sort.cpp](../src/ui/package_table/package_table_sort.cpp) contains
   package table sorting rules.
 - [src/ui/transaction/pending_transaction_controller.cpp](../src/ui/transaction/pending_transaction_controller.cpp)

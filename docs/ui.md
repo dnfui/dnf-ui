@@ -195,6 +195,12 @@ package table column definitions, stable column ids, saved visibility settings, 
 [src/ui/package_table/package_table_model.cpp](../src/ui/package_table/package_table_model.cpp) contains the
 GTK object wrapper used to store package rows and their table display values.
 
+[src/ui/package_table/package_table_upgrade_rows.cpp](../src/ui/package_table/package_table_upgrade_rows.cpp)
+builds plain List Upgradable rows from a daemon snapshot and optional metadata matched by exact NEVRA.
+Missing metadata leaves a basic daemon row visible, and unrelated metadata cannot add upgrades. Each row
+retains its daemon target and snapshot generation independently of the display metadata. The query controller
+still owns loading, cancellation, snapshot publication, and the READY check before calling the row builder.
+
 [src/ui/package_table/package_table_sort.cpp](../src/ui/package_table/package_table_sort.cpp) contains package
 table cell text lookup and sorting rules. Version columns sort by stored RPM epoch and version. Release
 columns sort by stored RPM release text.

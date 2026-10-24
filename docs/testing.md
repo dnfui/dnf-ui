@@ -35,6 +35,7 @@ Key files:
 - [test/unit/test_package_table_export.cpp](../test/unit/test_package_table_export.cpp)
 - [test/unit/test_package_table_sort.cpp](../test/unit/test_package_table_sort.cpp)
 - [test/unit/test_package_table_status.cpp](../test/unit/test_package_table_status.cpp)
+- [test/unit/test_package_table_upgrade_rows.cpp](../test/unit/test_package_table_upgrade_rows.cpp)
 - [test/unit/test_pending_transaction_request.cpp](../test/unit/test_pending_transaction_request.cpp)
 - [test/unit/test_repository_apply_model.cpp](../test/unit/test_repository_apply_model.cpp)
 - [test/unit/test_repository_apply_operation.cpp](../test/unit/test_repository_apply_operation.cpp)
@@ -53,6 +54,8 @@ These tests protect:
 - pending transaction action row selection for install, upgrade, downgrade, remove, and reinstall
 - package table CSV export formatting
 - package table column text and sorting behavior
+- daemon upgrade row construction with missing or mismatched metadata, preserved target identity and
+  generation, and full NEVRA fallback, without GTK windows or backend queries
 - dnf5daemon transaction preview parsing, upgrade-target parsing, and failure handling
 - repository Apply planning, write outcome classification, and final-state verification
 - repository Apply workflow with substituted repository and backend operations, including initial read
