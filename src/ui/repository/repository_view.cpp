@@ -11,7 +11,7 @@
 #include "ui/package_query/package_query_controller.hpp"
 #include "ui/package_query/package_query_controller_internal.hpp"
 #include "ui/refresh/repository_refresh_controller.hpp"
-#include "ui/repository/repository_apply_model.hpp"
+#include "ui/repository/repository_apply_operation.hpp"
 #include "ui/transaction/pending_transaction_apply.hpp"
 #include "ui/common/ui_helpers.hpp"
 #include "ui/common/widgets.hpp"
@@ -19,7 +19,6 @@
 
 #include <gio/gio.h>
 
-#include <exception>
 #include <map>
 #include <memory>
 #include <string>
@@ -72,18 +71,6 @@ struct RepositoryApplyTaskData {
   uint64_t load_id = 0;
   std::vector<std::string> enable_ids;
   std::vector<std::string> disable_ids;
-};
-
-struct RepositoryApplyTaskResult {
-  bool sync_needed = false;
-  bool no_write_needed = false;
-  bool clear_pending = false;
-  RepositoryWriteOutcome write_outcome = RepositoryWriteOutcome::NOT_ATTEMPTED;
-  RepositoryVerificationOutcome verification_outcome = RepositoryVerificationOutcome::NOT_RUN;
-  RepositoryBackendSyncResult backend_sync_result = RepositoryBackendSyncResult::FAILED;
-  bool repository_state_loaded = false;
-  std::vector<RepositoryInfo> repositories;
-  std::string error;
 };
 
 struct RepositoryReviewDialogData {
@@ -435,7 +422,7 @@ repository_view_backend_is_available(RepositoryBackendSyncResult sync_result)
 // Return the repository-window status for the completed Apply result.
 // -----------------------------------------------------------------------------
 const char *
-repository_view_window_status_for_result(const RepositoryApplyTaskResult &result)
+repository_view_window_status_for_result(const RepositoryApplyResult &result)
 {
   if (result.no_write_needed) {
     if (repository_view_backend_is_available(result.backend_sync_result)) {
@@ -475,7 +462,7 @@ repository_view_window_status_for_result(const RepositoryApplyTaskResult &result
 // Return the main-window status for the completed Apply result.
 // -----------------------------------------------------------------------------
 const char *
-repository_view_main_status_for_result(const RepositoryApplyTaskResult &result)
+repository_view_main_status_for_result(const RepositoryApplyResult &result)
 {
   if (result.no_write_needed) {
     if (repository_view_backend_is_available(result.backend_sync_result)) {
@@ -510,7 +497,7 @@ repository_view_main_status_for_result(const RepositoryApplyTaskResult &result)
 // Return the main-window status color for the completed Apply result.
 // -----------------------------------------------------------------------------
 const char *
-repository_view_main_status_color_for_result(const RepositoryApplyTaskResult &result)
+repository_view_main_status_color_for_result(const RepositoryApplyResult &result)
 {
   if (result.write_outcome == RepositoryWriteOutcome::SUCCEEDED &&
       result.verification_outcome == RepositoryVerificationOutcome::CONFIRMED &&
@@ -540,7 +527,7 @@ repository_view_main_status_color_for_result(const RepositoryApplyTaskResult &re
 // -----------------------------------------------------------------------------
 void
 repository_view_refresh_main_after_apply(const std::shared_ptr<MainWindowUiState> &widgets,
-                                         const RepositoryApplyTaskResult &result)
+                                         const RepositoryApplyResult &result)
 {
   if (!widgets || widgets->window_state.destroyed) {
     return;
@@ -1164,100 +1151,8 @@ on_repository_apply_task(GTask *task, gpointer, gpointer, GCancellable *)
   const std::vector<std::string> desired_enable_ids = task_data ? task_data->enable_ids : std::vector<std::string> {};
   const std::vector<std::string> desired_disable_ids = task_data ? task_data->disable_ids : std::vector<std::string> {};
 
-  auto *apply_result = new RepositoryApplyTaskResult;
-  std::vector<RepositoryInfo> current_repositories;
-  std::string current_list_error;
-  if (!repository_service_client_list(current_repositories, current_list_error, nullptr)) {
-    apply_result->error =
-        current_list_error.empty() ? _("Repository state could not be reloaded.") : current_list_error;
-    g_task_return_pointer(task, apply_result, [](gpointer p) { delete static_cast<RepositoryApplyTaskResult *>(p); });
-    return;
-  }
-
-  apply_result->repository_state_loaded = true;
-  apply_result->repositories = current_repositories;
-
-  RepositoryChangePlan plan =
-      repository_apply_plan_changes(current_repositories, desired_enable_ids, desired_disable_ids);
-  if (!plan.valid) {
-    apply_result->error = plan.error;
-    apply_result->sync_needed = true;
-    apply_result->clear_pending = true;
-    try {
-      BaseRepoState repo_state = BaseManager::instance().rebuild(BaseRefreshMode::NORMAL);
-      apply_result->backend_sync_result = repository_apply_backend_sync_result(true, repo_state);
-    } catch (const std::exception &e) {
-      apply_result->backend_sync_result = RepositoryBackendSyncResult::FAILED;
-      if (!apply_result->error.empty()) {
-        apply_result->error += " ";
-      }
-      apply_result->error += e.what();
-    }
-    g_task_return_pointer(task, apply_result, [](gpointer p) { delete static_cast<RepositoryApplyTaskResult *>(p); });
-    return;
-  }
-
-  if (plan.enable_ids.empty() && plan.disable_ids.empty()) {
-    apply_result->sync_needed = true;
-    apply_result->no_write_needed = true;
-    apply_result->clear_pending = true;
-    try {
-      BaseRepoState repo_state = BaseManager::instance().rebuild(BaseRefreshMode::NORMAL);
-      apply_result->backend_sync_result = repository_apply_backend_sync_result(true, repo_state);
-    } catch (const std::exception &e) {
-      apply_result->backend_sync_result = RepositoryBackendSyncResult::FAILED;
-      apply_result->error = e.what();
-    }
-    g_task_return_pointer(task, apply_result, [](gpointer p) { delete static_cast<RepositoryApplyTaskResult *>(p); });
-    return;
-  }
-
-  RepositoryWriteResult write_result = repository_service_client_apply_changes(plan.enable_ids, plan.disable_ids);
-  apply_result->write_outcome = repository_apply_write_outcome(write_result);
-  apply_result->sync_needed = repository_view_write_was_attempted(apply_result->write_outcome);
-  if (apply_result->write_outcome == RepositoryWriteOutcome::FAILED ||
-      apply_result->write_outcome == RepositoryWriteOutcome::PARTIAL) {
-    apply_result->error = write_result.error.empty() ? _("Repository change failed.") : write_result.error;
-  }
-
-  if (repository_view_write_was_attempted(apply_result->write_outcome)) {
-    apply_result->clear_pending = true;
-    try {
-      BaseRepoState repo_state = BaseManager::instance().rebuild(BaseRefreshMode::NORMAL);
-      apply_result->backend_sync_result = repository_apply_backend_sync_result(true, repo_state);
-    } catch (const std::exception &e) {
-      apply_result->backend_sync_result = RepositoryBackendSyncResult::FAILED;
-      if (!apply_result->error.empty()) {
-        apply_result->error += " ";
-      }
-      apply_result->error += e.what();
-    }
-
-    std::vector<RepositoryInfo> repositories;
-    std::string list_error;
-    if (repository_service_client_list(repositories, list_error, nullptr)) {
-      apply_result->repository_state_loaded = true;
-      apply_result->repositories = std::move(repositories);
-      bool requested_states_match =
-          repository_apply_requested_states_match(apply_result->repositories, desired_enable_ids, desired_disable_ids);
-      apply_result->verification_outcome = repository_apply_verification_outcome(true, requested_states_match);
-      if (apply_result->verification_outcome == RepositoryVerificationOutcome::MISMATCH) {
-        if (!apply_result->error.empty()) {
-          apply_result->error += " ";
-        }
-        apply_result->error += _("Some repository changes were not confirmed by dnf5daemon.");
-      }
-    } else {
-      apply_result->repository_state_loaded = false;
-      apply_result->verification_outcome = repository_apply_verification_outcome(false, false);
-      if (!apply_result->error.empty()) {
-        apply_result->error += " ";
-      }
-      apply_result->error += list_error.empty() ? _("Repository state could not be reloaded.") : list_error;
-    }
-  }
-
-  g_task_return_pointer(task, apply_result, [](gpointer p) { delete static_cast<RepositoryApplyTaskResult *>(p); });
+  auto *apply_result = new RepositoryApplyResult(repository_apply_run(desired_enable_ids, desired_disable_ids));
+  g_task_return_pointer(task, apply_result, [](gpointer p) { delete static_cast<RepositoryApplyResult *>(p); });
 }
 
 // -----------------------------------------------------------------------------
@@ -1281,7 +1176,7 @@ on_repository_apply_finished(GObject *, GAsyncResult *result, gpointer)
   state->applying = false;
 
   GError *error = nullptr;
-  auto *apply_result = static_cast<RepositoryApplyTaskResult *>(g_task_propagate_pointer(task, &error));
+  auto *apply_result = static_cast<RepositoryApplyResult *>(g_task_propagate_pointer(task, &error));
   if (!apply_result) {
     if (state->destroyed) {
       if (error) {

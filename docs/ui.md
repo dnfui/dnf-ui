@@ -138,6 +138,18 @@ state and sends only changes that are still needed. Apply waits for package quer
 transaction preview or apply work to finish before changing repository state. After Apply, the UI reports
 whether package data was reloaded from live metadata, cached metadata, or installed packages only.
 
+The window delegates the synchronous Apply work to
+[src/ui/repository/repository_apply_operation.cpp](../src/ui/repository/repository_apply_operation.cpp) from
+its worker thread. The operation uses the existing
+[repository apply model](../src/ui/repository/repository_apply_model.cpp) for planning and classification.
+Its result keeps the write outcome, backend rebuild outcome, and final-state verification separate. A failed
+rebuild does not prevent verification, and matching final state does not erase a failed or partial write.
+The window retains task and widget lifetime handling, confirmation, status messages, and package-view updates.
+
+The operation accepts three replaceable dependencies for tests: repository listing, repository writes, and
+backend rebuilding. The normal entry point supplies the dnf5daemon repository client and BaseManager. Tests
+can exercise the same workflow without GTK windows, daemon access, or changes to system repositories.
+
 ### Package details controller
 
 [src/ui/details/package_details_controller.cpp](../src/ui/details/package_details_controller.cpp) updates the

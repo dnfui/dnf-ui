@@ -124,7 +124,10 @@ concern: `window`, `package_query`, `package_table`, `details`, `transaction`, `
 - [src/ui/refresh/repository_refresh_controller.cpp](../src/ui/refresh/repository_refresh_controller.cpp)
   handles manual repository refresh.
 - [src/ui/repository/repository_view.cpp](../src/ui/repository/repository_view.cpp) shows repositories and
-  applies enabled-state changes.
+  owns review dialogs, background tasks, and UI updates for enabled-state changes.
+- [src/ui/repository/repository_apply_operation.cpp](../src/ui/repository/repository_apply_operation.cpp)
+  runs the repository Apply workflow: reload current state, plan and write changes, rebuild package data,
+  and verify final state. It returns plain results without accessing GTK widgets.
 - [src/ui/window/main_menu.cpp](../src/ui/window/main_menu.cpp) handles top menu actions.
 - [src/ui/history/transaction_history_view.cpp](../src/ui/history/transaction_history_view.cpp) shows
   read-only transaction history.

@@ -37,6 +37,7 @@ Key files:
 - [test/unit/test_package_table_status.cpp](../test/unit/test_package_table_status.cpp)
 - [test/unit/test_pending_transaction_request.cpp](../test/unit/test_pending_transaction_request.cpp)
 - [test/unit/test_repository_apply_model.cpp](../test/unit/test_repository_apply_model.cpp)
+- [test/unit/test_repository_apply_operation.cpp](../test/unit/test_repository_apply_operation.cpp)
 - [test/unit/test_repository_service_client.cpp](../test/unit/test_repository_service_client.cpp)
 - [test/unit/test_search.cpp](../test/unit/test_search.cpp)
 - [test/unit/test_transaction_history.cpp](../test/unit/test_transaction_history.cpp)
@@ -54,6 +55,9 @@ These tests protect:
 - package table column text and sorting behavior
 - dnf5daemon transaction preview parsing, upgrade-target parsing, and failure handling
 - repository Apply planning, write outcome classification, and final-state verification
+- repository Apply workflow with substituted repository and backend operations, including initial read
+  failures, disappeared repositories, already-matching state, partial writes, failed rebuilds, and failed
+  final-state verification without changing system repositories
 - dnf5daemon repository list parsing and repository enable or disable calls
 - daemon upgrade snapshot ownership, stale-state invalidation, and current-target validation
 - transaction history row formatting, action labels, and page cursor behavior
