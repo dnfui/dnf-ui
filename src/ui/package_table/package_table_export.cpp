@@ -21,6 +21,7 @@ namespace {
 struct ExportDialogData {
   std::shared_ptr<MainWindowUiState> widgets;
   std::string csv;
+  GApplication *application = nullptr;
 };
 
 // -----------------------------------------------------------------------------
@@ -120,6 +121,30 @@ build_visible_table_csv(MainWindowUiState *widgets, std::string &csv_out)
 }
 
 // -----------------------------------------------------------------------------
+// Report the result after the CSV file has been saved.
+// -----------------------------------------------------------------------------
+void
+on_export_save_finished(GObject *source, GAsyncResult *result, gpointer user_data)
+{
+  auto *data = static_cast<ExportDialogData *>(user_data);
+  MainWindowUiState *widgets = data->widgets.get();
+
+  GError *error = nullptr;
+  gboolean saved = g_file_replace_contents_finish(G_FILE(source), result, nullptr, &error);
+  if (saved) {
+    set_export_status(widgets, _("Package list exported."), "green");
+  } else {
+    set_export_status(widgets, error ? error->message : _("Could not export package list."), "red");
+  }
+
+  g_clear_error(&error);
+  if (data->application) {
+    g_application_release(data->application);
+  }
+  delete data;
+}
+
+// -----------------------------------------------------------------------------
 // Save the prepared CSV text to the selected file.
 // -----------------------------------------------------------------------------
 void
@@ -148,23 +173,21 @@ on_export_dialog_response(GObject *source, GAsyncResult *result, gpointer user_d
       return;
     }
 
-    gboolean saved = g_file_replace_contents(
-        file, data->csv.c_str(), data->csv.size(), nullptr, FALSE, G_FILE_CREATE_NONE, nullptr, nullptr, &error);
-    if (saved) {
-      status_message = _("Package list exported.");
-      status_color = "green";
-    } else {
-      status_message = error ? error->message : _("Could not export package list.");
-      status_color = "red";
+    // Keep the CSV buffer and application alive until the save callback finishes.
+    if (data->application) {
+      g_application_hold(data->application);
     }
-
-    if (error) {
-      g_error_free(error);
-    }
-    if (file) {
-      g_object_unref(file);
-    }
-    set_export_status(widgets, status_message.c_str(), status_color);
+    g_file_replace_contents_async(file,
+                                  data->csv.c_str(),
+                                  data->csv.size(),
+                                  nullptr,
+                                  FALSE,
+                                  G_FILE_CREATE_NONE,
+                                  nullptr,
+                                  on_export_save_finished,
+                                  data);
+    g_object_unref(file);
+    return;
   }
 
   delete data;
@@ -190,7 +213,11 @@ package_table_export_visible_rows_to_csv(MainWindowUiState *widgets, GtkWindow *
   gtk_file_dialog_set_title(dialog, _("Export Package List"));
   gtk_file_dialog_set_initial_name(dialog, "dnf-ui-package-list.csv");
 
-  auto *data = new ExportDialogData { widgets ? widgets->shared_from_this() : nullptr, std::move(csv) };
+  auto *data = new ExportDialogData {
+    widgets ? widgets->shared_from_this() : nullptr,
+    std::move(csv),
+    parent ? G_APPLICATION(gtk_window_get_application(parent)) : nullptr,
+  };
   gtk_file_dialog_save(dialog, parent, nullptr, on_export_dialog_response, data);
   g_object_unref(dialog);
 }
