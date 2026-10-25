@@ -16,7 +16,7 @@
 namespace {
 
 constexpr const char *kSessionPath = "/org/rpm/dnf/v0/test";
-constexpr const char *kInterfaces = R"xml(
+constexpr const char *kInterfacesStart = R"xml(
 <node>
   <interface name="org.rpm.dnf.v0.Goal">
     <method name="resolve">
@@ -30,12 +30,33 @@ constexpr const char *kInterfaces = R"xml(
     <method name="get_status">
       <arg type="b" direction="out"/><arg type="a{sv}" direction="out"/>
     </method>
+)xml";
+constexpr const char *kCleanWithOptionsMethod = R"xml(
     <method name="clean_with_options">
       <arg type="a{sv}" direction="in"/>
       <arg type="b" direction="out"/><arg type="s" direction="out"/>
     </method>
+)xml";
+constexpr const char *kCleanMethod = R"xml(
+    <method name="clean">
+      <arg type="a{sv}" direction="in"/>
+      <arg type="b" direction="out"/><arg type="s" direction="out"/>
+    </method>
+)xml";
+constexpr const char *kCleanWithoutOptionsMethod = R"xml(
+    <method name="clean_with_options">
+      <arg type="b" direction="out"/><arg type="s" direction="out"/>
+    </method>
+)xml";
+constexpr const char *kInterfacesEnd = R"xml(
   </interface>
 </node>)xml";
+
+enum class OfflineCleanupApi {
+  OPTIONS_ON_CLEAN_WITH_OPTIONS,
+  OPTIONS_ON_CLEAN,
+  NO_OPTIONS_METHOD,
+};
 
 struct OfflineScenario {
   std::vector<std::pair<std::string, std::string>> packages { { "upgrade", "dnf5daemon-server" } };
@@ -47,6 +68,7 @@ struct OfflineScenario {
   bool clean_retains_state = false;
   bool clean_status_error = false;
   bool unsupported_status = false;
+  OfflineCleanupApi cleanup_api = OfflineCleanupApi::OPTIONS_ON_CLEAN_WITH_OPTIONS;
 };
 
 // -----------------------------------------------------------------------------
@@ -113,7 +135,21 @@ class OfflineDaemonFixture {
     context = g_main_context_new();
     loop = g_main_loop_new(context, FALSE);
     g_main_context_push_thread_default(context);
-    info = g_dbus_node_info_new_for_xml(kInterfaces, &error);
+    std::string interfaces = kInterfacesStart;
+    switch (this->scenario.cleanup_api) {
+    case OfflineCleanupApi::OPTIONS_ON_CLEAN_WITH_OPTIONS:
+      interfaces += kCleanWithOptionsMethod;
+      break;
+    case OfflineCleanupApi::OPTIONS_ON_CLEAN:
+      interfaces += kCleanWithoutOptionsMethod;
+      interfaces += kCleanMethod;
+      break;
+    case OfflineCleanupApi::NO_OPTIONS_METHOD:
+      interfaces += kCleanWithoutOptionsMethod;
+      break;
+    }
+    interfaces += kInterfacesEnd;
+    info = g_dbus_node_info_new_for_xml(interfaces.c_str(), &error);
     REQUIRE(info != nullptr);
     static const GDBusInterfaceVTable table = {
       +[](GDBusConnection *,
@@ -216,7 +252,7 @@ class OfflineDaemonFixture {
         g_variant_builder_add(&fields, "{sv}", "status", g_variant_new_string(state.c_str()));
       }
       g_dbus_method_invocation_return_value(invocation, g_variant_new("(ba{sv})", scheduled, &fields));
-    } else if (method == "clean_with_options") {
+    } else if (method == "clean_with_options" || method == "clean") {
       ++clean_calls;
       GVariant *options = g_variant_get_child_value(parameters, 0);
       gboolean allow_interactive = FALSE;
@@ -486,6 +522,42 @@ TEST_CASE("Discarding stored DNF updates unblocks a fresh transaction", "[offlin
   REQUIRE(daemon.preview(preview, error));
   REQUIRE(daemon.discard(error));
   REQUIRE(daemon.clean_calls == 2);
+}
+
+// -----------------------------------------------------------------------------
+// Published daemon interfaces put cleanup options on clean instead.
+// -----------------------------------------------------------------------------
+TEST_CASE("Discard supports the documented offline cleanup method", "[offline-transaction]")
+{
+  OfflineScenario scenario;
+  scenario.cleanup_api = OfflineCleanupApi::OPTIONS_ON_CLEAN;
+  OfflineDaemonFixture daemon(scenario);
+  daemon.set_status("ready", true);
+
+  std::string error;
+  REQUIRE(daemon.discard(error));
+  REQUIRE(error.empty());
+  REQUIRE(daemon.clean_calls == 1);
+  REQUIRE(daemon.clean_interactive);
+
+  TransactionPreview preview;
+  REQUIRE(daemon.preview(preview, error));
+}
+
+// -----------------------------------------------------------------------------
+// Never call a cleanup method whose arguments cannot request authentication.
+// -----------------------------------------------------------------------------
+TEST_CASE("Discard rejects unsupported offline cleanup signatures", "[offline-transaction]")
+{
+  OfflineScenario scenario;
+  scenario.cleanup_api = OfflineCleanupApi::NO_OPTIONS_METHOD;
+  OfflineDaemonFixture daemon(scenario);
+  daemon.set_status("ready", true);
+
+  std::string error;
+  REQUIRE_FALSE(daemon.discard(error));
+  REQUIRE(error == _("dnf5daemon does not expose a supported offline cleanup method."));
+  REQUIRE(daemon.clean_calls == 0);
 }
 
 TEST_CASE("Discard requests cleanup when offline status is empty", "[offline-transaction]")

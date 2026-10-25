@@ -1,9 +1,9 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: dnf-ui 0.4.3\n"
+"Project-Id-Version: dnf-ui 0.7.3\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-29 16:20+0000\n"
-"PO-Revision-Date: 2026-07-29 00:00+0200\n"
+"POT-Creation-Date: 2026-10-25 15:45+0000\n"
+"PO-Revision-Date: 2026-10-25 16:48+0100\n"
 "Last-Translator: DNF UI project <dnfui@proton.me>\n"
 "Language-Team: Swedish\n"
 "Language: sv\n"
@@ -20,6 +20,12 @@ msgstr "Ändringar förberedda för nästa omstart. Inga paket har ändrats änn
 
 msgid "Could not check updates prepared for reboot."
 msgstr "Kunde inte kontrollera uppdateringar förberedda för omstart."
+
+msgid "Could not inspect dnf5daemon offline cleanup methods."
+msgstr "Kunde inte kontrollera vilka metoder dnf5daemon stöder för att rensa offlinetransaktionen."
+
+msgid "dnf5daemon does not expose a supported offline cleanup method."
+msgstr "dnf5daemon har ingen metod som stöds för att rensa offlinetransaktionen."
 
 msgid "dnf5daemon returned an unsupported offline transaction status."
 msgstr "dnf5daemon returnerade en status för offlinetransaktionen som inte stöds."

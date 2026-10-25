@@ -7,6 +7,8 @@
 
 #include "i18n.hpp"
 
+#include <cstring>
+
 namespace {
 
 constexpr const char *kDnfDaemonName = "org.rpm.dnf.v0";
@@ -22,6 +24,79 @@ offline_interactive_options()
   g_variant_builder_init(&options, G_VARIANT_TYPE("a{sv}"));
   g_variant_builder_add(&options, "{sv}", "interactive", g_variant_new_boolean(TRUE));
   return g_variant_new("a{sv}", &options);
+}
+
+// -----------------------------------------------------------------------------
+// Check the input and output arguments of one daemon cleanup method.
+// -----------------------------------------------------------------------------
+bool
+offline_cleanup_method_has_options(GDBusMethodInfo *method)
+{
+  if (!method || !method->in_args || !method->out_args) {
+    return false;
+  }
+  if (!method->in_args[0] || method->in_args[1] || !method->out_args[0] || !method->out_args[1] ||
+      method->out_args[2]) {
+    return false;
+  }
+
+  return std::strcmp(method->in_args[0]->signature, "a{sv}") == 0 &&
+      std::strcmp(method->out_args[0]->signature, "b") == 0 && std::strcmp(method->out_args[1]->signature, "s") == 0;
+}
+
+// -----------------------------------------------------------------------------
+// Select the cleanup method with an options dictionary on this daemon session.
+// -----------------------------------------------------------------------------
+const char *
+offline_cleanup_method_name(GDBusConnection *connection,
+                            const std::string &session_path,
+                            std::string &error_out,
+                            GCancellable *cancellable)
+{
+  GError *error = nullptr;
+  GVariant *reply = g_dbus_connection_call_sync(connection,
+                                                kDnfDaemonName,
+                                                session_path.c_str(),
+                                                "org.freedesktop.DBus.Introspectable",
+                                                "Introspect",
+                                                nullptr,
+                                                G_VARIANT_TYPE("(s)"),
+                                                G_DBUS_CALL_FLAGS_NONE,
+                                                -1,
+                                                cancellable,
+                                                &error);
+  if (!reply) {
+    error_out = error ? error->message : _("Could not inspect dnf5daemon offline cleanup methods.");
+    g_clear_error(&error);
+    return nullptr;
+  }
+
+  const gchar *xml = nullptr;
+  g_variant_get(reply, "(&s)", &xml);
+  GDBusNodeInfo *node = g_dbus_node_info_new_for_xml(xml, &error);
+  g_variant_unref(reply);
+  if (!node) {
+    error_out = error ? error->message : _("Could not inspect dnf5daemon offline cleanup methods.");
+    g_clear_error(&error);
+    return nullptr;
+  }
+
+  GDBusInterfaceInfo *offline_interface = g_dbus_node_info_lookup_interface(node, kDnfDaemonOfflineInterface);
+  const char *method_name = nullptr;
+  if (offline_interface &&
+      offline_cleanup_method_has_options(
+          g_dbus_interface_info_lookup_method(offline_interface, "clean_with_options"))) {
+    method_name = "clean_with_options";
+  } else if (offline_interface &&
+             offline_cleanup_method_has_options(g_dbus_interface_info_lookup_method(offline_interface, "clean"))) {
+    method_name = "clean";
+  }
+
+  g_dbus_node_info_unref(node);
+  if (!method_name) {
+    error_out = _("dnf5daemon does not expose a supported offline cleanup method.");
+  }
+  return method_name;
 }
 
 } // namespace
@@ -140,13 +215,18 @@ transaction_service_client_discard_offline_request(GDBusConnection *connection,
 {
   error_out.clear();
 
+  const char *method_name = offline_cleanup_method_name(connection, session_path, error_out, cancellable);
+  if (!method_name) {
+    return false;
+  }
+
   // Empty daemon status can also mean unreadable stored data. Always request cleanup.
   GError *error = nullptr;
   GVariant *reply = g_dbus_connection_call_sync(connection,
                                                 kDnfDaemonName,
                                                 session_path.c_str(),
                                                 kDnfDaemonOfflineInterface,
-                                                "clean_with_options",
+                                                method_name,
                                                 g_variant_new("(@a{sv})", offline_interactive_options()),
                                                 G_VARIANT_TYPE("(bs)"),
                                                 G_DBUS_CALL_FLAGS_NONE,

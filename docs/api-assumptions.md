@@ -153,11 +153,11 @@ Assumptions:
   The API does not expose the stored package items, so the UI does not keep a shadow package list after preparation.
 - `ready`, `download-incomplete`, `download-complete`, and `transaction-incomplete` are the installed API's
   state names. Unknown nonempty states also block apply.
-- The current client calls `Offline.clean_with_options(a{sv}) -> (bs)` with `interactive=true`.
-  The private D-Bus fixture mirrors that call.
-  The stable API reference lists `clean_with_options()` with no arguments and `clean(a{sv}) -> (bs)` with options.
-  Treat this as a version compatibility point: verify the installed daemon's introspection before describing the
-  client's call as supported by that version.
+- Daemon versions place the cleanup options dictionary on either `Offline.clean_with_options(a{sv}) -> (bs)`
+  or `Offline.clean(a{sv}) -> (bs)`. The client inspects the active session and calls the method with that
+  signature using `interactive=true`. It rejects an unknown signature without sending a cleanup request.
+  The stable API reference lists `clean_with_options()` without arguments and `clean(a{sv}) -> (bs)` with options.
+  Private D-Bus tests cover both supported signatures and an unsupported signature.
 - Confirmed discard always requests daemon cleanup, even when status appears empty, because empty status can also
   mean stored data is missing or unreadable. Success requires a successful cleanup reply and a fresh status check
   that confirms no DNF state or update boot trigger remains. DNF cleanup removes its own stored transaction and

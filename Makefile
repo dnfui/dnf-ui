@@ -336,14 +336,18 @@ dnf5-source:
 	@./utils/fetch_dnf5_source.sh
 
 # FIXME: Run cppcheck on the source tree:
+# Cppcheck does not load the GTK version macro, so check both branches.
+# Aggregate members without constructors produce false warnings here.
 .PHONY: cppcheck
 cppcheck:
 	@echo "*** Static code analysis"
-	@cppcheck $(shell find src -name "*.cpp" -o -name "*.hpp") \
-		--quiet --enable=all -DDEBUG=1 \
-		--suppress=missingIncludeSystem \
-		--suppress=unusedStructMember \
-		--suppress=knownConditionTrueFalse
+	@for gtk_check_version in 0 1; do \
+		cppcheck $(shell find src -name "*.cpp" -o -name "*.hpp") \
+			--quiet --enable=warning --error-exitcode=1 -Isrc -DDEBUG=1 \
+			"-DGTK_CHECK_VERSION(a,b,c)=$$gtk_check_version" \
+			--suppress=missingIncludeSystem \
+			--suppress=uninitMemberVarNoCtor || exit 1; \
+	done
 
 # Run clang format in Docker:
 .PHONY: indent
