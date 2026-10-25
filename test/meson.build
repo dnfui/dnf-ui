@@ -6,7 +6,10 @@ gio_dep = dependency('gio-2.0')
 dnfui_tests = executable(
   'dnfui-tests',
   files(
-    'unit/test_backend.cpp',
+    'unit/test_base_manager.cpp',
+    'unit/test_installed_state.cpp',
+    'unit/test_package_details.cpp',
+    'unit/test_package_queries.cpp',
     'unit/test_config.cpp',
     'unit/test_dnf5daemon_client.cpp',
     'unit/test_offline.cpp',

@@ -26,7 +26,10 @@ On Fedora, `catch-devel` provides `pkgconfig(catch2-with-main)`.
 
 Key files:
 
-- [test/unit/test_backend.cpp](../test/unit/test_backend.cpp)
+- [test/unit/test_base_manager.cpp](../test/unit/test_base_manager.cpp)
+- [test/unit/test_installed_state.cpp](../test/unit/test_installed_state.cpp)
+- [test/unit/test_package_details.cpp](../test/unit/test_package_details.cpp)
+- [test/unit/test_package_queries.cpp](../test/unit/test_package_queries.cpp)
 - [test/unit/test_config.cpp](../test/unit/test_config.cpp)
 - [test/unit/test_daemon_upgrade_state.cpp](../test/unit/test_daemon_upgrade_state.cpp)
 - [test/unit/test_dnf5daemon_client.cpp](../test/unit/test_dnf5daemon_client.cpp)
@@ -45,6 +48,10 @@ Key files:
 - [test/unit/test_transaction_history.cpp](../test/unit/test_transaction_history.cpp)
 - [test/unit/test_transaction_request.cpp](../test/unit/test_transaction_request.cpp)
 - [test/unit/test_offline.cpp](../test/unit/test_offline.cpp)
+
+The backend tests are grouped by responsibility: BaseManager initialization, caching, and repository
+fallback; installed snapshots and package state; search, browse, and version merging; and package
+information, dependencies, and files. All four files run in the existing `dnfui-tests` executable.
 
 These tests protect:
 
