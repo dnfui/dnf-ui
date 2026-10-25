@@ -25,13 +25,12 @@ dnfui_tests = executable(
     'unit/test_daemon_upgrade_state.cpp',
     'unit/test_transaction_request.cpp',
     'unit/test_transaction_dialogs.cpp',
-    'unit/test_main_window_css_resource.cpp',
     'unit/test_transaction_history.cpp',
     'unit/test_repository_service_client.cpp',
     'unit/test_repository_apply_feedback.cpp',
     'unit/test_repository_apply_model.cpp',
     'unit/test_repository_apply_operation.cpp',
-  ) + backend_sources + main_window_resources + files(
+  ) + backend_sources + files(
     '../src/i18n.cpp',
     '../src/config.cpp',
     '../src/dnf5daemon_client/transaction_service_client_dbus.cpp',

@@ -19,13 +19,6 @@ repository_client_sources = files(
   'dnf5daemon_client/repository_service_client.cpp',
 )
 
-gnome = import('gnome')
-main_window_resources = gnome.compile_resources(
-  'dnfui-main-window-resources',
-  'ui/window/main_window.gresource.xml',
-  source_dir: 'ui/window',
-)
-
 app_sources = files(
   'app.cpp',
   'config.cpp',
@@ -72,7 +65,7 @@ app_sources = files(
 
 dnfui_app = executable(
   'dnfui',
-  backend_sources + daemon_client_sources + repository_client_sources + app_sources + main_window_resources,
+  backend_sources + daemon_client_sources + repository_client_sources + app_sources,
   include_directories: src_inc,
   dependencies: [
     libdnf5_dep,

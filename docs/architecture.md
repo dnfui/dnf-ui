@@ -113,8 +113,6 @@ and `common`.
 
 - [src/ui/window/main_window.cpp](../src/ui/window/main_window.cpp) creates shared widget state and connects signals.
 - [src/ui/window/main_window_layout.cpp](../src/ui/window/main_window_layout.cpp) builds the main window widget tree.
-- [src/ui/window/main_window.css](../src/ui/window/main_window.css) holds custom widget styles,
-  compiled into the application as a GTK resource.
 - [src/ui/common/widgets.hpp](../src/ui/common/widgets.hpp) groups the widget pointers and shared UI state.
 - [src/ui/common/widgets.cpp](../src/ui/common/widgets.cpp) handles task helpers shared by controllers.
 - [src/ui/refresh/repository_refresh_controller.cpp](../src/ui/refresh/repository_refresh_controller.cpp)
