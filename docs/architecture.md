@@ -122,6 +122,8 @@ concern: `window`, `package_query`, `package_table`, `details`, `transaction`, `
 - [src/ui/repository/repository_apply_operation.cpp](../src/ui/repository/repository_apply_operation.cpp)
   runs the repository Apply workflow: reload current state, plan and write changes, rebuild package data,
   and verify final state. It returns plain results without accessing GTK widgets.
+- [src/ui/repository/repository_apply_feedback.cpp](../src/ui/repository/repository_apply_feedback.cpp)
+  selects main-window and repository-window feedback from the Apply result without accessing GTK widgets.
 - [src/ui/window/main_menu.cpp](../src/ui/window/main_menu.cpp) handles top menu actions.
 - [src/ui/history/transaction_history_view.cpp](../src/ui/history/transaction_history_view.cpp) shows
   read-only transaction history.

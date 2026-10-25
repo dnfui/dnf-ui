@@ -37,6 +37,7 @@ Key files:
 - [test/unit/test_package_table_status.cpp](../test/unit/test_package_table_status.cpp)
 - [test/unit/test_package_table_upgrade_rows.cpp](../test/unit/test_package_table_upgrade_rows.cpp)
 - [test/unit/test_pending_transaction_request.cpp](../test/unit/test_pending_transaction_request.cpp)
+- [test/unit/test_repository_apply_feedback.cpp](../test/unit/test_repository_apply_feedback.cpp)
 - [test/unit/test_repository_apply_model.cpp](../test/unit/test_repository_apply_model.cpp)
 - [test/unit/test_repository_apply_operation.cpp](../test/unit/test_repository_apply_operation.cpp)
 - [test/unit/test_repository_service_client.cpp](../test/unit/test_repository_service_client.cpp)
@@ -58,6 +59,8 @@ These tests protect:
   generation, and full NEVRA fallback, without GTK windows or backend queries
 - dnf5daemon transaction preview parsing, upgrade-target parsing, and failure handling
 - repository Apply planning, write outcome classification, and final-state verification
+- repository Apply status messages and colors for successful, partial, failed, and unverified changes, and for
+  different backend rebuild results, without GTK windows
 - repository Apply workflow with substituted repository and backend operations, including initial read
   failures, disappeared repositories, already-matching state, partial writes, failed rebuilds, and failed
   final-state verification without changing system repositories

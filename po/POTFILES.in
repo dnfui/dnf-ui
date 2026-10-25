@@ -33,6 +33,7 @@ src/ui/package_table/package_table_sort.cpp
 src/ui/package_table/package_table_status.cpp
 src/ui/package_table/package_table_view.cpp
 src/ui/refresh/repository_refresh_controller.cpp
+src/ui/repository/repository_apply_feedback.cpp
 src/ui/repository/repository_apply_model.cpp
 src/ui/repository/repository_apply_operation.cpp
 src/ui/repository/repository_view.cpp

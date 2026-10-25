@@ -143,7 +143,9 @@ its worker thread. The operation uses the existing
 [repository apply model](../src/ui/repository/repository_apply_model.cpp) for planning and classification.
 Its result keeps the write outcome, backend rebuild outcome, and final-state verification separate. A failed
 rebuild does not prevent verification, and matching final state does not erase a failed or partial write.
-The window retains task and widget lifetime handling, confirmation, status messages, and package-view updates.
+The window retains task and widget lifetime handling, confirmation, and package-view updates. It displays
+status messages selected by [repository_apply_feedback.cpp](../src/ui/repository/repository_apply_feedback.cpp),
+which maps write, verification, and backend rebuild results to messages and status colors without GTK dependencies.
 
 The operation accepts three replaceable dependencies for tests: repository listing, repository writes, and
 backend rebuilding. The normal entry point supplies the dnf5daemon repository client and BaseManager.
