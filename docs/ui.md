@@ -9,8 +9,8 @@ For source-backed GTK and GIO assumptions, see [External API assumptions](api-as
 `main_window_layout.cpp` builds the widget tree. `main_window.cpp` creates shared widget state and connects
 behavior. Controller files own the behavior behind each part of the window.
 
-The shared widget state lives in [src/ui/common/widgets.hpp](../src/ui/common/widgets.hpp). Controller files
-receive a `MainWindowUiState` pointer and use it to update the parts of the window they own.
+The shared widget state lives in [src/ui/common/widgets.hpp](../src/ui/common/widgets.hpp).
+Controller files receive a `MainWindowUiState` pointer and use it to update the parts of the window they own.
 
 This keeps widget construction, package query behavior, package details, repository refresh behavior,
 and pending transaction behavior in separate files.
@@ -46,7 +46,8 @@ The main window file is responsible for:
 - connecting GTK signals to controller callbacks
 - saving window size and pane positions
 
-It should not contain package query logic or transaction apply logic. Those belong in the controller files.
+It should not contain package query logic or transaction apply logic.
+Those belong in the controller files.
 
 ## Shared widget state
 
@@ -59,8 +60,7 @@ It should not contain package query logic or transaction apply logic. Those belo
 - `MainWindowState` for window-level state
 - `MainWindowUiState` as the top-level shared state passed to controllers
 
-This state is not meant to hide ownership. It is a practical place to store GTK pointers that several
-controllers need.
+This state is not meant to hide ownership. It is a practical place to store GTK pointers that several controllers need.
 
 ## Controller files
 
@@ -108,21 +108,20 @@ The bottom bar shows the visible row count on the left and the last completed pa
 
 After startup, DNF UI quietly checks dnf5daemon's read-only upgrade target list. When that check succeeds, the
 List Upgradable button shows the current number of daemon-reported upgrades. Pressing the button still loads
-the full table. After Refresh Repositories completes with live metadata, DNF UI refreshes that count quietly
-again.
+the full table. After Refresh Repositories completes with live metadata, DNF UI refreshes that count quietly again.
 
 Search result caching uses this file:
 [src/ui/package_query/package_query_cache.cpp](../src/ui/package_query/package_query_cache.cpp). The cache is
 tied to the current backend Base generation and a cache epoch kept by the query cache layer. Repository
 refreshes, transaction follow-up refreshes, and installed-state refreshes clear cached search rows and advance
 that epoch, so older search workers cannot repopulate the cache with rows the UI has already invalidated.
-Dropping the cached Base to save memory does not invalidate search rows by itself. All-version searches are
-not stored in this cache because they can be much larger than the normal compact result.
+Dropping the cached Base to save memory does not invalidate search rows by itself.
+All-version searches are not stored in this cache because they can be much larger than the normal compact result.
 
 [src/ui/refresh/repository_refresh_controller.cpp](../src/ui/refresh/repository_refresh_controller.cpp) owns
 the Refresh Repositories button workflow. It refreshes dnf5daemon metadata, rebuilds the libdnf5 Base, updates
-the lower-right progress text, and clears stale upgradable rows after repository metadata changes. The same
-workflow can be started with F5.
+the lower-right progress text, and clears stale upgradable rows after repository metadata changes.
+The same workflow can be started with F5.
 
 `View -> Repositories...` or Ctrl+Shift+R opens a repository list window backed by dnf5daemon. The
 implementation lives in [src/ui/repository/repository_view.cpp](../src/ui/repository/repository_view.cpp). It
@@ -147,8 +146,8 @@ rebuild does not prevent verification, and matching final state does not erase a
 The window retains task and widget lifetime handling, confirmation, status messages, and package-view updates.
 
 The operation accepts three replaceable dependencies for tests: repository listing, repository writes, and
-backend rebuilding. The normal entry point supplies the dnf5daemon repository client and BaseManager. Tests
-can exercise the same workflow without GTK windows, daemon access, or changes to system repositories.
+backend rebuilding. The normal entry point supplies the dnf5daemon repository client and BaseManager.
+Tests can exercise the same workflow without GTK windows, daemon access, or changes to system repositories.
 
 ### Package details controller
 
@@ -171,8 +170,7 @@ result is ignored. Changelog loading can require extra repository metadata for a
 remains separate from the normal Info load. Rows with an upgrade target keep a separate changelog target so
 the Changelog tab can show the update package while Info, Files, and Dependencies still use the installed
 package context. When the Status column is hidden, the Info tab keeps Status as a live label outside the
-fetched package metadata text, so pending transaction changes do not leave stale Status text in the details
-panel.
+fetched package metadata text, so pending transaction changes do not leave stale Status text in the details panel.
 
 ### Package table view
 
@@ -182,8 +180,8 @@ package table, including column setup, selection, and status refresh.
 The table columns can be shown or hidden from `View -> Columns`, and the same menu can restore the default
 column set. The setting is stored in `dnfui.conf` as `package_table_hidden_columns`, using stable column ids
 so new default-visible columns can be added without hiding them for existing users. Older
-`package_table_columns` settings are migrated when they are read. Saving preferences is best-effort. The app
-keeps running if the config file cannot be created or updated.
+`package_table_columns` settings are migrated when they are read. Saving preferences is best-effort.
+The app keeps running if the config file cannot be created or updated.
 
 `File -> Export Package List...` or Ctrl+E writes the currently visible package table rows to a CSV file. It
 exports the table model that is already shown to the user instead of running another backend query. CSV fields
@@ -202,14 +200,13 @@ retains its daemon target and snapshot generation independently of the display m
 still owns loading, cancellation, snapshot publication, and the READY check before calling the row builder.
 
 [src/ui/package_table/package_table_sort.cpp](../src/ui/package_table/package_table_sort.cpp) contains package
-table cell text lookup and sorting rules. Version columns sort by stored RPM epoch and version. Release
-columns sort by stored RPM release text.
+table cell text lookup and sorting rules. Version columns sort by stored RPM epoch and version.
+Release columns sort by stored RPM release text.
 
 [src/ui/package_table/package_table_export.cpp](../src/ui/package_table/package_table_export.cpp) exports the
 current table rows to CSV.
 [src/ui/package_table/package_table_export_csv.cpp](../src/ui/package_table/package_table_export_csv.cpp)
-formats the CSV text, including spreadsheet formula protection, and is tested without opening a GTK file
-dialog.
+formats the CSV text, including spreadsheet formula protection, and is tested without opening a GTK file dialog.
 
 [src/ui/package_table/package_table_status.cpp](../src/ui/package_table/package_table_status.cpp) keeps the
 status text and CSS classes separate from table construction.
@@ -296,8 +293,7 @@ by package name and architecture, so marking another install-side target for the
 previous one. Exact install actions for install-only packages can coexist because DNF supports installing
 several such versions side by side. Remove and reinstall actions remain tied to exact installed NEVRAs, so
 parallel installed versions can be handled independently. Opening a pending exact installonly action from the
-Pending Actions tab preserves that exact install meaning instead of reclassifying the row as an upgrade or
-downgrade.
+Pending Actions tab preserves that exact install meaning instead of reclassifying the row as an upgrade or downgrade.
 
 Mark Listed Upgrades marks only valid upgrade candidates from the current table. It does not mark
 downgradeable rows or intermediate newer rows.
@@ -305,8 +301,8 @@ downgradeable rows or intermediate newer rows.
 [src/ui/transaction/pending_transaction_action_rows.cpp](../src/ui/transaction/pending_transaction_action_rows.cpp)
 keeps those row-selection rules in one place. It also resolves which package actions are available for the
 selected row, so details buttons, context menus, and row activation use the same answer. This is needed
-because an update can be shown from either the installed package list or the upgradable package list. The
-helper must not run libdnf queries because it is called while updating GTK controls.
+because an update can be shown from either the installed package list or the upgradable package list.
+The helper must not run libdnf queries because it is called while updating GTK controls.
 
 ### Transaction progress
 
@@ -325,8 +321,7 @@ because the daemon reports individual downloads, not one reliable total for the 
 Verification, transaction preparation, and RPM processing use the daemon's processed and total values. The bar
 is not an overall transaction percentage.
 
-The main window stays open while apply is running so the completion callback can finish the progress window
-cleanly.
+The main window stays open while apply is running so the completion callback can finish the progress window cleanly.
 
 ## Background work pattern
 
@@ -343,8 +338,8 @@ This keeps the window responsive and prevents old results from replacing newer s
 
 Stop is cooperative. A Stop button cancels the task state immediately, but the worker still has to reach a
 safe cancellation point before it can return. Search and package list workers can now stop while waiting for
-the shared Base. Repository refresh cancels both the dnf5daemon refresh call and the later libdnf5 Base
-reload. Not every D-Bus or libdnf5 step can stop immediately.
+the shared Base. Repository refresh cancels both the dnf5daemon refresh call and the later libdnf5 Base reload.
+Not every D-Bus or libdnf5 step can stop immediately.
 
 ## Refresh rules
 

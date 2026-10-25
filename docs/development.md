@@ -12,8 +12,8 @@ Install them with:
 ./utils/install_fedora_dependencies.sh
 ```
 
-Meson handles the real build and install logic. The `Makefile` is a thin task runner for the common developer
-commands.
+Meson handles the real build and install logic.
+The `Makefile` is a thin task runner for the common developer commands.
 
 To use the project Git hooks in this checkout:
 
@@ -91,15 +91,14 @@ dnfui-backend-cli preview install cowsay
 dnfui-backend-cli preview-upgrade-all
 ```
 
-The CLI only previews transactions. It does not apply package changes. Repository enable and disable commands
-do change system repository configuration through dnf5daemon. The GUI self-protection check is
-process-specific, so the development CLI does not represent the GUI rule that blocks DNF UI from removing or
-replacing itself.
+The CLI only previews transactions. It does not apply package changes.
+Repository enable and disable commands do change system repository configuration through dnf5daemon.
+The GUI self-protection check is process-specific, so the development CLI does not represent the GUI rule that blocks
+DNF UI from removing or replacing itself.
 
 ## Native transaction testing
 
-For native Polkit testing from the source tree, build the app and run it as a
-regular desktop user:
+For native Polkit testing from the source tree, build the app and run it as a regular desktop user:
 
 ```sh
 make
@@ -115,8 +114,9 @@ When you apply a transaction, the desktop Polkit prompt should appear.
 
 ## Docker
 
-[Docker](https://www.docker.com/) is the default container runtime. The container targets also support
-[Podman](https://podman.io/) by setting `CONTAINER_RUNTIME=podman`. The target names still say Docker though.
+[Docker](https://www.docker.com/) is the default container runtime.
+The container targets also support [Podman](https://podman.io/) by setting `CONTAINER_RUNTIME=podman`.
+The target names still say Docker though.
 
 Running the application in a container is useful for testing and developing without affecting the host system.
 
@@ -184,8 +184,7 @@ Notes:
 
 - The RPM package is built from `dnf-ui.spec`
 - `make srpm` includes files tracked by Git in the generated source tarball
-- The Docker RPM targets use the existing Fedora development image and write artifacts into the same
-  `./rpmbuild/` tree
+- The Docker RPM targets use the existing Fedora development image and write artifacts into the same `./rpmbuild/` tree
 
 Run `rpmlint` on the source RPM and binary RPMs:
 
@@ -216,5 +215,5 @@ Stop the GDB container if it is still running:
 make dockergdbstop
 ```
 
-The Docker GDB target starts a system bus in the container and checks that dnf5daemon can be activated before
-launching GDB.
+The Docker GDB target starts a system bus in the container and checks that dnf5daemon can be activated
+before launching GDB.

@@ -2,9 +2,8 @@
 
 This document records external API behavior that DNF UI relies on.
 
-It is meant to keep maintenance grounded in real libdnf5, GTK, GIO, D-Bus, and Polkit behavior instead of
-unverified assumptions. When a critical flow changes, update the matching entry here and make sure the linked
-source still supports the code.
+It is meant to keep maintenance grounded in real libdnf5, GTK, GIO, D-Bus, and Polkit behavior instead of unverified assumptions.
+When a critical flow changes, update the matching entry here and make sure the linked source still supports the code.
 
 ## Source priority
 
@@ -104,7 +103,7 @@ Why this matters:
 - Retrying repository loading cannot repair that mismatch. Disabling plugins in local Bases prevents it
   without changing system plugin configuration or disabling daemon transaction hooks.
 - Local queries read repository configuration from disk. Custom plugins that supply repository configuration
-  only in memory are not executed locally; their daemon results may therefore differ from local browsing.
+  only in memory are not executed locally, their daemon results may therefore differ from local browsing.
   Supporting those plugins requires a separate solution that keeps their library lifetime consistent. Do not
   silently re-enable plugins as a query fallback.
 - This policy does not prevent a package scriptlet from restarting dnf5daemon-server during its own upgrade.
@@ -113,16 +112,15 @@ Why this matters:
 Tests:
 
 - `BaseManager reads package data without loading libdnf5 plugins` supplies an enabled, unloadable plugin
-  through `LIBDNF_PLUGINS_CONFIG_DIR`. It first verifies that a normal plugin-enabled `Base::setup()` rejects
-  the fixture, then checks local search, rebuild, installed reads, history and changelog Base construction,
-  and installed-only fallback.
+  through `LIBDNF_PLUGINS_CONFIG_DIR`.
+  It first verifies that a normal plugin-enabled `Base::setup()` rejects the fixture, then checks local search,
+  rebuild, installed reads, history and changelog Base construction, and installed-only fallback.
 
 Maintenance check:
 
 - Keep plugin disabling in the shared local Base factory. Do not apply it to daemon session configuration.
 - Verify the full backend suite after changing this policy. Tests of daemon self-upgrades additionally need a
-  disposable Fedora VM with systemd; the ordinary Docker daemon tests do not reproduce service restart
-  scriptlets.
+  disposable Fedora VM with systemd, the ordinary Docker daemon tests do not reproduce service restart scriptlets.
 
 ## Daemon self-upgrades and offline transactions
 
@@ -145,19 +143,21 @@ This section records the daemon contract. The UI policy and user-visible flow ar
 
 Assumptions:
 
-- `Goal.do_transaction` accepts `offline=true`. It prepares the resolved session for the next boot without
-  executing its package changes now. The whole resolved transaction is stored; the client does not split it or
-  exclude packages.
-- `Offline.get_status` returns `(b, a{sv})`. The boolean confirms a valid scheduled DNF transaction. The
-  `status` field can describe stored data even when the boolean is false. Nonempty states must therefore also
-  block a new transaction. Preparation succeeds only when the boolean is true and the state is `ready`. The
-  API does not expose the stored package items, so the UI does not keep a shadow package list after preparation.
+- `Goal.do_transaction` accepts `offline=true`.
+  It prepares the resolved session for the next boot without executing its package changes now.
+  The whole resolved transaction is stored, the client does not split it or exclude packages.
+- `Offline.get_status` returns `(b, a{sv})`. The boolean confirms a valid scheduled DNF transaction.
+  The `status` field can describe stored data even when the boolean is false.
+  Nonempty states must therefore also block a new transaction. Preparation succeeds only when the boolean is true
+  and the state is `ready`.
+  The API does not expose the stored package items, so the UI does not keep a shadow package list after preparation.
 - `ready`, `download-incomplete`, `download-complete`, and `transaction-incomplete` are the installed API's
   state names. Unknown nonempty states also block apply.
-- The current client calls `Offline.clean_with_options(a{sv}) -> (bs)` with `interactive=true`. The private
-  D-Bus fixture mirrors that call. The stable API reference lists `clean_with_options()` with no arguments
-  and `clean(a{sv}) -> (bs)` with options. Treat this as a version compatibility point: verify the installed
-  daemon's introspection before describing the client's call as supported by that version.
+- The current client calls `Offline.clean_with_options(a{sv}) -> (bs)` with `interactive=true`.
+  The private D-Bus fixture mirrors that call.
+  The stable API reference lists `clean_with_options()` with no arguments and `clean(a{sv}) -> (bs)` with options.
+  Treat this as a version compatibility point: verify the installed daemon's introspection before describing the
+  client's call as supported by that version.
 - Confirmed discard always requests daemon cleanup, even when status appears empty, because empty status can also
   mean stored data is missing or unreadable. Success requires a successful cleanup reply and a fresh status check
   that confirms no DNF state or update boot trigger remains. DNF cleanup removes its own stored transaction and
@@ -210,8 +210,7 @@ Source:
 
 Why this matters:
 
-- Upgrade All calls dnf5daemon's native upgrade-all path by sending an empty package list to the daemon's
-  `upgrade` method.
+- Upgrade All calls dnf5daemon's native upgrade-all path by sending an empty package list to the daemon's `upgrade` method.
 - Selected package upgrades must be sent to the daemon as upgrade specs, not install specs. DNF UI sends the
   package name and architecture for selected upgrades because exact candidate NEVRAs can fail with no match
   even though the package is correctly shown as upgradable.
@@ -299,8 +298,7 @@ Maintenance check:
 - If dnf5daemon package-list fields or scope names change, update the target parser and rerun the dnf5daemon
   client tests in Docker.
 - If the upgrade-target query starts requesting many more fields or returns a much larger package set,
-  consider switching from `Rpm.list()` to `Rpm.list_fd()` so the result is not limited by one D-Bus reply
-  size.
+  consider switching from `Rpm.list()` to `Rpm.list_fd()` so the result is not limited by one D-Bus reply size.
 
 ## dnf5daemon repository configuration
 
@@ -319,8 +317,7 @@ Assumptions:
 - Repository enable and disable calls persist the repository enabled state.
 - DNF UI checks staged repository IDs against a fresh daemon list before writes.
 - DNF UI verifies repository state through a fresh daemon session after writes.
-- DNF UI treats the Base rebuild result after repository Apply as a user-visible outcome, not a simple success
-  flag.
+- DNF UI treats the Base rebuild result after repository Apply as a user-visible outcome, not a simple success flag.
 - DNF UI does not depend on which file or override mechanism dnf5daemon uses to persist the setting.
 
 Source:
@@ -361,16 +358,13 @@ Assumptions:
 - DNF UI owns synchronization around its shared `libdnf5::Base`.
 - Read-only package queries take `BaseManager::acquire_read()`.
 - `BaseManager::acquire_read()` is serialized with an exclusive guard. Do not change it back to shared locking
-  unless libdnf5 `Base` and `PackageQuery` concurrent access has been verified against the local libdnf5
-  version.
-- Transaction preview and apply use dnf5daemon. The GTK process does not keep a local libdnf transaction apply
-  path.
+  unless libdnf5 `Base` and `PackageQuery` concurrent access has been verified against the local libdnf5 version.
+- Transaction preview and apply use dnf5daemon. The GTK process does not keep a local libdnf transaction apply path.
 - Changelog lookups read installed packages from the shared Base first because rpmdb changelog metadata does
   not need repo `other` metadata.
 - Available package changelogs use a temporary Base with repo `other` metadata. The shared Base read lock must
   be released before that temporary Base is loaded.
-- The backend installed snapshot mutex must not be held at the same time as a `BaseManager` read or write
-  guard.
+- The backend installed snapshot mutex must not be held at the same time as a `BaseManager` read or write guard.
 
 Current local source:
 
@@ -389,8 +383,7 @@ Tests:
 
 Maintenance check:
 
-- Any change that touches `BaseManager`, `dnf_state.cpp`, or transaction resolution should be reviewed for
-  lock ordering.
+- Any change that touches `BaseManager`, `dnf_state.cpp`, or transaction resolution should be reviewed for lock ordering.
 
 ## GTK and GIO background work
 
@@ -449,8 +442,7 @@ Checked against:
 - local D-Bus introspection using the same connection that opened the session
 
 The Dockerfile uses the floating `fedora:latest` image. The package version above is an observation, not a
-pinned compatibility baseline. Recheck the introspected API whenever the image or target Fedora release
-changes.
+pinned compatibility baseline. Recheck the introspected API whenever the image or target Fedora release changes.
 
 Assumptions:
 
@@ -470,17 +462,14 @@ Assumptions:
   attribute describing why it was excluded. Current [upstream reasons][wrapped-link-9]
   include `conflict`, `broken_dependency`, and `vendor_change`.
 - Skipped items are not executable actions. DNF UI appends them to preview warnings without changing action
-  counts or disk-space calculations. Unknown skipped reasons are retained in the warning; missing reasons use
+  counts or disk-space calculations. Unknown skipped reasons are retained in the warning, missing reasons use
   generic text. Remaining valid actions may still be applied. An all-skipped result remains an empty preview
   and is not applied.
 - Resolver result `0` means success, `1` means success with warnings, and `2` means resolve failure.
-- Resolve warnings and failures are read through `org.rpm.dnf.v0.Goal.get_transaction_problems_string() ->
-  (as)`.
-- Resolve uses `interactive=true` because dnf5daemon may need to request repository signing key approval while
-  loading repositories.
+- Resolve warnings and failures are read through `org.rpm.dnf.v0.Goal.get_transaction_problems_string() -> (as)`.
+- Resolve uses `interactive=true` because dnf5daemon may need to request repository signing key approval while loading repositories.
 - Apply is started through `org.rpm.dnf.v0.Goal.do_transaction(a{sv}) -> ()`.
-- Apply is started with `interactive=true` because the daemon may need authorization while running the
-  transaction.
+- Apply is started with `interactive=true` because the daemon may need authorization while running the transaction.
 - During resolve or apply, dnf5daemon may emit `repo_key_import_request`. The client must answer with
   `org.rpm.dnf.v0.rpm.Repo.confirm_key_with_options(s, b, a{sv})`.
 - DNF UI must not approve a key without user consent.
@@ -488,12 +477,10 @@ Assumptions:
 - A dnf5daemon session is tied to the D-Bus connection that created it.
 - `replaced` preview items can be the outgoing side of a normal upgrade. DNF UI's transaction safety policy is
   documented in [transactions.md](transactions.md).
-- The app keeps one shared system bus connection so the session used for preview is still valid when the user
-  later applies.
+- The app keeps one shared system bus connection so the session used for preview is still valid when the user later applies.
 - A resolved preview is not a system-wide DNF lock. If another package tool changes state before Apply, the
   apply call must fail and require a new preview.
-- `do_transaction` may need longer than a normal D-Bus timeout because the user can leave the Polkit prompt
-  open.
+- `do_transaction` may need longer than a normal D-Bus timeout because the user can leave the Polkit prompt open.
 - Unsupported daemon transaction item types or actions must fail preview instead of being hidden.
 - The progress window listens to selected dnf5daemon signals: `download_add_new`, `download_progress`,
   `download_end`, `download_mirror_failure`, `transaction_before_begin`, `transaction_verify_start`,
@@ -520,15 +507,13 @@ Tests:
 
 - dnf5daemon transaction tests need to cover preview, apply, release, daemon failure, authorization failure,
   and disconnect behavior
-- Repository signing key import needs a native manual test with a package signing key that has not already
-  been imported.
+- Repository signing key import needs a native manual test with a package signing key that has not already been imported.
 
 Maintenance check:
 
 - If any hard-coded daemon method, interface, object path, or reply signature is changed, verify it against
   the DNF5 dnf5daemon version DNF UI targets.
-- If session handling changes, test preview cancel, apply success, apply failure, and window close while a
-  session exists.
+- If session handling changes, test preview cancel, apply success, apply failure, and window close while a session exists.
 
 ## Polkit authorization through dnf5daemon
 
@@ -560,8 +545,7 @@ Maintenance check:
 
 ## Dependency update checklist
 
-When updating Fedora base images, libdnf5, GTK, GLib, GIO, or dnf5daemon, revalidate the affected entries in
-this document.
+When updating Fedora base images, libdnf5, GTK, GLib, GIO, or dnf5daemon, revalidate the affected entries in this document.
 
 Minimum checks:
 

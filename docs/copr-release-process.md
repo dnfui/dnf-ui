@@ -64,8 +64,7 @@ make srpm
 make rpm
 ```
 
-The SRPM helper creates a source tarball from tracked Git files, builds the SRPM, and updates this convenience
-symlink:
+The SRPM helper creates a source tarball from tracked Git files, builds the SRPM, and updates this convenience symlink:
 
 ```text
 dnf-ui-latest.src.rpm
@@ -160,8 +159,8 @@ For this project it should print:
 erikmn
 ```
 
-The COPR API token expires after 180 days. If COPR CLI authentication starts failing later, renew the token
-from the same API page.
+The COPR API token expires after 180 days.
+If COPR CLI authentication starts failing later, renew the token from the same API page.
 
 ### GitHub Actions COPR publishing
 
@@ -202,8 +201,8 @@ The created project is:
 https://copr.fedorainfracloud.org/coprs/erikmn/dnf-ui/
 ```
 
-For normal public builds, the current and previous supported Fedora releases are enough. Rawhide can be added
-later if early breakage detection is useful.
+For normal public builds, the current and previous supported Fedora releases are enough.
+Rawhide can be added later if early breakage detection is useful.
 
 ## 7. Upload a build to COPR
 
@@ -233,8 +232,8 @@ running    COPR is building for the enabled Fedora chroots
 succeeded  The build passed
 ```
 
-It is safe to stop watching with `Ctrl-C`. That only stops the local terminal from watching the build. It does
-not cancel the COPR build.
+It is safe to stop watching with `Ctrl-C`. That only stops the local terminal from watching the build.
+It does not cancel the COPR build.
 
 To monitor a build later, use the build id printed by COPR:
 
@@ -399,8 +398,8 @@ dnf-ui-<next-version>-1
 dnf-ui-<next-next-version>-1
 ```
 
-DNF decides whether something is an update from the RPM epoch, version, and release. Since this package does
-not use an epoch, always move version or release forward for every public COPR upload.
+DNF decides whether something is an update from the RPM epoch, version, and release.
+Since this package does not use an epoch, always move version or release forward for every public COPR upload.
 
 ## 13. What users do when there is a new version
 

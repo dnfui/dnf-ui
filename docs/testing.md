@@ -69,9 +69,9 @@ These tests protect:
 
 ## Daemon smoke tests
 
-The app now talks to DNF5 dnf5daemon for privileged transactions. Use Docker and native Fedora testing to
-verify upgrade-target listing, preview, apply, cancel, failure, session cleanup, and repository enable or
-disable behavior.
+The app now talks to DNF5 dnf5daemon for privileged transactions.
+Use Docker and native Fedora testing to verify upgrade-target listing, preview, apply, cancel,
+failure, session cleanup, and repository enable or disable behavior.
 
 ## Common commands
 
@@ -94,8 +94,9 @@ make dockerdnf5daemontest
 ```
 
 That Docker target also creates a disposable disabled repository and verifies that the repository client can
-enable it and disable it again through fresh dnf5daemon sessions. The test repository does not need package
-metadata because repository listing and enabled-state changes do not load available package data.
+enable it and disable it again through fresh dnf5daemon sessions.
+The test repository does not need package metadata because repository listing and enabled-state changes
+do not load available package data.
 
 Run the dnf5daemon transaction client tests on native Fedora:
 
@@ -104,10 +105,11 @@ make dnf5daemontest
 ```
 
 The native dnf5daemon tests may install and remove `cowsay` unless `DNFUI_TEST_DNF5DAEMON_INSTALL_SPEC` is set
-to another package. The script restores whether the test package was installed before the run. The optional
-downgrade preview test runs when `DNFUI_TEST_DNF5DAEMON_DOWNGRADE_SPEC` names a safe installed package version
-that can be downgraded in the test environment. Native apply tests are skipped by default because they require
-dnf5daemon authorization. Run them explicitly with:
+to another package.
+The script restores whether the test package was installed before the run.
+The optional downgrade preview test runs when `DNFUI_TEST_DNF5DAEMON_DOWNGRADE_SPEC` names a safe installed package version
+that can be downgraded in the test environment.
+Native apply tests are skipped by default because they require dnf5daemon authorization. Run them explicitly with:
 
 ```sh
 make dnf5daemonapplytest
@@ -141,8 +143,8 @@ Search for:
 dnfui-gpg-test-package
 ```
 
-The key prompt can appear while preparing the preview or while applying the transaction. Both paths must ask
-before trusting the key.
+The key prompt can appear while preparing the preview or while applying the transaction.
+Both paths must ask before trusting the key.
 
 Reject test:
 
@@ -231,15 +233,13 @@ pid="$(pgrep -n dnfui)"
 grep -E 'Rss|Pss|Private' "/proc/$pid/smaps_rollup"
 ```
 
-2. Run `List Packages` ten times, waiting for each run to finish before recording memory again.
-3. Repeat with `List Installed`, a broad `Search`, and `List Upgradable`.
-4. Repeat Search and List Packages with Latest only disabled.
-5. Alternate Latest only and all-version searches to verify all-version rows do not accumulate outside the
-   visible table.
-6. Alternate `List Upgradable` and `List Packages` a few times to verify old daemon-backed rows are released.
-7. A high but stable value is acceptable. Continued substantial growth after every completed run is a release
-   blocker.
-8. Run `make memcheck-app` once if memory keeps growing or if table row ownership changed.
+1. Run `List Packages` ten times, waiting for each run to finish before recording memory again.
+2. Repeat with `List Installed`, a broad `Search`, and `List Upgradable`.
+3. Repeat Search and List Packages with Latest only disabled.
+4. Alternate Latest only and all-version searches to verify all-version rows do not accumulate outside the visible table.
+5. Alternate `List Upgradable` and `List Packages` a few times to verify old daemon-backed rows are released.
+6. A high but stable value is acceptable. Continued substantial growth after every completed run is a release blocker.
+7. Run `make memcheck-app` once if memory keeps growing or if table row ownership changed.
 
 ## Docker notes
 
@@ -271,8 +271,8 @@ Build the source RPM in a clean Fedora build environment:
 mock -r fedora-rawhide-x86_64 --rebuild dnf-ui-latest.src.rpm
 ```
 
-Use the Fedora release and architecture that match the package review you are preparing. Running `mock` may
-require the user to be a member of the `mock` group.
+Use the Fedora release and architecture that match the package review you are preparing.
+Running `mock` may require the user to be a member of the `mock` group.
 
 Reference: <https://docs.fedoraproject.org/en-US/packaging-guidelines/ReviewGuidelines/>
 
@@ -291,8 +291,7 @@ For package apply behavior, use test packages that are safe to install and remov
 
 ## Multi-version package browsing checks
 
-Use these checks after changes to Latest only, package queries, package table display, or pending action
-identity:
+Use these checks after changes to Latest only, package queries, package table display, or pending action identity:
 
 1. Start with Latest only enabled.
 2. Run Search and List Packages and verify the compact one-row-per-package view.
@@ -314,5 +313,4 @@ identity:
     upgrade or downgrade.
 15. Verify that Unmark removes a pending exact install-only action instead of converting it to another action.
 16. Verify that normal package upgrade behavior is unchanged.
-17. Verify that the transaction preview contains both selected exact install-only NEVRAs when two versions are
-    selected.
+17. Verify that the transaction preview contains both selected exact install-only NEVRAs when two versions are selected.

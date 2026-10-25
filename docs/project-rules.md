@@ -29,12 +29,11 @@ and **explain** the code that is merged.
 - An upgradable package row represents an installed package with a newer repository candidate.
 - libdnf5 is the source for package rows, package details, and local package state shown in the UI. For List
   Upgradable rows, the displayed update target comes from dnf5daemon.
-- dnf5daemon is the source for transaction previews, apply work, Upgrade All, and the List Upgradable upgrade
-  target set.
-- The generic Status column may show that repository metadata contains a newer candidate. It must not be
-  treated as proof that dnf5daemon can apply that upgrade.
-- The List Upgradable view must start from dnf5daemon upgrade targets. libdnf5 may add display metadata, but
-  it must not add extra upgrade rows that the daemon did not report.
+- dnf5daemon is the source for transaction previews, apply work, Upgrade All, and the List Upgradable upgrade target set.
+- The generic Status column may show that repository metadata contains a newer candidate.
+  It must not be treated as proof that dnf5daemon can apply that upgrade.
+- The List Upgradable view must start from dnf5daemon upgrade targets.
+  libdnf5 may add display metadata, but it must not add extra upgrade rows that the daemon did not report.
 - If dnf5daemon reports an upgrade whose metadata cannot be loaded from libdnf5, keep a basic daemon row
   visible instead of hiding the upgrade.
 - When showing an upgradable package, details tabs should describe the currently installed package unless the
@@ -42,8 +41,7 @@ and **explain** the code that is merged.
 - For daemon-backed List Upgradable rows, the Info tab must use the attached daemon target for update
   information instead of selecting a separate libdnf5 candidate.
 - Installed package checks must not load repository metadata when local rpmdb state is enough.
-- Repository refresh can update repository-visible package state, but it should **not** pretend to install or
-  remove packages.
+- Repository refresh can update repository-visible package state, but it should **not** pretend to install or remove packages.
 
 ## libdnf5 access
 

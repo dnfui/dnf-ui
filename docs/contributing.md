@@ -12,8 +12,8 @@ Good ways to help include:
 - Reviewing code for correctness, maintainability, and clear design
 - Improving documentation when something is hard to understand
 
-Small focused patches are easier to review than large rewrites. If you want to change behavior or add a
-feature, please explain what problem it solves and how you tested it.
+Small focused patches are easier to review than large rewrites.
+If you want to change behavior or add a feature, please explain what problem it solves and how you tested it.
 
 Before changing code, start with [architecture.md](/docs/architecture.md) for the source layout,
 [project-rules.md](/docs/project-rules.md) for project boundaries, and [testing.md](/docs/testing.md) for the
