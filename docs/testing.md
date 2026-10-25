@@ -73,7 +73,8 @@ These tests protect:
   failures, disappeared repositories, already-matching state, partial writes, failed rebuilds, and failed
   final-state verification without changing system repositories
 - dnf5daemon repository list parsing and repository enable or disable calls
-- daemon upgrade snapshot ownership, stale-state invalidation, and current-target validation
+- daemon upgrade snapshot ownership, stale-state invalidation, and current-target validation; these state tests
+  also cover the snapshot rules used by the quiet upgrade-count task
 - transaction history row formatting, action labels, and page cursor behavior
 - history filter text trimming, optional local date bounds, inclusive end dates, invalid dates, and reversed ranges
 - transaction request validation
@@ -307,6 +308,14 @@ For transaction changes, test the dnf5daemon Docker path and then verify apply b
 a real desktop Polkit prompt.
 
 For package apply behavior, use test packages that are safe to install and remove in the test environment.
+
+## Quiet upgrade-count checks
+
+After changes to `package_query_upgrade_indicator.cpp`, verify on a desktop that a successful startup check
+updates the List Upgradable button count without loading the package table. Run Refresh Repositories and check
+that the count updates again after the refresh completes. Check that starting a package list or transaction
+preview does not let a quiet count refresh interrupt active work; pressing List Upgradable must still fetch
+and display the full daemon-reported upgrade list.
 
 ## Multi-version package browsing checks
 

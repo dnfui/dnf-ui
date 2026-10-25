@@ -35,6 +35,7 @@ app_sources = files(
   'ui/package_query/package_query_controls.cpp',
   'ui/package_query/package_query_controller.cpp',
   'ui/package_query/package_query_tasks.cpp',
+  'ui/package_query/package_query_upgrade_indicator.cpp',
   'ui/package_table/package_table_model.cpp',
   'ui/package_table/package_table_context_menu.cpp',
   'ui/package_table/package_table_columns.cpp',

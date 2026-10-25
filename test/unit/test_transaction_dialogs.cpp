@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include "dnf5daemon_client/transaction_service_client.hpp"
 #include "transaction/transaction_preview.hpp"
 #include "ui/common/widgets.hpp"
 #include "ui/transaction/transaction_dialogs.hpp"

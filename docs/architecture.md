@@ -134,7 +134,9 @@ and `common`.
 - [src/ui/package_query/package_query_controls.cpp](../src/ui/package_query/package_query_controls.cpp)
   handles active package-query request state, Stop button handling, cancellation, and refresh completion.
 - [src/ui/package_query/package_query_tasks.cpp](../src/ui/package_query/package_query_tasks.cpp) contains
-  package-query worker tasks and completion handlers.
+  package search, listing, and reload workers and their completion handlers.
+- [src/ui/package_query/package_query_upgrade_indicator.cpp](../src/ui/package_query/package_query_upgrade_indicator.cpp)
+  owns the separate quiet upgrade-count worker, its scheduling, and GTK-thread completion.
 - [src/ui/details/package_details_controller.cpp](../src/ui/details/package_details_controller.cpp) handles
   selection and details loading.
 - [src/ui/package_table/package_table_view.cpp](../src/ui/package_table/package_table_view.cpp) builds the package table.

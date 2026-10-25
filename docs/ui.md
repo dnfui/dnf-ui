@@ -84,7 +84,9 @@ of the public callback file:
 - [src/ui/package_query/package_query_controls.cpp](../src/ui/package_query/package_query_controls.cpp)
   handles active request state, Stop button handling, cancellation, and refresh completion.
 - [src/ui/package_query/package_query_tasks.cpp](../src/ui/package_query/package_query_tasks.cpp) contains the
-  `GTask` workers and completion handlers for package queries.
+  `GTask` workers and completion handlers for package queries, including List Upgradable.
+- [src/ui/package_query/package_query_upgrade_indicator.cpp](../src/ui/package_query/package_query_upgrade_indicator.cpp)
+  handles the quiet upgrade-count refresh independently of the visible package list.
 - [package_query_controller_internal.hpp](../src/ui/package_query/package_query_controller_internal.hpp)
   declares the shared functions used by those files.
 
@@ -108,7 +110,9 @@ same action target. List Installed and List Upgradable do not use this checkbox.
 The bottom bar shows the visible row count on the left and the last completed package query time on the right.
 
 After startup, DNF UI quietly checks dnf5daemon's read-only upgrade target list. When that check succeeds, the
-List Upgradable button shows the current number of daemon-reported upgrades. Pressing the button still loads
+List Upgradable button shows the current number of daemon-reported upgrades. The count check defers while a
+package list, repository refresh, or transaction preview/apply is busy; it does not load package metadata.
+Pressing the button still loads
 the full table. After Refresh Repositories completes with live metadata, DNF UI refreshes that count quietly again.
 
 Search result caching uses this file:

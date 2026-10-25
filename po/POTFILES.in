@@ -26,6 +26,7 @@ src/ui/package_query/package_query_cache.cpp
 src/ui/package_query/package_query_controller.cpp
 src/ui/package_query/package_query_controls.cpp
 src/ui/package_query/package_query_tasks.cpp
+src/ui/package_query/package_query_upgrade_indicator.cpp
 src/ui/package_table/package_table_columns.cpp
 src/ui/package_table/package_table_context_menu.cpp
 src/ui/package_table/package_table_export.cpp
