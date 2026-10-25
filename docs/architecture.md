@@ -230,6 +230,8 @@ Preview and apply go through DNF5 dnf5daemon:
   [src/dnf5daemon_client/transaction_service_client.cpp](../src/dnf5daemon_client/transaction_service_client.cpp)
 - GUI client D-Bus calls:
   [src/dnf5daemon_client/transaction_service_client_dbus.cpp][wrapped-link-1]
+- Offline status, preflight and cleanup D-Bus calls:
+  [src/dnf5daemon_client/transaction_service_client_offline.cpp](../src/dnf5daemon_client/transaction_service_client_offline.cpp)
 - GUI client daemon item parsing:
   [src/dnf5daemon_client/transaction_service_client_parser.cpp][wrapped-link-5]
 - GUI client wait handling:

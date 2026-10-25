@@ -48,6 +48,7 @@ Key files:
 - [test/unit/test_transaction_history.cpp](../test/unit/test_transaction_history.cpp)
 - [test/unit/test_transaction_request.cpp](../test/unit/test_transaction_request.cpp)
 - [test/unit/test_offline.cpp](../test/unit/test_offline.cpp)
+- [test/unit/test_offline_transaction.cpp](../test/unit/test_offline_transaction.cpp)
 
 The backend tests are grouped by responsibility: BaseManager initialization, caching, and repository
 fallback; installed snapshots and package state; search, browse, and version merging; and package
@@ -77,6 +78,8 @@ These tests protect:
 - history filter text trimming, optional local date bounds, inclusive end dates, invalid dates, and reversed ranges
 - transaction request validation
 - offline and cached metadata behavior
+- offline preview/apply mode checks, prepared-state inspection, verified cleanup and unsupported daemon replies
+  through a private D-Bus test fixture without changing system packages
 
 ## Daemon smoke tests
 

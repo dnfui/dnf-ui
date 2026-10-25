@@ -5,6 +5,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "dnf5daemon_client/transaction_service_client_internal.hpp"
+#include "i18n.hpp"
 #include "transaction/transaction_preview.hpp"
 #include "test_utils.hpp"
 
@@ -45,6 +46,7 @@ struct OfflineScenario {
   bool clean_rejected = false;
   bool clean_retains_state = false;
   bool clean_status_error = false;
+  bool unsupported_status = false;
 };
 
 // -----------------------------------------------------------------------------
@@ -208,7 +210,9 @@ class OfflineDaemonFixture {
       }
       GVariantBuilder fields;
       g_variant_builder_init(&fields, G_VARIANT_TYPE("a{sv}"));
-      if (!state.empty()) {
+      if (scenario.unsupported_status) {
+        g_variant_builder_add(&fields, "{sv}", "unexpected", g_variant_new_string("value"));
+      } else if (!state.empty()) {
         g_variant_builder_add(&fields, "{sv}", "status", g_variant_new_string(state.c_str()));
       }
       g_dbus_method_invocation_return_value(invocation, g_variant_new("(ba{sv})", scheduled, &fields));
@@ -545,4 +549,29 @@ TEST_CASE("Cancelled discard does not send a cleanup request", "[offline-transac
   REQUIRE_FALSE(discarded);
   REQUIRE_FALSE(error.empty());
   REQUIRE(daemon.clean_calls == 0);
+}
+
+// -----------------------------------------------------------------------------
+// Reject an unsupported status reply rather than treating it as no stored updates.
+// -----------------------------------------------------------------------------
+TEST_CASE("Unsupported offline status blocks transactions and cleanup success", "[offline-transaction]")
+{
+  OfflineScenario scenario;
+  scenario.unsupported_status = true;
+  OfflineDaemonFixture daemon(scenario);
+  std::string error;
+  bool prepared = true;
+
+  REQUIRE_FALSE(daemon.prepared(prepared, error));
+  REQUIRE_FALSE(prepared);
+  REQUIRE(error == _("dnf5daemon returned an unsupported offline transaction status."));
+
+  TransactionPreview preview;
+  REQUIRE_FALSE(daemon.preview(preview, error));
+  REQUIRE(preview.empty());
+  REQUIRE(error == _("dnf5daemon returned an unsupported offline transaction status."));
+
+  REQUIRE_FALSE(daemon.discard(error));
+  REQUIRE(daemon.clean_calls == 1);
+  REQUIRE(error == _("dnf5daemon returned an unsupported offline transaction status."));
 }

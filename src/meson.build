@@ -9,6 +9,7 @@ backend_sources = files(
 
 daemon_client_sources = files(
   'dnf5daemon_client/transaction_service_client_dbus.cpp',
+  'dnf5daemon_client/transaction_service_client_offline.cpp',
   'dnf5daemon_client/transaction_service_client_parser.cpp',
   'dnf5daemon_client/transaction_service_client.cpp',
   'dnf5daemon_client/transaction_service_client_wait.cpp',

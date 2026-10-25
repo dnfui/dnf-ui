@@ -23,6 +23,7 @@ Important files:
 - [src/transaction/transaction_preview.hpp](../src/transaction/transaction_preview.hpp)
 - [src/dnf5daemon_client/transaction_service_client.cpp](../src/dnf5daemon_client/transaction_service_client.cpp)
 - [src/dnf5daemon_client/transaction_service_client_dbus.cpp][wrapped-link-2]
+- [src/dnf5daemon_client/transaction_service_client_offline.cpp](../src/dnf5daemon_client/transaction_service_client_offline.cpp)
 - [src/dnf5daemon_client/transaction_service_client_parser.cpp][wrapped-link-4]
 - [src/dnf5daemon_client/transaction_service_client_wait.cpp][wrapped-link-3]
 
@@ -190,7 +191,9 @@ DNF UI uses DNF's existing offline implementation:
    applying these updates.
 
 Before preview and again before apply, the client checks for stored offline data and systemd's update boot
-triggers. Further transactions are rejected until those updates have been applied or explicitly discarded, so
+triggers. The offline D-Bus module owns the checks, prepared-update status reads and authenticated cleanup,
+while the main D-Bus client retains connection and session ownership. Further transactions are rejected until
+those updates have been applied or explicitly discarded, so
 a normal Apply does not silently invalidate an earlier prepared transaction. Browsing remains available.
 
 **Package > Discard Prepared Updates** abandons DNF's stored offline transaction without changing installed
