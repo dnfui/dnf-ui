@@ -67,6 +67,7 @@ These tests protect:
 - dnf5daemon repository list parsing and repository enable or disable calls
 - daemon upgrade snapshot ownership, stale-state invalidation, and current-target validation
 - transaction history row formatting, action labels, and page cursor behavior
+- history filter text trimming, optional local date bounds, inclusive end dates, invalid dates, and reversed ranges
 - transaction request validation
 - offline and cached metadata behavior
 

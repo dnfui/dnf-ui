@@ -26,6 +26,7 @@ app_sources = files(
   'ui/window/main_window.cpp',
   'ui/window/main_window_layout.cpp',
   'main.cpp',
+  'ui/history/transaction_history_filters.cpp',
   'ui/history/transaction_history_view.cpp',
   'ui/transaction/pending_transaction_action_rows.cpp',
   'ui/details/package_details_controller.cpp',

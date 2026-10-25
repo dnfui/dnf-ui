@@ -21,6 +21,7 @@ The UI source tree is grouped by the part of the window it owns:
 - `src/ui/package_query` for search, package listing, query cache, and Stop handling
 - `src/ui/package_table` for the package table model, columns, status, sorting, and context menu
 - `src/ui/details` for the package details panel
+- `src/ui/history` for transaction history browsing and filter validation
 - `src/ui/transaction` for marked actions, preview, apply, review dialogs, and progress
 - `src/ui/refresh` for manual repository refresh
 - `src/ui/repository` for the repository list and enabled-state changes
@@ -229,6 +230,9 @@ history on a worker thread and displays value objects from the backend instead o
 unbounded GTK list. The page control does not show a total page count, because that would require scanning the
 full matching history before the window can be used. Filters are applied by the backend before the page is
 returned, so a search looks through the available history instead of only the rows currently shown on screen.
+Date entries accept local dates in YYYY-MM-DD format, include the whole end date, and reject invalid or
+reversed ranges before searching. [transaction_history_filters.cpp](../src/ui/history/transaction_history_filters.cpp)
+handles text trimming and date-range validation separately from the GTK controls.
 Filter changes are applied when the user presses Search or presses Enter in a filter entry. This avoids
 starting a backend history scan for every typed character. The action filter uses checkboxes so the user can
 include one action, several actions, or all actions in the same history search. When the history window is

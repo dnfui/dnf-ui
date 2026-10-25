@@ -108,8 +108,8 @@ flowchart TD
 ## UI structure
 
 The main window is built once and the controller files own behavior. The `src/ui` directory is split by UI
-concern: `window`, `package_query`, `package_table`, `details`, `transaction`, `refresh`, `repository`, and
-`common`.
+concern: `window`, `package_query`, `package_table`, `details`, `history`, `transaction`, `refresh`, `repository`,
+and `common`.
 
 - [src/ui/window/main_window.cpp](../src/ui/window/main_window.cpp) creates shared widget state and connects signals.
 - [src/ui/window/main_window_layout.cpp](../src/ui/window/main_window_layout.cpp) builds the main window widget tree.
@@ -126,7 +126,9 @@ concern: `window`, `package_query`, `package_table`, `details`, `transaction`, `
   selects main-window and repository-window feedback from the Apply result without accessing GTK widgets.
 - [src/ui/window/main_menu.cpp](../src/ui/window/main_menu.cpp) handles top menu actions.
 - [src/ui/history/transaction_history_view.cpp](../src/ui/history/transaction_history_view.cpp) shows
-  read-only transaction history.
+  read-only transaction history and manages GTK controls and background loads.
+- [src/ui/history/transaction_history_filters.cpp](../src/ui/history/transaction_history_filters.cpp)
+  trims history search text and validates local date ranges without depending on GTK.
 - [src/ui/package_query/package_query_controller.cpp](../src/ui/package_query/package_query_controller.cpp)
   handles the public search, list, history, clear, and reload callbacks.
 - [src/ui/package_query/package_query_controls.cpp](../src/ui/package_query/package_query_controls.cpp)

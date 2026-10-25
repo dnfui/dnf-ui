@@ -19,6 +19,7 @@ src/transaction/transaction_request.hpp
 src/ui/common/ui_helpers.cpp
 src/ui/common/widgets.cpp
 src/ui/details/package_details_controller.cpp
+src/ui/history/transaction_history_filters.cpp
 src/ui/history/transaction_history_view.cpp
 src/ui/package_query/package_query_cache.cpp
 src/ui/package_query/package_query_controller.cpp
