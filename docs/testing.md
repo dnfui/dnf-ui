@@ -98,18 +98,20 @@ enable it and disable it again through fresh dnf5daemon sessions.
 The test repository does not need package metadata because repository listing and enabled-state changes
 do not load available package data.
 
-Run the dnf5daemon transaction client tests on native Fedora:
+Run the dnf5daemon transaction client tests on native Fedora in a disposable test environment.
+This target skips daemon apply tests by default, but the test setup uses `sudo dnf5` to remove and
+restore `cowsay` or the configured test package:
 
 ```sh
 make dnf5daemontest
 ```
 
-The native dnf5daemon tests may install and remove `cowsay` unless `DNFUI_TEST_DNF5DAEMON_INSTALL_SPEC` is set
-to another package.
-The script restores whether the test package was installed before the run.
+Set `DNFUI_TEST_DNF5DAEMON_INSTALL_SPEC` to use another package. On exit, the script attempts to restore
+the test package's previous installed state.
 The optional downgrade preview test runs when `DNFUI_TEST_DNF5DAEMON_DOWNGRADE_SPEC` names a safe installed package version
 that can be downgraded in the test environment.
-Native apply tests are skipped by default because they require dnf5daemon authorization. Run them explicitly with:
+To also test real dnf5daemon apply calls, use a disposable Fedora VM or test machine. This command performs
+package transactions in addition to the setup changes described above and requires dnf5daemon authorization:
 
 ```sh
 make dnf5daemonapplytest
@@ -228,18 +230,18 @@ List Upgradable row handling:
 
 1. Start DNF UI and record process memory after the first window is idle:
 
-```sh
-pid="$(pgrep -n dnfui)"
-grep -E 'Rss|Pss|Private' "/proc/$pid/smaps_rollup"
-```
+   ```sh
+   pid="$(pgrep -n dnfui)"
+   grep -E 'Rss|Pss|Private' "/proc/$pid/smaps_rollup"
+   ```
 
-1. Run `List Packages` ten times, waiting for each run to finish before recording memory again.
-2. Repeat with `List Installed`, a broad `Search`, and `List Upgradable`.
-3. Repeat Search and List Packages with Latest only disabled.
-4. Alternate Latest only and all-version searches to verify all-version rows do not accumulate outside the visible table.
-5. Alternate `List Upgradable` and `List Packages` a few times to verify old daemon-backed rows are released.
-6. A high but stable value is acceptable. Continued substantial growth after every completed run is a release blocker.
-7. Run `make memcheck-app` once if memory keeps growing or if table row ownership changed.
+2. Run `List Packages` ten times, waiting for each run to finish before recording memory again.
+3. Repeat with `List Installed`, a broad `Search`, and `List Upgradable`.
+4. Repeat Search and List Packages with Latest only disabled.
+5. Alternate Latest only and all-version searches to verify all-version rows do not accumulate outside the visible table.
+6. Alternate `List Upgradable` and `List Packages` a few times to verify old daemon-backed rows are released.
+7. A high but stable value is acceptable. Continued substantial growth after every completed run is a release blocker.
+8. Run `make memcheck-app` once if memory keeps growing or if table row ownership changed.
 
 ## Docker notes
 

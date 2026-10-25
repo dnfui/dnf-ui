@@ -16,6 +16,7 @@ aims to provide a **fast** and **dependable** package management workflow for DN
 ## Supported platform
 
 DNF UI targets systems using modern **DNF5** and **dnf5daemon**. It is developed and tested primarily on Fedora Linux.
+The Fedora RPM declares a runtime dependency on `dnf5daemon-server`.
 
 ## Status
 

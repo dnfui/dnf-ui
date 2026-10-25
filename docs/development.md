@@ -105,7 +105,8 @@ make
 ./dnfui
 ```
 
-When you apply a transaction, the desktop Polkit prompt should appear.
+dnf5daemon handles authorization when you apply a transaction.
+A desktop Polkit prompt may appear if authentication is required and an authentication agent is available.
 
 **NOTE:**
 
