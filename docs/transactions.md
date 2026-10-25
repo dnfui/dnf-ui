@@ -18,6 +18,7 @@ Important files:
 - [src/ui/transaction/pending_transaction_apply.cpp](../src/ui/transaction/pending_transaction_apply.cpp)
 - [src/ui/transaction/pending_transaction_request.cpp](../src/ui/transaction/pending_transaction_request.cpp)
 - [src/ui/transaction/transaction_dialogs.cpp](../src/ui/transaction/transaction_dialogs.cpp)
+- [src/ui/transaction/transaction_key_dialog.cpp](../src/ui/transaction/transaction_key_dialog.cpp)
 - [src/ui/transaction/transaction_progress.cpp](../src/ui/transaction/transaction_progress.cpp)
 - [src/transaction/transaction_request.hpp](../src/transaction/transaction_request.hpp)
 - [src/transaction/transaction_preview.hpp](../src/transaction/transaction_preview.hpp)
@@ -221,6 +222,8 @@ the user whether to trust it.
 
 The transaction client still owns the daemon protocol.
 The UI only answers yes or no, and the client sends that answer back to the same daemon session.
+The key dialog module owns the prompt, key details, and coordination between the GTK thread and the waiting
+preview or apply worker. Summary, discard, and error dialogs remain in `transaction_dialogs.cpp`.
 
 The same trust dialog is used during preview and apply.
 During preview it is shown before the transaction summary can be prepared.

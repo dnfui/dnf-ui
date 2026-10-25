@@ -316,8 +316,10 @@ The helper must not run libdnf queries because it is called while updating GTK c
 progress window shown while apply is running.
 
 [src/ui/transaction/transaction_dialogs.cpp](../src/ui/transaction/transaction_dialogs.cpp) builds the
-confirmation dialog shown before apply, the error dialog shown when preview fails, and the repository signing
-key prompt. Apply failures remain in the transaction progress window.
+confirmation dialog shown before apply and the error dialog shown when preview fails. The repository signing
+key prompt and its cancellation handling live in
+[transaction_key_dialog.cpp](../src/ui/transaction/transaction_key_dialog.cpp). Apply failures remain in the
+transaction progress window.
 
 The progress window can receive progress messages after the apply request has started. The code keeps the
 progress state alive while queued GTK callbacks are still pending.

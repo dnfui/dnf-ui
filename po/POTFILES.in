@@ -45,6 +45,7 @@ src/ui/transaction/pending_transaction_controller.cpp
 src/ui/transaction/pending_transaction_request.cpp
 src/ui/transaction/pending_transaction_view.cpp
 src/ui/transaction/transaction_dialogs.cpp
+src/ui/transaction/transaction_key_dialog.cpp
 src/ui/transaction/transaction_progress.cpp
 src/ui/window/main_menu.cpp
 src/ui/window/main_window.cpp

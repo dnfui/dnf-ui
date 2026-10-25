@@ -55,6 +55,7 @@ app_sources = files(
   'ui/refresh/repository_refresh_controller.cpp',
   'ui/transaction/transaction_progress.cpp',
   'ui/transaction/transaction_dialogs.cpp',
+  'ui/transaction/transaction_key_dialog.cpp',
   'upgrade/daemon_upgrade_state.cpp',
   'ui/common/color_scheme.cpp',
   'ui/common/ui_helpers.cpp',

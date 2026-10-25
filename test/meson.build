@@ -54,6 +54,7 @@ dnfui_tests = executable(
     '../src/ui/package_query/package_query_cache.cpp',
     '../src/ui/transaction/pending_transaction_request.cpp',
     '../src/ui/transaction/transaction_dialogs.cpp',
+    '../src/ui/transaction/transaction_key_dialog.cpp',
     '../src/ui/transaction/transaction_progress.cpp',
   ),
   include_directories: src_inc,

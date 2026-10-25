@@ -235,3 +235,40 @@ TEST_CASE("Discard requires confirmation and preserves the transaction lock", "[
   g_object_unref(dialog);
   gtk_window_destroy(parent);
 }
+
+// -----------------------------------------------------------------------------
+// The signing-key prompt must show every supplied identity without blank user IDs.
+// -----------------------------------------------------------------------------
+TEST_CASE("Repository signing-key details preserve key identity", "[transaction-key]")
+{
+  TransactionKeyImportRequest request;
+  request.key_id = "01234567";
+  request.fingerprint = "ABCD 1234 EFGH 5678";
+  request.user_ids = { "", "Example Repository <repo@example.org>", "", "Second Maintainer <maint@example.org>" };
+  request.key_url = "https://example.org/repo/key.asc";
+
+  std::string details = transaction_key_dialog_details_text(request);
+  REQUIRE(details.find("01234567") != std::string::npos);
+  REQUIRE(details.find("ABCD 1234 EFGH 5678") != std::string::npos);
+  REQUIRE(details.find("Example Repository <repo@example.org>\nSecond Maintainer <maint@example.org>") !=
+          std::string::npos);
+  REQUIRE(details.find("https://example.org/repo/key.asc") != std::string::npos);
+
+  TransactionKeyImportRequest empty;
+  std::string no_identity = transaction_key_dialog_details_text(empty);
+  REQUIRE(no_identity.find("01234567") == std::string::npos);
+  REQUIRE(no_identity.find("repo@example.org") == std::string::npos);
+}
+
+// -----------------------------------------------------------------------------
+// Already-cancelled requests must be rejected without opening a dialog.
+// -----------------------------------------------------------------------------
+TEST_CASE("Repository signing-key confirmation rejects prior cancellation", "[transaction-key]")
+{
+  auto widgets = std::make_shared<MainWindowUiState>();
+  TransactionKeyImportRequest request;
+  GCancellable *cancel = g_cancellable_new();
+  g_cancellable_cancel(cancel);
+  REQUIRE_FALSE(transaction_dialogs_confirm_key_import(widgets.get(), request, cancel));
+  g_object_unref(cancel);
+}

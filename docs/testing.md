@@ -81,6 +81,9 @@ These tests protect:
 - offline preview/apply mode checks, prepared-state inspection, verified cleanup and unsupported daemon replies
   through a private D-Bus test fixture without changing system packages
 
+Signing-key dialog tests cover key details without a GTK display and rejection when the task was already
+cancelled. The existing dialog tests that open GTK windows require a display.
+
 ## Daemon smoke tests
 
 The app now talks to DNF5 dnf5daemon for privileged transactions.

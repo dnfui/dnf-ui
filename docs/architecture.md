@@ -150,8 +150,10 @@ and `common`.
   the Pending Actions tab and updates package action labels.
 - [src/ui/transaction/pending_transaction_apply.cpp](../src/ui/transaction/pending_transaction_apply.cpp)
   handles preview, apply, and post-apply refresh.
-- [src/ui/transaction/transaction_dialogs.cpp](../src/ui/transaction/transaction_dialogs.cpp) builds review,
-  error, and repository key dialogs.
+- [src/ui/transaction/transaction_dialogs.cpp](../src/ui/transaction/transaction_dialogs.cpp) builds review
+  and error dialogs.
+- [src/ui/transaction/transaction_key_dialog.cpp](../src/ui/transaction/transaction_key_dialog.cpp) handles
+  repository signing-key approval, dialog lifetime, and cancellation across the worker and GTK threads.
 - [src/ui/transaction/transaction_progress.cpp](../src/ui/transaction/transaction_progress.cpp) manages the
   live progress window.
 
