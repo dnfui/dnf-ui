@@ -31,7 +31,9 @@ The UI source tree is grouped by the part of the window it owns:
 
 [src/ui/window/main_window.cpp](../src/ui/window/main_window.cpp) creates the main window.
 [src/ui/window/main_window_layout.cpp](../src/ui/window/main_window_layout.cpp) builds the GTK widget tree
-used by that window.
+used by that window. Custom rules live in [main_window.css](../src/ui/window/main_window.css), compiled into
+both the application and test executable as a GTK resource. The main window installs the stylesheet at
+application priority and still assigns its runtime CSS classes.
 
 The layout file is responsible for:
 

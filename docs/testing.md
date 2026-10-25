@@ -31,6 +31,7 @@ Key files:
 - [test/unit/test_package_details.cpp](../test/unit/test_package_details.cpp)
 - [test/unit/test_package_queries.cpp](../test/unit/test_package_queries.cpp)
 - [test/unit/test_config.cpp](../test/unit/test_config.cpp)
+- [test/unit/test_main_window_css_resource.cpp](../test/unit/test_main_window_css_resource.cpp)
 - [test/unit/test_daemon_upgrade_state.cpp](../test/unit/test_daemon_upgrade_state.cpp)
 - [test/unit/test_dnf5daemon_client.cpp](../test/unit/test_dnf5daemon_client.cpp)
 - [test/unit/test_pending_transaction_action_rows.cpp](../test/unit/test_pending_transaction_action_rows.cpp)
@@ -55,6 +56,8 @@ fallback; installed snapshots and package state; search, browse, and version mer
 information, dependencies, and files. All four files run in the existing `dnfui-tests` executable.
 
 These tests protect:
+
+- availability of the compiled main-window stylesheet resource without a GTK display
 
 - package search and merge behavior
 - Latest only and all-version package query behavior

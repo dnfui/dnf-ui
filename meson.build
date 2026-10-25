@@ -1,6 +1,7 @@
 project(
   'dnf-ui',
   'cpp',
+  'c',
   version: '0.7.3',
   default_options: [
     'cpp_std=c++20',
