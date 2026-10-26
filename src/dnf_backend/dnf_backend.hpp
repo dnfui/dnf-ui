@@ -322,6 +322,12 @@ bool dnf_backend_is_self_protected_transaction_spec(const std::string &spec);
 std::vector<PackageRow> dnf_backend_get_installed_package_rows_interruptible(GCancellable *cancellable);
 
 // -----------------------------------------------------------------------------
+// List installed packages no longer required by user-installed packages.
+// This is a read-only query, not an autoremove transaction.
+// -----------------------------------------------------------------------------
+std::vector<PackageRow> dnf_backend_get_unneeded_package_rows_interruptible(GCancellable *cancellable);
+
+// -----------------------------------------------------------------------------
 // Query the merged browse view shown by "List Packages".
 // -----------------------------------------------------------------------------
 std::vector<PackageRow> dnf_backend_get_browse_package_rows_interruptible(const DnfBackendSearchOptions &search_options,

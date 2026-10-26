@@ -853,11 +853,12 @@ dnf_backend_search_package_rows_interruptible(const std::string &pattern,
 //   Rows are collected while the Base lock is held, then the lock is
 //   released before publish_installed_snapshot acquires g_installed_mutex.
 // -----------------------------------------------------------------------------
-std::vector<PackageRow>
-dnf_backend_get_installed_package_rows_interruptible(GCancellable *cancellable)
+static std::vector<PackageRow>
+get_installed_package_rows_interruptible(GCancellable *cancellable, bool unneeded_only)
 {
   InstalledQueryResult installed;
   std::set<std::string> protected_names;
+  std::vector<PackageRow> unneeded_rows;
   {
     try {
       auto [base, guard] = acquire_interruptible_base_read(cancellable);
@@ -882,14 +883,62 @@ dnf_backend_get_installed_package_rows_interruptible(GCancellable *cancellable)
 
       refresh_installed_row_lookup(installed);
       protected_names = collect_self_protected_package_names(base);
+
+      if (unneeded_only) {
+        libdnf5::rpm::PackageQuery unneeded(base);
+        unneeded.filter_installed();
+        unneeded.filter_unneeded();
+        if (package_query_cancelled(cancellable)) {
+          return {};
+        }
+
+        std::set<std::string> unneeded_nevras;
+        for (const auto &pkg : unneeded) {
+          if (package_query_cancelled(cancellable)) {
+            return {};
+          }
+          unneeded_nevras.insert(pkg.get_nevra());
+        }
+
+        for (const auto &row : installed.rows) {
+          if (package_query_cancelled(cancellable)) {
+            return {};
+          }
+          if (unneeded_nevras.count(row.nevra) > 0) {
+            unneeded_rows.push_back(row);
+          }
+        }
+      }
     } catch (const BaseOperationCancelled &) {
       return {};
     }
   }
 
-  // Publish the new installed-package cache only after a complete uncancelled scan.
+  if (package_query_cancelled(cancellable)) {
+    return {};
+  }
+
+  // Publish the complete installed snapshot even when only unneeded rows are displayed.
   publish_installed_snapshot(installed, protected_names);
-  return installed.rows;
+  return unneeded_only ? unneeded_rows : installed.rows;
+}
+
+// -----------------------------------------------------------------------------
+// List all installed packages.
+// -----------------------------------------------------------------------------
+std::vector<PackageRow>
+dnf_backend_get_installed_package_rows_interruptible(GCancellable *cancellable)
+{
+  return get_installed_package_rows_interruptible(cancellable, false);
+}
+
+// -----------------------------------------------------------------------------
+// List installed packages that libdnf5 considers unneeded.
+// -----------------------------------------------------------------------------
+std::vector<PackageRow>
+dnf_backend_get_unneeded_package_rows_interruptible(GCancellable *cancellable)
+{
+  return get_installed_package_rows_interruptible(cancellable, true);
 }
 
 // -----------------------------------------------------------------------------

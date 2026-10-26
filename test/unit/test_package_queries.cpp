@@ -196,6 +196,52 @@ TEST_CASE("Installed package rows expose install reason")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that the unneeded view matches libdnf5 and keeps the full installed snapshot.
+// -----------------------------------------------------------------------------
+TEST_CASE("Unneeded package listing matches libdnf5 without filtering installed state")
+{
+  reset_backend_globals();
+
+  auto installed = dnf_backend_get_installed_package_rows_interruptible(nullptr);
+  auto unneeded = dnf_backend_get_unneeded_package_rows_interruptible(nullptr);
+
+  std::set<std::string> expected;
+  {
+    auto read = BaseManager::instance().acquire_read();
+    libdnf5::rpm::PackageQuery query(read.base);
+    query.filter_installed();
+    query.filter_unneeded();
+    for (const auto &pkg : query) {
+      expected.insert(pkg.get_nevra());
+    }
+  }
+
+  REQUIRE(package_row_nevras(unneeded) == expected);
+  REQUIRE(dnf_backend_installed_snapshot_size_for_tests() == installed.size());
+  for (const auto &row : installed) {
+    REQUIRE(dnf_backend_installed_snapshot_contains_for_tests(row.nevra));
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Verify that a cancelled unneeded query does not replace the installed snapshot.
+// -----------------------------------------------------------------------------
+TEST_CASE("Cancelled unneeded package listing preserves installed state")
+{
+  reset_backend_globals();
+
+  auto installed = dnf_backend_get_installed_package_rows_interruptible(nullptr);
+  GCancellable *cancellable = g_cancellable_new();
+  g_cancellable_cancel(cancellable);
+
+  auto unneeded = dnf_backend_get_unneeded_package_rows_interruptible(cancellable);
+  REQUIRE(unneeded.empty());
+  REQUIRE(dnf_backend_installed_snapshot_size_for_tests() == installed.size());
+
+  g_object_unref(cancellable);
+}
+
+// -----------------------------------------------------------------------------
 // Verify that merged search results keep one visible EVR per name and arch.
 // -----------------------------------------------------------------------------
 TEST_CASE("Search results keep one visible EVR per package name and architecture")
