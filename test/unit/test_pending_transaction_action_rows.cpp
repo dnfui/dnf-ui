@@ -78,6 +78,12 @@ TEST_CASE("Displayed package query state separates compact rows from upgrade pro
   REQUIRE(displayed_package_query_allows_installed_upgrade_action(displayed));
   REQUIRE_FALSE(displayed_package_query_uses_exact_available_rows(displayed));
 
+  displayed.kind = DisplayedPackageQueryKind::LIST_UNNEEDED;
+  REQUIRE_FALSE(displayed_package_query_uses_compact_rows(displayed));
+  REQUIRE(displayed_package_query_projects_upgrade_actions(displayed));
+  REQUIRE(displayed_package_query_allows_installed_upgrade_action(displayed));
+  REQUIRE_FALSE(displayed_package_query_uses_exact_available_rows(displayed));
+
   displayed.kind = DisplayedPackageQueryKind::LIST_PACKAGES;
   displayed.latest_only = false;
   REQUIRE_FALSE(displayed_package_query_uses_compact_rows(displayed));
