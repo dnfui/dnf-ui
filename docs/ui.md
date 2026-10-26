@@ -71,6 +71,7 @@ This state is not meant to hide ownership. It is a practical place to store GTK 
 handles the public GTK callbacks for package list workflows:
 
 - list installed packages
+- list unneeded installed dependencies from the Package menu
 - browse available and installed packages together
 - list installed packages that have available updates
 - search packages
@@ -105,7 +106,12 @@ one-row-per-package view. When disabled, those two queries show exact package ve
 versions can then be inspected and marked for downgrade. Intermediate newer versions remain visible for
 inspection, but only the newest available version can be marked for upgrade. All-version views use separate
 Status labels for the installed row and the available update row. This keeps the rows from looking like the
-same action target. List Installed and List Upgradable do not use this checkbox.
+same action target. List Installed, List Unneeded, and List Upgradable do not use this checkbox.
+
+Package > List Unneeded shows installed dependencies that libdnf5 considers no longer required by
+user-installed packages. It uses the usual package table and removal marking, without automatically
+removing packages. The List Installed button acts as Stop while this view loads. The selected removal
+still requires the regular dnf5daemon preview and confirmation.
 
 The bottom bar shows the visible row count on the left and the last completed package query time on the right.
 

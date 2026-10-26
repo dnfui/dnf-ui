@@ -77,7 +77,7 @@ requesting the optional metadata alone is not sufficient.
 
 The shared Base is heavyweight libdnf5 state. Normal package-query workers drop it when they finish so
 repository metadata does not stay resident just because the user ran one query. Search, List Installed, List
-Packages, List Upgradable, and exact selected-package reload workers use this policy.
+Unneeded, List Packages, List Upgradable, and exact selected-package reload workers use this policy.
 If a worker was cancelled, it skips the drop so Stop does not block again while trying to release cached metadata.
 
 Dropping the shared Base is a memory policy. It does not mean that repository metadata was refreshed, and it
@@ -181,6 +181,11 @@ The GTK controller captures the description, exact-match, and Latest only checkb
 That same option snapshot is used for the search cache key and passed to the backend worker, so a
 queued search does not depend on later checkbox changes.
 Changing Latest only does not reload the table by itself. It affects the next Search or List Packages request.
+
+List Unneeded uses libdnf5's `PackageQuery::filter_unneeded()` to list installed dependencies no longer
+required by user-installed packages. It shares the installed-list worker, retains the complete installed
+snapshot for status and pending actions, and does not create an autoremove transaction. An unneeded package
+is not necessarily removable; dnf5daemon still resolves and validates any manually marked removal.
 
 The List Upgradable view uses dnf5daemon to decide which upgrades exist.
 The worker refreshes installed-package state, loads the daemon upgrade targets, asks libdnf5 only for matching package metadata,

@@ -734,6 +734,9 @@ msgstr[1] "Läste in %zu cachade resultat."
 msgid "Listing installed packages..."
 msgstr "Listar installerade paket..."
 
+msgid "Listing unneeded packages..."
+msgstr "Listar överflödiga beroendepaket..."
+
 msgid "Listing packages..."
 msgstr "Listar paket..."
 
@@ -759,6 +762,9 @@ msgstr "Sökning avbröts."
 msgid "Listing installed packages cancelled."
 msgstr "Listning av installerade paket avbröts."
 
+msgid "Listing unneeded packages cancelled."
+msgstr "Listning av överflödiga beroendepaket avbröts."
+
 msgid "Listing packages cancelled."
 msgstr "Paketlistning avbröts."
 
@@ -774,6 +780,9 @@ msgstr "Stoppar sökning..."
 msgid "Stopping installed package listing..."
 msgstr "Stoppar listning av installerade paket..."
 
+msgid "Stopping unneeded package listing..."
+msgstr "Stoppar listning av överflödiga beroendepaket..."
+
 msgid "Stopping package listing..."
 msgstr "Stoppar paketlistning..."
 
@@ -788,6 +797,9 @@ msgstr "Stoppar åtgärd..."
 
 msgid "List Installed"
 msgstr "Lista installerade"
+
+msgid "List Unneeded"
+msgstr "Lista överflödiga beroendepaket"
 
 msgid "List Packages"
 msgstr "Lista paket"
@@ -818,6 +830,12 @@ msgid "Found %zu installed package."
 msgid_plural "Found %zu installed packages."
 msgstr[0] "Hittade %zu installerat paket."
 msgstr[1] "Hittade %zu installerade paket."
+
+#, c-format
+msgid "Found %zu unneeded package."
+msgid_plural "Found %zu unneeded packages."
+msgstr[0] "Hittade %zu överflödigt beroendepaket."
+msgstr[1] "Hittade %zu överflödiga beroendepaket."
 
 msgid "Error listing packages."
 msgstr "Fel vid listning av paket."

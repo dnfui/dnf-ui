@@ -60,6 +60,7 @@ These tests protect:
 - Latest only and all-version package query behavior
 - config file parsing and fallback behavior
 - installed snapshot behavior, including passive refresh without dropping the warmed Base
+- unneeded-package filtering, preservation of the installed snapshot, and cancellation
 - pending transaction action row selection for install, upgrade, downgrade, remove, and reinstall
 - package table CSV export formatting
 - package table column text and sorting behavior
@@ -317,6 +318,18 @@ that the count updates again after the refresh completes. Check that starting a 
 preview does not let a quiet count refresh interrupt active work; pressing List Upgradable must still fetch
 and display the full daemon-reported upgrade list.
 
+## Unneeded package listing checks
+
+1. Choose Package > List Unneeded and compare the results with `dnf5 repoquery --unneeded`.
+2. Verify the list is read-only and only changes packages after explicit removal marking, preview, and approval.
+3. While listing, use the List Installed button in Stop mode. Check that cancelling leaves the previous
+   displayed results unchanged and the controls usable.
+4. Change the installed package set, then reload List Unneeded and verify the current results are shown.
+5. Check that package status and pending removal actions still resolve correctly after switching between
+   List Unneeded and List Installed.
+6. Check the listing in installed-only metadata fallback mode. Protected or install-only packages in the
+   results must never be assumed safe to remove; the daemon still decides the resolved transaction.
+
 ## Multi-version package browsing checks
 
 Use these checks after changes to Latest only, package queries, package table display, or pending action identity:
@@ -332,8 +345,8 @@ Use these checks after changes to Latest only, package queries, package table di
 9. Verify that downgradeable rows mark a pending downgrade using the selected exact NEVRA.
 10. Verify that removing or reinstalling one exact installed NEVRA does not change pending actions for another
     installed NEVRA with the same name and architecture.
-11. Verify that List Installed, List Upgradable, Upgrade All, and Mark Listed Upgrades do not depend on the
-    Latest only checkbox.
+11. Verify that List Installed, List Unneeded, List Upgradable, Upgrade All, and Mark Listed Upgrades do not
+    depend on the Latest only checkbox.
 12. For an install-only package such as a kernel, verify that two distinct exact versions can be marked for
     installation together.
 13. Verify that marking the same exact install-only NEVRA twice does not add a duplicate pending action.

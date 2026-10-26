@@ -49,6 +49,8 @@ Assumptions:
 
 - `PackageQuery::filter_available()` removes installed packages from the query.
 - `PackageQuery::filter_latest_evr()` limits visible candidates to the latest EVR.
+- `PackageQuery::filter_unneeded()` selects installed packages no longer needed by user-installed packages.
+  This does not guarantee that a package can be removed; DNF5 autoremove separately checks protected packages.
 
 Current local source:
 
@@ -56,6 +58,8 @@ Current local source:
 
 Why this matters:
 
+- List Unneeded uses libdnf5 for a read-only dependency query while removal still goes through the
+  regular daemon preview and apply flow.
 - List Upgradable uses dnf5daemon's upgrade target list first. libdnf5 is then used only to add package
   metadata to those exact daemon-reported NEVRAs.
 - Missing libdnf5 metadata must not hide a daemon-reported upgrade. The UI should keep a basic daemon row
@@ -69,6 +73,8 @@ Tests:
 
 - `Installed row lookup resolves upgrade candidates by name and architecture`
 - `Daemon upgrade metadata lookup does not publish installed state`
+- `Unneeded package listing matches libdnf5 without filtering installed state`
+- `Cancelled unneeded package listing preserves installed state`
 
 Maintenance check:
 
