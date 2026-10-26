@@ -1,5 +1,5 @@
 Name:           dnf-ui
-Version:        0.7.3
+Version:        0.7.4
 Release:        1%{?dist}
 Summary:        GTK interface for DNF5
 
@@ -56,6 +56,11 @@ appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/io.github.dnfui.
 %{_datadir}/metainfo/io.github.dnfui.dnfui.metainfo.xml
 
 %changelog
+* Mon Oct 26 2026 ErikMN <dnfui@proton.me> - 0.7.4-1
+- List unneeded installed dependencies from the Package menu without automatically removing them
+- Keep the app responsive while saving exported package lists
+- Make Discard Prepared Updates work with both supported dnf5daemon offline cleanup methods
+
 * Thu Oct 22 2026 ErikMN <dnfui@proton.me> - 0.7.3-1
 - Show complete installed package file lists with a filter for finding paths
 - Allow selecting and copying individual file paths from large lists
