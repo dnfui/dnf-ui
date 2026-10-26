@@ -69,6 +69,7 @@ struct PackageListTaskData {
   uint64_t generation;
   gint64 started_at_us;
   DnfBackendSearchOptions options;
+  bool unneeded_only = false;
 };
 
 struct UpgradeablePackageListResult {
@@ -158,8 +159,10 @@ on_list_task(GTask *task, gpointer, gpointer, GCancellable *cancellable)
   QueryBackendBaseDropGuard base_drop_guard(cancellable);
 
   try {
-    // Query all installed packages.
-    auto *results = new std::vector<PackageRow>(dnf_backend_get_installed_package_rows_interruptible(cancellable));
+    const PackageListTaskData *td = static_cast<const PackageListTaskData *>(g_task_get_task_data(task));
+    auto *results = new std::vector<PackageRow>(
+        td && td->unneeded_only ? dnf_backend_get_unneeded_package_rows_interruptible(cancellable)
+                                : dnf_backend_get_installed_package_rows_interruptible(cancellable));
     // Let GTask free results if completion is skipped or cancelled.
     g_task_return_pointer(task, results, [](gpointer p) { delete static_cast<std::vector<PackageRow> *>(p); });
   } catch (const std::exception &e) {
@@ -176,13 +179,17 @@ on_list_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
   GTask *task = G_TASK(res);
   MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
   const PackageListTaskData *td = static_cast<const PackageListTaskData *>(g_task_get_task_data(task));
+  const bool unneeded_only = td && td->unneeded_only;
+  const PackageListRequestKind request_kind =
+      unneeded_only ? PackageListRequestKind::LIST_UNNEEDED : PackageListRequestKind::LIST_INSTALLED;
+  const char *query_title = unneeded_only ? _("List Unneeded") : _("List Installed");
 
   if (widgets_task_should_skip_completion(task, widgets)) {
     if (widgets && !widgets->window_state.destroyed) {
       if (GCancellable *c = g_task_get_cancellable(task)) {
         if (g_cancellable_is_cancelled(c) && td) {
           widgets_spinner_release(widgets->query.spinner);
-          package_query_end_package_list_request(widgets, td->request_id, PackageListRequestKind::LIST_INSTALLED);
+          package_query_end_package_list_request(widgets, td->request_id, request_kind);
         }
       }
     }
@@ -192,7 +199,7 @@ on_list_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
   // Drop outdated results if the backend Base changed while the worker was running.
   // This prevents showing rows that no longer match the current repository state.
   if (td && td->generation != BaseManager::instance().current_generation()) {
-    package_query_finish_generation_rejected_request(widgets, td->request_id, PackageListRequestKind::LIST_INSTALLED);
+    package_query_finish_generation_rejected_request(widgets, td->request_id, request_kind);
     return;
   }
 
@@ -204,11 +211,12 @@ on_list_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
   widgets_spinner_release(widgets->query.spinner);
 
   if (td) {
-    package_query_end_package_list_request(widgets, td->request_id, PackageListRequestKind::LIST_INSTALLED);
+    package_query_end_package_list_request(widgets, td->request_id, request_kind);
   }
 
   if (packages) {
-    package_query_set_displayed_query_kind(widgets, DisplayedPackageQueryKind::LIST_INSTALLED);
+    package_query_set_displayed_query_kind(
+        widgets, unneeded_only ? DisplayedPackageQueryKind::LIST_UNNEEDED : DisplayedPackageQueryKind::LIST_INSTALLED);
 
     // Fill the package table and update status.
     if (!widgets->query_state.reload_selected_nevra.empty()) {
@@ -218,15 +226,16 @@ on_list_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
     }
     package_table_fill_package_view(
         widgets, *packages, packages->empty() ? PackageTableEmptyState::NO_RESULTS : PackageTableEmptyState::READY);
-    std::string msg =
-        dnfui_i18n_format_count(packages->size(), "Found %zu installed package.", "Found %zu installed packages.");
+    std::string msg = unneeded_only
+        ? dnfui_i18n_format_count(packages->size(), "Found %zu unneeded package.", "Found %zu unneeded packages.")
+        : dnfui_i18n_format_count(packages->size(), "Found %zu installed package.", "Found %zu installed packages.");
     ui_helpers_set_status(widgets->query.status_label, msg, "green");
-    package_query_show_duration_label(widgets, _("List Installed"), td ? td->started_at_us : 0);
+    package_query_show_duration_label(widgets, query_title, td ? td->started_at_us : 0);
     package_query_finish_results_refresh(widgets);
   } else {
     widgets->query_state.reload_selected_nevra.clear();
     ui_helpers_set_status(widgets->query.status_label, error ? error->message : _("Error listing packages."), "red");
-    package_query_show_duration_label(widgets, _("List Installed"), td ? td->started_at_us : 0);
+    package_query_show_duration_label(widgets, query_title, td ? td->started_at_us : 0);
     if (error) {
       g_error_free(error);
     }
@@ -735,7 +744,7 @@ on_exact_package_reload_task_finished(GObject *, GAsyncResult *res, gpointer use
 // Start one installed-package list worker.
 // -----------------------------------------------------------------------------
 void
-package_query_start_list_installed_task(MainWindowUiState *widgets)
+package_query_start_list_installed_task(MainWindowUiState *widgets, bool unneeded_only)
 {
   widgets_spinner_acquire(widgets->query.spinner);
 
@@ -744,8 +753,13 @@ package_query_start_list_installed_task(MainWindowUiState *widgets)
   td->request_id = widgets->query_state.next_package_list_request_id++;
   td->generation = BaseManager::instance().current_generation();
   td->started_at_us = g_get_monotonic_time();
+  td->unneeded_only = unneeded_only;
 
-  package_query_begin_package_list_request(widgets, c, td->request_id, PackageListRequestKind::LIST_INSTALLED);
+  package_query_begin_package_list_request(widgets,
+                                           c,
+                                           td->request_id,
+                                           unneeded_only ? PackageListRequestKind::LIST_UNNEEDED
+                                                         : PackageListRequestKind::LIST_INSTALLED);
   GTask *task = widgets_task_new_for_main_window_ui_state(widgets, c, on_list_task_finished);
   g_task_set_task_data(task, td, [](gpointer p) { delete static_cast<PackageListTaskData *>(p); });
 

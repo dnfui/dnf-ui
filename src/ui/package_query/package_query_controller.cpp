@@ -13,6 +13,7 @@
 #include "ui/details/package_details_controller.hpp"
 #include "ui/package_query/package_query_cache.hpp"
 #include "ui/package_query/package_query_controller_internal.hpp"
+#include "ui/refresh/repository_refresh_controller.hpp"
 #include "ui/package_table/package_table_view.hpp"
 #include "ui/transaction/pending_transaction_view.hpp"
 #include "ui/common/ui_helpers.hpp"
@@ -150,7 +151,8 @@ package_query_on_list_button_clicked(GtkButton *, gpointer user_data)
 {
   MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
   if (package_query_has_active_package_list_request(widgets)) {
-    if (widgets->query_state.active_request.kind == PackageListRequestKind::LIST_INSTALLED) {
+    if (widgets->query_state.active_request.kind == PackageListRequestKind::LIST_INSTALLED ||
+        widgets->query_state.active_request.kind == PackageListRequestKind::LIST_UNNEEDED) {
       package_query_cancel_active_package_list_request(widgets);
     }
     return;
@@ -158,6 +160,28 @@ package_query_on_list_button_clicked(GtkButton *, gpointer user_data)
 
   ui_helpers_set_status(widgets->query.status_label, _("Listing installed packages..."), "blue");
   package_query_start_list_installed_task(widgets);
+}
+
+// -----------------------------------------------------------------------------
+// List unneeded dependencies using the installed-package worker.
+// -----------------------------------------------------------------------------
+void
+package_query_list_unneeded(MainWindowUiState *widgets)
+{
+  if (repository_refresh_is_running()) {
+    ui_helpers_set_status(widgets->query.status_label, _("Wait for repository refresh to finish."), "blue");
+    return;
+  }
+
+  if (package_query_has_active_package_list_request(widgets)) {
+    if (widgets->query_state.active_request.kind == PackageListRequestKind::LIST_UNNEEDED) {
+      package_query_cancel_active_package_list_request(widgets);
+    }
+    return;
+  }
+
+  ui_helpers_set_status(widgets->query.status_label, _("Listing unneeded packages..."), "blue");
+  package_query_start_list_installed_task(widgets, true);
 }
 
 // -----------------------------------------------------------------------------
@@ -311,6 +335,9 @@ package_query_reload_current_view(MainWindowUiState *widgets)
   }
   case DisplayedPackageQueryKind::LIST_INSTALLED:
     package_query_on_list_button_clicked(nullptr, widgets);
+    return;
+  case DisplayedPackageQueryKind::LIST_UNNEEDED:
+    package_query_list_unneeded(widgets);
     return;
   case DisplayedPackageQueryKind::LIST_PACKAGES: {
     ui_helpers_set_status(widgets->query.status_label, _("Listing packages..."), "blue");

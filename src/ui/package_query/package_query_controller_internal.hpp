@@ -90,7 +90,7 @@ void package_query_cancel_active_package_list_request(MainWindowUiState *widgets
 // -----------------------------------------------------------------------------
 // Start one installed-package list worker.
 // -----------------------------------------------------------------------------
-void package_query_start_list_installed_task(MainWindowUiState *widgets);
+void package_query_start_list_installed_task(MainWindowUiState *widgets, bool unneeded_only = false);
 // -----------------------------------------------------------------------------
 // Start one package browse worker.
 // -----------------------------------------------------------------------------

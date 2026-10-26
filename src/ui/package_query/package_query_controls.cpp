@@ -222,6 +222,7 @@ package_list_stop_button(MainWindowUiState *widgets, PackageListRequestKind kind
 
   switch (kind) {
   case PackageListRequestKind::LIST_INSTALLED:
+  case PackageListRequestKind::LIST_UNNEEDED:
     return widgets->query.list_button;
   case PackageListRequestKind::LIST_PACKAGES:
     return widgets->query.list_packages_button;
@@ -246,6 +247,8 @@ package_list_cancelled_status(PackageListRequestKind kind)
     return _("Search cancelled.");
   case PackageListRequestKind::LIST_INSTALLED:
     return _("Listing installed packages cancelled.");
+  case PackageListRequestKind::LIST_UNNEEDED:
+    return _("Listing unneeded packages cancelled.");
   case PackageListRequestKind::LIST_PACKAGES:
     return _("Listing packages cancelled.");
   case PackageListRequestKind::LIST_UPGRADEABLE:
@@ -270,6 +273,8 @@ package_list_stopping_status(PackageListRequestKind kind)
     return _("Stopping search...");
   case PackageListRequestKind::LIST_INSTALLED:
     return _("Stopping installed package listing...");
+  case PackageListRequestKind::LIST_UNNEEDED:
+    return _("Stopping unneeded package listing...");
   case PackageListRequestKind::LIST_PACKAGES:
     return _("Stopping package listing...");
   case PackageListRequestKind::LIST_UPGRADEABLE:

@@ -16,7 +16,15 @@
 // -----------------------------------------------------------------------------
 // Active background request using the package-list action buttons
 // -----------------------------------------------------------------------------
-enum class PackageListRequestKind { NONE, SEARCH, LIST_INSTALLED, LIST_PACKAGES, LIST_UPGRADEABLE, EXACT_RELOAD };
+enum class PackageListRequestKind {
+  NONE,
+  SEARCH,
+  LIST_INSTALLED,
+  LIST_UNNEEDED,
+  LIST_PACKAGES,
+  LIST_UPGRADEABLE,
+  EXACT_RELOAD
+};
 
 struct ActivePackageListRequest {
   // Active cancellable for the current background package-list request, if any.
@@ -33,7 +41,7 @@ struct ActivePackageListRequest {
 // Exact one-package views from the pending-actions sidebar are
 // refreshed via the currently selected NEVRA instead of adding more global UI state.
 // -----------------------------------------------------------------------------
-enum class DisplayedPackageQueryKind { NONE, SEARCH, LIST_INSTALLED, LIST_PACKAGES, LIST_UPGRADEABLE };
+enum class DisplayedPackageQueryKind { NONE, SEARCH, LIST_INSTALLED, LIST_UNNEEDED, LIST_PACKAGES, LIST_UPGRADEABLE };
 
 struct DisplayedPackageQueryState {
   DisplayedPackageQueryKind kind = DisplayedPackageQueryKind::NONE;
@@ -70,6 +78,7 @@ inline bool
 displayed_package_query_projects_upgrade_actions(const DisplayedPackageQueryState &displayed)
 {
   if (displayed.kind == DisplayedPackageQueryKind::LIST_INSTALLED ||
+      displayed.kind == DisplayedPackageQueryKind::LIST_UNNEEDED ||
       displayed.kind == DisplayedPackageQueryKind::LIST_UPGRADEABLE) {
     return true;
   }
@@ -91,6 +100,7 @@ displayed_package_query_allows_installed_upgrade_action(const DisplayedPackageQu
 {
   return displayed.kind == DisplayedPackageQueryKind::SEARCH ||
       displayed.kind == DisplayedPackageQueryKind::LIST_INSTALLED ||
+      displayed.kind == DisplayedPackageQueryKind::LIST_UNNEEDED ||
       displayed.kind == DisplayedPackageQueryKind::LIST_PACKAGES ||
       displayed.kind == DisplayedPackageQueryKind::LIST_UPGRADEABLE;
 }

@@ -18,6 +18,10 @@ struct MainWindowUiState;
 // -----------------------------------------------------------------------------
 void package_query_on_list_button_clicked(GtkButton *, gpointer user_data);
 // -----------------------------------------------------------------------------
+// List installed dependencies no longer needed by user-installed packages.
+// -----------------------------------------------------------------------------
+void package_query_list_unneeded(MainWindowUiState *widgets);
+// -----------------------------------------------------------------------------
 // Handle the available packages list button click.
 // -----------------------------------------------------------------------------
 void package_query_on_list_packages_button_clicked(GtkButton *, gpointer user_data);
