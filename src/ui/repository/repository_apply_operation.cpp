@@ -84,9 +84,11 @@ repository_apply_run(const std::vector<std::string> &desired_enable_ids,
   RepositoryWriteResult write_result = dependencies.apply_changes(plan.enable_ids, plan.disable_ids);
   result.write_outcome = repository_apply_write_outcome(write_result);
   result.sync_needed = result.write_outcome != RepositoryWriteOutcome::NOT_ATTEMPTED;
-  if (result.write_outcome == RepositoryWriteOutcome::FAILED ||
-      result.write_outcome == RepositoryWriteOutcome::PARTIAL) {
-    result.error = write_result.error.empty() ? _("Repository change failed.") : write_result.error;
+  if (!write_result.error.empty()) {
+    result.error = write_result.error;
+  } else if (result.write_outcome == RepositoryWriteOutcome::FAILED ||
+             result.write_outcome == RepositoryWriteOutcome::PARTIAL) {
+    result.error = _("Repository change failed.");
   }
 
   if (result.sync_needed) {

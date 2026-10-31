@@ -213,6 +213,28 @@ TEST_CASE("Repository Apply preserves pending changes when no write was attempte
 }
 
 // -----------------------------------------------------------------------------
+// Errors before a write attempt must remain available to the user.
+// -----------------------------------------------------------------------------
+TEST_CASE("Repository Apply reports errors before a write was attempted", "[repository-apply]")
+{
+  RepositoryApplyFixture fixture;
+  fixture.write_result = {};
+  fixture.write_result.enable_succeeded = false;
+  fixture.write_result.disable_succeeded = false;
+  fixture.write_result.error = "Failed to open repository session";
+
+  RepositoryApplyResult result = fixture.run();
+
+  REQUIRE(fixture.calls == std::vector<std::string> { "list", "write" });
+  REQUIRE(result.write_outcome == RepositoryWriteOutcome::NOT_ATTEMPTED);
+  REQUIRE(result.verification_outcome == RepositoryVerificationOutcome::NOT_RUN);
+  REQUIRE(result.repository_state_loaded);
+  REQUIRE_FALSE(result.sync_needed);
+  REQUIRE_FALSE(result.clear_pending);
+  REQUIRE(result.error == fixture.write_result.error);
+}
+
+// -----------------------------------------------------------------------------
 // Later matching state must not overwrite a failed or partial daemon write result.
 // -----------------------------------------------------------------------------
 TEST_CASE("Repository Apply keeps write failures distinct from verification", "[repository-apply]")
