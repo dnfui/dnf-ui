@@ -120,16 +120,6 @@ repository_apply_write_outcome(const RepositoryWriteResult &write_result)
   return RepositoryWriteOutcome::SUCCEEDED;
 }
 
-RepositoryVerificationOutcome
-repository_apply_verification_outcome(bool state_loaded, bool requested_state_matches)
-{
-  if (!state_loaded) {
-    return RepositoryVerificationOutcome::UNAVAILABLE;
-  }
-
-  return requested_state_matches ? RepositoryVerificationOutcome::CONFIRMED : RepositoryVerificationOutcome::MISMATCH;
-}
-
 // -----------------------------------------------------------------------------
 // EOF
 // -----------------------------------------------------------------------------

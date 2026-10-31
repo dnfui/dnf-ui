@@ -70,10 +70,5 @@ RepositoryBackendSyncResult repository_apply_backend_sync_result(BaseRepoState r
 RepositoryWriteOutcome repository_apply_write_outcome(const RepositoryWriteResult &write_result);
 
 // -----------------------------------------------------------------------------
-// Classify the final repository-state verification result.
-// -----------------------------------------------------------------------------
-RepositoryVerificationOutcome repository_apply_verification_outcome(bool state_loaded, bool requested_state_matches);
-
-// -----------------------------------------------------------------------------
 // EOF
 // -----------------------------------------------------------------------------

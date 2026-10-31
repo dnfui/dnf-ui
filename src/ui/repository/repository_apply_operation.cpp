@@ -102,7 +102,8 @@ repository_apply_run(const std::vector<std::string> &desired_enable_ids,
       result.repositories = std::move(repositories);
       bool requested_states_match =
           repository_apply_requested_states_match(result.repositories, desired_enable_ids, desired_disable_ids);
-      result.verification_outcome = repository_apply_verification_outcome(true, requested_states_match);
+      result.verification_outcome =
+          requested_states_match ? RepositoryVerificationOutcome::CONFIRMED : RepositoryVerificationOutcome::MISMATCH;
       if (result.verification_outcome == RepositoryVerificationOutcome::MISMATCH) {
         if (!result.error.empty()) {
           result.error += " ";
@@ -111,7 +112,7 @@ repository_apply_run(const std::vector<std::string> &desired_enable_ids,
       }
     } else {
       result.repository_state_loaded = false;
-      result.verification_outcome = repository_apply_verification_outcome(false, false);
+      result.verification_outcome = RepositoryVerificationOutcome::UNAVAILABLE;
       if (!result.error.empty()) {
         result.error += " ";
       }

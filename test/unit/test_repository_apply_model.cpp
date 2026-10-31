@@ -108,15 +108,5 @@ TEST_CASE("Repository apply write outcome keeps partial writes distinct")
 }
 
 // -----------------------------------------------------------------------------
-// Verify final-state verification does not replace the daemon write result.
-// -----------------------------------------------------------------------------
-TEST_CASE("Repository apply verification outcome is classified separately")
-{
-  REQUIRE(repository_apply_verification_outcome(false, false) == RepositoryVerificationOutcome::UNAVAILABLE);
-  REQUIRE(repository_apply_verification_outcome(true, false) == RepositoryVerificationOutcome::MISMATCH);
-  REQUIRE(repository_apply_verification_outcome(true, true) == RepositoryVerificationOutcome::CONFIRMED);
-}
-
-// -----------------------------------------------------------------------------
 // EOF
 // -----------------------------------------------------------------------------
