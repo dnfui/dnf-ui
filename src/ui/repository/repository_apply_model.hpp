@@ -62,7 +62,7 @@ bool repository_apply_requested_states_match(const std::vector<RepositoryInfo> &
 // -----------------------------------------------------------------------------
 // Convert the BaseManager rebuild result into the repository Apply result model.
 // -----------------------------------------------------------------------------
-RepositoryBackendSyncResult repository_apply_backend_sync_result(bool backend_rebuilt, BaseRepoState repo_state);
+RepositoryBackendSyncResult repository_apply_backend_sync_result(BaseRepoState repo_state);
 
 // -----------------------------------------------------------------------------
 // Classify the daemon repository write result without using later verification.

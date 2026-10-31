@@ -71,14 +71,12 @@ TEST_CASE("Repository apply final state verification checks requested states")
 // -----------------------------------------------------------------------------
 TEST_CASE("Repository apply backend sync classification preserves Base state")
 {
-  REQUIRE(repository_apply_backend_sync_result(true, BaseRepoState::LIVE_METADATA) ==
+  REQUIRE(repository_apply_backend_sync_result(BaseRepoState::LIVE_METADATA) ==
           RepositoryBackendSyncResult::LIVE_METADATA);
-  REQUIRE(repository_apply_backend_sync_result(true, BaseRepoState::CACHED_METADATA) ==
+  REQUIRE(repository_apply_backend_sync_result(BaseRepoState::CACHED_METADATA) ==
           RepositoryBackendSyncResult::CACHED_METADATA);
-  REQUIRE(repository_apply_backend_sync_result(true, BaseRepoState::INSTALLED_ONLY) ==
+  REQUIRE(repository_apply_backend_sync_result(BaseRepoState::INSTALLED_ONLY) ==
           RepositoryBackendSyncResult::INSTALLED_ONLY);
-  REQUIRE(repository_apply_backend_sync_result(false, BaseRepoState::LIVE_METADATA) ==
-          RepositoryBackendSyncResult::FAILED);
 }
 
 // -----------------------------------------------------------------------------

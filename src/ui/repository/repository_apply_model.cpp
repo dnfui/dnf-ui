@@ -85,12 +85,8 @@ repository_apply_requested_states_match(const std::vector<RepositoryInfo> &repos
 }
 
 RepositoryBackendSyncResult
-repository_apply_backend_sync_result(bool backend_rebuilt, BaseRepoState repo_state)
+repository_apply_backend_sync_result(BaseRepoState repo_state)
 {
-  if (!backend_rebuilt) {
-    return RepositoryBackendSyncResult::FAILED;
-  }
-
   switch (repo_state) {
   case BaseRepoState::LIVE_METADATA:
     return RepositoryBackendSyncResult::LIVE_METADATA;

@@ -19,7 +19,7 @@ rebuild_backend(RepositoryApplyResult &result, const RepositoryApplyDependencies
 {
   try {
     BaseRepoState repo_state = dependencies.rebuild_backend();
-    result.backend_sync_result = repository_apply_backend_sync_result(true, repo_state);
+    result.backend_sync_result = repository_apply_backend_sync_result(repo_state);
   } catch (const std::exception &e) {
     result.backend_sync_result = RepositoryBackendSyncResult::FAILED;
     if (!result.error.empty()) {
