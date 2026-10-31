@@ -76,7 +76,7 @@ These tests protect:
 - dnf5daemon repository list parsing and repository enable or disable calls
 - daemon upgrade snapshot ownership, stale-state invalidation, and current-target validation; these state tests
   also cover the snapshot rules used by the quiet upgrade-count task
-- transaction history row formatting, action labels, and page cursor behavior
+- transaction history row formatting, action labels, page cursor behavior, and paging of retained query rows
 - history filter text trimming, optional local date bounds, inclusive end dates, invalid dates, and reversed ranges
 - transaction request validation
 - offline and cached metadata behavior

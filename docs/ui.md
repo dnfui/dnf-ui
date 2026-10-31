@@ -240,6 +240,10 @@ history on a worker thread and displays value objects from the backend instead o
 unbounded GTK list. The page control does not show a total page count, because that would require scanning the
 full matching history before the window can be used. Filters are applied by the backend before the page is
 returned, so a search looks through the available history instead of only the rows currently shown on screen.
+The backend keeps one reusable query for the applied filter. It retains matching value rows that have already
+been found, so Older continues scanning from the last processed transaction and previously visited pages do
+not rescan the history database. Pressing Search starts a new query, and starting a package transaction
+invalidates the current query before the history controls are restored.
 Date entries accept local dates in YYYY-MM-DD format, include the whole end date, and reject invalid or
 reversed ranges before searching. [transaction_history_filters.cpp](../src/ui/history/transaction_history_filters.cpp)
 handles text trimming and date-range validation separately from the GTK controls.

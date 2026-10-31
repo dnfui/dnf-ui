@@ -58,6 +58,7 @@ struct TransactionHistoryWindowState {
   GtkSpinButton *page_spin_button = nullptr;
   GtkButton *goto_button = nullptr;
   GCancellable *cancellable = nullptr;
+  std::shared_ptr<TransactionHistoryQuery> query;
   std::vector<TransactionHistoryPackageRow> rows;
   TransactionHistoryCursor current_cursor;
   TransactionHistoryCursor next_cursor;
@@ -68,6 +69,7 @@ struct TransactionHistoryWindowState {
   bool loading = false;
   bool transaction_busy = false;
   bool updating_action_checks = false;
+  bool query_invalidated = false;
   bool destroyed = false;
 };
 
@@ -81,16 +83,71 @@ struct HistoryTaskUserData {
   uint64_t load_id = 0;
   TransactionHistoryCursor cursor;
   TransactionHistoryFilter filter;
+  std::shared_ptr<TransactionHistoryQuery> query;
+  std::shared_ptr<TransactionHistoryQuery> retired_query;
   gint64 started_at_us = 0;
   std::string duration_title;
+};
+
+struct HistoryTaskResult {
+  std::shared_ptr<TransactionHistoryQuery> query;
+  TransactionHistoryPage page;
 };
 
 void history_start_load(const std::shared_ptr<TransactionHistoryWindowState> &state,
                         TransactionHistoryCursor cursor,
                         const TransactionHistoryFilter &filter,
-                        const char *duration_title = nullptr);
+                        const char *duration_title = nullptr,
+                        bool start_new_query = false);
 
 std::shared_ptr<TransactionHistoryWindowState> history_open_window_state();
+
+// -----------------------------------------------------------------------------
+// Release one retained history query on a worker thread.
+// Destruction of its private Base can wait for the BaseManager lock.
+// -----------------------------------------------------------------------------
+void
+on_history_release_query_task(GTask *task, gpointer, gpointer, GCancellable *)
+{
+  auto *query = static_cast<std::shared_ptr<TransactionHistoryQuery> *>(g_task_get_task_data(task));
+  if (query) {
+    query->reset();
+  }
+  g_task_return_boolean(task, TRUE);
+}
+
+// -----------------------------------------------------------------------------
+// Schedule release of one retained history query away from the GTK thread.
+// -----------------------------------------------------------------------------
+void
+history_release_query_on_worker(std::shared_ptr<TransactionHistoryQuery> query)
+{
+  if (!query) {
+    return;
+  }
+
+  auto *query_holder = new std::shared_ptr<TransactionHistoryQuery>(std::move(query));
+  GTask *task = g_task_new(nullptr, nullptr, nullptr, nullptr);
+  g_task_set_task_data(
+      task, query_holder, [](gpointer p) { delete static_cast<std::shared_ptr<TransactionHistoryQuery> *>(p); });
+  g_task_run_in_thread(task, on_history_release_query_task);
+  g_object_unref(task);
+}
+
+// -----------------------------------------------------------------------------
+// Release an unused task result without destroying its query on the GTK thread.
+// -----------------------------------------------------------------------------
+void
+history_task_result_free(gpointer data)
+{
+  auto *task_result = static_cast<HistoryTaskResult *>(data);
+  if (!task_result) {
+    return;
+  }
+
+  history_release_query_on_worker(std::move(task_result->query));
+  delete task_result;
+}
 
 // -----------------------------------------------------------------------------
 // Setup shortcuts that are local to the transaction history window.
@@ -573,6 +630,7 @@ history_show_filter_error(const std::shared_ptr<TransactionHistoryWindowState> &
 
   history_cancel_active_load(state);
   ++state->load_id;
+  state->query_invalidated = true;
   state->rows.clear();
   state->current_cursor = TransactionHistoryCursor {};
   state->next_cursor = TransactionHistoryCursor {};
@@ -599,7 +657,7 @@ history_reload_from_controls(const std::shared_ptr<TransactionHistoryWindowState
     return;
   }
 
-  history_start_load(state, TransactionHistoryCursor {}, filters.backend, _("Search"));
+  history_start_load(state, TransactionHistoryCursor {}, filters.backend, _("Search"), true);
 }
 
 // -----------------------------------------------------------------------------
@@ -633,18 +691,27 @@ on_history_search_requested(gpointer user_data)
 void
 on_history_load_task(GTask *task, gpointer, gpointer, GCancellable *cancellable)
 {
+  auto *task_data = static_cast<HistoryTaskUserData *>(g_task_get_task_data(task));
+  const TransactionHistoryCursor cursor = task_data ? task_data->cursor : TransactionHistoryCursor {};
+  const TransactionHistoryFilter filter = task_data ? task_data->filter : TransactionHistoryFilter {};
+  std::shared_ptr<TransactionHistoryQuery> query = task_data ? std::move(task_data->query) : nullptr;
+  if (task_data) {
+    task_data->retired_query.reset();
+  }
+
   if (cancellable && g_cancellable_is_cancelled(cancellable)) {
     g_task_return_new_error(task, G_IO_ERROR, G_IO_ERROR_CANCELLED, "%s", _("History load was cancelled."));
     return;
   }
 
   try {
-    const auto *task_data = static_cast<const HistoryTaskUserData *>(g_task_get_task_data(task));
-    const TransactionHistoryCursor cursor = task_data ? task_data->cursor : TransactionHistoryCursor {};
-    const TransactionHistoryFilter filter = task_data ? task_data->filter : TransactionHistoryFilter {};
-    auto *page = new TransactionHistoryPage(
-        dnf_backend_list_transaction_history_page(cursor, filter, kHistoryPackageRowsPerPage, cancellable));
-    g_task_return_pointer(task, page, [](gpointer p) { delete static_cast<TransactionHistoryPage *>(p); });
+    if (!query) {
+      query = dnf_backend_create_transaction_history_query(filter, cancellable);
+    }
+    TransactionHistoryPage page =
+        dnf_backend_list_transaction_history_page(query, cursor, kHistoryPackageRowsPerPage, cancellable);
+    auto *task_result = new HistoryTaskResult { std::move(query), std::move(page) };
+    g_task_return_pointer(task, task_result, history_task_result_free);
   } catch (const std::exception &e) {
     if (cancellable && g_cancellable_is_cancelled(cancellable)) {
       g_task_return_new_error(task, G_IO_ERROR, G_IO_ERROR_CANCELLED, "%s", _("History load was cancelled."));
@@ -679,14 +746,14 @@ on_history_load_finished(GObject *, GAsyncResult *result, gpointer user_data)
   history_show_duration_label(state, duration_title, started_at_us);
 
   GError *error = nullptr;
-  auto *page = static_cast<TransactionHistoryPage *>(g_task_propagate_pointer(task, &error));
+  auto *task_result = static_cast<HistoryTaskResult *>(g_task_propagate_pointer(task, &error));
 
   if (state->cancellable) {
     g_object_unref(state->cancellable);
     state->cancellable = nullptr;
   }
 
-  if (!page) {
+  if (!task_result) {
     if (error && !g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
       std::string message = _("Failed to load transaction history.");
       message += " ";
@@ -699,17 +766,19 @@ on_history_load_finished(GObject *, GAsyncResult *result, gpointer user_data)
     return;
   }
 
+  state->query = std::move(task_result->query);
+  state->query_invalidated = false;
   state->current_cursor = requested_cursor;
   state->current_page = history_page_for_cursor(requested_cursor);
-  state->rows = std::move(page->rows);
-  state->next_cursor = page->next_cursor;
+  state->rows = std::move(task_result->page.rows);
+  state->next_cursor = task_result->page.next_cursor;
   state->current_filter = requested_filter;
-  state->has_older_history = page->has_more;
+  state->has_older_history = task_result->page.has_more;
   if (state->page_spin_button) {
     gtk_spin_button_set_value(state->page_spin_button, static_cast<double>(state->current_page));
   }
 
-  delete page;
+  delete task_result;
   history_set_loading(state, false);
   history_render_rows(state);
 }
@@ -721,7 +790,8 @@ void
 history_start_load(const std::shared_ptr<TransactionHistoryWindowState> &state,
                    TransactionHistoryCursor cursor,
                    const TransactionHistoryFilter &filter,
-                   const char *duration_title)
+                   const char *duration_title,
+                   bool start_new_query)
 {
   if (!state || state->destroyed) {
     return;
@@ -734,6 +804,11 @@ history_start_load(const std::shared_ptr<TransactionHistoryWindowState> &state,
 
   state->cancellable = g_cancellable_new();
   ++state->load_id;
+  std::shared_ptr<TransactionHistoryQuery> retired_query;
+  if (start_new_query || state->query_invalidated) {
+    retired_query = std::move(state->query);
+    state->query_invalidated = false;
+  }
 
   state->rows.clear();
   history_list_clear(state->list_box);
@@ -743,7 +818,14 @@ history_start_load(const std::shared_ptr<TransactionHistoryWindowState> &state,
   gtk_label_set_text(state->status_label, _("Loading transaction history..."));
 
   auto *task_user_data = new HistoryTaskUserData {
-    state, state->load_id, cursor, filter, g_get_monotonic_time(), duration_title ? duration_title : _("Page"),
+    state,
+    state->load_id,
+    cursor,
+    filter,
+    state->query,
+    std::move(retired_query),
+    g_get_monotonic_time(),
+    duration_title ? duration_title : _("Page"),
   };
   // The task state already keeps the data needed by the worker.
   // Do not keep the window alive while a cancelled history load finishes.
@@ -774,6 +856,7 @@ on_history_window_destroy(GtkWidget *, gpointer user_data)
     g_object_unref(state->cancellable);
     state->cancellable = nullptr;
   }
+  history_release_query_on_worker(std::move(state->query));
 }
 
 // -----------------------------------------------------------------------------
@@ -813,6 +896,7 @@ transaction_history_set_transaction_busy(bool busy)
   if (busy) {
     history_cancel_active_load(state);
     ++state->load_id;
+    state->query_invalidated = true;
     history_set_loading(state, false);
     gtk_label_set_text(state->status_label, _("Transaction is running. History controls are disabled."));
     return;
@@ -1091,7 +1175,7 @@ transaction_history_show_window(GtkWindow *parent)
                    state_holder);
 
   gtk_window_present(window);
-  history_start_load(state, TransactionHistoryCursor {}, TransactionHistoryFilter {});
+  history_start_load(state, TransactionHistoryCursor {}, TransactionHistoryFilter {}, nullptr, true);
 }
 
 // -----------------------------------------------------------------------------

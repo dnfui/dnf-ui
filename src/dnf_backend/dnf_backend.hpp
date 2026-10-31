@@ -12,6 +12,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <memory>
 #include <optional>
 #include <set>
 #include <string>
@@ -220,6 +221,8 @@ struct TransactionHistoryPage {
   bool has_more = false;
 };
 
+class TransactionHistoryQuery;
+
 enum class PackageDetailsContext {
   INSTALLED_CONTEXT,
   SELECTED_VERSION,
@@ -231,12 +234,17 @@ enum class PackageDetailsContext {
 std::string dnf_backend_transaction_history_action_to_string(TransactionHistoryAction action);
 
 // -----------------------------------------------------------------------------
-// Return one page of package changes from the libdnf5 transaction history database.
-// The cursor stores the first matching row offset for the requested page.
-// The backend stops after the requested page and one extra matching row.
+// Create one reusable transaction history query for an applied filter.
 // -----------------------------------------------------------------------------
-TransactionHistoryPage dnf_backend_list_transaction_history_page(TransactionHistoryCursor cursor,
-                                                                 const TransactionHistoryFilter &filter,
+std::shared_ptr<TransactionHistoryQuery>
+dnf_backend_create_transaction_history_query(const TransactionHistoryFilter &filter, GCancellable *cancellable);
+
+// -----------------------------------------------------------------------------
+// Return one page from a reusable transaction history query.
+// Rows found while advancing through history remain available to later page requests.
+// -----------------------------------------------------------------------------
+TransactionHistoryPage dnf_backend_list_transaction_history_page(const std::shared_ptr<TransactionHistoryQuery> &query,
+                                                                 TransactionHistoryCursor cursor,
                                                                  size_t max_package_rows,
                                                                  GCancellable *cancellable);
 
@@ -245,6 +253,15 @@ TransactionHistoryPage dnf_backend_list_transaction_history_page(TransactionHist
 // Return true when one history text value matches the same case-insensitive filter used by history searches.
 // -----------------------------------------------------------------------------
 bool dnf_backend_history_text_matches_filter_for_tests(const std::string &text, const std::string &filter_text);
+
+// -----------------------------------------------------------------------------
+// Return one page from rows already discovered by a history query.
+// -----------------------------------------------------------------------------
+TransactionHistoryPage
+dnf_backend_transaction_history_page_for_tests(const std::vector<TransactionHistoryPackageRow> &rows,
+                                               bool scan_complete,
+                                               TransactionHistoryCursor cursor,
+                                               size_t max_package_rows);
 #endif
 
 // -----------------------------------------------------------------------------

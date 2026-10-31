@@ -7,6 +7,7 @@
 #include <ctime>
 #include <limits>
 #include <string>
+#include <vector>
 
 // -----------------------------------------------------------------------------
 // Verify that transaction history actions have user-facing labels.
@@ -30,6 +31,56 @@ TEST_CASE("Transaction history cursor maps pages to row offsets")
   REQUIRE(first_page.page(100) == 1);
   REQUIRE(later_page.row_offset == 7400);
   REQUIRE(later_page.page(100) == 75);
+}
+
+// -----------------------------------------------------------------------------
+// Verify that rows retained by one history query can serve earlier and later pages.
+// -----------------------------------------------------------------------------
+TEST_CASE("Transaction history query rows serve requested pages")
+{
+  std::vector<TransactionHistoryPackageRow> rows(250);
+  for (size_t index = 0; index < rows.size(); ++index) {
+    rows[index].transaction_id = static_cast<int64_t>(index);
+  }
+
+  TransactionHistoryPage first_page =
+      dnf_backend_transaction_history_page_for_tests(rows, true, TransactionHistoryCursor::for_page(1, 100), 100);
+  TransactionHistoryPage second_page =
+      dnf_backend_transaction_history_page_for_tests(rows, true, TransactionHistoryCursor::for_page(2, 100), 100);
+  TransactionHistoryPage last_page =
+      dnf_backend_transaction_history_page_for_tests(rows, true, TransactionHistoryCursor::for_page(3, 100), 100);
+
+  REQUIRE(first_page.rows.size() == 100);
+  REQUIRE(first_page.rows.front().transaction_id == 0);
+  REQUIRE(first_page.rows.back().transaction_id == 99);
+  REQUIRE(first_page.next_cursor.row_offset == 100);
+  REQUIRE(first_page.has_more);
+
+  REQUIRE(second_page.rows.size() == 100);
+  REQUIRE(second_page.rows.front().transaction_id == 100);
+  REQUIRE(second_page.rows.back().transaction_id == 199);
+  REQUIRE(second_page.next_cursor.row_offset == 200);
+  REQUIRE(second_page.has_more);
+
+  REQUIRE(last_page.rows.size() == 50);
+  REQUIRE(last_page.rows.front().transaction_id == 200);
+  REQUIRE(last_page.rows.back().transaction_id == 249);
+  REQUIRE(last_page.next_cursor.row_offset == 250);
+  REQUIRE_FALSE(last_page.has_more);
+}
+
+// -----------------------------------------------------------------------------
+// A partial query result keeps Older available while more history can be scanned.
+// -----------------------------------------------------------------------------
+TEST_CASE("Transaction history query reports unscanned rows")
+{
+  std::vector<TransactionHistoryPackageRow> rows(100);
+  TransactionHistoryPage page =
+      dnf_backend_transaction_history_page_for_tests(rows, false, TransactionHistoryCursor {}, 100);
+
+  REQUIRE(page.rows.size() == 100);
+  REQUIRE(page.next_cursor.row_offset == 100);
+  REQUIRE(page.has_more);
 }
 
 // -----------------------------------------------------------------------------
