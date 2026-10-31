@@ -88,10 +88,10 @@ struct TransactionRequest {
     }
 
     // A package spec must not appear in more than one action list.
-    auto has_conflict = [](const std::vector<std::string> &left, const std::vector<std::string> &right) {
-      std::set<std::string> left_specs(left.begin(), left.end());
-      for (const auto &spec : right) {
-        if (left_specs.count(spec) > 0) {
+    std::set<std::string> requested_specs;
+    auto has_conflict = [&](const std::vector<std::string> &specs) {
+      for (const auto &spec : specs) {
+        if (!requested_specs.insert(spec).second) {
           return true;
         }
       }
@@ -99,10 +99,8 @@ struct TransactionRequest {
     };
 
     // Reject requests that ask for two different actions for the same package spec.
-    if (has_conflict(install, upgrade) || has_conflict(install, downgrade) || has_conflict(install, remove) ||
-        has_conflict(install, reinstall) || has_conflict(upgrade, downgrade) || has_conflict(upgrade, remove) ||
-        has_conflict(upgrade, reinstall) || has_conflict(downgrade, remove) || has_conflict(downgrade, reinstall) ||
-        has_conflict(remove, reinstall)) {
+    if (has_conflict(install) || has_conflict(upgrade) || has_conflict(downgrade) || has_conflict(remove) ||
+        has_conflict(reinstall)) {
       error_out = _("Transaction request contains conflicting package actions.");
       return false;
     }

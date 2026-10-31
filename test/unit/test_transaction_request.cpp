@@ -230,14 +230,71 @@ TEST_CASE("Transaction request validation rejects duplicate downgrade package sp
 // -----------------------------------------------------------------------------
 TEST_CASE("Transaction request validation rejects conflicting package actions")
 {
-  TransactionRequest request;
-  std::string error;
+  {
+    TransactionRequest request;
+    std::string error;
 
-  request.install.push_back("example-package-spec");
-  request.upgrade.push_back("example-package-spec");
+    request.install.push_back("example-package-spec");
+    request.upgrade.push_back("example-package-spec");
 
-  REQUIRE_FALSE(request.validate(error));
-  REQUIRE(error == "Transaction request contains conflicting package actions.");
+    REQUIRE_FALSE(request.validate(error));
+    REQUIRE(error == "Transaction request contains conflicting package actions.");
+  }
+
+  {
+    TransactionRequest request;
+    std::string error;
+
+    request.install.push_back("example-package-spec");
+    request.remove.push_back("example-package-spec");
+
+    REQUIRE_FALSE(request.validate(error));
+    REQUIRE(error == "Transaction request contains conflicting package actions.");
+  }
+
+  {
+    TransactionRequest request;
+    std::string error;
+
+    request.install.push_back("example-package-spec");
+    request.reinstall.push_back("example-package-spec");
+
+    REQUIRE_FALSE(request.validate(error));
+    REQUIRE(error == "Transaction request contains conflicting package actions.");
+  }
+
+  {
+    TransactionRequest request;
+    std::string error;
+
+    request.upgrade.push_back("example-package-spec");
+    request.remove.push_back("example-package-spec");
+
+    REQUIRE_FALSE(request.validate(error));
+    REQUIRE(error == "Transaction request contains conflicting package actions.");
+  }
+
+  {
+    TransactionRequest request;
+    std::string error;
+
+    request.upgrade.push_back("example-package-spec");
+    request.reinstall.push_back("example-package-spec");
+
+    REQUIRE_FALSE(request.validate(error));
+    REQUIRE(error == "Transaction request contains conflicting package actions.");
+  }
+
+  {
+    TransactionRequest request;
+    std::string error;
+
+    request.remove.push_back("example-package-spec");
+    request.reinstall.push_back("example-package-spec");
+
+    REQUIRE_FALSE(request.validate(error));
+    REQUIRE(error == "Transaction request contains conflicting package actions.");
+  }
 }
 
 // -----------------------------------------------------------------------------
