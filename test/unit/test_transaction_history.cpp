@@ -128,6 +128,24 @@ TEST_CASE("Transaction history dates reject invalid ranges", "[history-filters]"
     REQUIRE(error == _("Dates must use YYYY-MM-DD."));
   }
 
+  SECTION("signed month")
+  {
+    REQUIRE_FALSE(history_parse_date_range("2026-+1-01", "", from, to, error));
+    REQUIRE(error == _("Dates must use YYYY-MM-DD."));
+  }
+
+  SECTION("whitespace before month")
+  {
+    REQUIRE_FALSE(history_parse_date_range("2026- 1-01", "", from, to, error));
+    REQUIRE(error == _("Dates must use YYYY-MM-DD."));
+  }
+
+  SECTION("signed day")
+  {
+    REQUIRE_FALSE(history_parse_date_range("2026-01-+1", "", from, to, error));
+    REQUIRE(error == _("Dates must use YYYY-MM-DD."));
+  }
+
   SECTION("bad month")
   {
     REQUIRE_FALSE(history_parse_date_range("", "2024-13-01", from, to, error));

@@ -50,6 +50,16 @@ history_parse_date_filter(const char *text, bool end_of_day, int64_t &timestamp,
     return false;
   }
 
+  for (size_t i = 0; i < value.size(); ++i) {
+    if (i == 4 || i == 7) {
+      continue;
+    }
+    if (value[i] < '0' || value[i] > '9') {
+      error = _("Dates must use YYYY-MM-DD.");
+      return false;
+    }
+  }
+
   int year = 0;
   int month = 0;
   int day = 0;
