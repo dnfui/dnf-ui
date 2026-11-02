@@ -1,5 +1,5 @@
 Name:           dnf-ui
-Version:        0.7.4
+Version:        0.7.5
 Release:        1%{?dist}
 Summary:        GTK interface for DNF5
 
@@ -56,6 +56,11 @@ appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/io.github.dnfui.
 %{_datadir}/metainfo/io.github.dnfui.dnfui.metainfo.xml
 
 %changelog
+* Mon Nov 02 2026 ErikMN <dnfui@proton.me> - 0.7.5-1
+- Speed up transaction history page navigation by reusing the current history search
+- Reject malformed transaction history dates before searching
+- Preserve repository errors reported before changes are written
+
 * Mon Oct 26 2026 ErikMN <dnfui@proton.me> - 0.7.4-1
 - List unneeded installed dependencies from the Package menu without automatically removing them
 - Keep the app responsive while saving exported package lists
