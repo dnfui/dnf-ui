@@ -224,6 +224,26 @@ TEST_CASE("Transaction summary groups resolved changes by action", "[gtk]")
   REQUIRE(find_label_with_text(GTK_WIDGET(dialog), "Disk space usage will be unchanged.") != nullptr);
   REQUIRE(find_apply_button(GTK_WIDGET(dialog)) != nullptr);
 
+  GtkWidget *outer = gtk_window_get_child(dialog);
+  GtkWidget *scroller = nullptr;
+  for (GtkWidget *child = gtk_widget_get_first_child(outer); child; child = gtk_widget_get_next_sibling(child)) {
+    if (GTK_IS_SCROLLED_WINDOW(child)) {
+      scroller = child;
+      break;
+    }
+  }
+  REQUIRE(scroller != nullptr);
+  REQUIRE(gtk_scrolled_window_get_has_frame(GTK_SCROLLED_WINDOW(scroller)));
+  REQUIRE_FALSE(gtk_scrolled_window_get_overlay_scrolling(GTK_SCROLLED_WINDOW(scroller)));
+
+  GtkWidget *separator = gtk_widget_get_next_sibling(scroller);
+  REQUIRE(GTK_IS_SEPARATOR(separator));
+  GtkWidget *summary_heading_box = gtk_widget_get_next_sibling(separator);
+  REQUIRE(summary_heading_box != nullptr);
+  GtkWidget *summary_heading = find_label_with_text(GTK_WIDGET(dialog), "Summary");
+  REQUIRE(summary_heading != nullptr);
+  REQUIRE(gtk_widget_get_parent(summary_heading) == summary_heading_box);
+
   gtk_window_destroy(dialog);
   g_object_run_dispose(G_OBJECT(dialog));
   g_object_unref(dialog);

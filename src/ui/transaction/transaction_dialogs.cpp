@@ -199,6 +199,41 @@ transaction_dialogs_show_summary_dialog(MainWindowUiState *widgets,
     gtk_box_append(GTK_BOX(notice_box), notice);
   }
 
+  GtkWidget *scroller = gtk_scrolled_window_new();
+  gtk_scrolled_window_set_has_frame(GTK_SCROLLED_WINDOW(scroller), TRUE);
+  gtk_scrolled_window_set_overlay_scrolling(GTK_SCROLLED_WINDOW(scroller), FALSE);
+  gtk_widget_set_hexpand(scroller, TRUE);
+  gtk_widget_set_vexpand(scroller, TRUE);
+  gtk_box_append(GTK_BOX(outer), scroller);
+
+  GtkWidget *contents = gtk_box_new(GTK_ORIENTATION_VERTICAL, 12);
+  gtk_widget_set_margin_start(contents, 6);
+  gtk_widget_set_margin_end(contents, 6);
+  gtk_widget_set_margin_top(contents, 6);
+  gtk_widget_set_margin_bottom(contents, 6);
+  gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scroller), contents);
+
+  if (!preview.resolve_warnings.empty()) {
+    append_transaction_summary_section(
+        GTK_BOX(contents), _("Warnings"), { preview.resolve_warnings }, "dialog-warning-symbolic");
+  }
+
+  // Show the resolved backend changes, not only the packages marked manually.
+  append_transaction_package_summary_section(
+      GTK_BOX(contents), _("To be installed"), preview.install, "list-add-symbolic");
+  append_transaction_package_summary_section(
+      GTK_BOX(contents), _("To be upgraded"), preview.upgrade, "software-update-available-symbolic");
+  append_transaction_package_summary_section(
+      GTK_BOX(contents), _("To be downgraded"), preview.downgrade, "go-down-symbolic");
+  append_transaction_package_summary_section(
+      GTK_BOX(contents), _("To be reinstalled"), preview.reinstall, "document-revert-symbolic");
+  append_transaction_package_summary_section(
+      GTK_BOX(contents), _("To be removed"), preview.remove, "user-trash-symbolic");
+  append_transaction_package_summary_section(
+      GTK_BOX(contents), _("To be replaced"), preview.replaced, "view-refresh-symbolic");
+
+  gtk_box_append(GTK_BOX(outer), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL));
+
   GtkWidget *summary_heading_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
   gtk_box_append(GTK_BOX(outer), summary_heading_box);
 
@@ -239,39 +274,6 @@ transaction_dialogs_show_summary_dialog(MainWindowUiState *widgets,
   append_count_line(preview.remove.size(), "%zu package will be removed.", "%zu packages will be removed.");
   append_count_line(preview.replaced.size(), "%zu package will be replaced.", "%zu packages will be replaced.");
   append_summary_line(format_transaction_space_change(preview.disk_space_delta));
-
-  gtk_box_append(GTK_BOX(outer), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL));
-
-  GtkWidget *scroller = gtk_scrolled_window_new();
-  gtk_widget_set_hexpand(scroller, TRUE);
-  gtk_widget_set_vexpand(scroller, TRUE);
-  gtk_box_append(GTK_BOX(outer), scroller);
-
-  GtkWidget *contents = gtk_box_new(GTK_ORIENTATION_VERTICAL, 12);
-  gtk_widget_set_margin_start(contents, 6);
-  gtk_widget_set_margin_end(contents, 6);
-  gtk_widget_set_margin_top(contents, 6);
-  gtk_widget_set_margin_bottom(contents, 6);
-  gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scroller), contents);
-
-  if (!preview.resolve_warnings.empty()) {
-    append_transaction_summary_section(
-        GTK_BOX(contents), _("Warnings"), { preview.resolve_warnings }, "dialog-warning-symbolic");
-  }
-
-  // Show the resolved backend changes, not only the packages marked manually.
-  append_transaction_package_summary_section(
-      GTK_BOX(contents), _("To be installed"), preview.install, "list-add-symbolic");
-  append_transaction_package_summary_section(
-      GTK_BOX(contents), _("To be upgraded"), preview.upgrade, "software-update-available-symbolic");
-  append_transaction_package_summary_section(
-      GTK_BOX(contents), _("To be downgraded"), preview.downgrade, "go-down-symbolic");
-  append_transaction_package_summary_section(
-      GTK_BOX(contents), _("To be reinstalled"), preview.reinstall, "document-revert-symbolic");
-  append_transaction_package_summary_section(
-      GTK_BOX(contents), _("To be removed"), preview.remove, "user-trash-symbolic");
-  append_transaction_package_summary_section(
-      GTK_BOX(contents), _("To be replaced"), preview.replaced, "view-refresh-symbolic");
 
   GtkWidget *button_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
   gtk_widget_set_halign(button_box, GTK_ALIGN_END);
