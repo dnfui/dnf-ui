@@ -1698,3 +1698,36 @@ msgstr "Provides-sökning kräver fillistor som saknas i cachad förrådsmetadat
 
 msgid "Options"
 msgstr "Alternativ"
+
+msgid "Show installed packages."
+msgstr "Visa installerade paket."
+
+msgid "Browse packages in enabled repositories."
+msgstr "Bläddra bland paket i aktiverade förråd."
+
+msgid "Show packages with available updates."
+msgstr "Visa paket med tillgängliga uppdateringar."
+
+msgid "Preview all available package upgrades."
+msgstr "Förhandsgranska alla tillgängliga paketuppgraderingar."
+
+msgid "Refresh package data from enabled repositories."
+msgstr "Uppdatera paketdata från aktiverade förråd."
+
+msgid "Add the selected package to pending changes."
+msgstr "Lägg till det valda paketet bland väntande ändringar."
+
+msgid "Reinstall the selected installed package."
+msgstr "Installera om det valda installerade paketet."
+
+msgid "Mark the selected installed package for removal."
+msgstr "Markera det valda installerade paketet för borttagning."
+
+msgid "Add valid upgrade candidates from the current list to pending changes."
+msgstr "Lägg till giltiga uppgraderingskandidater från den aktuella listan bland väntande ändringar."
+
+msgid "Review and apply pending package changes."
+msgstr "Granska och verkställ väntande paketändringar."
+
+msgid "Clear all pending package changes."
+msgstr "Rensa alla väntande paketändringar."

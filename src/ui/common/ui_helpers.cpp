@@ -127,25 +127,26 @@ ui_helpers_set_icon_button_with_fallback(GtkButton *button,
 void
 ui_helpers_set_status(GtkLabel *label, const std::string &text, const std::string &color)
 {
-  std::string bg;
-  if (color == "green")
-    bg = "#e6f4ea";
-  else if (color == "yellow")
-    bg = "#fff4ce";
-  else if (color == "red")
-    bg = "#fce8e6";
-  else if (color == "blue")
-    bg = "#e8f0fe";
-  else if (color == "gray")
-    bg = "#f3f4f6";
-  else
-    bg = "#ffffff";
+  GtkWidget *widget = GTK_WIDGET(label);
+  gtk_widget_remove_css_class(widget, "status-success");
+  gtk_widget_remove_css_class(widget, "status-warning");
+  gtk_widget_remove_css_class(widget, "status-error");
+  gtk_widget_remove_css_class(widget, "status-working");
+  gtk_widget_remove_css_class(widget, "status-neutral");
 
-  char *escaped = g_markup_escape_text(text.c_str(), -1);
-  std::string markup = "<span background=\"" + bg + "\" foreground=\"black\">" + escaped + "</span>";
-  g_free(escaped);
+  if (color == "green") {
+    gtk_widget_add_css_class(widget, "status-success");
+  } else if (color == "yellow") {
+    gtk_widget_add_css_class(widget, "status-warning");
+  } else if (color == "red") {
+    gtk_widget_add_css_class(widget, "status-error");
+  } else if (color == "blue") {
+    gtk_widget_add_css_class(widget, "status-working");
+  } else if (color == "gray") {
+    gtk_widget_add_css_class(widget, "status-neutral");
+  }
 
-  gtk_label_set_markup(label, markup.c_str());
+  gtk_label_set_text(label, text.c_str());
 }
 
 // -----------------------------------------------------------------------------

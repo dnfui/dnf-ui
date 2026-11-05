@@ -88,6 +88,14 @@ dnf_backend_get_package_info(const std::string &pkg_nevra,
                              PackageDetailsContext context,
                              const PackageRow *upgrade_row_override)
 {
+  return dnf_backend_get_package_info_presentation(pkg_nevra, context, upgrade_row_override).full_text;
+}
+
+PackageInfoPresentation
+dnf_backend_get_package_info_presentation(const std::string &pkg_nevra,
+                                          PackageDetailsContext context,
+                                          const PackageRow *upgrade_row_override)
+{
   PackageRow selected_row;
   unsigned long long selected_install_size = 0;
   std::string selected_summary, selected_description;
@@ -109,7 +117,8 @@ dnf_backend_get_package_info(const std::string &pkg_nevra,
   query.filter_nevra(pkg_nevra);
 
   if (query.empty()) {
-    return dnfui_i18n_format(_("No details found for %s"), pkg_nevra.c_str());
+    std::string message = dnfui_i18n_format(_("No details found for %s"), pkg_nevra.c_str());
+    return { "", "", message, message };
   }
 
   const bool use_installed_context = context == PackageDetailsContext::INSTALLED_CONTEXT;
@@ -214,36 +223,40 @@ dnf_backend_get_package_info(const std::string &pkg_nevra,
   const std::string &display_summary = show_installed_context ? installed_summary : selected_summary;
   const std::string &display_description = show_installed_context ? installed_description : selected_description;
 
-  std::ostringstream oss;
-  oss << _("Name") << ": " << display_row.name << "\n"
-      << _("Package ID") << ": " << display_row.nevra << "\n"
-      << _("Version") << ": " << display_row.version << "\n"
-      << _("Release") << ": " << display_row.release << "\n"
-      << _("Arch") << ": " << display_row.arch << "\n"
-      << _("Repo") << ": " << display_row.repo << "\n";
+  std::ostringstream metadata;
+  metadata << _("Package ID") << ": " << display_row.nevra << "\n"
+           << _("Version") << ": " << display_row.version << "\n"
+           << _("Release") << ": " << display_row.release << "\n"
+           << _("Arch") << ": " << display_row.arch << "\n"
+           << _("Repo") << ": " << display_row.repo << "\n";
 
   if (show_installed_context) {
-    oss << _("Installed From") << ": " << installed_row.installed_from_repo << "\n";
+    metadata << _("Installed From") << ": " << installed_row.installed_from_repo << "\n";
   }
 
-  oss << _("Install Size") << ": " << format_package_size(display_install_size) << "\n";
+  metadata << _("Install Size") << ": " << format_package_size(display_install_size) << "\n";
 
   if (show_installed_context) {
-    oss << _("Install Reason") << ": " << dnf_backend_install_reason_to_string(installed_row.install_reason) << "\n";
+    metadata << _("Install Reason") << ": " << dnf_backend_install_reason_to_string(installed_row.install_reason)
+             << "\n";
   }
 
   if (upgrade_download_size > 0) {
-    oss << _("Download Size") << ": " << format_package_size(upgrade_download_size) << "\n";
+    metadata << _("Download Size") << ": " << format_package_size(upgrade_download_size) << "\n";
   }
 
   if (have_upgrade) {
-    oss << _("Installed Version") << ": " << installed_row.display_version() << "\n";
-    oss << _("Upgradable Version") << ": " << upgrade_row.display_version() << "\n";
+    metadata << _("Installed Version") << ": " << installed_row.display_version() << "\n";
+    metadata << _("Upgradable Version") << ": " << upgrade_row.display_version() << "\n";
   }
 
-  oss << "\n" << _("Summary") << ":\n" << display_summary << "\n\n" << _("Description") << ":\n" << display_description;
+  std::string metadata_text = metadata.str();
+  std::string description_text = std::string(_("Description")) + ":\n" + display_description;
+  std::string details = metadata_text + "\n" + description_text;
+  std::string full_text = std::string(_("Name")) + ": " + display_row.name + "\n" + metadata_text + "\n" +
+      _("Summary") + ":\n" + display_summary + "\n\n" + description_text;
 
-  return oss.str();
+  return { display_row.name, display_summary, details, full_text };
 }
 
 // -----------------------------------------------------------------------------

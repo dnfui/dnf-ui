@@ -170,7 +170,7 @@ details pane for the selected package.
 It updates:
 
 - selected package status
-- package details text
+- package name, summary, and details text
 - installed file list, loaded only when the Files tab is opened
 - dependencies, loaded only when the Dependencies tab is opened
 - changelog, loaded only when the Changelog tab is opened
@@ -184,11 +184,14 @@ remains separate from the normal Info load. Rows with an upgrade target keep a s
 the Changelog tab can show the update package while Info, Files, and Dependencies still use the installed
 package context. When the Status column is hidden, the Info tab keeps Status as a live label outside the
 fetched package metadata text, so pending transaction changes do not leave stale Status text in the details panel.
+The Info tab shows the package name and summary above the remaining details. The backend supplies these fields
+alongside the full text, so the UI does not parse translated labels from the details text.
 
 ### Package table view
 
 [src/ui/package_table/package_table_view.cpp](../src/ui/package_table/package_table_view.cpp) builds the
 package table, including column setup, selection, and status refresh.
+Package names, versions, and repository cells show their full text on hover.
 
 The table columns can be shown or hidden from `View -> Columns`, and the same menu can restore the default
 column set. The setting is stored in `dnfui.conf` as `package_table_hidden_columns`, using stable column ids

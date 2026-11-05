@@ -151,7 +151,7 @@ on_menu_clear_cache(GSimpleAction *, GVariant *, gpointer user_data)
   }
 
   package_query_clear_search_cache();
-  ui_helpers_set_status(data->widgets->query.status_label, _("Search cache cleared."), "green");
+  ui_helpers_set_status(data->widgets->query.status_label, _("Search cache cleared."), "gray");
 }
 
 // -----------------------------------------------------------------------------
@@ -316,7 +316,7 @@ on_menu_restore_default_columns(GSimpleAction *, GVariant *, gpointer user_data)
   GSimpleActionGroup *actions =
       static_cast<GSimpleActionGroup *>(g_object_get_data(G_OBJECT(data->window), "dnfui-menu-action-group"));
   sync_column_action_states(actions);
-  ui_helpers_set_status(data->widgets->query.status_label, _("Package table columns restored to defaults."), "green");
+  ui_helpers_set_status(data->widgets->query.status_label, _("Package table columns restored to defaults."), "gray");
 }
 
 // -----------------------------------------------------------------------------

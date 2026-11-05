@@ -16,8 +16,10 @@
 #include "ui/package_table/package_table_view.hpp"
 #include "ui/package_table/package_table_status.hpp"
 
+#include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 // Task data for one package details load.
@@ -150,6 +152,18 @@ set_details_text(GtkTextBuffer *buffer, const char *text)
   }
 
   gtk_text_buffer_set_text(buffer, text ? text : "", -1);
+}
+
+static void
+set_package_info_header(MainWindowUiState *widgets, const std::string &name, const std::string &summary)
+{
+  if (!widgets || !widgets->results.info_header) {
+    return;
+  }
+
+  gtk_label_set_text(widgets->results.info_name_label, name.c_str());
+  gtk_label_set_text(widgets->results.info_summary_label, summary.c_str());
+  gtk_widget_set_visible(widgets->results.info_header, !name.empty());
 }
 
 // -----------------------------------------------------------------------------
@@ -324,6 +338,7 @@ package_details_reset_details_view(MainWindowUiState *widgets)
   gtk_widget_set_visible(GTK_WIDGET(widgets->results.files_count_label), FALSE);
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->results.files_search_entry), FALSE);
   gtk_editable_set_text(GTK_EDITABLE(widgets->results.files_search_entry), "");
+  set_package_info_header(widgets, "", "");
   set_details_text(widgets->results.details_buffer, _("Select a package for details."));
   set_files_text(widgets->results.files_model, _("Select an installed package to view its file list."));
   set_details_text(widgets->results.deps_buffer, _("Select a package to view dependencies."));
@@ -346,6 +361,7 @@ package_details_clear_selected_package_state(MainWindowUiState *widgets)
   widgets->results.files_loaded_nevra.clear();
   widgets->results.deps_loaded_nevra.clear();
   widgets->results.changelog_loaded_nevra.clear();
+  set_package_info_header(widgets, "", "");
   set_details_status_text(widgets, nullptr);
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction_widgets.install_button), FALSE);
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction_widgets.remove_button), FALSE);
@@ -457,11 +473,13 @@ on_package_details_task(GTask *task, gpointer, gpointer task_data, GCancellable 
       upgrade_row_override = &td->upgrade_row_override.value();
     }
 
-    std::string info = dnf_backend_get_package_info(td ? td->details_query_nevra : "",
-                                                    td ? td->details_context : PackageDetailsContext::INSTALLED_CONTEXT,
-                                                    upgrade_row_override);
-    DNFUI_TRACE(
-        "Package info details loaded nevra=%s bytes=%zu", td ? td->details_query_nevra.c_str() : "", info.size());
+    PackageInfoPresentation info =
+        dnf_backend_get_package_info_presentation(td ? td->details_query_nevra : "",
+                                                  td ? td->details_context : PackageDetailsContext::INSTALLED_CONTEXT,
+                                                  upgrade_row_override);
+    DNFUI_TRACE("Package info details loaded nevra=%s bytes=%zu",
+                td ? td->details_query_nevra.c_str() : "",
+                info.full_text.size());
 
     if (cancellable && g_cancellable_is_cancelled(cancellable)) {
       return_package_details_task_cancelled(task);
@@ -469,7 +487,10 @@ on_package_details_task(GTask *task, gpointer, gpointer task_data, GCancellable 
     }
 
     DNFUI_TRACE("Package info task done nevra=%s", td ? td->details_query_nevra.c_str() : "");
-    g_task_return_pointer(task, g_strdup(info.c_str()), g_free);
+    g_task_return_pointer(
+        task, new PackageInfoPresentation(std::move(info)), +[](gpointer p) {
+          delete static_cast<PackageInfoPresentation *>(p);
+        });
   } catch (const std::exception &e) {
     DNFUI_TRACE("Package info task failed nevra=%s error=%s", td ? td->details_query_nevra.c_str() : "", e.what());
     g_task_return_error(task, g_error_new_literal(G_IO_ERROR, G_IO_ERROR_FAILED, e.what()));
@@ -490,10 +511,10 @@ on_package_details_task_finished(GObject *, GAsyncResult *res, gpointer user_dat
 
   const InfoTaskData *td = static_cast<const InfoTaskData *>(g_task_get_task_data(task));
   GError *error = nullptr;
-  char *info = static_cast<char *>(g_task_propagate_pointer(task, &error));
+  std::unique_ptr<PackageInfoPresentation> info(
+      static_cast<PackageInfoPresentation *>(g_task_propagate_pointer(task, &error)));
 
   if (!td) {
-    g_free(info);
     if (error) {
       g_error_free(error);
     }
@@ -509,7 +530,6 @@ on_package_details_task_finished(GObject *, GAsyncResult *res, gpointer user_dat
   if (td->generation != BaseManager::instance().current_generation() ||
       widgets->results.selected_nevra != td->selected_nevra ||
       widgets->results.details_query_nevra != td->details_query_nevra) {
-    g_free(info);
     if (error) {
       g_error_free(error);
     }
@@ -518,6 +538,7 @@ on_package_details_task_finished(GObject *, GAsyncResult *res, gpointer user_dat
 
   if (!info) {
     ui_helpers_set_status(widgets->query.status_label, error ? error->message : _("Error loading info."), "red");
+    set_details_text(widgets->results.details_buffer, error ? error->message : _("Error loading info."));
     if (error) {
       g_error_free(error);
     }
@@ -525,10 +546,11 @@ on_package_details_task_finished(GObject *, GAsyncResult *res, gpointer user_dat
   }
 
   // Display general package information.
-  set_details_text(widgets->results.details_buffer, info);
+  set_package_info_header(widgets, info->name, info->summary);
+  set_details_text(widgets->results.details_buffer,
+                   info->name.empty() ? info->full_text.c_str() : info->details.c_str());
 
-  ui_helpers_set_status(widgets->query.status_label, _("Package info loaded."), "green");
-  g_free(info);
+  ui_helpers_set_status(widgets->query.status_label, _("Package info loaded."), "gray");
 
   if (widgets->results.details_stack) {
     load_visible_package_details_page(widgets, widgets->results.details_stack);
@@ -769,6 +791,8 @@ package_details_load_selected_package_info(MainWindowUiState *widgets, const Pac
   gtk_widget_set_visible(GTK_WIDGET(widgets->results.files_count_label), FALSE);
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->results.files_search_entry), FALSE);
   gtk_editable_set_text(GTK_EDITABLE(widgets->results.files_search_entry), "");
+  set_package_info_header(widgets, "", "");
+  set_details_text(widgets->results.details_buffer, _("Fetching package info..."));
   set_files_text(widgets->results.files_model, _("Open the Files tab to load the file list."));
   set_details_text(widgets->results.deps_buffer, _("Open the Dependencies tab to load dependencies."));
   set_details_text(widgets->results.changelog_buffer, _("Open the Changelog tab to load the changelog."));

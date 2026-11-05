@@ -249,29 +249,38 @@ main_window_build_layout(AppWidgets *ui)
 
   GtkWidget *list_button = ui_helpers_create_icon_button_with_fallback(
       "drive-harddisk-system-symbolic", "view-list-symbolic", _("List Installed"));
+  gtk_widget_add_css_class(list_button, "flat");
+  gtk_widget_set_tooltip_text(list_button, _("Show installed packages."));
   gtk_box_append(GTK_BOX(hbox_buttons), list_button);
   ui->list_button = list_button;
 
   GtkWidget *list_packages_button = ui_helpers_create_icon_button_with_fallback(
       "package-x-generic-symbolic", "view-list-symbolic", _("List Packages"));
+  gtk_widget_add_css_class(list_packages_button, "flat");
+  gtk_widget_set_tooltip_text(list_packages_button, _("Browse packages in enabled repositories."));
   gtk_box_append(GTK_BOX(hbox_buttons), list_packages_button);
   ui->list_packages_button = list_packages_button;
 
   GtkWidget *list_upgradeable_button = ui_helpers_create_icon_button_with_fallback(
       "software-update-available-symbolic", "view-list-symbolic", _("List Upgradable"));
+  gtk_widget_add_css_class(list_upgradeable_button, "flat");
+  gtk_widget_set_tooltip_text(list_upgradeable_button, _("Show packages with available updates."));
   gtk_box_append(GTK_BOX(hbox_buttons), list_upgradeable_button);
   ui->list_upgradeable_button = list_upgradeable_button;
 
   append_button_group_separator(hbox_buttons);
 
   GtkWidget *upgrade_all_button = ui_helpers_create_icon_button_with_fallback(
-      "software-update-urgent-symbolic", "view-refresh-symbolic", _("Upgrade All"));
+      "software-update-available-symbolic", "view-refresh-symbolic", _("Upgrade All"));
+  gtk_widget_set_tooltip_text(upgrade_all_button, _("Preview all available package upgrades."));
   gtk_box_append(GTK_BOX(hbox_buttons), upgrade_all_button);
   ui->upgrade_all_button = upgrade_all_button;
 
   // Starts repository refresh on a background task.
   append_button_group_separator(hbox_buttons);
   GtkWidget *refresh_button = ui_helpers_create_icon_button("view-refresh-symbolic", _("Refresh Repositories"));
+  gtk_widget_add_css_class(refresh_button, "flat");
+  gtk_widget_set_tooltip_text(refresh_button, _("Refresh package data from enabled repositories."));
   gtk_box_append(GTK_BOX(hbox_buttons), refresh_button);
   ui->refresh_button = refresh_button;
 
@@ -281,20 +290,25 @@ main_window_build_layout(AppWidgets *ui)
   gtk_box_append(GTK_BOX(controls_box), hbox_tx_buttons);
 
   GtkWidget *install_button = ui_helpers_create_icon_button("list-add-symbolic", _("Mark for Install"));
+  gtk_widget_set_tooltip_text(install_button, _("Add the selected package to pending changes."));
   gtk_box_append(GTK_BOX(hbox_tx_buttons), install_button);
   ui->install_button = install_button;
 
   GtkWidget *reinstall_button = ui_helpers_create_icon_button_with_fallback(
       "document-revert-symbolic", "view-refresh-symbolic", _("Mark for Reinstall"));
+  gtk_widget_set_tooltip_text(reinstall_button, _("Reinstall the selected installed package."));
   gtk_box_append(GTK_BOX(hbox_tx_buttons), reinstall_button);
   ui->reinstall_button = reinstall_button;
 
   GtkWidget *remove_button = ui_helpers_create_icon_button("user-trash-symbolic", _("Mark for Removal"));
+  gtk_widget_set_tooltip_text(remove_button, _("Mark the selected installed package for removal."));
   gtk_box_append(GTK_BOX(hbox_tx_buttons), remove_button);
   ui->remove_button = remove_button;
 
   GtkWidget *mark_listed_upgrades_button = ui_helpers_create_icon_button_with_fallback(
       "software-update-available-symbolic", "object-select-symbolic", _("Mark Listed Upgrades"));
+  gtk_widget_set_tooltip_text(mark_listed_upgrades_button,
+                              _("Add valid upgrade candidates from the current list to pending changes."));
   gtk_box_append(GTK_BOX(hbox_tx_buttons), mark_listed_upgrades_button);
   ui->mark_listed_upgrades_button = mark_listed_upgrades_button;
 
@@ -302,10 +316,12 @@ main_window_build_layout(AppWidgets *ui)
 
   GtkWidget *apply_button = ui_helpers_create_icon_button("system-run-symbolic", _("Apply Transactions"));
   gtk_widget_add_css_class(apply_button, "suggested-action");
+  gtk_widget_set_tooltip_text(apply_button, _("Review and apply pending package changes."));
   gtk_box_append(GTK_BOX(hbox_tx_buttons), apply_button);
   ui->apply_button = apply_button;
 
   GtkWidget *clear_pending_button = ui_helpers_create_icon_button("edit-clear-symbolic", _("Clear Transactions"));
+  gtk_widget_set_tooltip_text(clear_pending_button, _("Clear all pending package changes."));
   gtk_box_append(GTK_BOX(hbox_tx_buttons), clear_pending_button);
   ui->clear_pending_button = clear_pending_button;
 
@@ -405,6 +421,31 @@ main_window_build_layout(AppWidgets *ui)
   gtk_widget_set_visible(details_status_label, FALSE);
   ui->details_status_label = details_status_label;
   gtk_box_append(GTK_BOX(info_box), details_status_label);
+
+  GtkWidget *info_header = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
+  gtk_widget_set_margin_start(info_header, 10);
+  gtk_widget_set_margin_end(info_header, 10);
+  gtk_widget_set_margin_top(info_header, 8);
+  gtk_widget_set_margin_bottom(info_header, 4);
+  gtk_widget_set_visible(info_header, FALSE);
+  gtk_box_append(GTK_BOX(info_box), info_header);
+  ui->info_header = info_header;
+
+  GtkWidget *info_name_label = gtk_label_new(nullptr);
+  gtk_label_set_xalign(GTK_LABEL(info_name_label), 0.0f);
+  gtk_label_set_selectable(GTK_LABEL(info_name_label), TRUE);
+  gtk_label_set_wrap(GTK_LABEL(info_name_label), TRUE);
+  gtk_widget_add_css_class(info_name_label, "package-info-name");
+  gtk_box_append(GTK_BOX(info_header), info_name_label);
+  ui->info_name_label = info_name_label;
+
+  GtkWidget *info_summary_label = gtk_label_new(nullptr);
+  gtk_label_set_xalign(GTK_LABEL(info_summary_label), 0.0f);
+  gtk_label_set_selectable(GTK_LABEL(info_summary_label), TRUE);
+  gtk_label_set_wrap(GTK_LABEL(info_summary_label), TRUE);
+  gtk_widget_add_css_class(info_summary_label, "package-info-summary");
+  gtk_box_append(GTK_BOX(info_header), info_summary_label);
+  ui->info_summary_label = info_summary_label;
 
   GtkTextBuffer *details_buffer = NULL;
   GtkWidget *scrolled_details =
