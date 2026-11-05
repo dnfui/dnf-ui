@@ -277,7 +277,6 @@ setup_css(MainWindowUiState *widgets)
                                     "label.status-bar { padding: 6px 8px; border-radius: 6px; } "
                                     "label.status-neutral { opacity: 0.8; } "
                                     "label.status-working { opacity: 0.9; } "
-                                    "label.status-success { border-left: 3px solid @success_color; } "
                                     "label.status-warning { background-color: alpha(@warning_color, 0.16); } "
                                     "label.status-error { background-color: alpha(@error_color, 0.16); } "
                                     ".top-controls { "
