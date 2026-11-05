@@ -79,22 +79,25 @@ static void
 append_transaction_summary_section(GtkBox *parent,
                                    const char *title,
                                    const std::vector<std::string> &items,
-                                   bool warning = false)
+                                   const char *icon_name)
 {
   if (!parent || !title || items.empty()) {
     return;
   }
 
-  GtkWidget *section = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
+  if (gtk_widget_get_first_child(GTK_WIDGET(parent))) {
+    gtk_box_append(parent, gtk_separator_new(GTK_ORIENTATION_HORIZONTAL));
+  }
+
+  GtkWidget *section = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
   gtk_box_append(parent, section);
 
-  GtkWidget *heading_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
+  GtkWidget *heading_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
   gtk_box_append(GTK_BOX(section), heading_box);
-  if (warning) {
-    GtkWidget *icon = gtk_image_new_from_icon_name("dialog-warning-symbolic");
-    gtk_image_set_pixel_size(GTK_IMAGE(icon), 16);
-    gtk_box_append(GTK_BOX(heading_box), icon);
-  }
+
+  GtkWidget *icon = gtk_image_new_from_icon_name(icon_name);
+  gtk_image_set_pixel_size(GTK_IMAGE(icon), 18);
+  gtk_box_append(GTK_BOX(heading_box), icon);
 
   GtkWidget *heading = gtk_label_new(nullptr);
   gchar *markup = g_markup_printf_escaped("<b>%s</b>", title);
@@ -103,13 +106,17 @@ append_transaction_summary_section(GtkBox *parent,
   gtk_label_set_xalign(GTK_LABEL(heading), 0.0f);
   gtk_box_append(GTK_BOX(heading_box), heading);
 
+  GtkWidget *items_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
+  gtk_widget_set_margin_start(items_box, 26);
+  gtk_box_append(GTK_BOX(section), items_box);
+
   for (const auto &item : items) {
     GtkWidget *label = gtk_label_new(item.c_str());
     gtk_label_set_xalign(GTK_LABEL(label), 0.0f);
     gtk_label_set_wrap(GTK_LABEL(label), TRUE);
     gtk_label_set_selectable(GTK_LABEL(label), TRUE);
     gtk_widget_set_focusable(label, FALSE);
-    gtk_box_append(GTK_BOX(section), label);
+    gtk_box_append(GTK_BOX(items_box), label);
   }
 }
 
@@ -117,7 +124,7 @@ static void
 append_transaction_package_summary_section(GtkBox *parent,
                                            const char *title,
                                            const std::vector<TransactionPreviewPackage> &packages,
-                                           bool warning = false)
+                                           const char *icon_name)
 {
   std::vector<std::string> labels;
   labels.reserve(packages.size());
@@ -125,7 +132,7 @@ append_transaction_package_summary_section(GtkBox *parent,
     labels.push_back(package.label);
   }
 
-  append_transaction_summary_section(parent, title, labels, warning);
+  append_transaction_summary_section(parent, title, labels, icon_name);
 }
 
 // -----------------------------------------------------------------------------
@@ -159,16 +166,15 @@ transaction_dialogs_show_summary_dialog(MainWindowUiState *widgets,
   gtk_window_set_child(dialog, outer);
 
   GtkWidget *title = gtk_label_new(nullptr);
-  gchar *title_markup = g_markup_printf_escaped("<b>%s</b>", _("Summary"));
+  gchar *title_markup =
+      g_markup_printf_escaped("<big><b>%s</b></big>",
+                              preview.requires_offline ? _("Prepare the following changes for the next reboot?")
+                                                       : _("Apply the following changes?"));
   gtk_label_set_markup(GTK_LABEL(title), title_markup);
   g_free(title_markup);
   gtk_label_set_xalign(GTK_LABEL(title), 0.0f);
+  gtk_label_set_wrap(GTK_LABEL(title), TRUE);
   gtk_box_append(GTK_BOX(outer), title);
-
-  GtkWidget *question = gtk_label_new(preview.requires_offline ? _("Prepare the following changes for the next reboot?")
-                                                               : _("Apply the following changes?"));
-  gtk_label_set_xalign(GTK_LABEL(question), 0.0f);
-  gtk_box_append(GTK_BOX(outer), question);
 
   GtkWidget *intro = gtk_label_new(
       _("This is your last opportunity to look through the list of marked changes before they are applied."));
@@ -177,22 +183,38 @@ transaction_dialogs_show_summary_dialog(MainWindowUiState *widgets,
   gtk_box_append(GTK_BOX(outer), intro);
 
   if (preview.requires_offline) {
+    GtkWidget *notice_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+    gtk_box_append(GTK_BOX(outer), notice_box);
+
+    GtkWidget *notice_icon = gtk_image_new_from_icon_name("system-reboot-symbolic");
+    gtk_widget_set_valign(notice_icon, GTK_ALIGN_START);
+    gtk_box_append(GTK_BOX(notice_box), notice_icon);
+
     GtkWidget *notice = gtk_label_new(
         _("These changes update the package service itself. To prevent it from restarting during installation, "
           "all changes listed here will be applied at your next reboot. The computer will not restart now."));
     gtk_label_set_xalign(GTK_LABEL(notice), 0.0f);
     gtk_label_set_wrap(GTK_LABEL(notice), TRUE);
-    gtk_box_append(GTK_BOX(outer), notice);
+    gtk_widget_set_hexpand(notice, TRUE);
+    gtk_box_append(GTK_BOX(notice_box), notice);
   }
+
+  GtkWidget *summary_heading_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+  gtk_box_append(GTK_BOX(outer), summary_heading_box);
+
+  GtkWidget *summary_icon = gtk_image_new_from_icon_name("view-list-symbolic");
+  gtk_image_set_pixel_size(GTK_IMAGE(summary_icon), 18);
+  gtk_box_append(GTK_BOX(summary_heading_box), summary_icon);
 
   GtkWidget *summary_heading = gtk_label_new(nullptr);
   gchar *summary_markup = g_markup_printf_escaped("<b>%s</b>", _("Summary"));
   gtk_label_set_markup(GTK_LABEL(summary_heading), summary_markup);
   g_free(summary_markup);
   gtk_label_set_xalign(GTK_LABEL(summary_heading), 0.0f);
-  gtk_box_append(GTK_BOX(outer), summary_heading);
+  gtk_box_append(GTK_BOX(summary_heading_box), summary_heading);
 
   GtkWidget *summary_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
+  gtk_widget_set_margin_start(summary_box, 26);
   gtk_box_append(GTK_BOX(outer), summary_box);
 
   auto append_summary_line = [&](const std::string &line) {
@@ -218,6 +240,8 @@ transaction_dialogs_show_summary_dialog(MainWindowUiState *widgets,
   append_count_line(preview.replaced.size(), "%zu package will be replaced.", "%zu packages will be replaced.");
   append_summary_line(format_transaction_space_change(preview.disk_space_delta));
 
+  gtk_box_append(GTK_BOX(outer), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL));
+
   GtkWidget *scroller = gtk_scrolled_window_new();
   gtk_widget_set_hexpand(scroller, TRUE);
   gtk_widget_set_vexpand(scroller, TRUE);
@@ -231,16 +255,23 @@ transaction_dialogs_show_summary_dialog(MainWindowUiState *widgets,
   gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scroller), contents);
 
   if (!preview.resolve_warnings.empty()) {
-    append_transaction_summary_section(GTK_BOX(contents), _("Warnings"), { preview.resolve_warnings }, true);
+    append_transaction_summary_section(
+        GTK_BOX(contents), _("Warnings"), { preview.resolve_warnings }, "dialog-warning-symbolic");
   }
 
   // Show the resolved backend changes, not only the packages marked manually.
-  append_transaction_package_summary_section(GTK_BOX(contents), _("To be installed"), preview.install);
-  append_transaction_package_summary_section(GTK_BOX(contents), _("To be upgraded"), preview.upgrade);
-  append_transaction_package_summary_section(GTK_BOX(contents), _("To be downgraded"), preview.downgrade);
-  append_transaction_package_summary_section(GTK_BOX(contents), _("To be reinstalled"), preview.reinstall);
-  append_transaction_package_summary_section(GTK_BOX(contents), _("To be removed"), preview.remove, true);
-  append_transaction_package_summary_section(GTK_BOX(contents), _("To be replaced"), preview.replaced);
+  append_transaction_package_summary_section(
+      GTK_BOX(contents), _("To be installed"), preview.install, "list-add-symbolic");
+  append_transaction_package_summary_section(
+      GTK_BOX(contents), _("To be upgraded"), preview.upgrade, "software-update-available-symbolic");
+  append_transaction_package_summary_section(
+      GTK_BOX(contents), _("To be downgraded"), preview.downgrade, "go-down-symbolic");
+  append_transaction_package_summary_section(
+      GTK_BOX(contents), _("To be reinstalled"), preview.reinstall, "document-revert-symbolic");
+  append_transaction_package_summary_section(
+      GTK_BOX(contents), _("To be removed"), preview.remove, "user-trash-symbolic");
+  append_transaction_package_summary_section(
+      GTK_BOX(contents), _("To be replaced"), preview.replaced, "view-refresh-symbolic");
 
   GtkWidget *button_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
   gtk_widget_set_halign(button_box, GTK_ALIGN_END);

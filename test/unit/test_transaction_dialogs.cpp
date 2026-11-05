@@ -154,6 +154,83 @@ TEST_CASE("Transaction summary identifies preparation for reboot", "[gtk]")
 }
 
 // -----------------------------------------------------------------------------
+// Find a label by its visible text in a transaction dialog.
+// -----------------------------------------------------------------------------
+static GtkWidget *
+find_label_with_text(GtkWidget *widget, const char *text)
+{
+  if (GTK_IS_LABEL(widget) && g_strcmp0(gtk_label_get_text(GTK_LABEL(widget)), text) == 0) {
+    return widget;
+  }
+  for (GtkWidget *child = gtk_widget_get_first_child(widget); child; child = gtk_widget_get_next_sibling(child)) {
+    if (GtkWidget *label = find_label_with_text(child, text)) {
+      return label;
+    }
+  }
+  return nullptr;
+}
+
+// -----------------------------------------------------------------------------
+// Verify that every resolved action remains visible in its own icon-labeled section.
+// -----------------------------------------------------------------------------
+TEST_CASE("Transaction summary groups resolved changes by action", "[gtk]")
+{
+  if (!transaction_dialog_display_available()) {
+    SKIP("A GTK display is required for transaction dialog tests.");
+  }
+
+  auto widgets = std::make_shared<MainWindowUiState>();
+  GtkWindow *parent = GTK_WINDOW(gtk_window_new());
+  widgets->query.entry = GTK_ENTRY(gtk_entry_new());
+  gtk_window_set_child(parent, GTK_WIDGET(widgets->query.entry));
+
+  TransactionPreview preview;
+  preview.resolve_warnings = "Resolver warning";
+  preview.install.push_back({ "Install package", "install", "x86_64" });
+  preview.upgrade.push_back({ "Upgrade package", "upgrade", "x86_64" });
+  preview.downgrade.push_back({ "Downgrade package", "downgrade", "x86_64" });
+  preview.reinstall.push_back({ "Reinstall package", "reinstall", "x86_64" });
+  preview.remove.push_back({ "Remove package", "remove", "x86_64" });
+  preview.replaced.push_back({ "Replace package", "replace", "x86_64" });
+
+  transaction_dialogs_show_summary_dialog(widgets.get(), preview, nullptr, nullptr);
+  GtkWindow *dialog = find_summary_dialog(parent);
+  REQUIRE(dialog != nullptr);
+
+  struct Section {
+    const char *heading;
+    const char *icon;
+    const char *item;
+  };
+  const Section sections[] = {
+    { "Warnings", "dialog-warning-symbolic", "Resolver warning" },
+    { "To be installed", "list-add-symbolic", "Install package" },
+    { "To be upgraded", "software-update-available-symbolic", "Upgrade package" },
+    { "To be downgraded", "go-down-symbolic", "Downgrade package" },
+    { "To be reinstalled", "document-revert-symbolic", "Reinstall package" },
+    { "To be removed", "user-trash-symbolic", "Remove package" },
+    { "To be replaced", "view-refresh-symbolic", "Replace package" },
+  };
+
+  for (const auto &section : sections) {
+    GtkWidget *heading = find_label_with_text(GTK_WIDGET(dialog), section.heading);
+    REQUIRE(heading != nullptr);
+    GtkWidget *icon = gtk_widget_get_first_child(gtk_widget_get_parent(heading));
+    REQUIRE(GTK_IS_IMAGE(icon));
+    REQUIRE(g_strcmp0(gtk_image_get_icon_name(GTK_IMAGE(icon)), section.icon) == 0);
+    REQUIRE(find_label_with_text(GTK_WIDGET(dialog), section.item) != nullptr);
+  }
+
+  REQUIRE(find_label_with_text(GTK_WIDGET(dialog), "Disk space usage will be unchanged.") != nullptr);
+  REQUIRE(find_apply_button(GTK_WIDGET(dialog)) != nullptr);
+
+  gtk_window_destroy(dialog);
+  g_object_run_dispose(G_OBJECT(dialog));
+  g_object_unref(dialog);
+  gtk_window_destroy(parent);
+}
+
+// -----------------------------------------------------------------------------
 // A successful preparation must not be presented as a completed installation.
 // -----------------------------------------------------------------------------
 TEST_CASE("Offline progress completion reports readiness for reboot", "[gtk]")

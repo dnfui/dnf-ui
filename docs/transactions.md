@@ -131,8 +131,9 @@ The preview dialog only shows actions the app understands:
 
 If dnf5daemon resolves successfully with warnings, the preview shows its human-readable warning text without
 treating the transaction as failed.
-The review dialog shows action counts and disk-space change above the complete package list. Warning and
-removal sections use a warning icon while retaining the daemon's package actions and diagnostics.
+The review dialog shows action counts and disk-space change above the complete package list. Each nonempty
+action section has a symbolic icon and a separator. Warnings appear first, and the complete resolved package
+labels remain visible and selectable.
 
 If dnf5daemon returns an unsupported transaction item or action, preview fails instead of hiding part of the
 transaction from the user.
