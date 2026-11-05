@@ -379,7 +379,8 @@ void
 transaction_dialogs_show_error_dialog(MainWindowUiState *widgets,
                                       const char *title,
                                       const char *intro,
-                                      const std::string &details)
+                                      const std::string &details,
+                                      const char *icon_name)
 {
   if (!widgets || !title || !intro) {
     return;
@@ -407,12 +408,21 @@ transaction_dialogs_show_error_dialog(MainWindowUiState *widgets,
   gtk_widget_set_margin_bottom(outer, 12);
   gtk_window_set_child(dialog, outer);
 
+  GtkWidget *heading_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+  gtk_box_append(GTK_BOX(outer), heading_box);
+
+  if (icon_name) {
+    GtkWidget *icon = gtk_image_new_from_icon_name(icon_name);
+    gtk_image_set_pixel_size(GTK_IMAGE(icon), 24);
+    gtk_box_append(GTK_BOX(heading_box), icon);
+  }
+
   GtkWidget *heading = gtk_label_new(nullptr);
   gchar *markup = g_markup_printf_escaped("<b>%s</b>", title);
   gtk_label_set_markup(GTK_LABEL(heading), markup);
   g_free(markup);
   gtk_label_set_xalign(GTK_LABEL(heading), 0.0f);
-  gtk_box_append(GTK_BOX(outer), heading);
+  gtk_box_append(GTK_BOX(heading_box), heading);
 
   GtkWidget *message = gtk_label_new(intro);
   gtk_label_set_xalign(GTK_LABEL(message), 0.0f);

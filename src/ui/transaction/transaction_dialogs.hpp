@@ -21,7 +21,8 @@ using TransactionApplyCallback = void (*)(MainWindowUiState *widgets);
 void transaction_dialogs_show_error_dialog(MainWindowUiState *widgets,
                                            const char *title,
                                            const char *intro,
-                                           const std::string &details);
+                                           const std::string &details,
+                                           const char *icon_name = nullptr);
 // -----------------------------------------------------------------------------
 // Show the resolved transaction summary before apply.
 // -----------------------------------------------------------------------------

@@ -73,7 +73,7 @@ done. Failures before RPM work starts keep pending actions so the user can retry
 When the user clicks Upgrade All, the GUI skips the pending action list and asks the transaction client to
 prepare a daemon-side Upgrade All session. If the resolved preview is empty, the session is closed. The GUI
 reports that all packages are already up to date only when there are no resolver warnings. Otherwise, it shows
-the warnings and reports that no transaction changes were returned.
+the warnings and reports that no package changes were prepared.
 
 When the user clicks Mark Listed Upgrades, the GUI marks the upgrade candidates currently shown in the package
 table as normal pending upgrade actions. The user can then remove individual actions before clicking Apply.
@@ -145,9 +145,9 @@ The preview is still authoritative. A pending downgrade records an exact NEVRA c
 user must still review the resolved daemon transaction before apply.
 
 If Upgrade All resolves to an empty preview without resolver warnings, the GUI reports that all packages are
-already up to date. If an empty preview contains warnings, the GUI shows them and reports that no transaction
-changes were returned. An empty preview for a selected package action also reports that no transaction changes
-were returned.
+already up to date. If an empty preview contains warnings, the GUI shows them and reports that no package
+changes were prepared. An empty preview for a selected package action without warnings reports that no
+transaction changes were returned.
 
 ## Apply
 

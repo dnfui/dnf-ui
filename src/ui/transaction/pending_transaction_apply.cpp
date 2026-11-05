@@ -753,15 +753,18 @@ start_preview_request(MainWindowUiState *widgets, TransactionRequest request)
           widgets->transaction_state.preview_transaction_path.clear();
           widgets->transaction_state.preview_upgrade_all = false;
           const char *status_message = empty_preview_status_message(td->request);
+          const char *status_color = "green";
           if (!td->preview.resolve_warnings.empty()) {
-            status_message = _("No transaction changes were returned.");
+            status_message = _("No package changes were prepared. The resolver reported a warning.");
+            status_color = "yellow";
             transaction_dialogs_show_error_dialog(
                 widgets,
                 _("Transaction Preview Warning"),
-                _("No package changes were returned, but dnf5daemon reported a warning."),
-                td->preview.resolve_warnings);
+                _("No packages were changed. The package resolver reported the following warning:"),
+                td->preview.resolve_warnings,
+                "dialog-warning-symbolic");
           }
-          ui_helpers_set_status(widgets->query.status_label, status_message, "green");
+          ui_helpers_set_status(widgets->query.status_label, status_message, status_color);
           return;
         }
 
