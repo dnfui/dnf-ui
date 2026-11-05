@@ -239,6 +239,7 @@ create_main_window_ui_state(const AppWidgets *ui)
   widgets->results.info_header = ui->info_header;
   widgets->results.info_name_label = GTK_LABEL(ui->info_name_label);
   widgets->results.info_summary_label = GTK_LABEL(ui->info_summary_label);
+  widgets->results.copy_info_button = GTK_BUTTON(ui->copy_info_button);
   widgets->results.details_buffer = ui->details_buffer;
   widgets->results.files_model = ui->files_model;
   widgets->results.filtered_files_model = ui->filtered_files_model;
@@ -582,6 +583,18 @@ on_files_filter_pending_changed(GObject *, GParamSpec *, gpointer user_data)
   update_files_count(static_cast<MainWindowUiState *>(user_data));
 }
 
+static void
+on_copy_info_clicked(GtkButton *button, gpointer user_data)
+{
+  MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
+  if (!widgets || widgets->results.info_full_text.empty()) {
+    return;
+  }
+
+  GdkClipboard *clipboard = gdk_display_get_clipboard(gtk_widget_get_display(GTK_WIDGET(button)));
+  gdk_clipboard_set_text(clipboard, widgets->results.info_full_text.c_str());
+}
+
 // -----------------------------------------------------------------------------
 // Connect all GTK signals and callbacks
 // -----------------------------------------------------------------------------
@@ -631,6 +644,7 @@ connect_signals(const AppWidgets *ui, MainWindowUiState *widgets)
 
   g_signal_connect(
       ui->details_stack, "notify::visible-child-name", G_CALLBACK(package_details_on_details_page_changed), widgets);
+  g_signal_connect(ui->copy_info_button, "clicked", G_CALLBACK(on_copy_info_clicked), widgets);
 
   g_signal_connect(ui->files_model, "items-changed", G_CALLBACK(on_files_model_changed), widgets);
   g_signal_connect(ui->filtered_files_model, "items-changed", G_CALLBACK(on_files_model_changed), widgets);

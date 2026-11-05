@@ -425,19 +425,32 @@ main_window_build_layout(AppWidgets *ui)
   GtkWidget *info_header = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
   gtk_widget_set_margin_start(info_header, 10);
   gtk_widget_set_margin_end(info_header, 10);
-  gtk_widget_set_margin_top(info_header, 8);
+  gtk_widget_set_margin_top(info_header, 4);
   gtk_widget_set_margin_bottom(info_header, 4);
   gtk_widget_set_visible(info_header, FALSE);
   gtk_box_append(GTK_BOX(info_box), info_header);
   ui->info_header = info_header;
 
+  GtkWidget *info_heading = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+  gtk_box_append(GTK_BOX(info_header), info_heading);
+
   GtkWidget *info_name_label = gtk_label_new(nullptr);
   gtk_label_set_xalign(GTK_LABEL(info_name_label), 0.0f);
   gtk_label_set_selectable(GTK_LABEL(info_name_label), TRUE);
   gtk_label_set_wrap(GTK_LABEL(info_name_label), TRUE);
+  gtk_label_set_wrap_mode(GTK_LABEL(info_name_label), PANGO_WRAP_WORD_CHAR);
+  gtk_widget_set_hexpand(info_name_label, TRUE);
   gtk_widget_add_css_class(info_name_label, "package-info-name");
-  gtk_box_append(GTK_BOX(info_header), info_name_label);
+  gtk_box_append(GTK_BOX(info_heading), info_name_label);
   ui->info_name_label = info_name_label;
+
+  GtkWidget *copy_info_button = gtk_button_new_with_label(_("Copy Info"));
+  gtk_widget_add_css_class(copy_info_button, "flat");
+  gtk_widget_set_tooltip_text(copy_info_button, _("Copy the complete package information."));
+  gtk_widget_set_sensitive(copy_info_button, FALSE);
+  gtk_widget_set_valign(copy_info_button, GTK_ALIGN_START);
+  gtk_box_append(GTK_BOX(info_heading), copy_info_button);
+  ui->copy_info_button = copy_info_button;
 
   GtkWidget *info_summary_label = gtk_label_new(nullptr);
   gtk_label_set_xalign(GTK_LABEL(info_summary_label), 0.0f);

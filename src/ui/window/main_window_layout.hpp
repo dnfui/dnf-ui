@@ -54,6 +54,7 @@ struct AppWidgets {
   GtkWidget *info_header = NULL;
   GtkWidget *info_name_label = NULL;
   GtkWidget *info_summary_label = NULL;
+  GtkWidget *copy_info_button = NULL;
 
   GtkTextBuffer *details_buffer = NULL;
   GtkStringList *files_model = NULL;

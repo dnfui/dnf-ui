@@ -186,6 +186,7 @@ package context. When the Status column is hidden, the Info tab keeps Status as 
 fetched package metadata text, so pending transaction changes do not leave stale Status text in the details panel.
 The Info tab shows the package name and summary above the remaining details. The backend supplies these fields
 alongside the full text, so the UI does not parse translated labels from the details text.
+Copy Info copies the complete formatted package information, including the name and summary.
 
 ### Package table view
 

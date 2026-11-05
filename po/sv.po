@@ -1731,3 +1731,9 @@ msgstr "Granska och verkställ väntande paketändringar."
 
 msgid "Clear all pending package changes."
 msgstr "Rensa alla väntande paketändringar."
+
+msgid "Copy Info"
+msgstr "Kopiera info"
+
+msgid "Copy the complete package information."
+msgstr "Kopiera den fullständiga paketinformationen."
