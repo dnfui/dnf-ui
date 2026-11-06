@@ -85,10 +85,6 @@ append_transaction_summary_section(GtkBox *parent,
     return;
   }
 
-  if (gtk_widget_get_first_child(GTK_WIDGET(parent))) {
-    gtk_box_append(parent, gtk_separator_new(GTK_ORIENTATION_HORIZONTAL));
-  }
-
   GtkWidget *section = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
   gtk_box_append(parent, section);
 
@@ -206,7 +202,7 @@ transaction_dialogs_show_summary_dialog(MainWindowUiState *widgets,
   gtk_widget_set_vexpand(scroller, TRUE);
   gtk_box_append(GTK_BOX(outer), scroller);
 
-  GtkWidget *contents = gtk_box_new(GTK_ORIENTATION_VERTICAL, 12);
+  GtkWidget *contents = gtk_box_new(GTK_ORIENTATION_VERTICAL, 18);
   gtk_widget_set_margin_start(contents, 6);
   gtk_widget_set_margin_end(contents, 6);
   gtk_widget_set_margin_top(contents, 6);
@@ -231,8 +227,6 @@ transaction_dialogs_show_summary_dialog(MainWindowUiState *widgets,
       GTK_BOX(contents), _("To be removed"), preview.remove, "user-trash-symbolic");
   append_transaction_package_summary_section(
       GTK_BOX(contents), _("To be replaced"), preview.replaced, "view-refresh-symbolic");
-
-  gtk_box_append(GTK_BOX(outer), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL));
 
   GtkWidget *summary_heading_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
   gtk_box_append(GTK_BOX(outer), summary_heading_box);
