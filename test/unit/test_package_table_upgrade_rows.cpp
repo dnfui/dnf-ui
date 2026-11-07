@@ -20,6 +20,7 @@ upgrade_snapshot()
     .nevra = "example-2.0-1.fc44.x86_64",
     .full_nevra = "example-0:2.0-1.fc44.x86_64",
     .repo_id = "daemon-updates",
+    .summary = "",
   };
 
   DaemonUpgradeSnapshot snapshot;
