@@ -179,6 +179,27 @@ table_cell_color_target(GtkWidget *cell)
 }
 
 // -----------------------------------------------------------------------------
+// Shade every second row according to its current position in the sorted view.
+// -----------------------------------------------------------------------------
+static void
+update_alternating_row_css(GtkListItem *item)
+{
+  GtkWidget *cell = gtk_list_item_get_child(item);
+  if (!cell) {
+    return;
+  }
+
+  GtkWidget *target = table_cell_color_target(cell);
+  gtk_widget_remove_css_class(cell, "package-row-alternate");
+  gtk_widget_remove_css_class(target, "package-row-alternate");
+
+  guint position = gtk_list_item_get_position(item);
+  if (position != GTK_INVALID_LIST_POSITION && position % 2 == 1) {
+    gtk_widget_add_css_class(target, "package-row-alternate");
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Remove pending row CSS classes from one table widget.
 // -----------------------------------------------------------------------------
 static void
@@ -512,6 +533,12 @@ create_text_column(MainWindowUiState *widgets, const PackageTableColumnDefinitio
                      gtk_widget_add_controller(cell, GTK_EVENT_CONTROLLER(context_click));
 
                      gtk_list_item_set_child(item, cell);
+                     g_signal_connect(item,
+                                      "notify::position",
+                                      G_CALLBACK(+[](GtkListItem *item, GParamSpec *, gpointer) {
+                                        update_alternating_row_css(item);
+                                      }),
+                                      nullptr);
                    }),
                    nullptr);
 
@@ -526,6 +553,7 @@ create_text_column(MainWindowUiState *widgets, const PackageTableColumnDefinitio
                      GtkWidget *cell = gtk_list_item_get_child(item);
                      GtkWidget *label = table_cell_label(cell);
                      GtkWidget *frame = table_cell_frame(cell);
+                     update_alternating_row_css(item);
                      GObject *obj = G_OBJECT(gtk_list_item_get_item(item));
                      const PackageItem *package_item = package_item_from_object(obj);
 
