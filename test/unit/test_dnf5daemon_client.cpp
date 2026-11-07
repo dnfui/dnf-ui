@@ -10,6 +10,7 @@
 #include "transaction/transaction_preview.hpp"
 #include "transaction/transaction_request.hpp"
 #include "dnf5daemon_client/transaction_service_client.hpp"
+#include "dnf5daemon_client/transaction_service_client_parser.hpp"
 
 #include <glib.h>
 #include <libdnf5/transaction/offline.hpp>
@@ -533,6 +534,30 @@ TEST_CASE("dnf5daemon upgrade target parser keeps normal and full NEVRA")
   REQUIRE(target.nevra == "demo-1.2.3-4.fc44.x86_64");
   REQUIRE(target.full_nevra == "demo-0:1.2.3-4.fc44.x86_64");
   REQUIRE(target.repo_id == "updates");
+}
+
+// -----------------------------------------------------------------------------
+// Verify that daemon summaries are retained for the upgrade table.
+// -----------------------------------------------------------------------------
+TEST_CASE("dnf5daemon upgrade target parser keeps summary")
+{
+  GVariantBuilder fields;
+  g_variant_builder_init(&fields, G_VARIANT_TYPE("a{sv}"));
+  g_variant_builder_add(&fields, "{sv}", "name", g_variant_new_string("demo"));
+  g_variant_builder_add(&fields, "{sv}", "version", g_variant_new_string("1.2.3"));
+  g_variant_builder_add(&fields, "{sv}", "release", g_variant_new_string("4.fc44"));
+  g_variant_builder_add(&fields, "{sv}", "arch", g_variant_new_string("x86_64"));
+  g_variant_builder_add(&fields, "{sv}", "summary", g_variant_new_string("Package summary"));
+  GVariant *object = g_variant_ref_sink(g_variant_builder_end(&fields));
+
+  DaemonUpgradeTarget target;
+  std::string error;
+  bool parsed = transaction_service_client_upgrade_target_from_daemon_object(object, target, error);
+  g_variant_unref(object);
+
+  REQUIRE(parsed);
+  REQUIRE(error.empty());
+  REQUIRE(target.summary == "Package summary");
 }
 
 // -----------------------------------------------------------------------------

@@ -181,7 +181,8 @@ transaction_session_options(const TransactionRequest &request)
 GVariant *
 upgrade_target_list_options()
 {
-  const char *attrs[] = { "name", "epoch", "version", "release", "arch", "repo_id", "nevra", "full_nevra", nullptr };
+  const char *attrs[] = { "name",    "epoch", "version",    "release", "arch",
+                          "repo_id", "nevra", "full_nevra", "summary", nullptr };
 
   GVariantBuilder options;
   g_variant_builder_init(&options, G_VARIANT_TYPE("a{sv}"));

@@ -23,6 +23,7 @@ package_row_from_daemon_upgrade_target(const DaemonUpgradeTarget &target)
   row.release = target.release;
   row.arch = target.arch;
   row.repo = target.repo_id;
+  row.summary = target.summary;
   return row;
 }
 

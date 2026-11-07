@@ -148,10 +148,11 @@ TEST_CASE_METHOD(ProviderRepositoryFixture, "Daemon upgrade metadata lookup does
   reset_backend_globals();
   REQUIRE(dnf_backend_installed_snapshot_size_for_tests() == 0);
 
-  std::vector<PackageRow> metadata_rows =
-      dnf_backend_get_available_package_metadata_by_nevras_interruptible({ target_nevra }, nullptr);
+  std::vector<PackageRow> metadata_rows = dnf_backend_get_available_package_metadata_by_nevras_interruptible(
+      { target_nevra, target_nevra, "dnfui-missing-1-1.noarch" }, nullptr);
 
-  REQUIRE(!metadata_rows.empty());
+  REQUIRE(metadata_rows.size() == 1);
+  REQUIRE(metadata_rows.front().nevra == target_nevra);
   REQUIRE(dnf_backend_installed_snapshot_size_for_tests() == 0);
 }
 

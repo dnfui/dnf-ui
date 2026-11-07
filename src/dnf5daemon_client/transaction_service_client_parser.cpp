@@ -124,6 +124,7 @@ transaction_service_client_upgrade_target_from_daemon_object(GVariant *object,
   target.repo_id = map_lookup_string(object, "repo_id");
   target.nevra = map_lookup_string(object, "nevra");
   target.full_nevra = map_lookup_string(object, "full_nevra");
+  target.summary = map_lookup_string(object, "summary");
 
   if (target.name.empty() || target.version.empty() || target.release.empty() || target.arch.empty()) {
     error_out = _("dnf5daemon returned an incomplete upgrade item.");
