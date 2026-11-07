@@ -1546,6 +1546,9 @@ msgstr "Rensa lista"
 msgid "Clear Search Cache"
 msgstr "Rensa sökcache"
 
+msgid "Keep Package Metadata Loaded"
+msgstr "Behåll paketmetadata i minnet"
+
 msgid "Transaction History..."
 msgstr "Transaktionshistorik..."
 

@@ -75,14 +75,21 @@ requesting the optional metadata alone is not sufficient.
 
 ## Base lifetime and search cache
 
-The shared Base is heavyweight libdnf5 state. Normal package-query workers drop it when they finish so
+The shared Base is heavyweight libdnf5 state. By default, normal package-query workers drop it when they finish so
 repository metadata does not stay resident just because the user ran one query. Search, List Installed, List
 Unneeded, List Packages, List Upgradable, and exact selected-package reload workers use this policy.
+The Package menu can retain the shared Base between queries for the current app session. Disabling that option
+releases it on a worker thread. List Installed and List Unneeded also check the installed state before using retained
+metadata. Periodic installed-state checks keep it when installed identities, installation reasons, and protected names
+are unchanged. Repository refreshes and detected package changes still replace or
+discard it. A changed installed snapshot invalidates the retained Base before publication, and older package query
+results are rejected.
+Retention can increase idle memory use. External repository changes require a repository refresh.
 If a worker was cancelled, it skips the drop so Stop does not block again while trying to release cached metadata.
 
-Dropping the shared Base is a memory policy. It does not mean that repository metadata was refreshed, and it
-does not increment the Base generation. The next normal query rebuilds the Base on demand and continues using
-the current generation unless a real rebuild publishes a replacement Base.
+Dropping the shared Base to release memory does not refresh repository metadata or increment the Base generation.
+The next normal query rebuilds the Base on demand. Invalidation after an installed-state change does increment the
+generation so older package query results cannot replace the refreshed snapshot.
 
 Search cache entries are lightweight snapshots of completed Search results.
 They store copied `PackageRow` values, not libdnf5 package objects.
@@ -96,7 +103,8 @@ Search cache validity depends on two values:
 - the Base generation recorded when the rows were produced
 - the search-cache epoch recorded when the rows were produced
 
-The Base generation changes when a repository refresh or transaction follow-up publishes a rebuilt Base.
+The Base generation changes when a repository refresh or transaction follow-up publishes a rebuilt Base, or when
+an installed-state check detects a change.
 The search-cache epoch changes when the UI explicitly clears cached search rows.
 Repository refresh, transaction completion, periodic installed-state refresh, and Clear Cache all clear
 the search cache and advance that epoch.

@@ -75,6 +75,40 @@ TEST_CASE("BaseManager generation increments on rebuild")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that repository rebuilds cannot change generation during snapshot publication.
+// -----------------------------------------------------------------------------
+TEST_CASE("BaseManager rebuild waits for installed snapshot publication")
+{
+  auto &mgr = BaseManager::instance();
+  mgr.reset_for_tests();
+
+  ScopedEnvVar force_failure("DNFUI_TEST_FORCE_FULL_REPO_LOAD_FAILURE", "1");
+  ScopedEnvVar force_cache_failure("DNFUI_TEST_FORCE_CACHEONLY_REPO_LOAD_FAILURE", "1");
+
+  const uint64_t before = mgr.current_generation();
+  std::promise<void> started;
+  std::future<void> started_future = started.get_future();
+  std::future<void> rebuild;
+  std::future_status blocked;
+
+  {
+    auto publish_lock = mgr.acquire_installed_snapshot_publication_lock();
+    rebuild = std::async(std::launch::async, [&mgr, &started]() {
+      started.set_value();
+      mgr.rebuild();
+    });
+    started_future.wait();
+    blocked = rebuild.wait_for(std::chrono::milliseconds(50));
+    REQUIRE(mgr.current_generation() == before);
+  }
+
+  REQUIRE(blocked == std::future_status::timeout);
+  REQUIRE_NOTHROW(rebuild.get());
+  REQUIRE(mgr.current_generation() > before);
+  mgr.reset_for_tests();
+}
+
+// -----------------------------------------------------------------------------
 // Verify that unloadable plugins cannot break local package data after an upgrade.
 // -----------------------------------------------------------------------------
 TEST_CASE("BaseManager reads package data without loading libdnf5 plugins")
@@ -138,6 +172,42 @@ TEST_CASE("BaseManager cache drop keeps generation stable")
   mgr.drop_cached_base();
 
   REQUIRE(mgr.current_generation() == before);
+}
+
+// -----------------------------------------------------------------------------
+// Verify that query retention leaves explicit cache drops in effect.
+// -----------------------------------------------------------------------------
+TEST_CASE("BaseManager retains cached Base between queries only when enabled")
+{
+  auto &mgr = BaseManager::instance();
+  mgr.reset_for_tests();
+  mgr.initialize_system_only_base_for_tests();
+
+  REQUIRE_FALSE(mgr.keep_base_between_queries_enabled());
+  mgr.drop_cached_base_after_query();
+  REQUIRE_FALSE(mgr.has_cached_base_for_tests());
+
+  mgr.initialize_system_only_base_for_tests();
+  mgr.set_keep_base_between_queries(true);
+  mgr.drop_cached_base_after_query();
+  REQUIRE(mgr.has_cached_base_for_tests());
+
+  mgr.drop_cached_base();
+  REQUIRE_FALSE(mgr.has_cached_base_for_tests());
+
+  mgr.initialize_system_only_base_for_tests();
+  std::future<void> toggle;
+  std::future_status toggle_status;
+  {
+    auto read = mgr.acquire_read();
+    toggle = std::async(std::launch::async, [&mgr]() { mgr.set_keep_base_between_queries(false); });
+    toggle_status = toggle.wait_for(std::chrono::milliseconds(500));
+  }
+  REQUIRE(toggle_status == std::future_status::ready);
+  toggle.get();
+  REQUIRE(mgr.has_cached_base_for_tests());
+  mgr.drop_cached_base_after_query();
+  REQUIRE_FALSE(mgr.has_cached_base_for_tests());
 }
 
 // -----------------------------------------------------------------------------

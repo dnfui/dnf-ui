@@ -461,7 +461,7 @@ TEST_CASE("All-version merge annotates installed rows also present in repositori
 
   dnf_backend_internal::InstalledQueryResult installed;
   installed.rows = { installed_row };
-  installed.nevras = { installed_row.nevra };
+  installed.nevra_reasons = { { installed_row.nevra, installed_row.install_reason } };
   installed.rows_by_name_arch.emplace(installed_row.name_arch_key(), installed_row);
 
   auto rows = dnf_backend_internal::visible_rows_from_available_view(std::move(available), installed);
@@ -503,7 +503,7 @@ TEST_CASE("All-version merge ignores hidden newest candidates for installed row 
 
   dnf_backend_internal::InstalledQueryResult installed;
   installed.rows = { installed_row };
-  installed.nevras = { installed_row.nevra };
+  installed.nevra_reasons = { { installed_row.nevra, installed_row.install_reason } };
   installed.rows_by_name_arch.emplace(installed_row.name_arch_key(), installed_row);
 
   auto rows = dnf_backend_internal::visible_rows_from_available_view(std::move(available), installed);
@@ -528,7 +528,8 @@ TEST_CASE("All-version merge keeps distinct installed package versions")
 
   dnf_backend_internal::InstalledQueryResult installed;
   installed.rows = { installed_one, installed_two };
-  installed.nevras = { installed_one.nevra, installed_two.nevra };
+  installed.nevra_reasons = { { installed_one.nevra, installed_one.install_reason },
+                              { installed_two.nevra, installed_two.install_reason } };
   installed.rows_by_name_arch.emplace(installed_two.name_arch_key(), installed_two);
 
   auto rows = dnf_backend_internal::visible_rows_from_available_view(std::move(available), installed);
@@ -557,7 +558,8 @@ TEST_CASE("All-version merge keeps exact reinstall availability for hidden insta
 
   dnf_backend_internal::InstalledQueryResult installed;
   installed.rows = { older_installed, newer_installed };
-  installed.nevras = { older_installed.nevra, newer_installed.nevra };
+  installed.nevra_reasons = { { older_installed.nevra, older_installed.install_reason },
+                              { newer_installed.nevra, newer_installed.install_reason } };
   installed.rows_by_name_arch.emplace(newer_installed.name_arch_key(), newer_installed);
 
   auto rows = dnf_backend_internal::visible_rows_from_available_view(std::move(available), installed);

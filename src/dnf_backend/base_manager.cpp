@@ -749,6 +749,15 @@ BaseManager::build_changelog_base()
 }
 
 // -----------------------------------------------------------------------------
+// Serialize installed snapshot publication with Base generation changes.
+// -----------------------------------------------------------------------------
+std::unique_lock<std::mutex>
+BaseManager::acquire_installed_snapshot_publication_lock()
+{
+  return std::unique_lock<std::mutex>(installed_snapshot_publication_mutex);
+}
+
+// -----------------------------------------------------------------------------
 // Rebuild the cached Base after repository refresh or transaction work.
 // -----------------------------------------------------------------------------
 BaseRepoState
@@ -756,6 +765,7 @@ BaseManager::rebuild(BaseRefreshMode refresh_mode,
                      std::shared_ptr<std::atomic<bool>> cancel_requested,
                      BaseProgressCallback progress_callback)
 {
+  auto publish_lock = acquire_installed_snapshot_publication_lock();
   // Allow only one Base rebuild at a time.
   std::unique_lock lock(base_mutex);
 
@@ -786,6 +796,61 @@ BaseManager::drop_cached_base()
   {
     std::unique_lock<std::mutex> lock(base_mutex);
     if (!base_ptr) {
+      return;
+    }
+    base_ptr.reset();
+  }
+
+  trim_free_heap();
+}
+
+// -----------------------------------------------------------------------------
+// Invalidate cached package metadata and reject queries that read the old Base.
+// -----------------------------------------------------------------------------
+void
+BaseManager::invalidate_cached_base_for_installed_state_change()
+{
+  bool had_base;
+  {
+    std::unique_lock<std::mutex> lock(base_mutex);
+    had_base = base_ptr != nullptr;
+    base_ptr.reset();
+    generation.fetch_add(1, std::memory_order_relaxed);
+  }
+
+  if (had_base) {
+    trim_free_heap();
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Keep repository metadata loaded between package queries when enabled.
+// The menu releases retained metadata on a worker after disabling this setting.
+// -----------------------------------------------------------------------------
+void
+BaseManager::set_keep_base_between_queries(bool enabled)
+{
+  keep_base_between_queries.store(enabled, std::memory_order_relaxed);
+}
+
+// -----------------------------------------------------------------------------
+// Return whether package queries retain the cached Base.
+// -----------------------------------------------------------------------------
+bool
+BaseManager::keep_base_between_queries_enabled() const
+{
+  return keep_base_between_queries.load(std::memory_order_relaxed);
+}
+
+// -----------------------------------------------------------------------------
+// Release query metadata unless the user chose to retain it.
+// -----------------------------------------------------------------------------
+void
+BaseManager::drop_cached_base_after_query()
+{
+  {
+    std::unique_lock<std::mutex> lock(base_mutex);
+    if (keep_base_between_queries.load(std::memory_order_relaxed) || !base_ptr) {
       return;
     }
     base_ptr.reset();
@@ -851,6 +916,7 @@ BaseManager::reset_for_tests()
   std::unique_lock<std::mutex> lock(base_mutex);
   base_ptr.reset();
   generation.store(0, std::memory_order_relaxed);
+  keep_base_between_queries.store(false, std::memory_order_relaxed);
 }
 #endif
 

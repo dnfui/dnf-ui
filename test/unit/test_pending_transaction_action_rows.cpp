@@ -38,7 +38,7 @@ make_single_installed_query_result(const PackageRow &row)
 {
   dnf_backend_internal::InstalledQueryResult installed;
   installed.rows = { row };
-  installed.nevras = { row.nevra };
+  installed.nevra_reasons = { { row.nevra, row.install_reason } };
   installed.rows_by_name_arch.emplace(row.name_arch_key(), row);
   return installed;
 }

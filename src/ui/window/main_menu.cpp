@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------------
 #include "ui/window/main_menu.hpp"
 
+#include "dnf_backend/base_manager.hpp"
 #include "i18n.hpp"
 #include "ui/history/transaction_history_view.hpp"
 #include "ui/package_query/package_query_controller.hpp"
@@ -152,6 +153,36 @@ on_menu_clear_cache(GSimpleAction *, GVariant *, gpointer user_data)
 
   package_query_clear_search_cache();
   ui_helpers_set_status(data->widgets->query.status_label, _("Search cache cleared."), "gray");
+}
+
+// -----------------------------------------------------------------------------
+// Keep package metadata loaded between queries when selected.
+// -----------------------------------------------------------------------------
+static void
+release_package_metadata_task(GTask *task, gpointer, gpointer, GCancellable *)
+{
+  BaseManager::instance().drop_cached_base_after_query();
+  g_task_return_boolean(task, TRUE);
+}
+
+// -----------------------------------------------------------------------------
+// Update the metadata retention choice without blocking the GTK thread.
+// -----------------------------------------------------------------------------
+static void
+on_menu_keep_package_metadata_loaded_changed(GSimpleAction *action, GVariant *value, gpointer)
+{
+  if (!value) {
+    return;
+  }
+
+  const bool enabled = g_variant_get_boolean(value);
+  BaseManager::instance().set_keep_base_between_queries(enabled);
+  g_simple_action_set_state(action, value);
+  if (!enabled) {
+    GTask *task = g_task_new(nullptr, nullptr, nullptr, nullptr);
+    g_task_run_in_thread(task, release_package_metadata_task);
+    g_object_unref(task);
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -353,6 +384,7 @@ main_menu_create()
   g_menu_append(package_menu, _("List Unneeded"), "win.list-unneeded");
   g_menu_append(package_menu, _("Clear List"), "win.clear-list");
   g_menu_append(package_menu, _("Clear Search Cache"), "win.clear-cache");
+  g_menu_append(package_menu, _("Keep Package Metadata Loaded"), "win.keep-package-metadata-loaded");
   g_menu_append(package_menu, _("Transaction History..."), "win.transaction-history");
   g_menu_append(package_menu, _("Discard Prepared Updates..."), "win.discard-prepared-updates");
   g_menu_append_submenu(menu_bar, _("Package"), G_MENU_MODEL(package_menu));
@@ -422,6 +454,14 @@ main_menu_connect_actions(const MainMenuWidgets &menu_widgets, MainWindowUiState
 
   GSimpleActionGroup *actions = g_simple_action_group_new();
   g_action_map_add_action_entries(G_ACTION_MAP(actions), entries, G_N_ELEMENTS(entries), data);
+  GSimpleAction *keep_metadata_action =
+      g_simple_action_new_stateful("keep-package-metadata-loaded",
+                                   nullptr,
+                                   g_variant_new_boolean(BaseManager::instance().keep_base_between_queries_enabled()));
+  g_signal_connect(
+      keep_metadata_action, "change-state", G_CALLBACK(on_menu_keep_package_metadata_loaded_changed), data);
+  g_action_map_add_action(G_ACTION_MAP(actions), G_ACTION(keep_metadata_action));
+  g_object_unref(keep_metadata_action);
   const std::set<std::string> visible_columns = package_table_load_visible_column_ids();
   for (const auto &column : package_table_column_definitions()) {
     std::string action_name = column_action_name_for_id(column.id);

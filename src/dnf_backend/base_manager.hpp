@@ -146,6 +146,10 @@ class BaseManager {
   BaseRepoState current_repo_state() const;
 
   // -----------------------------------------------------------------------------
+  // Serialize installed snapshot publication with Base generation changes.
+  // -----------------------------------------------------------------------------
+  std::unique_lock<std::mutex> acquire_installed_snapshot_publication_lock();
+  // -----------------------------------------------------------------------------
   // Rebuild the cached Base from repository metadata with fallback.
   // -----------------------------------------------------------------------------
   BaseRepoState rebuild(BaseRefreshMode refresh_mode = BaseRefreshMode::NORMAL,
@@ -155,6 +159,20 @@ class BaseManager {
   // Drop the cached Base so the next backend operation rebuilds it on demand.
   // -----------------------------------------------------------------------------
   void drop_cached_base();
+  // Invalidate package queries after an external installed-state change.
+  void invalidate_cached_base_for_installed_state_change();
+  // -----------------------------------------------------------------------------
+  // Keep the cached Base between package queries when enabled.
+  // -----------------------------------------------------------------------------
+  void set_keep_base_between_queries(bool enabled);
+  // -----------------------------------------------------------------------------
+  // Return whether package queries retain the cached Base.
+  // -----------------------------------------------------------------------------
+  bool keep_base_between_queries_enabled() const;
+  // -----------------------------------------------------------------------------
+  // Drop the cached Base after a query unless retention is enabled.
+  // -----------------------------------------------------------------------------
+  void drop_cached_base_after_query();
 
 #ifdef DNFUI_BUILD_TESTS
   // -----------------------------------------------------------------------------
@@ -198,9 +216,12 @@ class BaseManager {
   BaseRepoState repo_state = BaseRepoState::LIVE_METADATA;
 
   std::atomic<uint64_t> generation { 0 };
+  std::atomic<bool> keep_base_between_queries { false };
 
   // Serializes Base queries, rebuilds, and Base destruction.
   mutable std::mutex base_mutex;
+  // Prevents a Base generation change during installed snapshot publication.
+  std::mutex installed_snapshot_publication_mutex;
 };
 
 // -----------------------------------------------------------------------------

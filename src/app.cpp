@@ -214,7 +214,7 @@ static void
 on_installed_refresh_task(GTask *task, gpointer, gpointer, GCancellable *)
 {
   try {
-    const bool changed = dnf_backend_refresh_installed_snapshot();
+    const bool changed = dnf_backend_refresh_installed_snapshot_for_periodic_check();
     if (changed) {
       DaemonUpgradeState::instance().mark_stale();
     }

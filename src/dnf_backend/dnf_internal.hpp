@@ -31,7 +31,7 @@ collect_provider_matching_nevras(libdnf5::Base &base, const std::string &pattern
 // Keeping rows, exact NEVRAs, and name and architecture lookup together avoids partial cache updates.
 struct InstalledQueryResult {
   std::vector<PackageRow> rows;
-  std::set<std::string> nevras;
+  std::map<std::string, PackageInstallReason> nevra_reasons;
   std::map<std::string, PackageRow> rows_by_name_arch;
 };
 
@@ -106,14 +106,20 @@ std::vector<PackageRow> visible_rows_from_maps(std::map<std::string, PackageRow>
 std::set<std::string> collect_self_protected_package_names(libdnf5::Base &base);
 // -----------------------------------------------------------------------------
 // Publish a completed installed-package scan to shared backend state.
-// Returns true when installed identities or self-protected package names changed.
+// Returns true when installed identities, reasons, or self-protected names changed.
 // -----------------------------------------------------------------------------
 bool publish_installed_snapshot(InstalledQueryResult installed, std::set<std::string> protected_names);
+// Publish a query snapshot only if its Base has not been invalidated.
+bool publish_installed_snapshot_if_generation_matches(InstalledQueryResult installed,
+                                                      std::set<std::string> protected_names,
+                                                      uint64_t base_generation);
 // -----------------------------------------------------------------------------
 // Publish a local rpmdb-only installed scan while preserving repo-derived fields
 // that still describe the same exact installed package.
 // -----------------------------------------------------------------------------
-bool publish_local_installed_snapshot(InstalledQueryResult installed, std::set<std::string> protected_names);
+bool publish_local_installed_snapshot(InstalledQueryResult installed,
+                                      std::set<std::string> protected_names,
+                                      bool invalidate_retained_base = false);
 
 } // namespace dnf_backend_internal
 

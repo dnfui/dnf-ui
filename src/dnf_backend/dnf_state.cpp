@@ -26,7 +26,7 @@
 namespace {
 
 struct InstalledStateSnapshot {
-  std::set<std::string> nevras;
+  std::map<std::string, PackageInstallReason> nevra_reasons;
   std::map<std::string, PackageRow> rows_by_name_arch;
   std::set<std::string> self_protected_package_names;
 };
@@ -81,7 +81,7 @@ InstalledPackageResolution
 resolve_installed_package_locked(const PackageRow &row)
 {
   InstalledPackageResolution resolution;
-  resolution.exact_installed = g_installed_state.nevras.count(row.nevra) > 0;
+  resolution.exact_installed = g_installed_state.nevra_reasons.count(row.nevra) > 0;
   resolution.self_protected = g_installed_state.self_protected_package_names.count(row.name) > 0;
 
   auto installed_it = g_installed_state.rows_by_name_arch.find(row.name_arch_key());
@@ -159,6 +159,25 @@ preserve_local_refresh_reinstall_availability_locked(dnf_backend_internal::Insta
 }
 
 // -----------------------------------------------------------------------------
+// Check identities, installation reasons, and protected package names.
+// -----------------------------------------------------------------------------
+bool
+installed_snapshot_changed_locked(const dnf_backend_internal::InstalledQueryResult &installed,
+                                  const std::set<std::string> &protected_names)
+{
+  if (g_installed_state.nevra_reasons != installed.nevra_reasons) {
+    return true;
+  }
+
+  for (const auto &name : protected_names) {
+    if (g_installed_state.self_protected_package_names.count(name) == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// -----------------------------------------------------------------------------
 // Publish installed-package state while g_installed_mutex is already held.
 // -----------------------------------------------------------------------------
 bool
@@ -169,9 +188,8 @@ publish_installed_snapshot_locked(dnf_backend_internal::InstalledQueryResult ins
   if (!protected_names.empty()) {
     next_protected_names.insert(protected_names.begin(), protected_names.end());
   }
-  const bool changed = g_installed_state.nevras != installed.nevras ||
-      g_installed_state.self_protected_package_names != next_protected_names;
-  g_installed_state.nevras.swap(installed.nevras);
+  const bool changed = installed_snapshot_changed_locked(installed, protected_names);
+  g_installed_state.nevra_reasons.swap(installed.nevra_reasons);
   g_installed_state.rows_by_name_arch.swap(installed.rows_by_name_arch);
   g_installed_state.self_protected_package_names.swap(next_protected_names);
   return changed;
@@ -249,13 +267,32 @@ self_protected_package_name_snapshot()
 // -----------------------------------------------------------------------------
 // Publish installed-package state only after callers have finished all libdnf
 // Base reads. Do not hold the Base lock while taking g_installed_mutex.
-// The return value tracks installed identities and self-protection changes.
+// The return value tracks installed identities, reasons, and self-protection changes.
 // -----------------------------------------------------------------------------
 bool
 publish_installed_snapshot(InstalledQueryResult installed, std::set<std::string> protected_names)
 {
+  auto publish_lock = BaseManager::instance().acquire_installed_snapshot_publication_lock();
   std::lock_guard<std::mutex> lock(g_installed_mutex);
   return publish_installed_snapshot_locked(std::move(installed), std::move(protected_names));
+}
+
+// -----------------------------------------------------------------------------
+// Prevent an older package query from overwriting a refreshed installed snapshot.
+// -----------------------------------------------------------------------------
+bool
+publish_installed_snapshot_if_generation_matches(InstalledQueryResult installed,
+                                                 std::set<std::string> protected_names,
+                                                 uint64_t base_generation)
+{
+  auto publish_lock = BaseManager::instance().acquire_installed_snapshot_publication_lock();
+  if (BaseManager::instance().current_generation() != base_generation) {
+    return false;
+  }
+
+  std::lock_guard<std::mutex> lock(g_installed_mutex);
+  publish_installed_snapshot_locked(std::move(installed), std::move(protected_names));
+  return true;
 }
 
 // -----------------------------------------------------------------------------
@@ -264,8 +301,22 @@ publish_installed_snapshot(InstalledQueryResult installed, std::set<std::string>
 // exact reinstall value only when the same installed NEVRA is still present.
 // -----------------------------------------------------------------------------
 bool
-publish_local_installed_snapshot(InstalledQueryResult installed, std::set<std::string> protected_names)
+publish_local_installed_snapshot(InstalledQueryResult installed,
+                                 std::set<std::string> protected_names,
+                                 bool invalidate_retained_base)
 {
+  auto publish_lock = BaseManager::instance().acquire_installed_snapshot_publication_lock();
+  if (invalidate_retained_base) {
+    bool changed;
+    {
+      std::lock_guard<std::mutex> lock(g_installed_mutex);
+      changed = installed_snapshot_changed_locked(installed, protected_names);
+    }
+    if (changed) {
+      BaseManager::instance().invalidate_cached_base_for_installed_state_change();
+    }
+  }
+
   std::lock_guard<std::mutex> lock(g_installed_mutex);
   preserve_local_refresh_reinstall_availability_locked(installed);
   return publish_installed_snapshot_locked(std::move(installed), std::move(protected_names));
@@ -281,7 +332,7 @@ publish_local_installed_snapshot(InstalledQueryResult installed, std::set<std::s
 //   held, then published after that lock has been released.
 // -----------------------------------------------------------------------------
 bool
-refresh_installed_snapshot(bool drop_cached_base)
+refresh_installed_snapshot(bool drop_cached_base, bool invalidate_retained_base = false)
 {
   InstalledQueryResult installed;
   std::set<std::string> protected_names;
@@ -294,7 +345,7 @@ refresh_installed_snapshot(bool drop_cached_base)
     protected_names = collect_self_protected_package_names(base);
   } // Base read lock released before acquiring g_installed_mutex
 
-  return publish_local_installed_snapshot(installed, protected_names);
+  return publish_local_installed_snapshot(std::move(installed), std::move(protected_names), invalidate_retained_base);
 }
 
 } // namespace dnf_backend_internal
@@ -309,7 +360,7 @@ size_t
 dnf_backend_installed_snapshot_size_for_tests()
 {
   std::lock_guard<std::mutex> lock(g_installed_mutex);
-  return g_installed_state.nevras.size();
+  return g_installed_state.nevra_reasons.size();
 }
 
 // -----------------------------------------------------------------------------
@@ -319,7 +370,7 @@ bool
 dnf_backend_installed_snapshot_contains_for_tests(const std::string &nevra)
 {
   std::lock_guard<std::mutex> lock(g_installed_mutex);
-  return g_installed_state.nevras.count(nevra) > 0;
+  return g_installed_state.nevra_reasons.count(nevra) > 0;
 }
 #endif
 
@@ -348,6 +399,21 @@ bool
 dnf_backend_refresh_installed_snapshot_preserving_cached_base()
 {
   return refresh_installed_snapshot(/*drop_cached_base=*/false);
+}
+
+// -----------------------------------------------------------------------------
+// Preserve the shared Base during periodic checks only while retention is enabled.
+// A changed installed snapshot invalidates the Base before the next package query.
+// -----------------------------------------------------------------------------
+bool
+dnf_backend_refresh_installed_snapshot_for_periodic_check()
+{
+  auto &manager = BaseManager::instance();
+  if (!manager.keep_base_between_queries_enabled()) {
+    return dnf_backend_refresh_installed_snapshot();
+  }
+
+  return refresh_installed_snapshot(/*drop_cached_base=*/false, /*invalidate_retained_base=*/true);
 }
 
 // -----------------------------------------------------------------------------
@@ -465,7 +531,10 @@ void
 dnf_backend_testonly_replace_installed_snapshot(const std::set<std::string> &nevras)
 {
   std::lock_guard<std::mutex> lock(g_installed_mutex);
-  g_installed_state.nevras = nevras;
+  g_installed_state.nevra_reasons.clear();
+  for (const auto &nevra : nevras) {
+    g_installed_state.nevra_reasons.emplace(nevra, PackageInstallReason::UNKNOWN);
+  }
   g_installed_state.rows_by_name_arch.clear();
   g_installed_state.self_protected_package_names.clear();
 }
@@ -480,7 +549,7 @@ dnf_backend_testonly_replace_installed_snapshot_rows(const std::vector<PackageRo
   g_installed_state = {};
 
   for (const auto &row : rows) {
-    g_installed_state.nevras.insert(row.nevra);
+    g_installed_state.nevra_reasons.emplace(row.nevra, row.install_reason);
     g_installed_state.rows_by_name_arch[row.name_arch_key()] = row;
   }
 }
@@ -494,7 +563,7 @@ dnf_backend_testonly_publish_installed_snapshot_rows(const std::vector<PackageRo
 {
   InstalledQueryResult installed;
   for (const auto &row : rows) {
-    installed.nevras.insert(row.nevra);
+    installed.nevra_reasons.emplace(row.nevra, row.install_reason);
     installed.rows_by_name_arch[row.name_arch_key()] = row;
   }
 

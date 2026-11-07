@@ -292,6 +292,11 @@ bool dnf_backend_refresh_installed_snapshot();
 bool dnf_backend_refresh_installed_snapshot_preserving_cached_base();
 
 // -----------------------------------------------------------------------------
+// Refresh installed state periodically and retain unchanged package metadata when enabled.
+// -----------------------------------------------------------------------------
+bool dnf_backend_refresh_installed_snapshot_for_periodic_check();
+
+// -----------------------------------------------------------------------------
 // Resolve installed-package state for one visible row from one installed snapshot.
 // -----------------------------------------------------------------------------
 InstalledPackageResolution dnf_backend_resolve_installed_package(const PackageRow &row);

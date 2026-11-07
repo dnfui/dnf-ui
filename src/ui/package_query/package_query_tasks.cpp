@@ -143,7 +143,7 @@ struct QueryBackendBaseDropGuard {
     if (cancellable && g_cancellable_is_cancelled(cancellable)) {
       return;
     }
-    BaseManager::instance().drop_cached_base();
+    BaseManager::instance().drop_cached_base_after_query();
   }
 
   private:
@@ -159,7 +159,17 @@ on_list_task(GTask *task, gpointer, gpointer, GCancellable *cancellable)
   QueryBackendBaseDropGuard base_drop_guard(cancellable);
 
   try {
-    const PackageListTaskData *td = static_cast<const PackageListTaskData *>(g_task_get_task_data(task));
+    PackageListTaskData *td = static_cast<PackageListTaskData *>(g_task_get_task_data(task));
+    if (BaseManager::instance().keep_base_between_queries_enabled()) {
+      if (dnf_backend_refresh_installed_snapshot_for_periodic_check()) {
+        DaemonUpgradeState::instance().mark_stale();
+      }
+      // This task may have invalidated its own starting Base generation.
+      if (td) {
+        td->generation = BaseManager::instance().current_generation();
+      }
+    }
+
     auto *results = new std::vector<PackageRow>(
         td && td->unneeded_only ? dnf_backend_get_unneeded_package_rows_interruptible(cancellable)
                                 : dnf_backend_get_installed_package_rows_interruptible(cancellable));

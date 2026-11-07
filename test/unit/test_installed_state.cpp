@@ -64,7 +64,7 @@ TEST_CASE("Installed snapshot publish ignores metadata-only row changes")
 
   dnf_backend_internal::InstalledQueryResult first_result;
   first_result.rows = { first };
-  first_result.nevras = { first.nevra };
+  first_result.nevra_reasons = { { first.nevra, first.install_reason } };
   first_result.rows_by_name_arch.emplace(first.name_arch_key(), first);
 
   REQUIRE(dnf_backend_internal::publish_installed_snapshot(std::move(first_result), {}));
@@ -74,7 +74,7 @@ TEST_CASE("Installed snapshot publish ignores metadata-only row changes")
 
   dnf_backend_internal::InstalledQueryResult second_result;
   second_result.rows = { second };
-  second_result.nevras = { second.nevra };
+  second_result.nevra_reasons = { { second.nevra, second.install_reason } };
   second_result.rows_by_name_arch.emplace(second.name_arch_key(), second);
 
   REQUIRE_FALSE(dnf_backend_internal::publish_installed_snapshot(std::move(second_result), {}));
@@ -125,6 +125,118 @@ TEST_CASE("Installed package refresh can preserve the cached Base")
   REQUIRE(mgr.has_cached_base_for_tests());
 
   mgr.reset_for_tests();
+}
+
+// -----------------------------------------------------------------------------
+// Verify that periodic checks retain metadata only while installed state is unchanged.
+// -----------------------------------------------------------------------------
+TEST_CASE("Periodic installed refresh honors package metadata retention")
+{
+  reset_backend_globals();
+  auto &mgr = BaseManager::instance();
+  mgr.reset_for_tests();
+
+  REQUIRE(dnf_backend_refresh_installed_snapshot());
+  mgr.initialize_system_only_base_for_tests();
+  mgr.set_keep_base_between_queries(true);
+
+  REQUIRE_FALSE(dnf_backend_refresh_installed_snapshot_for_periodic_check());
+  REQUIRE(mgr.has_cached_base_for_tests());
+
+  reset_backend_globals();
+  REQUIRE(dnf_backend_refresh_installed_snapshot_for_periodic_check());
+  REQUIRE_FALSE(mgr.has_cached_base_for_tests());
+
+  mgr.set_keep_base_between_queries(false);
+  mgr.initialize_system_only_base_for_tests();
+  REQUIRE_FALSE(dnf_backend_refresh_installed_snapshot_for_periodic_check());
+  REQUIRE_FALSE(mgr.has_cached_base_for_tests());
+
+  mgr.reset_for_tests();
+  reset_backend_globals();
+}
+
+// -----------------------------------------------------------------------------
+// Verify that an explicit installed listing can detect changes while retaining metadata.
+// -----------------------------------------------------------------------------
+TEST_CASE("Installed listing checks retained Base freshness")
+{
+  reset_backend_globals();
+  auto &mgr = BaseManager::instance();
+  mgr.reset_for_tests();
+
+  REQUIRE(dnf_backend_refresh_installed_snapshot());
+  mgr.initialize_system_only_base_for_tests();
+  mgr.set_keep_base_between_queries(true);
+  const uint64_t previous_generation = mgr.current_generation();
+
+  REQUIRE_FALSE(dnf_backend_refresh_installed_snapshot_for_periodic_check());
+  REQUIRE(mgr.has_cached_base_for_tests());
+  REQUIRE(mgr.current_generation() == previous_generation);
+
+  dnf_backend_testonly_replace_installed_snapshot({ "package-not-installed-0-1.x86_64" });
+  REQUIRE(dnf_backend_refresh_installed_snapshot_for_periodic_check());
+  REQUIRE(mgr.current_generation() > previous_generation);
+  REQUIRE_FALSE(mgr.has_cached_base_for_tests());
+
+  const auto installed = dnf_backend_get_installed_package_rows_interruptible(nullptr);
+  REQUIRE_FALSE(installed.empty());
+  REQUIRE(installed.size() == dnf_backend_installed_snapshot_size_for_tests());
+  REQUIRE_FALSE(dnf_backend_installed_snapshot_contains_for_tests("package-not-installed-0-1.x86_64"));
+
+  mgr.reset_for_tests();
+  reset_backend_globals();
+}
+
+// -----------------------------------------------------------------------------
+// Verify that reason changes in parallel installed versions invalidate the Base.
+// A package query started before invalidation must not restore the old snapshot.
+// -----------------------------------------------------------------------------
+TEST_CASE("Periodic installed refresh detects installation reason changes")
+{
+  reset_backend_globals();
+  auto &mgr = BaseManager::instance();
+  mgr.reset_for_tests();
+
+  PackageRow older;
+  older.nevra = "demo-1.0-1.x86_64";
+  older.name = "demo";
+  older.arch = "x86_64";
+  older.install_reason = PackageInstallReason::DEPENDENCY;
+
+  PackageRow newer = older;
+  newer.nevra = "demo-2.0-1.x86_64";
+  newer.install_reason = PackageInstallReason::USER;
+
+  auto snapshot = [&newer](const PackageRow &old_row) {
+    dnf_backend_internal::InstalledQueryResult installed;
+    installed.rows = { old_row, newer };
+    installed.nevra_reasons = { { old_row.nevra, old_row.install_reason }, { newer.nevra, newer.install_reason } };
+    installed.rows_by_name_arch.emplace(newer.name_arch_key(), newer);
+    return installed;
+  };
+
+  REQUIRE(dnf_backend_internal::publish_installed_snapshot(snapshot(older), {}));
+  mgr.initialize_system_only_base_for_tests();
+  mgr.set_keep_base_between_queries(true);
+  const uint64_t old_generation = mgr.current_generation();
+
+  REQUIRE_FALSE(dnf_backend_internal::publish_local_installed_snapshot(snapshot(older), {}, true));
+  REQUIRE(mgr.has_cached_base_for_tests());
+  REQUIRE(mgr.current_generation() == old_generation);
+
+  PackageRow changed_older = older;
+  changed_older.install_reason = PackageInstallReason::USER;
+  REQUIRE(dnf_backend_internal::publish_local_installed_snapshot(snapshot(changed_older), {}, true));
+  REQUIRE_FALSE(mgr.has_cached_base_for_tests());
+  REQUIRE(mgr.current_generation() > old_generation);
+
+  REQUIRE_FALSE(
+      dnf_backend_internal::publish_installed_snapshot_if_generation_matches(snapshot(older), {}, old_generation));
+  REQUIRE_FALSE(dnf_backend_internal::publish_local_installed_snapshot(snapshot(changed_older), {}));
+
+  mgr.reset_for_tests();
+  reset_backend_globals();
 }
 
 // -----------------------------------------------------------------------------

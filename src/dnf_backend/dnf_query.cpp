@@ -547,7 +547,7 @@ collect_installed_rows(libdnf5::Base &base,
   for (auto pkg : query) {
     if (package_query_cancelled(cancellable)) {
       result.rows.clear();
-      result.nevras.clear();
+      result.nevra_reasons.clear();
       result.rows_by_name_arch.clear();
       return result;
     }
@@ -557,10 +557,9 @@ collect_installed_rows(libdnf5::Base &base,
     }
 
     PackageRow row = make_package_row_with_installonly(pkg, PackageRepoCandidateRelation::UNKNOWN, installonly_nevras);
-    // The exact NEVRA set answers "is this precise package installed".
-    // The name and architecture map answers "which installed package matches
-    // this available update candidate".
-    result.nevras.insert(row.nevra);
+    // Exact NEVRAs and install reasons are needed to detect changes without
+    // keeping another complete installed-package snapshot.
+    result.nevra_reasons.emplace(row.nevra, row.install_reason);
     remember_newest_row(result.rows_by_name_arch, row);
     result.rows.push_back(row);
   }
@@ -765,6 +764,7 @@ dnf_backend_search_package_rows_interruptible(const std::string &pattern,
   std::vector<PackageRow> rows;
   InstalledQueryResult installed_snapshot;
   std::set<std::string> protected_names;
+  uint64_t base_generation = 0;
   {
     try {
       std::optional<TemporaryBaseRead> provider_read;
@@ -775,6 +775,7 @@ dnf_backend_search_package_rows_interruptible(const std::string &pattern,
         normal_read.emplace(acquire_interruptible_base_read(cancellable));
       }
       libdnf5::Base &base = provider_read ? *provider_read->base : normal_read->base;
+      base_generation = BaseManager::instance().current_generation();
       // The shared installed snapshot must contain every installed package, not
       // only the rows that matched this search.
       // The UI uses it later for package status, action buttons, and pending action handling.
@@ -839,7 +840,10 @@ dnf_backend_search_package_rows_interruptible(const std::string &pattern,
     }
   }
 
-  publish_installed_snapshot(std::move(installed_snapshot), std::move(protected_names));
+  if (!publish_installed_snapshot_if_generation_matches(
+          std::move(installed_snapshot), std::move(protected_names), base_generation)) {
+    return {};
+  }
   return rows;
 }
 
@@ -859,9 +863,11 @@ get_installed_package_rows_interruptible(GCancellable *cancellable, bool unneede
   InstalledQueryResult installed;
   std::set<std::string> protected_names;
   std::vector<PackageRow> unneeded_rows;
+  uint64_t base_generation = 0;
   {
     try {
       auto [base, guard] = acquire_interruptible_base_read(cancellable);
+      base_generation = BaseManager::instance().current_generation();
       const DnfBackendSearchOptions search_options {};
       installed = collect_installed_rows(base, cancellable, search_options);
       if (package_query_cancelled(cancellable)) {
@@ -919,7 +925,9 @@ get_installed_package_rows_interruptible(GCancellable *cancellable, bool unneede
   }
 
   // Publish the complete installed snapshot even when only unneeded rows are displayed.
-  publish_installed_snapshot(installed, protected_names);
+  if (!publish_installed_snapshot_if_generation_matches(installed, protected_names, base_generation)) {
+    return {};
+  }
   return unneeded_only ? unneeded_rows : installed.rows;
 }
 
@@ -953,9 +961,11 @@ dnf_backend_get_browse_package_rows_interruptible(const DnfBackendSearchOptions 
   std::vector<PackageRow> rows;
   InstalledQueryResult installed;
   std::set<std::string> protected_names;
+  uint64_t base_generation = 0;
   {
     try {
       auto [base, guard] = acquire_interruptible_base_read(cancellable);
+      base_generation = BaseManager::instance().current_generation();
 
       // Browse uses the full installed set because installed-only packages must
       // still be visible even when no enabled repo contains them.
@@ -990,7 +1000,10 @@ dnf_backend_get_browse_package_rows_interruptible(const DnfBackendSearchOptions 
     }
   }
 
-  publish_installed_snapshot(std::move(installed), std::move(protected_names));
+  if (!publish_installed_snapshot_if_generation_matches(
+          std::move(installed), std::move(protected_names), base_generation)) {
+    return {};
+  }
   return rows;
 }
 

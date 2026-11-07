@@ -128,6 +128,11 @@ refreshes, transaction follow-up refreshes, and installed-state refreshes clear 
 that epoch, so older search workers cannot repopulate the cache with rows the UI has already invalidated.
 Dropping the cached Base to save memory does not invalidate search rows by itself.
 All-version searches are not stored in this cache because they can be much larger than the normal compact result.
+Package > Keep Package Metadata Loaded is off by default. When enabled, ordinary package queries reuse loaded
+repository metadata during the current app session, which can increase idle memory use. Turning it off releases
+the retained metadata. Periodic installed-state checks keep it when installed package identities, installation
+reasons, and protected names are unchanged. List Installed and List Unneeded check the current installed state
+before using retained metadata. Refresh Repositories is needed to pick up external repository changes.
 
 [src/ui/refresh/repository_refresh_controller.cpp](../src/ui/refresh/repository_refresh_controller.cpp) owns
 the Refresh Repositories button workflow. It refreshes dnf5daemon metadata, rebuilds the libdnf5 Base, updates
