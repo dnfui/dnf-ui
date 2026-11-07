@@ -1020,20 +1020,20 @@ dnf_backend_get_available_package_metadata_by_nevras_interruptible(const std::ve
 
     libdnf5::rpm::PackageQuery query(base);
     query.filter_available();
+    query.filter_nevra(nevras);
 
     for (auto pkg : query) {
       if (package_query_cancelled(cancellable)) {
         return {};
       }
 
-      PackageRow row =
-          make_package_row_with_installonly(pkg, PackageRepoCandidateRelation::UNKNOWN, installonly_nevras);
-      if (requested_nevras.count(row.nevra) == 0 || returned_nevras.count(row.nevra) > 0) {
+      std::string nevra = pkg.get_nevra();
+      if (requested_nevras.count(nevra) == 0 || returned_nevras.count(nevra) > 0) {
         continue;
       }
 
-      rows.push_back(row);
-      returned_nevras.insert(row.nevra);
+      rows.push_back(make_package_row_with_installonly(pkg, PackageRepoCandidateRelation::UNKNOWN, installonly_nevras));
+      returned_nevras.insert(std::move(nevra));
     }
   } catch (const BaseOperationCancelled &) {
     return {};

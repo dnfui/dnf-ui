@@ -373,14 +373,17 @@ on_list_upgradeable_task(GTask *task, gpointer, gpointer, GCancellable *cancella
 #endif
 
     std::vector<std::string> target_nevras;
-    target_nevras.reserve(targets.size());
     for (const auto &target : targets) {
-      target_nevras.push_back(target.nevra.empty() ? target.full_nevra : target.nevra);
+      if (target.summary.empty()) {
+        target_nevras.push_back(target.nevra.empty() ? target.full_nevra : target.nevra);
+      }
     }
 
     std::vector<PackageRow> metadata_rows;
     try {
-      metadata_rows = dnf_backend_get_available_package_metadata_by_nevras_interruptible(target_nevras, cancellable);
+      if (!target_nevras.empty()) {
+        metadata_rows = dnf_backend_get_available_package_metadata_by_nevras_interruptible(target_nevras, cancellable);
+      }
     } catch (const std::exception &) {
       // Metadata from libdnf5 is optional here. The dnf5daemon target remains
       // visible because it is the upgrade reported by the transaction service.

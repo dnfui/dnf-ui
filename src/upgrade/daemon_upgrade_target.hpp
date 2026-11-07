@@ -15,6 +15,7 @@ struct DaemonUpgradeTarget {
   std::string nevra;
   std::string full_nevra;
   std::string repo_id;
+  std::string summary;
 
   std::string name_arch_key() const
   {

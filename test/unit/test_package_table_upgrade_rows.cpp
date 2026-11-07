@@ -85,6 +85,20 @@ TEST_CASE("Upgrade rows keep daemon targets when metadata is missing", "[upgrade
 }
 
 // -----------------------------------------------------------------------------
+// Daemon summaries fill upgrade rows without a separate metadata lookup.
+// -----------------------------------------------------------------------------
+TEST_CASE("Upgrade rows use daemon summaries", "[upgrade-rows]")
+{
+  DaemonUpgradeSnapshot snapshot = upgrade_snapshot();
+  snapshot.targets_by_name_arch.begin()->second.summary = "Package summary from dnf5daemon";
+
+  auto rows = package_table_rows_from_daemon_targets(snapshot, {});
+
+  REQUIRE(rows.size() == 1);
+  REQUIRE(rows.front().row.summary == "Package summary from dnf5daemon");
+}
+
+// -----------------------------------------------------------------------------
 // Display metadata must not replace the daemon target used by package actions.
 // -----------------------------------------------------------------------------
 TEST_CASE("Upgrade rows add exact metadata and retain their daemon context", "[upgrade-rows]")
