@@ -31,7 +31,7 @@ test_config_dir()
     std::filesystem::path path(tmp_dir);
     g_free(tmp_dir);
 
-    REQUIRE(g_setenv("XDG_CONFIG_HOME", path.c_str(), TRUE));
+    REQUIRE(g_setenv("DNFUI_TEST_CONFIG_DIR", path.c_str(), TRUE));
     return path;
   }();
 
@@ -94,6 +94,7 @@ TEST_CASE("Config map save and load roundtrip")
   };
 
   REQUIRE(config_save_map(saved));
+  REQUIRE(std::filesystem::exists(test_config_file()));
   std::map<std::string, std::string> loaded = config_load_map();
 
   REQUIRE(loaded == saved);

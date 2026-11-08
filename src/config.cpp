@@ -28,6 +28,12 @@ constexpr int MIN_WINDOW_HEIGHT = 400;
 std::filesystem::path
 config_file_path()
 {
+#ifdef DNFUI_BUILD_TESTS
+  if (const char *test_config_dir = g_getenv("DNFUI_TEST_CONFIG_DIR")) {
+    return std::filesystem::path(test_config_dir) / "dnfui.conf";
+  }
+#endif
+
   const char *config_dir = g_get_user_config_dir();
   if (!config_dir || !*config_dir) {
     return {};
