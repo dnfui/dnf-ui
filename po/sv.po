@@ -541,6 +541,15 @@ msgstr "%s: %.1f s"
 msgid "Mark for Install"
 msgstr "Markera för installation"
 
+msgid "Mark Selected for Install or Upgrade"
+msgstr "Markera valda för installation eller uppgradering"
+
+msgid "Mark Selected for Removal"
+msgstr "Markera valda för borttagning"
+
+msgid "Mark Selected for Reinstall"
+msgstr "Markera valda för ominstallation"
+
 msgid "Unmark Install"
 msgstr "Avmarkera installation"
 
@@ -594,6 +603,12 @@ msgstr "Status"
 
 msgid "Select a package for details."
 msgstr "Välj ett paket för att visa detaljer."
+
+msgid "Multiple packages selected."
+msgstr "Flera paket valda."
+
+msgid "Select one package to view its details."
+msgstr "Välj ett paket för att visa dess detaljer."
 
 msgid "Select an installed package to view its file list."
 msgstr "Välj ett installerat paket för att visa dess fillista."
@@ -1340,6 +1355,27 @@ msgstr[1] "Markerade %zu listade uppgraderingar."
 
 msgid "No pending actions to clear."
 msgstr "Det finns inga väntande åtgärder att rensa."
+
+msgid "No selected packages support this action."
+msgstr "Inget av de valda paketen stöder den här åtgärden."
+
+msgid "Selected packages contain conflicting versions or invalid actions."
+msgstr "De valda paketen innehåller motstridiga versioner eller ogiltiga åtgärder."
+
+msgid "Selected packages are already marked."
+msgstr "De valda paketen är redan markerade."
+
+#, c-format
+msgid "Marked %zu selected package."
+msgid_plural "Marked %zu selected packages."
+msgstr[0] "Markerade %zu valt paket."
+msgstr[1] "Markerade %zu valda paket."
+
+#, c-format
+msgid "Skipped %zu package."
+msgid_plural "Skipped %zu packages."
+msgstr[0] "Hoppade över %zu paket."
+msgstr[1] "Hoppade över %zu paket."
 
 #, c-format
 msgid "Cleared %zu pending action."

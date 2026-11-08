@@ -8,6 +8,7 @@
 #include "i18n.hpp"
 #include "ui/transaction/pending_transaction_action_rows.hpp"
 #include "ui/transaction/pending_transaction_controller.hpp"
+#include "ui/package_table/package_table_view.hpp"
 #include "ui/common/ui_helpers.hpp"
 #include "ui/common/widgets.hpp"
 
@@ -87,6 +88,7 @@ package_table_show_context_menu(GtkWidget *anchor,
   GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
   gtk_popover_set_child(GTK_POPOVER(popover), box);
 
+  const bool multiple_selected = package_table_get_selected_packages(widgets).size() > 1;
   PendingTransactionSelectionActions actions =
       pending_transaction_actions_for_selection(row.row,
                                                 row.upgrade_target(),
@@ -119,10 +121,31 @@ package_table_show_context_menu(GtkWidget *anchor,
   const char *remove_label = actions.remove_is_pending ? _("Unmark Removal") : _("Mark for Removal");
   const char *reinstall_label = actions.reinstall_is_pending ? _("Unmark Reinstall") : _("Mark for Reinstall");
 
+  const char *install_icon = install_context_menu_icon(actions);
+  const char *remove_icon = actions.remove_is_pending ? "edit-clear-symbolic" : "user-trash-symbolic";
+  const char *reinstall_icon = actions.reinstall_is_pending
+      ? "edit-clear-symbolic"
+      : ui_helpers_icon_name_with_fallback("document-revert-symbolic", "view-refresh-symbolic");
+  gboolean install_sensitive = actions.can_install;
+  gboolean remove_sensitive = actions.can_remove;
+  gboolean reinstall_sensitive = actions.can_reinstall;
+
+  if (multiple_selected) {
+    install_label = _("Mark Selected for Install or Upgrade");
+    remove_label = _("Mark Selected for Removal");
+    reinstall_label = _("Mark Selected for Reinstall");
+    install_icon = "list-add-symbolic";
+    remove_icon = "user-trash-symbolic";
+    reinstall_icon = "document-revert-symbolic";
+    install_sensitive = gtk_widget_get_sensitive(GTK_WIDGET(widgets->transaction_widgets.install_button));
+    remove_sensitive = gtk_widget_get_sensitive(GTK_WIDGET(widgets->transaction_widgets.remove_button));
+    reinstall_sensitive = gtk_widget_get_sensitive(GTK_WIDGET(widgets->transaction_widgets.reinstall_button));
+  }
+
   append_context_menu_action(GTK_BOX(box),
                              install_label,
-                             install_context_menu_icon(actions),
-                             actions.can_install,
+                             install_icon,
+                             install_sensitive,
                              G_CALLBACK(+[](GtkButton *button, gpointer user_data) {
                                if (GtkWidget *popover = gtk_widget_get_ancestor(GTK_WIDGET(button), GTK_TYPE_POPOVER)) {
                                  gtk_popover_popdown(GTK_POPOVER(popover));
@@ -133,8 +156,8 @@ package_table_show_context_menu(GtkWidget *anchor,
 
   append_context_menu_action(GTK_BOX(box),
                              remove_label,
-                             actions.remove_is_pending ? "edit-clear-symbolic" : "user-trash-symbolic",
-                             actions.can_remove,
+                             remove_icon,
+                             remove_sensitive,
                              G_CALLBACK(+[](GtkButton *button, gpointer user_data) {
                                if (GtkWidget *popover = gtk_widget_get_ancestor(GTK_WIDGET(button), GTK_TYPE_POPOVER)) {
                                  gtk_popover_popdown(GTK_POPOVER(popover));
@@ -145,10 +168,8 @@ package_table_show_context_menu(GtkWidget *anchor,
 
   append_context_menu_action(GTK_BOX(box),
                              reinstall_label,
-                             actions.reinstall_is_pending ? "edit-clear-symbolic"
-                                                          : ui_helpers_icon_name_with_fallback(
-                                                                "document-revert-symbolic", "view-refresh-symbolic"),
-                             actions.can_reinstall,
+                             reinstall_icon,
+                             reinstall_sensitive,
                              G_CALLBACK(+[](GtkButton *button, gpointer user_data) {
                                if (GtkWidget *popover = gtk_widget_get_ancestor(GTK_WIDGET(button), GTK_TYPE_POPOVER)) {
                                  gtk_popover_popdown(GTK_POPOVER(popover));

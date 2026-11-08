@@ -10,6 +10,7 @@
 #include "i18n.hpp"
 #include "ui/transaction/pending_transaction_action_rows.hpp"
 #include "ui/transaction/pending_transaction_view.hpp"
+#include "ui/transaction/pending_transaction_controller.hpp"
 #include "ui/common/ui_helpers.hpp"
 #include "ui/common/widgets.hpp"
 #include "ui/common/widgets_internal.hpp"
@@ -434,6 +435,7 @@ package_details_show_multiple_selected_packages(MainWindowUiState *widgets)
   package_details_reset_details_view(widgets);
   set_details_text(widgets->results.description_buffer, _("Multiple packages selected."));
   set_details_text(widgets->results.details_buffer, _("Select one package to view its details."));
+  pending_transaction_update_multi_selection_buttons(widgets);
 }
 
 // -----------------------------------------------------------------------------

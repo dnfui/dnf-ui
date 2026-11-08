@@ -9,6 +9,8 @@
 
 #include <gtk/gtk.h>
 
+struct MainWindowUiState;
+
 // -----------------------------------------------------------------------------
 // Mark the selected package for install.
 // -----------------------------------------------------------------------------
@@ -21,6 +23,10 @@ void pending_transaction_on_remove_button_clicked(GtkButton *, gpointer user_dat
 // Mark the selected package for reinstall.
 // -----------------------------------------------------------------------------
 void pending_transaction_on_reinstall_button_clicked(GtkButton *, gpointer user_data);
+// -----------------------------------------------------------------------------
+// Enable package action buttons for a multi-selection.
+// -----------------------------------------------------------------------------
+void pending_transaction_update_multi_selection_buttons(MainWindowUiState *widgets);
 // -----------------------------------------------------------------------------
 // Mark all listed upgrade candidates as pending upgrades.
 // -----------------------------------------------------------------------------

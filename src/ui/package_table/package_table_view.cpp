@@ -813,7 +813,7 @@ restore_package_view_sort_state(GtkColumnView *view, PackageColumnKind kind, Gtk
 }
 
 // -----------------------------------------------------------------------------
-// Return the selected package table row from the current package table.
+// Return all selected package table rows in the current sort order.
 // -----------------------------------------------------------------------------
 std::vector<PackageTableRow>
 package_table_get_selected_packages(MainWindowUiState *widgets)
@@ -1054,7 +1054,9 @@ finish_package_table_view(MainWindowUiState *widgets,
                        return;
                      }
                      if (index == GTK_INVALID_LIST_POSITION) {
+                       package_details_cancel_active_load(widgets);
                        package_details_clear_selected_package_state(widgets);
+                       package_details_reset_details_view(widgets);
                        return;
                      }
 

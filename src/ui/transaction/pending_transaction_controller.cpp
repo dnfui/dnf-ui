@@ -51,6 +51,127 @@ pending_transaction_action_is_busy(MainWindowUiState *widgets)
 }
 
 // -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// Enable package actions when at least one selected row supports them.
+// -----------------------------------------------------------------------------
+void
+pending_transaction_update_multi_selection_buttons(MainWindowUiState *widgets)
+{
+  std::vector<PackageTableRow> selected = package_table_get_selected_packages(widgets);
+  if (selected.size() < 2) {
+    return;
+  }
+
+  bool can_install = false;
+  bool can_remove = false;
+  bool can_reinstall = false;
+  for (const auto &row : selected) {
+    PendingTransactionSelectionActions actions =
+        pending_transaction_actions_for_selection(row.row,
+                                                  row.upgrade_target(),
+                                                  row.upgrade_generation(),
+                                                  widgets->query_state.displayed_query,
+                                                  widgets->transaction_state.actions);
+    can_install = can_install || actions.can_install;
+    can_remove = can_remove || actions.can_remove;
+    can_reinstall = can_reinstall || actions.can_reinstall;
+    if (can_install && can_remove && can_reinstall) {
+      break;
+    }
+  }
+
+  ui_helpers_set_icon_button(widgets->transaction_widgets.install_button,
+                             "list-add-symbolic",
+                             _("Mark Selected for Install or Upgrade"));
+  ui_helpers_set_icon_button(widgets->transaction_widgets.remove_button,
+                             "user-trash-symbolic",
+                             _("Mark Selected for Removal"));
+  ui_helpers_set_icon_button_with_fallback(widgets->transaction_widgets.reinstall_button,
+                                           "document-revert-symbolic",
+                                           "view-refresh-symbolic",
+                                           _("Mark Selected for Reinstall"));
+  gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction_widgets.install_button), can_install);
+  gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction_widgets.remove_button), can_remove);
+  gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction_widgets.reinstall_button), can_reinstall);
+}
+
+// -----------------------------------------------------------------------------
+// Resolve selected packages and mark them as one pending action update.
+// -----------------------------------------------------------------------------
+static void
+pending_transaction_mark_selected_packages(MainWindowUiState *widgets,
+                                           const std::vector<PackageTableRow> &selected,
+                                           PendingAction::Type requested_type)
+{
+  if (package_query_has_active_package_list_request(widgets)) {
+    ui_helpers_set_status(widgets->query.status_label, _("Wait for the current package query to finish."), "blue");
+    return;
+  }
+
+  std::vector<PendingTransactionBatchAction> batch;
+  batch.reserve(selected.size());
+  size_t skipped = 0;
+  for (const auto &row : selected) {
+    PendingTransactionSelectionActions actions =
+        pending_transaction_actions_for_selection(row.row,
+                                                  row.upgrade_target(),
+                                                  row.upgrade_generation(),
+                                                  widgets->query_state.displayed_query,
+                                                  widgets->transaction_state.actions);
+
+    PendingAction::Type action_type = requested_type;
+    bool allowed = false;
+    if (requested_type == PendingAction::INSTALL) {
+      allowed = actions.can_install;
+      if (actions.rows.install_is_upgrade) {
+        action_type = PendingAction::UPGRADE;
+      } else if (actions.rows.install_is_downgrade) {
+        action_type = PendingAction::DOWNGRADE;
+      }
+    } else if (requested_type == PendingAction::REMOVE) {
+      allowed = actions.can_remove;
+    } else if (requested_type == PendingAction::REINSTALL) {
+      allowed = actions.can_reinstall;
+    }
+
+    if (allowed) {
+      batch.push_back({ actions.rows, action_type });
+    } else {
+      ++skipped;
+    }
+  }
+
+  if (batch.empty()) {
+    ui_helpers_set_status(widgets->query.status_label, _("No selected packages support this action."), "gray");
+    return;
+  }
+
+  size_t marked_count = 0;
+  if (!pending_transaction_mark_batch(widgets->transaction_state.actions, batch, marked_count)) {
+    ui_helpers_set_status(widgets->query.status_label,
+                          _("Selected packages contain conflicting versions or invalid actions."),
+                          "red");
+    return;
+  }
+
+  if (marked_count == 0) {
+    ui_helpers_set_status(widgets->query.status_label, _("Selected packages are already marked."), "gray");
+    return;
+  }
+
+  pending_transaction_invalidate_service_preview(widgets);
+  pending_transaction_refresh_pending_tab(widgets);
+  package_table_refresh_statuses(widgets);
+  pending_transaction_update_multi_selection_buttons(widgets);
+
+  std::string message = dnfui_i18n_format_count(
+      marked_count, "Marked %zu selected package.", "Marked %zu selected packages.");
+  if (skipped > 0) {
+    message += " " + dnfui_i18n_format_count(skipped, "Skipped %zu package.", "Skipped %zu packages.");
+  }
+  ui_helpers_set_status(widgets->query.status_label, message, "blue");
+}
+
 // Handle marking the selected package for install.
 // -----------------------------------------------------------------------------
 void
@@ -61,6 +182,12 @@ pending_transaction_on_install_button_clicked(GtkButton *, gpointer user_data)
     return;
   }
 
+
+  std::vector<PackageTableRow> selected_packages = package_table_get_selected_packages(widgets);
+  if (selected_packages.size() > 1) {
+    pending_transaction_mark_selected_packages(widgets, selected_packages, PendingAction::INSTALL);
+    return;
+  }
   // Read the selected package from the current package table.
   PackageTableRow selected;
   if (!package_table_get_selected_package(widgets, selected)) {
@@ -145,6 +272,12 @@ pending_transaction_on_remove_button_clicked(GtkButton *, gpointer user_data)
     return;
   }
 
+
+  std::vector<PackageTableRow> selected_packages = package_table_get_selected_packages(widgets);
+  if (selected_packages.size() > 1) {
+    pending_transaction_mark_selected_packages(widgets, selected_packages, PendingAction::REMOVE);
+    return;
+  }
   // Read the selected package from the current package table.
   PackageTableRow selected;
   if (!package_table_get_selected_package(widgets, selected)) {
@@ -211,6 +344,12 @@ pending_transaction_on_reinstall_button_clicked(GtkButton *, gpointer user_data)
     return;
   }
 
+
+  std::vector<PackageTableRow> selected_packages = package_table_get_selected_packages(widgets);
+  if (selected_packages.size() > 1) {
+    pending_transaction_mark_selected_packages(widgets, selected_packages, PendingAction::REINSTALL);
+    return;
+  }
   PackageTableRow selected;
   if (!package_table_get_selected_package(widgets, selected)) {
     ui_helpers_set_status(widgets->query.status_label, _("No package selected."), "gray");
