@@ -39,6 +39,7 @@ dnfui_tests = executable(
     '../src/dnf5daemon_client/transaction_service_client.cpp',
     '../src/dnf5daemon_client/transaction_service_client_wait.cpp',
     '../src/dnf5daemon_client/repository_service_client.cpp',
+    '../src/ui/common/ui_helpers.cpp',
     '../src/ui/history/transaction_history_filters.cpp',
     '../src/ui/repository/repository_apply_feedback.cpp',
     '../src/ui/repository/repository_apply_model.cpp',

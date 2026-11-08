@@ -8,6 +8,7 @@
 
 #include "i18n.hpp"
 #include "transaction/transaction_preview.hpp"
+#include "ui/common/ui_helpers.hpp"
 #include "ui/common/widgets.hpp"
 
 #include <memory>
@@ -218,7 +219,10 @@ transaction_dialogs_show_summary_dialog(MainWindowUiState *widgets,
   append_transaction_package_summary_section(
       GTK_BOX(contents), _("To be installed"), preview.install, "list-add-symbolic");
   append_transaction_package_summary_section(
-      GTK_BOX(contents), _("To be upgraded"), preview.upgrade, "software-update-available-symbolic");
+      GTK_BOX(contents),
+      _("To be upgraded"),
+      preview.upgrade,
+      ui_helpers_icon_name_with_fallback("software-update-available-symbolic", "view-refresh-symbolic"));
   append_transaction_package_summary_section(
       GTK_BOX(contents), _("To be downgraded"), preview.downgrade, "go-down-symbolic");
   append_transaction_package_summary_section(

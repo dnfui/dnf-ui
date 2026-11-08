@@ -2,6 +2,7 @@
 
 #include "dnf5daemon_client/transaction_service_client.hpp"
 #include "transaction/transaction_preview.hpp"
+#include "ui/common/ui_helpers.hpp"
 #include "ui/common/widgets.hpp"
 #include "ui/transaction/transaction_dialogs.hpp"
 #include "ui/transaction/transaction_progress.hpp"
@@ -205,7 +206,9 @@ TEST_CASE("Transaction summary groups resolved changes by action", "[gtk]")
   const Section sections[] = {
     { "Warnings", "dialog-warning-symbolic", "Resolver warning" },
     { "To be installed", "list-add-symbolic", "Install package" },
-    { "To be upgraded", "software-update-available-symbolic", "Upgrade package" },
+    { "To be upgraded",
+      ui_helpers_icon_name_with_fallback("software-update-available-symbolic", "view-refresh-symbolic"),
+      "Upgrade package" },
     { "To be downgraded", "go-down-symbolic", "Downgrade package" },
     { "To be reinstalled", "document-revert-symbolic", "Reinstall package" },
     { "To be removed", "user-trash-symbolic", "Remove package" },
