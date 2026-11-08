@@ -236,9 +236,7 @@ TEST_CASE("Transaction summary groups resolved changes by action", "[gtk]")
   REQUIRE(gtk_scrolled_window_get_has_frame(GTK_SCROLLED_WINDOW(scroller)));
   REQUIRE_FALSE(gtk_scrolled_window_get_overlay_scrolling(GTK_SCROLLED_WINDOW(scroller)));
 
-  GtkWidget *separator = gtk_widget_get_next_sibling(scroller);
-  REQUIRE(GTK_IS_SEPARATOR(separator));
-  GtkWidget *summary_heading_box = gtk_widget_get_next_sibling(separator);
+  GtkWidget *summary_heading_box = gtk_widget_get_next_sibling(scroller);
   REQUIRE(summary_heading_box != nullptr);
   GtkWidget *summary_heading = find_label_with_text(GTK_WIDGET(dialog), "Summary");
   REQUIRE(summary_heading != nullptr);
