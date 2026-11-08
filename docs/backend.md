@@ -185,7 +185,7 @@ Changing Latest only does not reload the table by itself. It affects the next Se
 List Unneeded uses libdnf5's `PackageQuery::filter_unneeded()` to list installed dependencies no longer
 required by user-installed packages. It shares the installed-list worker, retains the complete installed
 snapshot for status and pending actions, and does not create an autoremove transaction. An unneeded package
-is not necessarily removable; dnf5daemon still resolves and validates any manually marked removal.
+is not necessarily removable. dnf5daemon still resolves and validates any manually marked removal.
 
 The List Upgradable view uses dnf5daemon to decide which upgrades exist.
 The worker refreshes installed-package state, loads the daemon upgrade targets, asks libdnf5 only for matching package metadata,
@@ -301,8 +301,7 @@ available update NEVRA stored on the row. List Upgradable rows use installed con
 Files, and Dependencies, while their changelog uses the daemon-selected upgrade target.
 
 When Latest only is disabled, each available row uses selected-version context, including the globally newest
-available version. This makes Description, Common, Dependencies, and Changelog describe the exact selected
-NEVRA.
+available version. This makes Description, Common, Dependencies, and Changelog describe the exact selected NEVRA.
 Files remains available only when that exact NEVRA is installed.
 
 ## Transactions

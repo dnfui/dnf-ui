@@ -50,7 +50,7 @@ Assumptions:
 - `PackageQuery::filter_available()` removes installed packages from the query.
 - `PackageQuery::filter_latest_evr()` limits visible candidates to the latest EVR.
 - `PackageQuery::filter_unneeded()` selects installed packages no longer needed by user-installed packages.
-  This does not guarantee that a package can be removed; DNF5 autoremove separately checks protected packages.
+  This does not guarantee that a package can be removed. DNF5 autoremove separately checks protected packages.
 
 Current local source:
 
@@ -213,6 +213,7 @@ Assumption:
 Source:
 
 - DNF5 dnf5daemon D-Bus API
+- [DNF 5.4.4.0 daemon upgrade implementation][wrapped-link-12]
 
 Why this matters:
 
@@ -575,8 +576,7 @@ request or commit message.
 
 [wrapped-link-1]: https://github.com/rpm-software-management/dnf5/blob/5.4.4.0/include/libdnf5/plugin/iplugin.hpp
 [wrapped-link-2]: https://github.com/rpm-software-management/dnf5/blob/5.4.4.0/dnf5daemon-server/session.cpp
-[wrapped-link-3]:
-  https://github.com/rpm-software-management/dnf5/blob/5.4.4.0/dnf5daemon-server/services/offline/offline.cpp
+[wrapped-link-3]: https://github.com/rpm-software-management/dnf5/blob/5.4.4.0/dnf5daemon-server/services/offline/offline.cpp
 [wrapped-link-4]: https://www.freedesktop.org/software/systemd/man/latest/systemd.offline-updates.html
 [wrapped-link-5]: ../src/dnf5daemon_client/transaction_service_client_dbus.cpp
 [wrapped-link-6]: ../src/dnf5daemon_client/transaction_service_client_dbus.cpp
@@ -585,3 +585,4 @@ request or commit message.
 [wrapped-link-9]: https://github.com/rpm-software-management/dnf5/blob/main/dnf5daemon-server/services/goal/goal.cpp
 [wrapped-link-10]: ../src/dnf5daemon_client/transaction_service_client_dbus.cpp
 [wrapped-link-11]: ../src/dnf5daemon_client/transaction_service_client_parser.cpp
+[wrapped-link-12]: https://github.com/rpm-software-management/dnf5/blob/5.4.4.0/dnf5daemon-server/services/rpm/rpm.cpp#L750-L769

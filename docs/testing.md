@@ -24,64 +24,22 @@ On Fedora, `catch-devel` provides `pkgconfig(catch2-with-main)`.
 
 ## Catch2 tests
 
-Key files:
+The tests live in [test/unit](../test/unit) and are registered in [test/meson.build](../test/meson.build).
+The `dnfui-tests` executable covers:
 
-- [test/unit/test_base_manager.cpp](../test/unit/test_base_manager.cpp)
-- [test/unit/test_installed_state.cpp](../test/unit/test_installed_state.cpp)
-- [test/unit/test_package_details.cpp](../test/unit/test_package_details.cpp)
-- [test/unit/test_package_queries.cpp](../test/unit/test_package_queries.cpp)
-- [test/unit/test_config.cpp](../test/unit/test_config.cpp)
-- [test/unit/test_daemon_upgrade_state.cpp](../test/unit/test_daemon_upgrade_state.cpp)
-- [test/unit/test_dnf5daemon_client.cpp](../test/unit/test_dnf5daemon_client.cpp)
-- [test/unit/test_pending_transaction_action_rows.cpp](../test/unit/test_pending_transaction_action_rows.cpp)
-- [test/unit/test_package_query_cache.cpp](../test/unit/test_package_query_cache.cpp)
-- [test/unit/test_package_table_export.cpp](../test/unit/test_package_table_export.cpp)
-- [test/unit/test_package_table_sort.cpp](../test/unit/test_package_table_sort.cpp)
-- [test/unit/test_package_table_status.cpp](../test/unit/test_package_table_status.cpp)
-- [test/unit/test_package_table_upgrade_rows.cpp](../test/unit/test_package_table_upgrade_rows.cpp)
-- [test/unit/test_pending_transaction_request.cpp](../test/unit/test_pending_transaction_request.cpp)
-- [test/unit/test_repository_apply_feedback.cpp](../test/unit/test_repository_apply_feedback.cpp)
-- [test/unit/test_repository_apply_model.cpp](../test/unit/test_repository_apply_model.cpp)
-- [test/unit/test_repository_apply_operation.cpp](../test/unit/test_repository_apply_operation.cpp)
-- [test/unit/test_repository_service_client.cpp](../test/unit/test_repository_service_client.cpp)
-- [test/unit/test_search.cpp](../test/unit/test_search.cpp)
-- [test/unit/test_transaction_history.cpp](../test/unit/test_transaction_history.cpp)
-- [test/unit/test_transaction_request.cpp](../test/unit/test_transaction_request.cpp)
-- [test/unit/test_offline.cpp](../test/unit/test_offline.cpp)
-- [test/unit/test_offline_transaction.cpp](../test/unit/test_offline_transaction.cpp)
+- package queries, details, installed snapshots, metadata fallback, cancellation, and search caching
+- Latest only, all-version, and unneeded-package behavior
+- package table sorting, status, CSV export, and config file fallback
+- pending package actions and transaction request validation
+- daemon upgrade snapshots and rows, including stale results, missing metadata, and exact target identity
+- dnf5daemon preview parsing, repository calls, and failure handling
+- repository Apply planning, writes, rebuilds, final-state verification, and feedback with substituted
+  operations that do not change system repositories
+- transaction history formatting, filtering, date validation, and paging
+- offline transaction mode, status, and cleanup through a private D-Bus fixture without changing system
+  packages
 
-The backend tests are grouped by responsibility: BaseManager initialization, caching, and repository
-fallback; installed snapshots and package state; search, browse, and version merging; and package
-information, dependencies, and files. All four files run in the existing `dnfui-tests` executable.
-
-These tests protect:
-
-- package search and merge behavior
-- Latest only and all-version package query behavior
-- config file parsing and fallback behavior
-- installed snapshot behavior, including passive refresh without dropping the warmed Base
-- unneeded-package filtering, preservation of the installed snapshot, and cancellation
-- pending transaction action row selection for install, upgrade, downgrade, remove, and reinstall
-- package table CSV export formatting
-- package table column text and sorting behavior
-- daemon upgrade row construction with missing or mismatched metadata, preserved target identity and
-  generation, and full NEVRA fallback, without GTK windows or backend queries
-- dnf5daemon transaction preview parsing, upgrade-target parsing, and failure handling
-- repository Apply planning, write outcome classification, and final-state verification
-- repository Apply status messages and colors for successful, partial, failed, and unverified changes, and for
-  different backend rebuild results, without GTK windows
-- repository Apply workflow with substituted repository and backend operations, including initial read
-  failures, disappeared repositories, already-matching state, partial writes, failed rebuilds, and failed
-  final-state verification without changing system repositories
-- dnf5daemon repository list parsing and repository enable or disable calls
-- daemon upgrade snapshot ownership, stale-state invalidation, and current-target validation; these state tests
-  also cover the snapshot rules used by the quiet upgrade-count task
-- transaction history row formatting, action labels, page cursor behavior, and paging of retained query rows
-- history filter text trimming, optional local date bounds, inclusive end dates, invalid dates, and reversed ranges
-- transaction request validation
-- offline and cached metadata behavior
-- offline preview/apply mode checks, prepared-state inspection, verified cleanup and unsupported daemon replies
-  through a private D-Bus test fixture without changing system packages
+The separate `dnfui-color-scheme-tests` executable checks theme behavior.
 
 Signing-key dialog tests cover key details without a GTK display and rejection when the task was already
 cancelled. The existing dialog tests that open GTK windows require a display.
@@ -315,7 +273,7 @@ For package apply behavior, use test packages that are safe to install and remov
 After changes to `package_query_upgrade_indicator.cpp`, verify on a desktop that a successful startup check
 updates the List Upgradable button count without loading the package table. Run Refresh Repositories and check
 that the count updates again after the refresh completes. Check that starting a package list or transaction
-preview does not let a quiet count refresh interrupt active work; pressing List Upgradable must still fetch
+preview does not let a quiet count refresh interrupt active work. Pressing List Upgradable must still fetch
 and display the full daemon-reported upgrade list.
 
 ## Unneeded package listing checks
@@ -328,7 +286,7 @@ and display the full daemon-reported upgrade list.
 5. Check that package status and pending removal actions still resolve correctly after switching between
    List Unneeded and List Installed.
 6. Check the listing in installed-only metadata fallback mode. Protected or install-only packages in the
-   results must never be assumed safe to remove; the daemon still decides the resolved transaction.
+   results must never be assumed safe to remove. The daemon still decides the resolved transaction.
 
 ## Multi-version package browsing checks
 

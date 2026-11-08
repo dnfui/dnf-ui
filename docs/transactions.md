@@ -11,6 +11,7 @@ The GUI process stays unprivileged.
 Package search and details happen in the GUI process through libdnf5.
 Package changes go through DNF5 dnf5daemon on the system bus.
 dnf5daemon owns the privileged package operation and its Polkit authorization behavior.
+There is no local libdnf transaction apply path.
 
 Important files:
 
@@ -132,7 +133,7 @@ The preview dialog only shows actions the app understands:
 If dnf5daemon resolves successfully with warnings, the preview shows its human-readable warning text without
 treating the transaction as failed.
 The review dialog shows the complete resolved package list in a framed scrollable area. Each nonempty action
-section has a symbolic icon and a separator, and warnings appear first. All package labels remain selectable.
+section has a symbolic icon, and warnings appear first. All package labels remain selectable.
 The action counts and disk-space change appear below the list, directly above the confirmation buttons.
 
 If dnf5daemon returns an unsupported transaction item or action, preview fails instead of hiding part of the
@@ -249,13 +250,6 @@ Current messages cover:
 - transaction preparation
 - package processing
 - unpack errors
-
-## Local transaction path
-
-DNF UI does not keep a local libdnf transaction apply path.
-
-The GTK process may query package metadata with libdnf5, but transaction preview and apply go through dnf5daemon.
-That keeps privileged package changes outside the GUI process and avoids carrying a second transaction implementation.
 
 [wrapped-link-1]: api-assumptions.md
 [wrapped-link-2]: ../src/dnf5daemon_client/transaction_service_client_dbus.cpp

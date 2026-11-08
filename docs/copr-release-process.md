@@ -368,16 +368,7 @@ Add a changelog entry:
 - Fix packaging issue
 ```
 
-Then build, test, and upload:
-
-```bash
-make srpm
-
-mock -r fedora-<current>-x86_64 --rebuild dnf-ui-latest.src.rpm
-mock -r fedora-<previous>-x86_64 --rebuild dnf-ui-latest.src.rpm
-
-copr-cli build dnf-ui dnf-ui-latest.src.rpm
-```
+Then follow the build, test, and upload steps in section 10.
 
 ## 12. Versioning rule
 
@@ -457,7 +448,7 @@ https://developer.fedoraproject.org/deployment/copr/copr-cli.html
 COPR user documentation:
 
 ```text
-https://docs.pagure.org/copr.copr/user_documentation.html
+https://docs.copr.fedorainfracloud.org/user_documentation.html
 ```
 
 Mock setup documentation:

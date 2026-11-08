@@ -47,6 +47,8 @@ The main window file is responsible for:
 - connecting GTK signals to controller callbacks
 - saving window size and pane positions
 
+The top menu actions live in [main_menu.cpp](../src/ui/window/main_menu.cpp).
+
 It should not contain package query logic or transaction apply logic.
 Those belong in the controller files.
 
@@ -117,9 +119,9 @@ The bottom bar shows the visible row count on the left and the last completed pa
 
 After startup, DNF UI quietly checks dnf5daemon's read-only upgrade target list. When that check succeeds, the
 List Upgradable button shows the current number of daemon-reported upgrades. The count check defers while a
-package list, repository refresh, or transaction preview/apply is busy; it does not load package metadata.
-Pressing the button still loads
-the full table. After Refresh Repositories completes with live metadata, DNF UI refreshes that count quietly again.
+package list, repository refresh, or transaction preview/apply is busy. It does not load package metadata.
+Pressing the button still loads the full table. After Refresh Repositories completes with live metadata,
+DNF UI refreshes that count quietly again.
 
 Search result caching uses this file:
 [src/ui/package_query/package_query_cache.cpp](../src/ui/package_query/package_query_cache.cpp). The cache is
@@ -134,33 +136,27 @@ the Refresh Repositories button workflow. It refreshes dnf5daemon metadata, rebu
 the lower-right progress text, and clears stale upgradable rows after repository metadata changes.
 The same workflow can be started with F5.
 
-`View -> Repositories...` or Ctrl+Shift+R opens a repository list window backed by dnf5daemon. The
-implementation lives in [src/ui/repository/repository_view.cpp](../src/ui/repository/repository_view.cpp). It
-lists repository ID, name, and enabled state on a worker thread so opening the window does not block the main
-UI. Checkbox changes are kept pending until the user presses Apply. The user can clear those pending
-repository changes without applying them. Reload is disabled while repository changes are pending, so staged
-changes are not discarded silently. Before changing repository state, the window shows a short review dialog
-with the repositories that will be enabled or disabled. The window applies repository enable and disable
-changes through dnf5daemon, rebuilds the main package backend with the new repository configuration, and then
-reads the final repository state through a fresh daemon session. Apply is not cancellable once it starts, and
-the repository window stays open until it finishes. Before writing, Apply checks the current daemon repository
-state and sends only changes that are still needed. Apply waits for package queries, repository refresh, and
-transaction preview or apply work to finish before changing repository state. After Apply, the UI reports
-whether package data was reloaded from live metadata, cached metadata, or installed packages only.
+`View -> Repositories...` or Ctrl+Shift+R opens the repository window in
+[repository_view.cpp](../src/ui/repository/repository_view.cpp). It loads repository IDs, names, and enabled
+states on a worker thread. Checkbox changes stay pending until Apply and can be cleared. Reload is disabled
+while changes are pending. A review dialog lists what will be enabled or disabled.
 
-The window delegates the synchronous Apply work to
-[src/ui/repository/repository_apply_operation.cpp](../src/ui/repository/repository_apply_operation.cpp) from
-its worker thread. The operation uses the existing
-[repository apply model](../src/ui/repository/repository_apply_model.cpp) for planning and classification.
-Its result keeps the write outcome, backend rebuild outcome, and final-state verification separate. A failed
-rebuild does not prevent verification, and matching final state does not erase a failed or partial write.
-The window retains task and widget lifetime handling, confirmation, and package-view updates. It displays
-status messages selected by [repository_apply_feedback.cpp](../src/ui/repository/repository_apply_feedback.cpp),
-which maps write, verification, and backend rebuild results to messages and status colors without GTK dependencies.
+Apply waits for package queries, repository refresh, and transaction preview or apply to finish. It checks
+the current daemon repository state and sends only changes still needed. It cannot be cancelled once it starts,
+and the window stays open until it finishes. After the writes, DNF UI rebuilds package data and checks the
+final repository state through a fresh daemon session. The UI reports whether the rebuild used live metadata,
+cached metadata, or installed packages only.
 
-The operation accepts three replaceable dependencies for tests: repository listing, repository writes, and
-backend rebuilding. The normal entry point supplies the dnf5daemon repository client and BaseManager.
-Tests can exercise the same workflow without GTK windows, daemon access, or changes to system repositories.
+The worker calls [repository_apply_operation.cpp](../src/ui/repository/repository_apply_operation.cpp).
+It uses the [repository apply model](../src/ui/repository/repository_apply_model.cpp) to plan and classify changes.
+It returns plain results without using GTK and reports the write, rebuild, and verification results separately.
+A failed rebuild does not skip verification, and a matching final state does not hide a failed or partial write.
+The window owns task and widget lifetimes, confirmation, and package-view updates.
+[repository_apply_feedback.cpp](../src/ui/repository/repository_apply_feedback.cpp) turns the results into
+status messages and colors without GTK dependencies.
+
+Tests can replace repository listing, writes, and backend rebuilding. The normal operation uses dnf5daemon and
+BaseManager. Tests run without GTK windows, daemon access, or system repository changes.
 
 ### Package details controller
 
@@ -238,28 +234,26 @@ builds right-click actions for package rows.
 history. It lists recent package changes and lets the user filter them by package, action, result, date range,
 repository, architecture, or command text.
 
-The history window implementation is this file:
-[src/ui/history/transaction_history_view.cpp](../src/ui/history/transaction_history_view.cpp). It loads
-history on a worker thread and displays value objects from the backend instead of libdnf5 objects. It shows
-100 package changes per page and supports Newer, Older, and direct page navigation without creating an
-unbounded GTK list. The page control does not show a total page count, because that would require scanning the
-full matching history before the window can be used. Filters are applied by the backend before the page is
-returned, so a search looks through the available history instead of only the rows currently shown on screen.
-The backend keeps one reusable query for the applied filter. It retains matching value rows that have already
-been found, so Older continues scanning from the last processed transaction and previously visited pages do
-not rescan the history database. Pressing Search starts a new query, and starting a package transaction
+[transaction_history_view.cpp](../src/ui/history/transaction_history_view.cpp) loads history on a worker
+thread and displays backend values instead of libdnf5 objects. It shows 100 package changes per page, with
+Newer, Older, and direct page navigation. It does not show a total page count because that would require a
+full scan before the window can be used. The navigation row shows how long the last search or page load took.
+
+The backend applies filters while scanning history, so results are not limited to the visible page. It keeps
+one query and retains matching rows already found. Older continues where the previous scan stopped, and
+revisiting a page does not rescan newer transactions. Search starts a new query. Starting a package transaction
 invalidates the current query before the history controls are restored.
-Date entries accept local dates in YYYY-MM-DD format, include the whole end date, and reject invalid or
-reversed ranges before searching. [transaction_history_filters.cpp](../src/ui/history/transaction_history_filters.cpp)
-handles text trimming and date-range validation separately from the GTK controls.
-Filter changes are applied when the user presses Search or presses Enter in a filter entry. This avoids
-starting a backend history scan for every typed character. The action filter uses checkboxes so the user can
-include one action, several actions, or all actions in the same history search. When the history window is
-focused, Ctrl+F focuses the package filter and Ctrl+W closes the window. If a package transaction summary is
-open, the history window remains usable. If a package transaction is being applied, the history window stays
-open and can be closed. Its controls are disabled until apply finishes. The navigation row shows how long the
-last completed history search or page load took. The feature is intentionally read-only. It does not offer
-rollback, replay, or undo actions.
+
+Filters apply when the user presses Search or Enter in a filter entry, rather than on every keystroke.
+The action checkboxes allow one, several, or all actions.
+[transaction_history_filters.cpp](../src/ui/history/transaction_history_filters.cpp) trims search text and
+validates local dates in YYYY-MM-DD format. The end date includes the whole day. Invalid or reversed ranges
+are rejected before searching.
+
+Ctrl+F focuses the package filter and Ctrl+W closes the window. The window remains usable while a transaction
+summary is open. While a package transaction is being applied, the window stays open but its controls are
+disabled until Apply finishes. The window can still be closed. History is read-only. It cannot roll back,
+replay, or undo transactions.
 
 ### Pending transaction controller
 
