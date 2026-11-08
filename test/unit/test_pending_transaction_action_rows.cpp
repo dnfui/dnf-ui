@@ -65,6 +65,105 @@ make_test_upgrade_target(const char *nevra,
 }
 
 // -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// Verify that batch marking keeps distinct package identities and is idempotent.
+// -----------------------------------------------------------------------------
+TEST_CASE("Pending transaction batch marking skips already marked packages")
+{
+  reset_backend_globals();
+
+  PackageRow first = make_test_package_row("first-1.0-1.x86_64", "first", "1.0", "1", "x86_64");
+  PackageRow second = make_test_package_row("second-1.0-1.x86_64", "second", "1.0", "1", "x86_64");
+  PendingTransactionActionRows first_rows = pending_transaction_action_rows_for_selection(first, nullptr, 0, false);
+  PendingTransactionActionRows second_rows = pending_transaction_action_rows_for_selection(second, nullptr, 0, false);
+
+  std::vector<PendingAction> actions;
+  std::vector<PendingTransactionBatchAction> selected {
+    { first_rows, PendingAction::INSTALL },
+    { second_rows, PendingAction::INSTALL },
+    { first_rows, PendingAction::INSTALL },
+  };
+  size_t marked = 0;
+  REQUIRE(pending_transaction_mark_batch(actions, selected, marked));
+  REQUIRE(marked == 2);
+  REQUIRE(actions.size() == 2);
+  REQUIRE(pending_transaction_mark_batch(actions, selected, marked));
+  REQUIRE(marked == 0);
+  REQUIRE(actions.size() == 2);
+}
+
+// -----------------------------------------------------------------------------
+// Verify that selected conflicting versions cannot overwrite each other.
+// -----------------------------------------------------------------------------
+TEST_CASE("Pending transaction batch marking rejects conflicting versions without changes")
+{
+  reset_backend_globals();
+
+  PackageRow older = make_test_package_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
+  PackageRow newer = make_test_package_row("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64");
+  PendingTransactionActionRows older_rows = pending_transaction_action_rows_for_selection(older, nullptr, 0, false);
+  PendingTransactionActionRows newer_rows = pending_transaction_action_rows_for_selection(newer, nullptr, 0, false);
+
+  std::vector<PendingAction> actions;
+  REQUIRE(pending_transaction_mark_install_side_action(actions, older_rows));
+  std::vector<PendingTransactionBatchAction> selected {
+    { older_rows, PendingAction::INSTALL },
+    { newer_rows, PendingAction::INSTALL },
+  };
+  size_t marked = 0;
+  REQUIRE_FALSE(pending_transaction_mark_batch(actions, selected, marked));
+  REQUIRE(marked == 0);
+  REQUIRE(actions.size() == 1);
+  REQUIRE(actions[0].nevra == older.nevra);
+}
+
+// -----------------------------------------------------------------------------
+// Verify that installonly versions retain the existing multiple-install behavior.
+// -----------------------------------------------------------------------------
+TEST_CASE("Pending transaction batch marking allows separate installonly versions")
+{
+  reset_backend_globals();
+
+  PackageRow older = make_test_package_row("kernel-test-1.0-1.x86_64", "kernel-test", "1.0", "1", "x86_64");
+  PackageRow newer = make_test_package_row("kernel-test-2.0-1.x86_64", "kernel-test", "2.0", "1", "x86_64");
+  older.installonly = true;
+  newer.installonly = true;
+  PendingTransactionActionRows older_rows = pending_transaction_action_rows_for_selection(older, nullptr, 0, true);
+  PendingTransactionActionRows newer_rows = pending_transaction_action_rows_for_selection(newer, nullptr, 0, true);
+
+  std::vector<PendingAction> actions;
+  std::vector<PendingTransactionBatchAction> selected {
+    { older_rows, PendingAction::INSTALL },
+    { newer_rows, PendingAction::INSTALL },
+  };
+  size_t marked = 0;
+  REQUIRE(pending_transaction_mark_batch(actions, selected, marked));
+  REQUIRE(marked == 2);
+  REQUIRE(actions.size() == 2);
+}
+
+// -----------------------------------------------------------------------------
+// Verify that an invalid batch cannot leave a partial pending transaction.
+// -----------------------------------------------------------------------------
+TEST_CASE("Pending transaction batch marking fails without partial changes")
+{
+  reset_backend_globals();
+
+  PackageRow valid = make_test_package_row("valid-1.0-1.x86_64", "valid", "1.0", "1", "x86_64");
+  PendingTransactionActionRows valid_rows = pending_transaction_action_rows_for_selection(valid, nullptr, 0, false);
+  PendingTransactionActionRows invalid_rows;
+
+  std::vector<PendingAction> actions;
+  std::vector<PendingTransactionBatchAction> selected {
+    { valid_rows, PendingAction::INSTALL },
+    { invalid_rows, PendingAction::INSTALL },
+  };
+  size_t marked = 0;
+  REQUIRE_FALSE(pending_transaction_mark_batch(actions, selected, marked));
+  REQUIRE(marked == 0);
+  REQUIRE(actions.empty());
+}
+
 // Verify the view rules used by upgrade action projection.
 // -----------------------------------------------------------------------------
 TEST_CASE("Displayed package query state separates compact rows from upgrade projection")

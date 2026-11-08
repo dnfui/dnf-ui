@@ -11,6 +11,9 @@
 #include "ui/package_query/package_query_state.hpp"
 #include "upgrade/daemon_upgrade_state.hpp"
 
+#include <map>
+#include <utility>
+
 namespace {
 
 // -----------------------------------------------------------------------------
@@ -587,6 +590,78 @@ pending_transaction_mark_reinstall_action(std::vector<PendingAction> &actions,
                                           const PendingTransactionActionRows &action_rows)
 {
   return pending_transaction_mark_installed_side_action(actions, action_rows, PendingAction::REINSTALL);
+}
+
+// -----------------------------------------------------------------------------
+// Mark eligible selected packages only after checking for conflicting versions.
+// A failed batch leaves the pending actions unchanged.
+// -----------------------------------------------------------------------------
+bool
+pending_transaction_mark_batch(std::vector<PendingAction> &actions,
+                               const std::vector<PendingTransactionBatchAction> &selected,
+                               size_t &marked_count)
+{
+  marked_count = 0;
+  std::map<std::string, size_t> install_by_key;
+  for (size_t i = 0; i < selected.size(); ++i) {
+    const auto &action = selected[i];
+    const bool install_side = pending_action_is_install_side(action.type);
+    const bool installed_side = pending_action_is_installed_side(action.type);
+    if ((!install_side && !installed_side) || action.rows.package_key.empty() ||
+        (install_side && (!action.rows.has_install_row || action.rows.install_row.nevra.empty())) ||
+        (installed_side && (!action.rows.has_installed_row || action.rows.installed_row.nevra.empty()))) {
+      return false;
+    }
+
+    if (!install_side) {
+      continue;
+    }
+
+    auto [it, inserted] = install_by_key.emplace(action.rows.package_key, i);
+    if (inserted) {
+      continue;
+    }
+
+    const auto &previous = selected[it->second];
+    if (previous.type == action.type && previous.rows.install_row.nevra == action.rows.install_row.nevra) {
+      continue;
+    }
+
+    const bool multiple_installonly_versions = previous.type == PendingAction::INSTALL &&
+        action.type == PendingAction::INSTALL && previous.rows.install_row.installonly &&
+        action.rows.install_row.installonly;
+    if (!multiple_installonly_versions) {
+      return false;
+    }
+  }
+
+  std::vector<PendingAction> updated = actions;
+  std::set<std::pair<PendingAction::Type, std::string>> seen_actions;
+  for (const auto &action : selected) {
+    const bool install_side = pending_action_is_install_side(action.type);
+    const std::string &nevra = install_side ? action.rows.install_row.nevra : action.rows.installed_row.nevra;
+    if (!seen_actions.emplace(action.type, nevra).second ||
+        has_pending_action(updated, nevra, action.type)) {
+      continue;
+    }
+
+    bool success = false;
+    if (install_side) {
+      success = pending_transaction_mark_install_side_action(updated, action.rows);
+    } else if (action.type == PendingAction::REMOVE) {
+      success = pending_transaction_mark_remove_action(updated, action.rows);
+    } else if (action.type == PendingAction::REINSTALL) {
+      success = pending_transaction_mark_reinstall_action(updated, action.rows);
+    }
+    if (!success) {
+      marked_count = 0;
+      return false;
+    }
+    ++marked_count;
+  }
+
+  actions = std::move(updated);
+  return true;
 }
 
 // -----------------------------------------------------------------------------

@@ -54,6 +54,12 @@ struct PendingTransactionSelectionActions {
   std::string installed_action_nevra;
 };
 
+// One eligible action resolved from a selected package table row.
+struct PendingTransactionBatchAction {
+  PendingTransactionActionRows rows;
+  PendingAction::Type type;
+};
+
 struct DisplayedPackageQueryState;
 
 // -----------------------------------------------------------------------------
@@ -148,6 +154,13 @@ bool pending_transaction_mark_remove_action(std::vector<PendingAction> &actions,
 // -----------------------------------------------------------------------------
 bool pending_transaction_mark_reinstall_action(std::vector<PendingAction> &actions,
                                                const PendingTransactionActionRows &rows);
+// -----------------------------------------------------------------------------
+// Mark a batch without replacing a pending action with a different selected version.
+// Leave the original actions unchanged if the batch contains conflicting or invalid requests.
+// -----------------------------------------------------------------------------
+bool pending_transaction_mark_batch(std::vector<PendingAction> &actions,
+                                    const std::vector<PendingTransactionBatchAction> &selected,
+                                    size_t &marked_count);
 // -----------------------------------------------------------------------------
 // Return true when self-protection should block the install button path.
 // A normal upgrade is allowed because dnf5daemon still resolves the final preview.
