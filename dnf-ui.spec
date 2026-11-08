@@ -1,5 +1,5 @@
 Name:           dnf-ui
-Version:        0.7.5
+Version:        0.8.0
 Release:        1%{?dist}
 Summary:        GTK interface for DNF5
 
@@ -56,6 +56,13 @@ appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/io.github.dnfui.
 %{_datadir}/metainfo/io.github.dnfui.dnfui.metainfo.xml
 
 %changelog
+* Sun Nov 08 2026 ErikMN <dnfui@proton.me> - 0.8.0-1
+- Separate package descriptions and common details into tabs, with a button to copy the description
+- Make package states and actions easier to read with clearer styling and tooltips
+- Show package changes and warnings in a scrollable transaction preview, with totals and disk space below
+- Explain previews with warnings but no changes, and show an upgrade icon when the desktop theme lacks one
+- Speed up List Upgradable by using package summaries returned by DNF
+
 * Mon Nov 02 2026 ErikMN <dnfui@proton.me> - 0.7.5-1
 - Speed up transaction history page navigation by reusing the current history search
 - Reject malformed transaction history dates before searching
