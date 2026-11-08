@@ -21,6 +21,7 @@
 #include "ui/common/widgets.hpp"
 
 #include <memory>
+#include <string>
 
 struct MainWindowCleanupData {
   std::shared_ptr<MainWindowUiState> widgets;
@@ -236,10 +237,11 @@ create_main_window_ui_state(const AppWidgets *ui)
   widgets->results.inner_paned = GTK_PANED(ui->inner_paned);
   widgets->results.details_stack = GTK_STACK(ui->details_stack);
   widgets->results.details_status_label = GTK_LABEL(ui->details_status_label);
-  widgets->results.info_header = ui->info_header;
-  widgets->results.info_name_label = GTK_LABEL(ui->info_name_label);
-  widgets->results.info_summary_label = GTK_LABEL(ui->info_summary_label);
-  widgets->results.copy_info_button = GTK_BUTTON(ui->copy_info_button);
+  widgets->results.description_header = ui->description_header;
+  widgets->results.description_name_label = GTK_LABEL(ui->description_name_label);
+  widgets->results.description_summary_label = GTK_LABEL(ui->description_summary_label);
+  widgets->results.copy_description_button = GTK_BUTTON(ui->copy_description_button);
+  widgets->results.description_buffer = ui->description_buffer;
   widgets->results.details_buffer = ui->details_buffer;
   widgets->results.files_model = ui->files_model;
   widgets->results.filtered_files_model = ui->filtered_files_model;
@@ -599,15 +601,33 @@ on_files_filter_pending_changed(GObject *, GParamSpec *, gpointer user_data)
 }
 
 static void
-on_copy_info_clicked(GtkButton *button, gpointer user_data)
+on_copy_description_clicked(GtkButton *button, gpointer user_data)
 {
   MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
-  if (!widgets || widgets->results.info_full_text.empty()) {
+  if (!widgets || !widgets->results.description_name_label || !widgets->results.description_summary_label ||
+      !widgets->results.description_buffer) {
     return;
   }
 
+  GtkTextIter start;
+  GtkTextIter end;
+  gtk_text_buffer_get_bounds(widgets->results.description_buffer, &start, &end);
+  char *description = gtk_text_buffer_get_text(widgets->results.description_buffer, &start, &end, FALSE);
+
+  std::string text = gtk_label_get_text(widgets->results.description_name_label);
+  const char *summary = gtk_label_get_text(widgets->results.description_summary_label);
+  if (*summary) {
+    text += "\n";
+    text += summary;
+  }
+  if (*description) {
+    text += "\n\n";
+    text += description;
+  }
+
   GdkClipboard *clipboard = gdk_display_get_clipboard(gtk_widget_get_display(GTK_WIDGET(button)));
-  gdk_clipboard_set_text(clipboard, widgets->results.info_full_text.c_str());
+  gdk_clipboard_set_text(clipboard, text.c_str());
+  g_free(description);
 }
 
 // -----------------------------------------------------------------------------
@@ -659,7 +679,7 @@ connect_signals(const AppWidgets *ui, MainWindowUiState *widgets)
 
   g_signal_connect(
       ui->details_stack, "notify::visible-child-name", G_CALLBACK(package_details_on_details_page_changed), widgets);
-  g_signal_connect(ui->copy_info_button, "clicked", G_CALLBACK(on_copy_info_clicked), widgets);
+  g_signal_connect(ui->copy_description_button, "clicked", G_CALLBACK(on_copy_description_clicked), widgets);
 
   g_signal_connect(ui->files_model, "items-changed", G_CALLBACK(on_files_model_changed), widgets);
   g_signal_connect(ui->filtered_files_model, "items-changed", G_CALLBACK(on_files_model_changed), widgets);

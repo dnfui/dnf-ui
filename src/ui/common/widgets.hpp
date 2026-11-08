@@ -47,12 +47,12 @@ struct PackageResultsWidgets {
   GtkPaned *inner_paned = nullptr;
   GtkStack *details_stack = nullptr;
   GtkLabel *details_status_label = nullptr;
-  GtkWidget *info_header = nullptr;
-  GtkLabel *info_name_label = nullptr;
-  GtkLabel *info_summary_label = nullptr;
-  GtkButton *copy_info_button = nullptr;
-  std::string info_full_text;
+  GtkWidget *description_header = nullptr;
+  GtkLabel *description_name_label = nullptr;
+  GtkLabel *description_summary_label = nullptr;
+  GtkButton *copy_description_button = nullptr;
   // Text buffers owned by the details panel text views.
+  GtkTextBuffer *description_buffer = nullptr;
   GtkTextBuffer *details_buffer = nullptr;
   GtkStringList *files_model = nullptr;
   GtkFilterListModel *filtered_files_model = nullptr;

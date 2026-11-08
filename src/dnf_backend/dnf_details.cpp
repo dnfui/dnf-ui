@@ -118,7 +118,7 @@ dnf_backend_get_package_info_presentation(const std::string &pkg_nevra,
 
   if (query.empty()) {
     std::string message = dnfui_i18n_format(_("No details found for %s"), pkg_nevra.c_str());
-    return { "", "", message, message };
+    return { "", "", message, message, message };
   }
 
   const bool use_installed_context = context == PackageDetailsContext::INSTALLED_CONTEXT;
@@ -252,11 +252,10 @@ dnf_backend_get_package_info_presentation(const std::string &pkg_nevra,
 
   std::string metadata_text = metadata.str();
   std::string description_text = std::string(_("Description")) + ":\n" + display_description;
-  std::string details = metadata_text + "\n" + description_text;
   std::string full_text = std::string(_("Name")) + ": " + display_row.name + "\n" + metadata_text + "\n" +
       _("Summary") + ":\n" + display_summary + "\n\n" + description_text;
 
-  return { display_row.name, display_summary, details, full_text };
+  return { display_row.name, display_summary, metadata_text, display_description, full_text };
 }
 
 // -----------------------------------------------------------------------------

@@ -407,10 +407,48 @@ main_window_build_layout(AppWidgets *ui)
   gtk_box_append(GTK_BOX(details_panel), details_switcher);
   gtk_box_append(GTK_BOX(details_panel), details_stack);
 
-  // Package info tab.
-  GtkWidget *info_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-  gtk_widget_set_hexpand(info_box, TRUE);
-  gtk_widget_set_vexpand(info_box, TRUE);
+  // Package description tab.
+  GtkWidget *description_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+  gtk_widget_set_hexpand(description_box, TRUE);
+  gtk_widget_set_vexpand(description_box, TRUE);
+
+  GtkWidget *description_header = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
+  gtk_widget_set_margin_start(description_header, 10);
+  gtk_widget_set_margin_end(description_header, 10);
+  gtk_widget_set_margin_top(description_header, 4);
+  gtk_widget_set_margin_bottom(description_header, 4);
+  gtk_widget_set_visible(description_header, FALSE);
+  gtk_box_append(GTK_BOX(description_box), description_header);
+  ui->description_header = description_header;
+
+  GtkWidget *description_heading = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+  gtk_box_append(GTK_BOX(description_header), description_heading);
+
+  GtkWidget *description_name_label = gtk_label_new(nullptr);
+  gtk_label_set_xalign(GTK_LABEL(description_name_label), 0.0f);
+  gtk_label_set_selectable(GTK_LABEL(description_name_label), TRUE);
+  gtk_label_set_wrap(GTK_LABEL(description_name_label), TRUE);
+  gtk_label_set_wrap_mode(GTK_LABEL(description_name_label), PANGO_WRAP_WORD_CHAR);
+  gtk_widget_set_hexpand(description_name_label, TRUE);
+  gtk_widget_add_css_class(description_name_label, "package-info-name");
+  gtk_box_append(GTK_BOX(description_heading), description_name_label);
+  ui->description_name_label = description_name_label;
+
+  GtkWidget *copy_description_button = gtk_button_new_with_label(_("Copy Description"));
+  gtk_widget_add_css_class(copy_description_button, "flat");
+  gtk_widget_set_tooltip_text(copy_description_button, _("Copy the title, summary, and description."));
+  gtk_widget_set_sensitive(copy_description_button, FALSE);
+  gtk_widget_set_valign(copy_description_button, GTK_ALIGN_START);
+  gtk_box_append(GTK_BOX(description_heading), copy_description_button);
+  ui->copy_description_button = copy_description_button;
+
+  GtkWidget *description_summary_label = gtk_label_new(nullptr);
+  gtk_label_set_xalign(GTK_LABEL(description_summary_label), 0.0f);
+  gtk_label_set_selectable(GTK_LABEL(description_summary_label), TRUE);
+  gtk_label_set_wrap(GTK_LABEL(description_summary_label), TRUE);
+  gtk_widget_add_css_class(description_summary_label, "package-info-summary");
+  gtk_box_append(GTK_BOX(description_header), description_summary_label);
+  ui->description_summary_label = description_summary_label;
 
   GtkWidget *details_status_label = gtk_label_new(NULL);
   gtk_label_set_xalign(GTK_LABEL(details_status_label), 0.0f);
@@ -420,53 +458,23 @@ main_window_build_layout(AppWidgets *ui)
   gtk_widget_set_margin_bottom(details_status_label, 6);
   gtk_widget_set_visible(details_status_label, FALSE);
   ui->details_status_label = details_status_label;
-  gtk_box_append(GTK_BOX(info_box), details_status_label);
+  gtk_box_append(GTK_BOX(description_box), details_status_label);
 
-  GtkWidget *info_header = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
-  gtk_widget_set_margin_start(info_header, 10);
-  gtk_widget_set_margin_end(info_header, 10);
-  gtk_widget_set_margin_top(info_header, 4);
-  gtk_widget_set_margin_bottom(info_header, 4);
-  gtk_widget_set_visible(info_header, FALSE);
-  gtk_box_append(GTK_BOX(info_box), info_header);
-  ui->info_header = info_header;
+  GtkTextBuffer *description_buffer = NULL;
+  GtkWidget *scrolled_description =
+      create_scrolled_text_view(_("Select a package for details."), GTK_WRAP_WORD, &description_buffer);
+  ui->description_buffer = description_buffer;
+  gtk_box_append(GTK_BOX(description_box), scrolled_description);
 
-  GtkWidget *info_heading = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
-  gtk_box_append(GTK_BOX(info_header), info_heading);
+  gtk_stack_add_titled(GTK_STACK(details_stack), description_box, "description", _("Description"));
 
-  GtkWidget *info_name_label = gtk_label_new(nullptr);
-  gtk_label_set_xalign(GTK_LABEL(info_name_label), 0.0f);
-  gtk_label_set_selectable(GTK_LABEL(info_name_label), TRUE);
-  gtk_label_set_wrap(GTK_LABEL(info_name_label), TRUE);
-  gtk_label_set_wrap_mode(GTK_LABEL(info_name_label), PANGO_WRAP_WORD_CHAR);
-  gtk_widget_set_hexpand(info_name_label, TRUE);
-  gtk_widget_add_css_class(info_name_label, "package-info-name");
-  gtk_box_append(GTK_BOX(info_heading), info_name_label);
-  ui->info_name_label = info_name_label;
-
-  GtkWidget *copy_info_button = gtk_button_new_with_label(_("Copy Info"));
-  gtk_widget_add_css_class(copy_info_button, "flat");
-  gtk_widget_set_tooltip_text(copy_info_button, _("Copy the complete package information."));
-  gtk_widget_set_sensitive(copy_info_button, FALSE);
-  gtk_widget_set_valign(copy_info_button, GTK_ALIGN_START);
-  gtk_box_append(GTK_BOX(info_heading), copy_info_button);
-  ui->copy_info_button = copy_info_button;
-
-  GtkWidget *info_summary_label = gtk_label_new(nullptr);
-  gtk_label_set_xalign(GTK_LABEL(info_summary_label), 0.0f);
-  gtk_label_set_selectable(GTK_LABEL(info_summary_label), TRUE);
-  gtk_label_set_wrap(GTK_LABEL(info_summary_label), TRUE);
-  gtk_widget_add_css_class(info_summary_label, "package-info-summary");
-  gtk_box_append(GTK_BOX(info_header), info_summary_label);
-  ui->info_summary_label = info_summary_label;
-
+  // Common package details tab.
   GtkTextBuffer *details_buffer = NULL;
   GtkWidget *scrolled_details =
       create_scrolled_text_view(_("Select a package for details."), GTK_WRAP_WORD, &details_buffer);
   ui->details_buffer = details_buffer;
-  gtk_box_append(GTK_BOX(info_box), scrolled_details);
 
-  gtk_stack_add_titled(GTK_STACK(details_stack), info_box, "info", _("Info"));
+  gtk_stack_add_titled(GTK_STACK(details_stack), scrolled_details, "common", _("Common"));
 
   // File list tab.
   GtkWidget *files_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);

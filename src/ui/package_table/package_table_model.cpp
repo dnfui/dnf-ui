@@ -155,7 +155,7 @@ package_table_fill_item_display_values(PackageItem &item,
       compact_view && !resolution.exact_installed && resolution.has_installed_row && newest_actionable_upgrade;
 
   if (project_available_upgrade) {
-    // The table column is named Version, so keep it aligned with the Info tab Version field.
+    // The table column is named Version, so keep it aligned with the Common tab Version field.
     values.version = resolution.installed_row.version;
     values.release = resolution.installed_row.release;
     values.repo = resolution.installed_row.repo;

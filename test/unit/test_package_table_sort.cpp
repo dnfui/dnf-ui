@@ -53,7 +53,7 @@ compare_table_test_rows(MainWindowUiState &widgets,
 }
 
 // -----------------------------------------------------------------------------
-// Verify that the package table Version column matches the Info tab Version
+// Verify that the package table Version column matches the Common tab Version
 // field and does not include the package release.
 // -----------------------------------------------------------------------------
 TEST_CASE("Package table Version column shows only package version")

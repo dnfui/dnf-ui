@@ -379,7 +379,8 @@ std::vector<PackageRow> dnf_backend_get_available_package_rows_by_nevra(const st
 struct PackageInfoPresentation {
   std::string name;
   std::string summary;
-  std::string details;
+  std::string common;
+  std::string description;
   std::string full_text;
 };
 

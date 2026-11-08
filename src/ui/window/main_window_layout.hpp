@@ -51,11 +51,12 @@ struct AppWidgets {
   GtkWidget *details_panel = NULL;
   GtkWidget *details_stack = NULL;
   GtkWidget *details_status_label = NULL;
-  GtkWidget *info_header = NULL;
-  GtkWidget *info_name_label = NULL;
-  GtkWidget *info_summary_label = NULL;
-  GtkWidget *copy_info_button = NULL;
+  GtkWidget *description_header = NULL;
+  GtkWidget *description_name_label = NULL;
+  GtkWidget *description_summary_label = NULL;
+  GtkWidget *copy_description_button = NULL;
 
+  GtkTextBuffer *description_buffer = NULL;
   GtkTextBuffer *details_buffer = NULL;
   GtkStringList *files_model = NULL;
   GtkFilterListModel *filtered_files_model = NULL;

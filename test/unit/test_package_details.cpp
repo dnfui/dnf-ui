@@ -124,8 +124,9 @@ TEST_CASE("Package info formatting contains expected fields")
       dnf_backend_get_package_info_presentation(results.front().nevra, PackageDetailsContext::INSTALLED_CONTEXT);
   REQUIRE(presentation.full_text == info);
   REQUIRE(presentation.name == results.front().name);
-  REQUIRE(presentation.details.rfind("Package ID: ", 0) == 0);
-  REQUIRE(presentation.details.find("Description:") != std::string::npos);
+  REQUIRE(presentation.common.rfind("Package ID: ", 0) == 0);
+  REQUIRE(presentation.common.find("Description:") == std::string::npos);
+  REQUIRE(presentation.full_text.find("Description:\n" + presentation.description) != std::string::npos);
 }
 
 // -----------------------------------------------------------------------------

@@ -1613,6 +1613,9 @@ msgstr "Rensa transaktioner"
 msgid "Info"
 msgstr "Info"
 
+msgid "Common"
+msgstr "Allmänt"
+
 msgid "Files"
 msgstr "Filer"
 
@@ -1737,3 +1740,9 @@ msgstr "Kopiera info"
 
 msgid "Copy the complete package information."
 msgstr "Kopiera den fullständiga paketinformationen."
+
+msgid "Copy Description"
+msgstr "Kopiera beskrivning"
+
+msgid "Copy the title, summary, and description."
+msgstr "Kopiera titel, sammanfattning och beskrivning."

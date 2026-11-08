@@ -155,27 +155,26 @@ set_details_text(GtkTextBuffer *buffer, const char *text)
 }
 
 static void
-set_package_info_header(MainWindowUiState *widgets, const std::string &name, const std::string &summary)
+set_package_description_header(MainWindowUiState *widgets, const std::string &name, const std::string &summary)
 {
-  if (!widgets || !widgets->results.info_header) {
+  if (!widgets || !widgets->results.description_header) {
     return;
   }
 
-  gtk_label_set_text(widgets->results.info_name_label, name.c_str());
-  gtk_label_set_text(widgets->results.info_summary_label, summary.c_str());
-  gtk_widget_set_visible(widgets->results.info_header, !name.empty());
+  gtk_label_set_text(widgets->results.description_name_label, name.c_str());
+  gtk_label_set_text(widgets->results.description_summary_label, summary.c_str());
+  gtk_widget_set_visible(widgets->results.description_header, !name.empty());
 }
 
 static void
-set_package_info_copy_text(MainWindowUiState *widgets, const std::string &text)
+set_package_copy_button_sensitive(MainWindowUiState *widgets, bool available)
 {
   if (!widgets) {
     return;
   }
 
-  widgets->results.info_full_text = text;
-  if (widgets->results.copy_info_button) {
-    gtk_widget_set_sensitive(GTK_WIDGET(widgets->results.copy_info_button), !text.empty());
+  if (widgets->results.copy_description_button) {
+    gtk_widget_set_sensitive(GTK_WIDGET(widgets->results.copy_description_button), available);
   }
 }
 
@@ -235,7 +234,7 @@ set_deferred_details_text(const DeferredDetailsUiState &ui, const char *text)
 }
 
 // -----------------------------------------------------------------------------
-// Show or hide the selected package Status label in the Info tab.
+// Show or hide the selected package Status label in the Description tab.
 // -----------------------------------------------------------------------------
 static void
 set_details_status_text(MainWindowUiState *widgets, const char *status_text)
@@ -351,8 +350,9 @@ package_details_reset_details_view(MainWindowUiState *widgets)
   gtk_widget_set_visible(GTK_WIDGET(widgets->results.files_count_label), FALSE);
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->results.files_search_entry), FALSE);
   gtk_editable_set_text(GTK_EDITABLE(widgets->results.files_search_entry), "");
-  set_package_info_header(widgets, "", "");
-  set_package_info_copy_text(widgets, "");
+  set_package_description_header(widgets, "", "");
+  set_package_copy_button_sensitive(widgets, false);
+  set_details_text(widgets->results.description_buffer, _("Select a package for details."));
   set_details_text(widgets->results.details_buffer, _("Select a package for details."));
   set_files_text(widgets->results.files_model, _("Select an installed package to view its file list."));
   set_details_text(widgets->results.deps_buffer, _("Select a package to view dependencies."));
@@ -375,8 +375,8 @@ package_details_clear_selected_package_state(MainWindowUiState *widgets)
   widgets->results.files_loaded_nevra.clear();
   widgets->results.deps_loaded_nevra.clear();
   widgets->results.changelog_loaded_nevra.clear();
-  set_package_info_header(widgets, "", "");
-  set_package_info_copy_text(widgets, "");
+  set_package_description_header(widgets, "", "");
+  set_package_copy_button_sensitive(widgets, false);
   set_details_status_text(widgets, nullptr);
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction_widgets.install_button), FALSE);
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction_widgets.remove_button), FALSE);
@@ -553,6 +553,7 @@ on_package_details_task_finished(GObject *, GAsyncResult *res, gpointer user_dat
 
   if (!info) {
     ui_helpers_set_status(widgets->query.status_label, error ? error->message : _("Error loading info."), "red");
+    set_details_text(widgets->results.description_buffer, error ? error->message : _("Error loading info."));
     set_details_text(widgets->results.details_buffer, error ? error->message : _("Error loading info."));
     if (error) {
       g_error_free(error);
@@ -561,11 +562,13 @@ on_package_details_task_finished(GObject *, GAsyncResult *res, gpointer user_dat
   }
 
   // Display general package information.
-  set_package_info_header(widgets, info->name, info->summary);
+  set_package_description_header(widgets, info->name, info->summary);
+  set_details_text(widgets->results.description_buffer,
+                   info->name.empty() ? info->full_text.c_str() : info->description.c_str());
   set_details_text(widgets->results.details_buffer,
-                   info->name.empty() ? info->full_text.c_str() : info->details.c_str());
+                   info->name.empty() ? info->full_text.c_str() : info->common.c_str());
   if (!info->name.empty()) {
-    set_package_info_copy_text(widgets, info->full_text);
+    set_package_copy_button_sensitive(widgets, true);
   }
 
   ui_helpers_set_status(widgets->query.status_label, _("Package info loaded."), "gray");
@@ -809,8 +812,9 @@ package_details_load_selected_package_info(MainWindowUiState *widgets, const Pac
   gtk_widget_set_visible(GTK_WIDGET(widgets->results.files_count_label), FALSE);
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->results.files_search_entry), FALSE);
   gtk_editable_set_text(GTK_EDITABLE(widgets->results.files_search_entry), "");
-  set_package_info_header(widgets, "", "");
-  set_package_info_copy_text(widgets, "");
+  set_package_description_header(widgets, "", "");
+  set_package_copy_button_sensitive(widgets, false);
+  set_details_text(widgets->results.description_buffer, _("Fetching package info..."));
   set_details_text(widgets->results.details_buffer, _("Fetching package info..."));
   set_files_text(widgets->results.files_model, _("Open the Files tab to load the file list."));
   set_details_text(widgets->results.deps_buffer, _("Open the Dependencies tab to load dependencies."));
