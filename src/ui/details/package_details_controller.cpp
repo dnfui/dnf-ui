@@ -420,6 +420,23 @@ package_details_cancel_active_load(MainWindowUiState *widgets)
 }
 
 // -----------------------------------------------------------------------------
+// Show a neutral details panel while more than one package is selected.
+// -----------------------------------------------------------------------------
+void
+package_details_show_multiple_selected_packages(MainWindowUiState *widgets)
+{
+  if (!widgets) {
+    return;
+  }
+
+  package_details_cancel_active_load(widgets);
+  package_details_clear_selected_package_state(widgets);
+  package_details_reset_details_view(widgets);
+  set_details_text(widgets->results.description_buffer, _("Multiple packages selected."));
+  set_details_text(widgets->results.details_buffer, _("Select one package to view its details."));
+}
+
+// -----------------------------------------------------------------------------
 // Enable only the transaction actions that make sense for the selected row.
 // -----------------------------------------------------------------------------
 static void

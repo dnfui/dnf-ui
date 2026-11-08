@@ -47,7 +47,11 @@ struct PackageTableRow {
 };
 
 // -----------------------------------------------------------------------------
-// Return the currently selected package table row, including any daemon upgrade target.
+// Return all selected package table rows in current sort order.
+// -----------------------------------------------------------------------------
+std::vector<PackageTableRow> package_table_get_selected_packages(MainWindowUiState *widgets);
+// -----------------------------------------------------------------------------
+// Return the package row when exactly one row is selected.
 // -----------------------------------------------------------------------------
 bool package_table_get_selected_package(MainWindowUiState *widgets, PackageTableRow &out_pkg);
 // -----------------------------------------------------------------------------

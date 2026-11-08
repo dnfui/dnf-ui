@@ -19,6 +19,10 @@ struct PackageTableRow;
 // -----------------------------------------------------------------------------
 void package_details_clear_selected_package_state(MainWindowUiState *widgets);
 // -----------------------------------------------------------------------------
+// Show the details panel state for more than one selected package.
+// -----------------------------------------------------------------------------
+void package_details_show_multiple_selected_packages(MainWindowUiState *widgets);
+// -----------------------------------------------------------------------------
 // Stop the active package details load, if one is still running.
 // -----------------------------------------------------------------------------
 void package_details_cancel_active_load(MainWindowUiState *widgets);

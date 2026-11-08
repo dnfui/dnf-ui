@@ -19,6 +19,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <utility>
 
 static void update_pending_action_css_for_cell(GtkWidget *cell,
                                                MainWindowUiState *widgets,
@@ -36,8 +37,8 @@ package_table_quick_filter_model(MainWindowUiState *widgets)
     return nullptr;
   }
 
-  GtkSingleSelection *selection = GTK_SINGLE_SELECTION(gtk_column_view_get_model(GTK_COLUMN_VIEW(view)));
-  GtkSortListModel *sort_model = GTK_SORT_LIST_MODEL(gtk_single_selection_get_model(selection));
+  GtkMultiSelection *selection = GTK_MULTI_SELECTION(gtk_column_view_get_model(GTK_COLUMN_VIEW(view)));
+  GtkSortListModel *sort_model = GTK_SORT_LIST_MODEL(gtk_multi_selection_get_model(selection));
   return GTK_FILTER_LIST_MODEL(gtk_sort_list_model_get_model(sort_model));
 }
 
@@ -163,12 +164,12 @@ static void
 refresh_model_status_values(GtkColumnView *view, MainWindowUiState *widgets)
 {
   GtkSelectionModel *model = gtk_column_view_get_model(view);
-  if (!model || !GTK_IS_SINGLE_SELECTION(model)) {
+  if (!model) {
     return;
   }
 
-  GtkSingleSelection *selection = GTK_SINGLE_SELECTION(model);
-  GtkSortListModel *sort_model = GTK_SORT_LIST_MODEL(gtk_single_selection_get_model(selection));
+  GtkMultiSelection *selection = GTK_MULTI_SELECTION(model);
+  GtkSortListModel *sort_model = GTK_SORT_LIST_MODEL(gtk_multi_selection_get_model(selection));
   GtkFilterListModel *filtered_model = GTK_FILTER_LIST_MODEL(gtk_sort_list_model_get_model(sort_model));
   GListModel *items_model = gtk_filter_list_model_get_model(filtered_model);
 
@@ -440,12 +441,11 @@ select_package_table_row(GtkColumnView *view, const std::string &nevra)
   }
 
   GtkSelectionModel *model = gtk_column_view_get_model(view);
-  if (!model || !GTK_IS_SINGLE_SELECTION(model)) {
+  if (!model) {
     return false;
   }
 
-  GtkSingleSelection *selection = GTK_SINGLE_SELECTION(model);
-  GListModel *items_model = gtk_single_selection_get_model(selection);
+  GListModel *items_model = G_LIST_MODEL(model);
   if (!items_model) {
     return false;
   }
@@ -458,7 +458,9 @@ select_package_table_row(GtkColumnView *view, const std::string &nevra)
     g_object_unref(obj);
 
     if (match) {
-      gtk_single_selection_set_selected(selection, i);
+      if (!gtk_selection_model_is_selected(model, i)) {
+        gtk_selection_model_select_item(model, i, TRUE);
+      }
       return true;
     }
   }
@@ -813,42 +815,58 @@ restore_package_view_sort_state(GtkColumnView *view, PackageColumnKind kind, Gtk
 // -----------------------------------------------------------------------------
 // Return the selected package table row from the current package table.
 // -----------------------------------------------------------------------------
-bool
-package_table_get_selected_package(MainWindowUiState *widgets, PackageTableRow &out_pkg)
+std::vector<PackageTableRow>
+package_table_get_selected_packages(MainWindowUiState *widgets)
 {
+  std::vector<PackageTableRow> rows;
   if (!widgets || !widgets->results.list_scroller) {
-    return false;
+    return rows;
   }
 
   GtkWidget *child = gtk_scrolled_window_get_child(widgets->results.list_scroller);
   if (!child || !GTK_IS_COLUMN_VIEW(child)) {
-    return false;
+    return rows;
   }
 
   GtkSelectionModel *model = gtk_column_view_get_model(GTK_COLUMN_VIEW(child));
-  if (!model || !GTK_IS_SINGLE_SELECTION(model)) {
+  if (!model) {
+    return rows;
+  }
+
+  GtkBitset *selected = gtk_selection_model_get_selection(model);
+  rows.reserve(gtk_bitset_get_size(selected));
+  GtkBitsetIter iter;
+  guint position;
+  if (gtk_bitset_iter_init_first(&iter, selected, &position)) {
+    do {
+      GObject *obj = G_OBJECT(g_list_model_get_item(G_LIST_MODEL(model), position));
+      const PackageItem *item = package_item_from_object(obj);
+      if (item) {
+        rows.push_back(package_table_row_from_item(*item));
+      }
+      if (obj) {
+        g_object_unref(obj);
+      }
+    } while (gtk_bitset_iter_next(&iter, &position));
+  }
+
+  gtk_bitset_unref(selected);
+  return rows;
+}
+
+// -----------------------------------------------------------------------------
+// Return the package row when exactly one package is selected.
+// -----------------------------------------------------------------------------
+bool
+package_table_get_selected_package(MainWindowUiState *widgets, PackageTableRow &out_pkg)
+{
+  std::vector<PackageTableRow> rows = package_table_get_selected_packages(widgets);
+  if (rows.size() != 1) {
     return false;
   }
 
-  GtkSingleSelection *sel = GTK_SINGLE_SELECTION(model);
-  guint index = gtk_single_selection_get_selected(sel);
-  if (index == GTK_INVALID_LIST_POSITION) {
-    return false;
-  }
-
-  GObject *obj = G_OBJECT(g_list_model_get_item(gtk_single_selection_get_model(sel), index));
-  if (!obj) {
-    return false;
-  }
-
-  const PackageItem *item = package_item_from_object(obj);
-  bool ok = item != nullptr;
-  if (ok) {
-    out_pkg = package_table_row_from_item(*item);
-  }
-
-  g_object_unref(obj);
-  return ok;
+  out_pkg = std::move(rows.front());
+  return true;
 }
 
 // -----------------------------------------------------------------------------
@@ -868,12 +886,11 @@ package_table_get_displayed_packages(MainWindowUiState *widgets)
   }
 
   GtkSelectionModel *model = gtk_column_view_get_model(GTK_COLUMN_VIEW(child));
-  if (!model || !GTK_IS_SINGLE_SELECTION(model)) {
+  if (!model) {
     return rows;
   }
 
-  GtkSingleSelection *sel = GTK_SINGLE_SELECTION(model);
-  GListModel *items_model = gtk_single_selection_get_model(sel);
+  GListModel *items_model = G_LIST_MODEL(model);
   if (!items_model) {
     return rows;
   }
@@ -1020,27 +1037,33 @@ finish_package_table_view(MainWindowUiState *widgets,
   gtk_sort_list_model_set_sorter(sort_model, gtk_column_view_get_sorter(view));
   g_object_unref(filtered_model);
 
-  GtkSingleSelection *sel = gtk_single_selection_new(nullptr);
-  gtk_single_selection_set_autoselect(sel, FALSE);
-  gtk_single_selection_set_can_unselect(sel, TRUE);
-  gtk_single_selection_set_model(sel, G_LIST_MODEL(sort_model));
-  gtk_single_selection_set_selected(sel, GTK_INVALID_LIST_POSITION);
+  GtkMultiSelection *sel = gtk_multi_selection_new(nullptr);
+  gtk_multi_selection_set_model(sel, G_LIST_MODEL(sort_model));
 
   g_signal_connect(sel,
                    "selection-changed",
-                   G_CALLBACK(+[](GtkSingleSelection *self, guint, guint, gpointer user_data) {
+                   G_CALLBACK(+[](GtkSelectionModel *self, guint, guint, gpointer user_data) {
                      MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
-                     guint index = gtk_single_selection_get_selected(self);
+                     GtkBitset *selected_rows = gtk_selection_model_get_selection(self);
+                     guint count = gtk_bitset_get_size(selected_rows);
+                     guint index = count == 1 ? gtk_bitset_get_nth(selected_rows, 0) : GTK_INVALID_LIST_POSITION;
+                     gtk_bitset_unref(selected_rows);
 
+                     if (count > 1) {
+                       package_details_show_multiple_selected_packages(widgets);
+                       return;
+                     }
                      if (index == GTK_INVALID_LIST_POSITION) {
                        package_details_clear_selected_package_state(widgets);
                        return;
                      }
 
-                     GObject *obj = G_OBJECT(g_list_model_get_item(gtk_single_selection_get_model(self), index));
+                     GObject *obj = G_OBJECT(g_list_model_get_item(G_LIST_MODEL(self), index));
                      const PackageItem *item = package_item_from_object(obj);
                      if (!item) {
-                       g_object_unref(obj);
+                       if (obj) {
+                         g_object_unref(obj);
+                       }
                        package_details_clear_selected_package_state(widgets);
                        return;
                      }
@@ -1062,12 +1085,11 @@ finish_package_table_view(MainWindowUiState *widgets,
                    G_CALLBACK(+[](GtkColumnView *self, guint position, gpointer user_data) {
                      MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
                      GtkSelectionModel *model = gtk_column_view_get_model(self);
-                     if (!model || !GTK_IS_SINGLE_SELECTION(model)) {
+                     if (!model) {
                        return;
                      }
 
-                     GtkSingleSelection *sel = GTK_SINGLE_SELECTION(model);
-                     GListModel *items_model = gtk_single_selection_get_model(sel);
+                     GListModel *items_model = G_LIST_MODEL(model);
                      if (!items_model) {
                        return;
                      }
@@ -1090,7 +1112,7 @@ finish_package_table_view(MainWindowUiState *widgets,
                                                                    row.upgrade_generation(),
                                                                    widgets->query_state.displayed_query,
                                                                    widgets->transaction_state.actions);
-                     gtk_single_selection_set_selected(sel, position);
+                     gtk_selection_model_select_item(model, position, TRUE);
                      g_object_unref(obj);
 
                      if (actions.can_install) {
@@ -1112,7 +1134,7 @@ finish_package_table_view(MainWindowUiState *widgets,
   // Restore selection when the same package is still present after a refresh.
   bool restored = false;
   if (!widgets->results.selected_nevra.empty()) {
-    GListModel *selected_model = gtk_single_selection_get_model(sel);
+    GListModel *selected_model = G_LIST_MODEL(sel);
     guint n_items = g_list_model_get_n_items(selected_model);
 
     for (guint i = 0; i < n_items; ++i) {
@@ -1122,7 +1144,7 @@ finish_package_table_view(MainWindowUiState *widgets,
       g_object_unref(obj);
 
       if (match) {
-        gtk_single_selection_set_selected(sel, i);
+        gtk_selection_model_select_item(GTK_SELECTION_MODEL(sel), i, TRUE);
         restored = true;
         break;
       }
