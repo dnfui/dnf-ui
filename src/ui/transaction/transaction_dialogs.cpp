@@ -80,7 +80,8 @@ static void
 append_transaction_summary_section(GtkBox *parent,
                                    const char *title,
                                    const std::vector<std::string> &items,
-                                   const char *icon_name)
+                                   const char *icon_name,
+                                   const char *fallback_icon_name)
 {
   if (!parent || !title || items.empty()) {
     return;
@@ -92,7 +93,7 @@ append_transaction_summary_section(GtkBox *parent,
   GtkWidget *heading_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
   gtk_box_append(GTK_BOX(section), heading_box);
 
-  GtkWidget *icon = gtk_image_new_from_icon_name(icon_name);
+  GtkWidget *icon = gtk_image_new_from_icon_name(ui_helpers_icon_name_with_fallback(icon_name, fallback_icon_name));
   gtk_image_set_pixel_size(GTK_IMAGE(icon), 18);
   gtk_box_append(GTK_BOX(heading_box), icon);
 
@@ -121,7 +122,8 @@ static void
 append_transaction_package_summary_section(GtkBox *parent,
                                            const char *title,
                                            const std::vector<TransactionPreviewPackage> &packages,
-                                           const char *icon_name)
+                                           const char *icon_name,
+                                           const char *fallback_icon_name)
 {
   std::vector<std::string> labels;
   labels.reserve(packages.size());
@@ -129,7 +131,7 @@ append_transaction_package_summary_section(GtkBox *parent,
     labels.push_back(package.label);
   }
 
-  append_transaction_summary_section(parent, title, labels, icon_name);
+  append_transaction_summary_section(parent, title, labels, icon_name, fallback_icon_name);
 }
 
 // -----------------------------------------------------------------------------
@@ -183,7 +185,8 @@ transaction_dialogs_show_summary_dialog(MainWindowUiState *widgets,
     GtkWidget *notice_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
     gtk_box_append(GTK_BOX(outer), notice_box);
 
-    GtkWidget *notice_icon = gtk_image_new_from_icon_name("system-reboot-symbolic");
+    GtkWidget *notice_icon = gtk_image_new_from_icon_name(
+        ui_helpers_icon_name_with_fallback("system-reboot-symbolic", "view-refresh-symbolic"));
     gtk_widget_set_valign(notice_icon, GTK_ALIGN_START);
     gtk_box_append(GTK_BOX(notice_box), notice_icon);
 
@@ -212,30 +215,32 @@ transaction_dialogs_show_summary_dialog(MainWindowUiState *widgets,
 
   if (!preview.resolve_warnings.empty()) {
     append_transaction_summary_section(
-        GTK_BOX(contents), _("Warnings"), { preview.resolve_warnings }, "dialog-warning-symbolic");
+        GTK_BOX(contents), _("Warnings"), { preview.resolve_warnings }, "dialog-warning-symbolic", "dialog-information-symbolic");
   }
 
   // Show the resolved backend changes, not only the packages marked manually.
   append_transaction_package_summary_section(
-      GTK_BOX(contents), _("To be installed"), preview.install, "list-add-symbolic");
+      GTK_BOX(contents), _("To be installed"), preview.install, "list-add-symbolic", "document-new-symbolic");
   append_transaction_package_summary_section(
       GTK_BOX(contents),
       _("To be upgraded"),
       preview.upgrade,
-      ui_helpers_icon_name_with_fallback("software-update-available-symbolic", "view-refresh-symbolic"));
+      "software-update-available-symbolic",
+      "view-refresh-symbolic");
   append_transaction_package_summary_section(
-      GTK_BOX(contents), _("To be downgraded"), preview.downgrade, "go-down-symbolic");
+      GTK_BOX(contents), _("To be downgraded"), preview.downgrade, "go-down-symbolic", "pan-down-symbolic");
   append_transaction_package_summary_section(
-      GTK_BOX(contents), _("To be reinstalled"), preview.reinstall, "document-revert-symbolic");
+      GTK_BOX(contents), _("To be reinstalled"), preview.reinstall, "document-revert-symbolic", "view-refresh-symbolic");
   append_transaction_package_summary_section(
-      GTK_BOX(contents), _("To be removed"), preview.remove, "user-trash-symbolic");
+      GTK_BOX(contents), _("To be removed"), preview.remove, "user-trash-symbolic", "list-remove-symbolic");
   append_transaction_package_summary_section(
-      GTK_BOX(contents), _("To be replaced"), preview.replaced, "view-refresh-symbolic");
+      GTK_BOX(contents), _("To be replaced"), preview.replaced, "view-refresh-symbolic", "emblem-synchronizing-symbolic");
 
   GtkWidget *summary_heading_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
   gtk_box_append(GTK_BOX(outer), summary_heading_box);
 
-  GtkWidget *summary_icon = gtk_image_new_from_icon_name("view-list-symbolic");
+  GtkWidget *summary_icon = gtk_image_new_from_icon_name(
+      ui_helpers_icon_name_with_fallback("view-list-symbolic", "dialog-information-symbolic"));
   gtk_image_set_pixel_size(GTK_IMAGE(summary_icon), 18);
   gtk_box_append(GTK_BOX(summary_heading_box), summary_icon);
 
