@@ -189,7 +189,6 @@ supplies the description and metadata separately, so the UI does not parse trans
 
 [src/ui/package_table/package_table_view.cpp](../src/ui/package_table/package_table_view.cpp) builds the
 package table, including column setup, selection, and status refresh.
-Package names, versions, and repository cells show their full text on hover.
 
 The table columns can be shown or hidden from `View -> Columns`, and the same menu can restore the default
 column set. The setting is stored in `dnfui.conf` as `package_table_hidden_columns`, using stable column ids
