@@ -13,6 +13,9 @@ static bool
 transaction_dialog_display_available()
 {
   static const bool available = gtk_init_check();
+  if (!available) {
+    REQUIRE(g_getenv("DNFUI_TEST_REQUIRE_DISPLAY") == nullptr);
+  }
   return available;
 }
 
@@ -204,15 +207,27 @@ TEST_CASE("Transaction summary groups resolved changes by action", "[gtk]")
     const char *item;
   };
   const Section sections[] = {
-    { "Warnings", "dialog-warning-symbolic", "Resolver warning" },
-    { "To be installed", "list-add-symbolic", "Install package" },
+    { "Warnings",
+      ui_helpers_icon_name_with_fallback("dialog-warning-symbolic", "dialog-information-symbolic"),
+      "Resolver warning" },
+    { "To be installed",
+      ui_helpers_icon_name_with_fallback("list-add-symbolic", "document-new-symbolic"),
+      "Install package" },
     { "To be upgraded",
       ui_helpers_icon_name_with_fallback("software-update-available-symbolic", "view-refresh-symbolic"),
       "Upgrade package" },
-    { "To be downgraded", "go-down-symbolic", "Downgrade package" },
-    { "To be reinstalled", "document-revert-symbolic", "Reinstall package" },
-    { "To be removed", "user-trash-symbolic", "Remove package" },
-    { "To be replaced", "view-refresh-symbolic", "Replace package" },
+    { "To be downgraded",
+      ui_helpers_icon_name_with_fallback("go-down-symbolic", "pan-down-symbolic"),
+      "Downgrade package" },
+    { "To be reinstalled",
+      ui_helpers_icon_name_with_fallback("document-revert-symbolic", "view-refresh-symbolic"),
+      "Reinstall package" },
+    { "To be removed",
+      ui_helpers_icon_name_with_fallback("user-trash-symbolic", "list-remove-symbolic"),
+      "Remove package" },
+    { "To be replaced",
+      ui_helpers_icon_name_with_fallback("view-refresh-symbolic", "emblem-synchronizing-symbolic"),
+      "Replace package" },
   };
 
   for (const auto &section : sections) {
