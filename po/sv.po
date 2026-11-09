@@ -1,9 +1,9 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: dnf-ui 0.7.3\n"
+"Project-Id-Version: dnf-ui 0.8.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-25 15:45+0000\n"
-"PO-Revision-Date: 2026-10-25 16:48+0100\n"
+"POT-Creation-Date: 2026-11-09 18:47+0100\n"
+"PO-Revision-Date: 2026-11-09 19:26+0100\n"
 "Last-Translator: DNF UI project <dnfui@proton.me>\n"
 "Language-Team: Swedish\n"
 "Language: sv\n"
@@ -1631,9 +1631,6 @@ msgstr "Rensa väntande"
 msgid "Clear Transactions"
 msgstr "Rensa transaktioner"
 
-msgid "Info"
-msgstr "Info"
-
 msgid "Details"
 msgstr "Detaljer"
 
@@ -1755,12 +1752,6 @@ msgstr "Granska och verkställ väntande paketändringar."
 
 msgid "Clear all pending package changes."
 msgstr "Rensa alla väntande paketändringar."
-
-msgid "Copy Info"
-msgstr "Kopiera info"
-
-msgid "Copy the complete package information."
-msgstr "Kopiera den fullständiga paketinformationen."
 
 msgid "Copy Description"
 msgstr "Kopiera beskrivning"
