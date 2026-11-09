@@ -65,6 +65,8 @@ jobs:
               appstreamcli validate --no-net build/ci/packaging/io.github.dnfui.dnfui.metainfo.xml
               meson test -C build/ci --print-errorlogs
               DNFUI_TEST_REQUIRE_DISPLAY=1 xvfb-run -a dbus-run-session -- \
+                build/ci/test/dnfui-tests "[gtk]"
+              DNFUI_TEST_REQUIRE_DISPLAY=1 xvfb-run -a dbus-run-session -- \
                 meson test -C build/ci dnfui-color-scheme-tests --print-errorlogs
 
               meson setup build/final \
