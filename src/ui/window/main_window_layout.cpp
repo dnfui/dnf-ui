@@ -468,13 +468,13 @@ main_window_build_layout(AppWidgets *ui)
 
   gtk_stack_add_titled(GTK_STACK(details_stack), description_box, "description", _("Description"));
 
-  // Common package details tab.
+  // Package details tab.
   GtkTextBuffer *details_buffer = NULL;
   GtkWidget *scrolled_details =
       create_scrolled_text_view(_("Select a package for details."), GTK_WRAP_WORD, &details_buffer);
   ui->details_buffer = details_buffer;
 
-  gtk_stack_add_titled(GTK_STACK(details_stack), scrolled_details, "common", _("Common"));
+  gtk_stack_add_titled(GTK_STACK(details_stack), scrolled_details, "common", _("Details"));
 
   // File list tab.
   GtkWidget *files_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);

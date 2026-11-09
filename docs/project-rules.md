@@ -38,7 +38,7 @@ and **explain** the code that is merged.
   visible instead of hiding the upgrade.
 - When showing an upgradable package, details tabs should describe the currently installed package unless the
   text clearly says it is showing update information.
-- For daemon-backed List Upgradable rows, the Common tab must use the attached daemon target for update
+- For daemon-backed List Upgradable rows, the Details tab must use the attached daemon target for update
   information instead of selecting a separate libdnf5 candidate.
 - Installed package checks must not load repository metadata when local rpmdb state is enough.
 - Repository refresh can update repository-visible package state, but it should **not** pretend to install or remove packages.

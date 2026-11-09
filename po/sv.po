@@ -1613,8 +1613,8 @@ msgstr "Rensa transaktioner"
 msgid "Info"
 msgstr "Info"
 
-msgid "Common"
-msgstr "Allmänt"
+msgid "Details"
+msgstr "Detaljer"
 
 msgid "Files"
 msgstr "Filer"

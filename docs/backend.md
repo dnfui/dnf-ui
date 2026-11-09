@@ -290,18 +290,18 @@ It provides:
 These helpers perform read-only libdnf5 queries and do not mutate the installed snapshot.
 
 When the selected row has a daemon upgrade target, the details controller keeps the visible row ID separate
-from the package ID used for installed details. Description, Common, Files, and Dependencies use the installed
+from the package ID used for installed details. Description, Details, Files, and Dependencies use the installed
 counterpart when it is known. Changelog uses the exact daemon upgrade target because that row represents the package
-version the user is deciding whether to install. The Common tab uses the attached daemon target for the
+version the user is deciding whether to install. The Details tab uses the attached daemon target for the
 upgradable version line instead of asking libdnf5 to choose a separate candidate.
 
-Newest upgrade rows in compact Search and List Packages views use installed context for Description, Common,
+Newest upgrade rows in compact Search and List Packages views use installed context for Description, Details,
 Files, and Dependencies so they match the installed version and Update Version columns. Their changelog uses the
-available update NEVRA stored on the row. List Upgradable rows use installed context for Description, Common,
+available update NEVRA stored on the row. List Upgradable rows use installed context for Description, Details,
 Files, and Dependencies, while their changelog uses the daemon-selected upgrade target.
 
 When Latest only is disabled, each available row uses selected-version context, including the globally newest
-available version. This makes Description, Common, Dependencies, and Changelog describe the exact selected NEVRA.
+available version. This makes Description, Details, Dependencies, and Changelog describe the exact selected NEVRA.
 Files remains available only when that exact NEVRA is installed.
 
 ## Transactions
