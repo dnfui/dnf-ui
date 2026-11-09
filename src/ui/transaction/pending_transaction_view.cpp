@@ -82,33 +82,41 @@ pending_transaction_refresh_pending_tab(MainWindowUiState *widgets)
   // Add one row for each pending action.
   for (const auto &a : widgets->transaction_state.actions) {
     std::string prefix;
+    const char *icon_name = nullptr;
+    const char *fallback_icon_name = nullptr;
     switch (a.type) {
     case PendingAction::INSTALL:
       prefix = _("Install: ");
+      icon_name = "list-add-symbolic";
+      fallback_icon_name = "document-new-symbolic";
       break;
     case PendingAction::UPGRADE:
       prefix = _("Upgrade: ");
+      icon_name = "software-update-available-symbolic";
+      fallback_icon_name = "view-refresh-symbolic";
       break;
     case PendingAction::DOWNGRADE:
       prefix = _("Downgrade: ");
+      icon_name = "go-down-symbolic";
+      fallback_icon_name = "pan-down-symbolic";
       break;
     case PendingAction::REINSTALL:
       prefix = _("Reinstall: ");
+      icon_name = "document-revert-symbolic";
+      fallback_icon_name = "view-refresh-symbolic";
       break;
     case PendingAction::REMOVE:
       prefix = _("Remove: ");
+      icon_name = "user-trash-symbolic";
+      fallback_icon_name = "list-remove-symbolic";
       break;
     }
     std::string line = prefix + a.nevra;
 
-    GtkWidget *button = gtk_button_new();
+    GtkWidget *button = ui_helpers_create_icon_button_with_fallback(icon_name, fallback_icon_name, line.c_str());
     gtk_widget_add_css_class(button, "flat");
     gtk_widget_set_hexpand(button, TRUE);
-
-    GtkWidget *label = gtk_label_new(line.c_str());
-    gtk_label_set_xalign(GTK_LABEL(label), 0.0);
-    gtk_widget_set_halign(label, GTK_ALIGN_FILL);
-    gtk_button_set_child(GTK_BUTTON(button), label);
+    gtk_widget_set_halign(gtk_button_get_child(GTK_BUTTON(button)), GTK_ALIGN_START);
 
     PendingJumpButtonData *data = new PendingJumpButtonData { widgets, a.nevra, a.type, a.installonly };
     g_signal_connect_data(
