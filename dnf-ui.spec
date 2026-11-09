@@ -1,5 +1,5 @@
 Name:           dnf-ui
-Version:        0.8.0
+Version:        0.8.1
 Release:        1%{?dist}
 Summary:        GTK interface for DNF5
 
@@ -56,6 +56,13 @@ appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/io.github.dnfui.
 %{_datadir}/metainfo/io.github.dnfui.dnfui.metainfo.xml
 
 %changelog
+* Mon Nov 09 2026 ErikMN <dnfui@proton.me> - 0.8.1-1
+- Filter package lists by name or summary while browsing
+- Show expected installed size in a sortable Size column
+- Restore smooth package list scrolling by removing hover tooltips
+- Show action icons in the Pending list and improve icon fallbacks in transaction previews
+- Rename the Common package tab to Details
+
 * Sun Nov 08 2026 ErikMN <dnfui@proton.me> - 0.8.0-1
 - Separate package descriptions and common details into tabs, with a button to copy the description
 - Make package states and actions easier to read with clearer styling and tooltips
