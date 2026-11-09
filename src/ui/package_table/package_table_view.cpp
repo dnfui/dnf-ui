@@ -558,7 +558,6 @@ create_text_column(MainWindowUiState *widgets, const PackageTableColumnDefinitio
 
                      if (!package_item) {
                        gtk_label_set_text(GTK_LABEL(label), "");
-                       gtk_widget_set_tooltip_text(label, nullptr);
                        package_table_clear_status_css(cell);
                        package_table_clear_pending_action_css(frame);
                        clear_pending_row_css_for_cell(frame);
@@ -587,10 +586,6 @@ create_text_column(MainWindowUiState *widgets, const PackageTableColumnDefinitio
                      } else {
                        std::string text = package_table_column_text(*package_item, kind);
                        gtk_label_set_text(GTK_LABEL(label), text.c_str());
-                       if (kind == PackageColumnKind::PACKAGE || kind == PackageColumnKind::VERSION ||
-                           kind == PackageColumnKind::UPDATE_VERSION || kind == PackageColumnKind::REPO) {
-                         gtk_widget_set_tooltip_text(label, text.c_str());
-                       }
                      }
                    }),
                    nullptr);
