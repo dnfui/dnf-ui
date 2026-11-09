@@ -201,6 +201,11 @@ on_export_dialog_response(GObject *source, GAsyncResult *result, gpointer user_d
 void
 package_table_export_visible_rows_to_csv(MainWindowUiState *widgets, GtkWindow *parent)
 {
+  if (package_table_quick_filter_is_pending(widgets)) {
+    ui_helpers_set_status(widgets->query.status_label, _("Wait for package filtering to finish."), "blue");
+    return;
+  }
+
   std::string csv;
   if (!build_visible_table_csv(widgets, csv)) {
     if (widgets) {

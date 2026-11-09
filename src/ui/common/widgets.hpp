@@ -44,6 +44,8 @@ struct PackageQueryWidgets {
 // -----------------------------------------------------------------------------
 struct PackageResultsWidgets {
   GtkScrolledWindow *list_scroller = nullptr;
+  GtkSearchBar *quick_filter_bar = nullptr;
+  GtkSearchEntry *quick_filter_entry = nullptr;
   GtkPaned *inner_paned = nullptr;
   GtkStack *details_stack = nullptr;
   GtkLabel *details_status_label = nullptr;

@@ -26,6 +26,137 @@ static void update_pending_action_css_for_cell(GtkWidget *cell,
                                                const PendingTransactionActionRows &action_rows);
 
 // -----------------------------------------------------------------------------
+// Return the filter model attached to the current package table.
+// -----------------------------------------------------------------------------
+static GtkFilterListModel *
+package_table_quick_filter_model(MainWindowUiState *widgets)
+{
+  GtkWidget *view = gtk_scrolled_window_get_child(widgets->results.list_scroller);
+  if (!GTK_IS_COLUMN_VIEW(view)) {
+    return nullptr;
+  }
+
+  GtkSingleSelection *selection = GTK_SINGLE_SELECTION(gtk_column_view_get_model(GTK_COLUMN_VIEW(view)));
+  GtkSortListModel *sort_model = GTK_SORT_LIST_MODEL(gtk_single_selection_get_model(selection));
+  return GTK_FILTER_LIST_MODEL(gtk_sort_list_model_get_model(sort_model));
+}
+
+// -----------------------------------------------------------------------------
+// Return true while the package filter is still processing results.
+// -----------------------------------------------------------------------------
+bool
+package_table_quick_filter_is_pending(MainWindowUiState *widgets)
+{
+  if (!widgets || !widgets->results.list_scroller) {
+    return false;
+  }
+
+  GtkFilterListModel *model = package_table_quick_filter_model(widgets);
+  return model && gtk_filter_list_model_get_pending(model) > 0;
+}
+
+// -----------------------------------------------------------------------------
+// Update the count of packages shown by the filter.
+// -----------------------------------------------------------------------------
+static void
+update_quick_filter_count(MainWindowUiState *widgets)
+{
+  GtkFilterListModel *model = package_table_quick_filter_model(widgets);
+  if (!model) {
+    return;
+  }
+
+  size_t total = g_list_model_get_n_items(gtk_filter_list_model_get_model(model));
+  size_t matching = g_list_model_get_n_items(G_LIST_MODEL(model));
+  std::string text;
+  if (!gtk_filter_list_model_get_filter(model)) {
+    text = dnfui_i18n_format_count(total, "Item: %zu", "Items: %zu");
+  } else if (gtk_filter_list_model_get_pending(model) > 0) {
+    text =
+        dnfui_i18n_format_two_counts(matching, total, "Item: %zu of %zu (filtering)", "Items: %zu of %zu (filtering)");
+  } else {
+    text = dnfui_i18n_format_two_counts(matching, total, "Item: %zu of %zu", "Items: %zu of %zu");
+  }
+  gtk_label_set_text(widgets->results.count_label, text.c_str());
+}
+
+static void
+on_quick_filter_items_changed(GListModel *, guint, guint, guint, gpointer user_data)
+{
+  update_quick_filter_count(static_cast<MainWindowUiState *>(user_data));
+}
+
+static void
+on_quick_filter_pending_changed(GObject *, GParamSpec *, gpointer user_data)
+{
+  update_quick_filter_count(static_cast<MainWindowUiState *>(user_data));
+}
+
+// -----------------------------------------------------------------------------
+// Match package names and summaries without another backend query.
+// -----------------------------------------------------------------------------
+static gboolean
+quick_filter_matches(gpointer object, gpointer user_data)
+{
+  const PackageItem *item = package_item_from_object(G_OBJECT(object));
+  const char *text =
+      static_cast<const char *>(g_object_get_data(G_OBJECT(user_data), "dnfui-package-quick-filter-text"));
+  return item && package_table_quick_filter_matches(item->row, text);
+}
+
+// -----------------------------------------------------------------------------
+// Apply the local filter when the entry text changes.
+// -----------------------------------------------------------------------------
+void
+package_table_on_quick_filter_changed(GtkEditable *editable, gpointer user_data)
+{
+  MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
+  const char *text = gtk_editable_get_text(editable);
+  g_object_set_data_full(
+      G_OBJECT(editable), "dnfui-package-quick-filter-text", *text ? g_utf8_casefold(text, -1) : nullptr, g_free);
+
+  GtkFilterListModel *model = package_table_quick_filter_model(widgets);
+  if (!model) {
+    return;
+  }
+
+  GtkFilter *filter = gtk_filter_list_model_get_filter(model);
+  if (!*text) {
+    gtk_filter_list_model_set_filter(model, nullptr);
+  } else if (filter) {
+    gtk_filter_changed(filter, GTK_FILTER_CHANGE_DIFFERENT);
+  } else {
+    filter = GTK_FILTER(gtk_custom_filter_new(quick_filter_matches, editable, nullptr));
+    gtk_filter_list_model_set_filter(model, filter);
+    g_object_unref(filter);
+  }
+  update_quick_filter_count(widgets);
+}
+
+// -----------------------------------------------------------------------------
+// Clearing the quick filter also restores all package rows.
+// -----------------------------------------------------------------------------
+void
+package_table_on_quick_filter_mode_changed(GObject *bar, GParamSpec *, gpointer user_data)
+{
+  MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
+  if (!gtk_search_bar_get_search_mode(GTK_SEARCH_BAR(bar))) {
+    gtk_editable_set_text(GTK_EDITABLE(widgets->results.quick_filter_entry), "");
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Hide the filter before replacing a package table.
+// -----------------------------------------------------------------------------
+static void
+reset_quick_filter(MainWindowUiState *widgets)
+{
+  gtk_search_bar_set_key_capture_widget(widgets->results.quick_filter_bar, nullptr);
+  gtk_search_bar_set_search_mode(widgets->results.quick_filter_bar, FALSE);
+  gtk_editable_set_text(GTK_EDITABLE(widgets->results.quick_filter_entry), "");
+}
+
+// -----------------------------------------------------------------------------
 // Refresh stored package status values without changing the GTK model.
 // -----------------------------------------------------------------------------
 static void
@@ -37,10 +168,9 @@ refresh_model_status_values(GtkColumnView *view, MainWindowUiState *widgets)
   }
 
   GtkSingleSelection *selection = GTK_SINGLE_SELECTION(model);
-  GListModel *items_model = gtk_single_selection_get_model(selection);
-  if (!items_model) {
-    return;
-  }
+  GtkSortListModel *sort_model = GTK_SORT_LIST_MODEL(gtk_single_selection_get_model(selection));
+  GtkFilterListModel *filtered_model = GTK_FILTER_LIST_MODEL(gtk_sort_list_model_get_model(sort_model));
+  GListModel *items_model = gtk_filter_list_model_get_model(filtered_model);
 
   guint n_items = g_list_model_get_n_items(items_model);
   for (guint i = 0; i < n_items; ++i) {
@@ -877,11 +1007,18 @@ finish_package_table_view(MainWindowUiState *widgets,
   }
   package_table_apply_column_visibility(view);
 
-  // Wrap the package list in a GTK sort model so column header clicks reorder it.
-  GtkSortListModel *sort_model = gtk_sort_list_model_new(nullptr, nullptr);
-  gtk_sort_list_model_set_model(sort_model, G_LIST_MODEL(store));
-  gtk_sort_list_model_set_sorter(sort_model, gtk_column_view_get_sorter(view));
+  // Filter loaded packages before applying the existing column sorting.
+  GtkFilterListModel *filtered_model = gtk_filter_list_model_new(nullptr, nullptr);
+  gtk_filter_list_model_set_model(filtered_model, G_LIST_MODEL(store));
+  gtk_filter_list_model_set_incremental(filtered_model, TRUE);
+  g_signal_connect(filtered_model, "items-changed", G_CALLBACK(on_quick_filter_items_changed), widgets);
+  g_signal_connect(filtered_model, "notify::pending", G_CALLBACK(on_quick_filter_pending_changed), widgets);
   g_object_unref(store);
+
+  GtkSortListModel *sort_model = gtk_sort_list_model_new(nullptr, nullptr);
+  gtk_sort_list_model_set_model(sort_model, G_LIST_MODEL(filtered_model));
+  gtk_sort_list_model_set_sorter(sort_model, gtk_column_view_get_sorter(view));
+  g_object_unref(filtered_model);
 
   GtkSingleSelection *sel = gtk_single_selection_new(nullptr);
   gtk_single_selection_set_autoselect(sel, FALSE);
@@ -966,6 +1103,7 @@ finish_package_table_view(MainWindowUiState *widgets,
                    widgets);
 
   gtk_scrolled_window_set_child(widgets->results.list_scroller, GTK_WIDGET(view));
+  gtk_search_bar_set_key_capture_widget(widgets->results.quick_filter_bar, GTK_WIDGET(view));
 
   // Update count label
   std::string count_msg = dnfui_i18n_format_count(item_count, "Item: %zu", "Items: %zu");
@@ -1009,6 +1147,7 @@ package_table_fill_package_view(MainWindowUiState *widgets,
                                 const std::vector<PackageRow> &items,
                                 PackageTableEmptyState empty_state)
 {
+  reset_quick_filter(widgets);
   if (items.empty()) {
     gtk_scrolled_window_set_child(widgets->results.list_scroller, create_empty_package_view(empty_state));
     gtk_label_set_text(widgets->results.count_label, _("Items: 0"));
@@ -1044,6 +1183,7 @@ package_table_fill_package_view(MainWindowUiState *widgets,
                                 const std::vector<PackageTableRow> &items,
                                 PackageTableEmptyState empty_state)
 {
+  reset_quick_filter(widgets);
   if (items.empty()) {
     gtk_scrolled_window_set_child(widgets->results.list_scroller, create_empty_package_view(empty_state));
     gtk_label_set_text(widgets->results.count_label, _("Items: 0"));

@@ -53,6 +53,22 @@ compare_table_test_rows(MainWindowUiState &widgets,
 }
 
 // -----------------------------------------------------------------------------
+// Verify that local filtering matches package names and summaries.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package table quick filter matches name and summary without case sensitivity")
+{
+  PackageRow row = make_table_test_row("kernel-debug-1.0-1.x86_64", "Kernel-Debug", "1.0", "1", "x86_64");
+  row.summary = "Debugging tools for the kernel";
+
+  REQUIRE(package_table_quick_filter_matches(row, "debug"));
+  REQUIRE(package_table_quick_filter_matches(row, "tools"));
+  REQUIRE(package_table_quick_filter_matches(row, "kernel"));
+  REQUIRE_FALSE(package_table_quick_filter_matches(row, "firmware"));
+  REQUIRE(package_table_quick_filter_matches(row, ""));
+  REQUIRE(package_table_quick_filter_matches(row, nullptr));
+}
+
+// -----------------------------------------------------------------------------
 // Verify that the package table Version column matches the Details tab Version
 // field and does not include the package release.
 // -----------------------------------------------------------------------------

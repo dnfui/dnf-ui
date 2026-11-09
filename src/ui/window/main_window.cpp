@@ -121,6 +121,24 @@ setup_shortcuts(GtkWidget *window, GtkWidget *entry, MainWindowUiState *widgets)
 
   gtk_shortcut_controller_add_shortcut(GTK_SHORTCUT_CONTROLLER(shortcuts), focus_search);
 
+  // Open the local package filter with Ctrl+Shift+F.
+  GtkShortcut *quick_filter = gtk_shortcut_new(
+      gtk_keyval_trigger_new(GDK_KEY_F, static_cast<GdkModifierType>(GDK_CONTROL_MASK | GDK_SHIFT_MASK)),
+      gtk_callback_action_new(
+          +[](GtkWidget *, GVariant *, gpointer user_data) -> gboolean {
+            MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
+            GtkWidget *view = gtk_scrolled_window_get_child(widgets->results.list_scroller);
+            if (!GTK_IS_COLUMN_VIEW(view)) {
+              return FALSE;
+            }
+            gtk_search_bar_set_search_mode(widgets->results.quick_filter_bar, TRUE);
+            gtk_widget_grab_focus(GTK_WIDGET(widgets->results.quick_filter_entry));
+            return TRUE;
+          },
+          widgets,
+          NULL));
+  gtk_shortcut_controller_add_shortcut(GTK_SHORTCUT_CONTROLLER(shortcuts), quick_filter);
+
   GtkShortcut *clear_list = gtk_shortcut_new(gtk_keyval_trigger_new(GDK_KEY_l, GDK_CONTROL_MASK),
                                              gtk_callback_action_new(
                                                  +[](GtkWidget *widget, GVariant *, gpointer) -> gboolean {
@@ -234,6 +252,8 @@ create_main_window_ui_state(const AppWidgets *ui)
   widgets->query.latest_checkbox = GTK_CHECK_BUTTON(ui->latest_checkbox);
 
   widgets->results.list_scroller = GTK_SCROLLED_WINDOW(ui->scrolled_list);
+  widgets->results.quick_filter_bar = GTK_SEARCH_BAR(ui->quick_filter_bar);
+  widgets->results.quick_filter_entry = GTK_SEARCH_ENTRY(ui->quick_filter_entry);
   widgets->results.inner_paned = GTK_PANED(ui->inner_paned);
   widgets->results.details_stack = GTK_STACK(ui->details_stack);
   widgets->results.details_status_label = GTK_LABEL(ui->details_status_label);
@@ -669,6 +689,11 @@ connect_signals(const AppWidgets *ui, MainWindowUiState *widgets)
   g_signal_connect(ui->search_button, "clicked", G_CALLBACK(package_query_on_search_button_clicked), widgets);
 
   g_signal_connect(ui->entry, "activate", G_CALLBACK(package_query_on_search_button_clicked), widgets);
+  g_signal_connect(ui->quick_filter_entry, "changed", G_CALLBACK(package_table_on_quick_filter_changed), widgets);
+  g_signal_connect(ui->quick_filter_bar,
+                   "notify::search-mode-enabled",
+                   G_CALLBACK(package_table_on_quick_filter_mode_changed),
+                   widgets);
   g_signal_connect(ui->history_list, "row-selected", G_CALLBACK(package_query_on_history_row_selected), widgets);
 
   g_signal_connect(ui->apply_button, "clicked", G_CALLBACK(pending_transaction_on_apply_button_clicked), widgets);

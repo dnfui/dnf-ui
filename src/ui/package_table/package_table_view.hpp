@@ -11,6 +11,8 @@
 #include "ui/package_table/package_table_columns.hpp"
 #include "upgrade/daemon_upgrade_target.hpp"
 
+#include <gtk/gtk.h>
+
 #include <memory>
 #include <vector>
 
@@ -65,7 +67,16 @@ void package_table_fill_package_view(MainWindowUiState *widgets,
                                      const std::vector<PackageTableRow> &items,
                                      PackageTableEmptyState empty_state = PackageTableEmptyState::READY);
 // -----------------------------------------------------------------------------
-// Refresh status values for all visible package rows.
+// Update the local package filter when its text or visibility changes.
+// -----------------------------------------------------------------------------
+void package_table_on_quick_filter_changed(GtkEditable *editable, gpointer user_data);
+void package_table_on_quick_filter_mode_changed(GObject *bar, GParamSpec *, gpointer user_data);
+// -----------------------------------------------------------------------------
+// Return true while quick filtering is still processing results.
+// -----------------------------------------------------------------------------
+bool package_table_quick_filter_is_pending(MainWindowUiState *widgets);
+// -----------------------------------------------------------------------------
+// Refresh status values for all package rows.
 // -----------------------------------------------------------------------------
 void package_table_refresh_statuses(MainWindowUiState *widgets);
 // -----------------------------------------------------------------------------

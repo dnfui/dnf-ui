@@ -750,6 +750,9 @@ msgstr "Redo."
 msgid "Wait for the current package query to finish."
 msgstr "Vänta tills aktuell paketfråga är klar."
 
+msgid "Wait for package filtering to finish."
+msgstr "Vänta tills paketfiltreringen är klar."
+
 msgid "Loading package..."
 msgstr "Läser in paket..."
 
@@ -1576,6 +1579,21 @@ msgstr "Sök paket..."
 
 msgid "Filter files..."
 msgstr "Filtrera filer..."
+
+msgid "Filter results..."
+msgstr "Filtrera resultat..."
+
+#, c-format
+msgid "Item: %zu of %zu"
+msgid_plural "Items: %zu of %zu"
+msgstr[0] "Objekt: %zu av %zu"
+msgstr[1] "Objekt: %zu av %zu"
+
+#, c-format
+msgid "Item: %zu of %zu (filtering)"
+msgid_plural "Items: %zu of %zu (filtering)"
+msgstr[0] "Objekt: %zu av %zu (filtrerar)"
+msgstr[1] "Objekt: %zu av %zu (filtrerar)"
 
 #, c-format
 msgid "%zu of %zu file"

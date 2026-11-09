@@ -48,6 +48,8 @@ struct AppWidgets {
   GtkWidget *inner_paned = NULL;
 
   GtkWidget *scrolled_list = NULL;
+  GtkWidget *quick_filter_bar = NULL;
+  GtkWidget *quick_filter_entry = NULL;
   GtkWidget *details_panel = NULL;
   GtkWidget *details_stack = NULL;
   GtkWidget *details_status_label = NULL;

@@ -382,11 +382,30 @@ main_window_build_layout(AppWidgets *ui)
   ui->inner_paned = inner_paned;
 
   // Package table.
+  GtkWidget *table_overlay = gtk_overlay_new();
+  gtk_widget_set_hexpand(table_overlay, TRUE);
+  gtk_widget_set_vexpand(table_overlay, TRUE);
+  gtk_paned_set_start_child(GTK_PANED(inner_paned), table_overlay);
+
   GtkWidget *scrolled_list = gtk_scrolled_window_new();
   gtk_widget_set_hexpand(scrolled_list, TRUE);
   gtk_widget_set_vexpand(scrolled_list, TRUE);
-  gtk_paned_set_start_child(GTK_PANED(inner_paned), scrolled_list);
+  gtk_overlay_set_child(GTK_OVERLAY(table_overlay), scrolled_list);
   ui->scrolled_list = scrolled_list;
+
+  GtkWidget *quick_filter_bar = gtk_search_bar_new();
+  gtk_widget_set_halign(quick_filter_bar, GTK_ALIGN_END);
+  gtk_widget_set_valign(quick_filter_bar, GTK_ALIGN_END);
+  gtk_widget_set_margin_end(quick_filter_bar, 8);
+  gtk_widget_set_margin_bottom(quick_filter_bar, 8);
+  gtk_search_bar_set_show_close_button(GTK_SEARCH_BAR(quick_filter_bar), TRUE);
+  GtkWidget *quick_filter_entry = gtk_search_entry_new();
+  gtk_search_entry_set_placeholder_text(GTK_SEARCH_ENTRY(quick_filter_entry), _("Filter results..."));
+  gtk_widget_set_size_request(quick_filter_entry, 220, -1);
+  gtk_search_bar_set_child(GTK_SEARCH_BAR(quick_filter_bar), quick_filter_entry);
+  gtk_overlay_add_overlay(GTK_OVERLAY(table_overlay), quick_filter_bar);
+  ui->quick_filter_bar = quick_filter_bar;
+  ui->quick_filter_entry = quick_filter_entry;
 
   // Details panel.
   GtkWidget *details_panel = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);

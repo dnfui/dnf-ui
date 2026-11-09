@@ -116,6 +116,11 @@ removing packages. The List Installed button acts as Stop while this view loads.
 still requires the regular dnf5daemon preview and confirmation.
 
 The bottom bar shows the visible row count on the left and the last completed package query time on the right.
+When the package table has focus, typing opens a temporary filter in its bottom-right corner. Ctrl+Shift+F
+also opens it directly. The filter matches package names and summaries without running a new backend search.
+Escape or the close button clears it and restores the full list. The count shows matching and total rows while
+filtering. Mark Listed Upgrades and package export use the filtered rows, not hidden results. Both require
+filtering to finish before they can run. Loading a new package list clears the filter.
 
 After startup, DNF UI quietly checks dnf5daemon's read-only upgrade target list. When that check succeeds, the
 List Upgradable button shows the current number of daemon-reported upgrades. The count check defers while a
@@ -249,7 +254,7 @@ The action checkboxes allow one, several, or all actions.
 validates local dates in YYYY-MM-DD format. The end date includes the whole day. Invalid or reversed ranges
 are rejected before searching.
 
-Ctrl+F focuses the package filter and Ctrl+W closes the window. The window remains usable while a transaction
+Ctrl+F focuses the main package search field and Ctrl+W closes the window. The window remains usable while a transaction
 summary is open. While a package transaction is being applied, the window stays open but its controls are
 disabled until Apply finishes. The window can still be closed. History is read-only. It cannot roll back,
 replay, or undo transactions.

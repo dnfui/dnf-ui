@@ -283,6 +283,10 @@ pending_transaction_on_mark_listed_upgrades_button_clicked(GtkButton *, gpointer
     ui_helpers_set_status(widgets->query.status_label, _("Wait for the current package query to finish."), "blue");
     return;
   }
+  if (package_table_quick_filter_is_pending(widgets)) {
+    ui_helpers_set_status(widgets->query.status_label, _("Wait for package filtering to finish."), "blue");
+    return;
+  }
 
   std::vector<PackageTableRow> rows = package_table_get_displayed_packages(widgets);
   const bool projects_upgrade_actions =

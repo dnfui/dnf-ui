@@ -228,6 +228,29 @@ make_package_object(MainWindowUiState *widgets, const PackageTableRow &row)
 }
 
 // -----------------------------------------------------------------------------
+// Match package names and summaries against case-folded filter text.
+// -----------------------------------------------------------------------------
+bool
+package_table_quick_filter_matches(const PackageRow &row, const char *folded_text)
+{
+  if (!folded_text || !*folded_text) {
+    return true;
+  }
+
+  gchar *name = g_utf8_casefold(row.name.c_str(), -1);
+  bool matches = g_strstr_len(name, -1, folded_text) != nullptr;
+  g_free(name);
+
+  if (!matches) {
+    gchar *summary = g_utf8_casefold(row.summary.c_str(), -1);
+    matches = g_strstr_len(summary, -1, folded_text) != nullptr;
+    g_free(summary);
+  }
+
+  return matches;
+}
+
+// -----------------------------------------------------------------------------
 // Read the sortable package wrapper stored on a GTK list item.
 // -----------------------------------------------------------------------------
 const PackageItem *
