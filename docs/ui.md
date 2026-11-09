@@ -219,7 +219,10 @@ still owns loading, cancellation, snapshot publication, and the READY check befo
 
 [src/ui/package_table/package_table_sort.cpp](../src/ui/package_table/package_table_sort.cpp) contains package
 table cell text lookup and sorting rules. Version columns sort by stored RPM epoch and version.
-Release columns sort by stored RPM release text.
+Release columns sort by stored RPM release text. The Size column shows the package's expected installed
+size, using the same libdnf5 metadata as the Details tab. The column sorts by bytes rather than formatted
+size text. For rows showing an installed version alongside an update, Size describes the installed version.
+When package size metadata is unavailable, the Size cell is blank.
 
 [src/ui/package_table/package_table_export.cpp](../src/ui/package_table/package_table_export.cpp) exports the
 current table rows to CSV.

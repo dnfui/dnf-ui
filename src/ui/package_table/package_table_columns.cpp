@@ -25,6 +25,7 @@ package_table_column_definitions()
     { PackageColumnKind::UPDATE_RELEASE, "update-release", N_("Update Release"), 150, false, true },
     { PackageColumnKind::ARCH, "arch", N_("Arch"), 95, false, true },
     { PackageColumnKind::REPO, "repo", N_("Repo"), 130, false, true },
+    { PackageColumnKind::SIZE, "size", N_("Size"), 100, false, true },
     { PackageColumnKind::SUMMARY, "summary", N_("Summary"), 0, true, true },
   };
 

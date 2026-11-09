@@ -19,6 +19,7 @@ struct MainWindowUiState;
 struct PackageTableDisplayValues {
   std::string version;
   std::string update_version;
+  std::optional<std::uint64_t> install_size;
   std::string release;
   std::string update_release;
   std::string repo;

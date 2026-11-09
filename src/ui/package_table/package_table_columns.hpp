@@ -21,6 +21,7 @@ enum class PackageColumnKind {
   UPDATE_RELEASE,
   ARCH,
   REPO,
+  SIZE,
   SUMMARY,
 };
 

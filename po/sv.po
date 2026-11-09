@@ -435,6 +435,9 @@ msgstr "Installerad från"
 msgid "Install Size"
 msgstr "Installationsstorlek"
 
+msgid "Size"
+msgstr "Storlek"
+
 msgid "Install Reason"
 msgstr "Installationsorsak"
 

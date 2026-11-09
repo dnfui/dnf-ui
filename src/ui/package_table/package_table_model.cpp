@@ -122,6 +122,7 @@ package_table_fill_item_display_values(PackageItem &item,
   PackageTableDisplayValues values {
     .version = item.row.version,
     .update_version = {},
+    .install_size = item.row.install_size,
     .release = item.row.release,
     .update_release = {},
     .repo = item.row.repo,
@@ -133,10 +134,12 @@ package_table_fill_item_display_values(PackageItem &item,
     if (resolution.has_installed_row) {
       values.version = resolution.installed_row.version;
       values.release = resolution.installed_row.release;
+      values.install_size = resolution.installed_row.install_size;
       item.current_evr = sort_evr_from_row(resolution.installed_row);
     } else {
       values.version.clear();
       values.release.clear();
+      values.install_size.reset();
       item.current_evr = {};
     }
 
@@ -158,6 +161,7 @@ package_table_fill_item_display_values(PackageItem &item,
     // The table column is named Version, so keep it aligned with the Details tab Version field.
     values.version = resolution.installed_row.version;
     values.release = resolution.installed_row.release;
+    values.install_size = resolution.installed_row.install_size;
     values.repo = resolution.installed_row.repo;
     item.current_evr = sort_evr_from_row(resolution.installed_row);
   }
@@ -184,7 +188,8 @@ package_table_fill_item_display_values(PackageItem &item,
   }
 
   const bool display_values_differ = values.version != item.row.version || !values.update_version.empty() ||
-      values.release != item.row.release || !values.update_release.empty() || values.repo != item.row.repo;
+      values.install_size != item.row.install_size || values.release != item.row.release ||
+      !values.update_release.empty() || values.repo != item.row.repo;
   if (display_values_differ) {
     item.display_values = std::make_shared<PackageTableDisplayValues>(std::move(values));
   } else {

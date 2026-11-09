@@ -6,6 +6,15 @@
 #include "ui/package_table/package_table_view_internal.hpp"
 
 // -----------------------------------------------------------------------------
+// Return the install size for the version shown in the package table.
+// -----------------------------------------------------------------------------
+static const std::optional<std::uint64_t> &
+package_table_item_install_size(const PackageItem &item)
+{
+  return item.display_values ? item.display_values->install_size : item.row.install_size;
+}
+
+// -----------------------------------------------------------------------------
 // Return the visible text for one package table cell.
 // -----------------------------------------------------------------------------
 std::string
@@ -30,6 +39,17 @@ package_table_column_text(const PackageItem &item, PackageColumnKind kind)
     return item.row.arch;
   case PackageColumnKind::REPO:
     return display ? display->repo : item.row.repo;
+  case PackageColumnKind::SIZE: {
+    const auto &size = package_table_item_install_size(item);
+    if (!size) {
+      return {};
+    }
+
+    char *formatted = g_format_size(*size);
+    std::string text = formatted;
+    g_free(formatted);
+    return text;
+  }
   case PackageColumnKind::SUMMARY:
     return item.row.summary;
   }
@@ -89,6 +109,28 @@ compare_sort_release(const PackageTableSortEvr &lhs, const PackageTableSortEvr &
 }
 
 // -----------------------------------------------------------------------------
+// Compare package sizes numerically and place unknown sizes before known sizes.
+// -----------------------------------------------------------------------------
+static int
+compare_install_size(const std::optional<std::uint64_t> &lhs, const std::optional<std::uint64_t> &rhs)
+{
+  if (!lhs || !rhs) {
+    if (!lhs && !rhs) {
+      return 0;
+    }
+    return lhs ? 1 : -1;
+  }
+
+  if (*lhs < *rhs) {
+    return -1;
+  }
+  if (*lhs > *rhs) {
+    return 1;
+  }
+  return 0;
+}
+
+// -----------------------------------------------------------------------------
 // Compare two package items for the active package table column.
 // -----------------------------------------------------------------------------
 static int
@@ -121,6 +163,9 @@ compare_package_items(const PackageItem &lhs, const PackageItem &rhs, PackageCol
   case PackageColumnKind::REPO:
     result = compare_text(package_table_column_text(lhs, PackageColumnKind::REPO),
                           package_table_column_text(rhs, PackageColumnKind::REPO));
+    break;
+  case PackageColumnKind::SIZE:
+    result = compare_install_size(package_table_item_install_size(lhs), package_table_item_install_size(rhs));
     break;
   case PackageColumnKind::SUMMARY:
     result = compare_text(lhs.row.summary, rhs.row.summary);

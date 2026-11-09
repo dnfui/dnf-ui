@@ -69,6 +69,86 @@ TEST_CASE("Package table quick filter matches name and summary without case sens
 }
 
 // -----------------------------------------------------------------------------
+// Verify that Size displays installed bytes and distinguishes zero from unknown.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package table Size column displays install size")
+{
+  reset_backend_globals();
+
+  PackageRow row = make_table_test_row("demo-1-1.x86_64", "demo", "1", "1", "x86_64");
+  PackageItem item = make_table_test_item(row);
+  REQUIRE(package_table_column_text(item, PackageColumnKind::SIZE).empty());
+
+  row.install_size = 0;
+  item = make_table_test_item(row);
+  char *zero_size = g_format_size(0);
+  std::string zero_text = zero_size;
+  g_free(zero_size);
+  REQUIRE(package_table_column_text(item, PackageColumnKind::SIZE) == zero_text);
+
+  row.install_size = 8 * 1024 * 1024;
+  item = make_table_test_item(row);
+  char *formatted = g_format_size(*row.install_size);
+  std::string expected = formatted;
+  g_free(formatted);
+  REQUIRE(package_table_column_text(item, PackageColumnKind::SIZE) == expected);
+}
+
+// -----------------------------------------------------------------------------
+// Verify that Size follows the installed version in compact and daemon upgrade views.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package table Size column uses installed size for upgrade rows")
+{
+  reset_backend_globals();
+
+  PackageRow installed = make_table_test_row("demo-1-1.x86_64", "demo", "1", "1", "x86_64");
+  installed.install_size = 4 * 1024 * 1024;
+  PackageRow update = make_table_test_row("demo-2-1.x86_64", "demo", "2", "1", "x86_64");
+  update.install_size = 12 * 1024 * 1024;
+  update.is_newest_available = true;
+  dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
+
+  PackageItem compact = make_table_test_item(update);
+  PackageItem exact = make_table_test_item(update, false);
+
+  char *installed_text = g_format_size(*installed.install_size);
+  std::string installed_expected = installed_text;
+  g_free(installed_text);
+  char *candidate_text = g_format_size(*update.install_size);
+  std::string candidate_expected = candidate_text;
+  g_free(candidate_text);
+
+  REQUIRE(package_table_column_text(compact, PackageColumnKind::SIZE) == installed_expected);
+  REQUIRE(package_table_column_text(exact, PackageColumnKind::SIZE) == candidate_expected);
+
+  PackageItem daemon_item {};
+  daemon_item.row = update;
+  daemon_item.daemon_upgrade = std::make_shared<DaemonUpgradeRowContext>();
+  InstalledPackageResolution resolution = dnf_backend_resolve_installed_package(daemon_item.row);
+  package_table_fill_item_display_values(daemon_item, resolution, true);
+  REQUIRE(package_table_column_text(daemon_item, PackageColumnKind::SIZE) == installed_expected);
+}
+
+// -----------------------------------------------------------------------------
+// Verify that Size sorts by bytes instead of formatted strings.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package table Size sorter compares numeric values")
+{
+  reset_backend_globals();
+  MainWindowUiState widgets;
+
+  PackageRow small = make_table_test_row("small-1-1.x86_64", "small", "1", "1", "x86_64");
+  PackageRow large = make_table_test_row("large-1-1.x86_64", "large", "1", "1", "x86_64");
+  PackageRow unknown = make_table_test_row("unknown-1-1.x86_64", "unknown", "1", "1", "x86_64");
+  small.install_size = 9 * 1024 * 1024;
+  large.install_size = 10 * 1024 * 1024;
+
+  REQUIRE(compare_table_test_rows(widgets, small, large, PackageColumnKind::SIZE) < 0);
+  REQUIRE(compare_table_test_rows(widgets, large, small, PackageColumnKind::SIZE) > 0);
+  REQUIRE(compare_table_test_rows(widgets, unknown, small, PackageColumnKind::SIZE) < 0);
+}
+
+// -----------------------------------------------------------------------------
 // Verify that the package table Version column matches the Details tab Version
 // field and does not include the package release.
 // -----------------------------------------------------------------------------

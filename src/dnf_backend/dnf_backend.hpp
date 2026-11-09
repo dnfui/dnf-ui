@@ -68,6 +68,7 @@ struct PackageRow {
   std::string repo;
   std::string installed_from_repo;
   std::string summary;
+  std::optional<std::uint64_t> install_size;
   PackageInstallReason install_reason = PackageInstallReason::UNKNOWN;
   PackageRepoCandidateRelation repo_candidate_relation = PackageRepoCandidateRelation::UNKNOWN;
   // These fields are set only when an installed row has a visible repository candidate.

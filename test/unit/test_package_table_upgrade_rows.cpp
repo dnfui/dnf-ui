@@ -42,6 +42,7 @@ upgrade_metadata()
   row.nevra = "example-2.0-1.fc44.x86_64";
   row.repo = "metadata-repo";
   row.summary = "Package summary from libdnf5";
+  row.install_size = 4096;
   return row;
 }
 
@@ -80,6 +81,7 @@ TEST_CASE("Upgrade rows keep daemon targets when metadata is missing", "[upgrade
   REQUIRE(row.arch == target.arch);
   REQUIRE(row.repo == target.repo_id);
   REQUIRE(row.summary.empty());
+  REQUIRE_FALSE(row.install_size.has_value());
   REQUIRE(rows.front().upgrade_target() != nullptr);
   REQUIRE(rows.front().upgrade_target()->full_nevra == target.full_nevra);
   REQUIRE(rows.front().upgrade_generation() == snapshot.generation);
@@ -117,6 +119,7 @@ TEST_CASE("Upgrade rows add exact metadata and retain their daemon context", "[u
   REQUIRE(row.row.nevra == metadata.nevra);
   REQUIRE(row.row.summary == metadata.summary);
   REQUIRE(row.row.repo == metadata.repo);
+  REQUIRE(row.row.install_size == metadata.install_size);
   REQUIRE(row.upgrade_generation() == 7);
   REQUIRE(row.upgrade_target() != nullptr);
   REQUIRE(row.upgrade_target()->name == target.name);

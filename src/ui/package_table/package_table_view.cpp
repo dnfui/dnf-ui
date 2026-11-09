@@ -629,7 +629,7 @@ create_text_column(MainWindowUiState *widgets, const PackageTableColumnDefinitio
         gtk_label_set_xalign(GTK_LABEL(label), 0.0f);
         if (kind == PackageColumnKind::VERSION || kind == PackageColumnKind::UPDATE_VERSION ||
             kind == PackageColumnKind::RELEASE || kind == PackageColumnKind::UPDATE_RELEASE ||
-            kind == PackageColumnKind::ARCH || kind == PackageColumnKind::REPO) {
+            kind == PackageColumnKind::ARCH || kind == PackageColumnKind::REPO || kind == PackageColumnKind::SIZE) {
           gtk_widget_add_css_class(label, "package-meta");
         }
         if (kind == PackageColumnKind::SUMMARY) {
