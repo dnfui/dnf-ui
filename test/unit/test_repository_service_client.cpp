@@ -6,11 +6,14 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "dnf5daemon_client/repository_service_client.hpp"
+#include "test_utils.hpp"
 
-#include <glib.h>
+#include <gio/gio.h>
 
 #include <algorithm>
+#include <chrono>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace {
@@ -21,6 +24,142 @@ struct RepositoryMapSpec {
   bool include_enabled = true;
   bool enabled = false;
   bool enabled_as_string = false;
+};
+
+constexpr const char *kDelayedSessionPath = "/org/rpm/dnf/v0/delayed_test";
+constexpr const char *kDelayedDaemonXml = R"xml(
+<node>
+  <interface name="org.rpm.dnf.v0.SessionManager">
+    <method name="open_session">
+      <arg type="a{sv}" direction="in"/>
+      <arg type="o" direction="out"/>
+    </method>
+    <method name="close_session">
+      <arg type="o" direction="in"/>
+      <arg type="b" direction="out"/>
+    </method>
+  </interface>
+  <interface name="org.rpm.dnf.v0.rpm.Repo">
+    <method name="enable_with_options">
+      <arg type="as" direction="in"/>
+      <arg type="a{sv}" direction="in"/>
+    </method>
+  </interface>
+</node>)xml";
+
+struct PrivateRepositoryTestBus {
+  GSubprocess *process = nullptr;
+
+  ~PrivateRepositoryTestBus()
+  {
+    if (process) {
+      g_subprocess_force_exit(process);
+      g_subprocess_wait(process, nullptr, nullptr);
+      g_object_unref(process);
+    }
+  }
+
+  std::string start()
+  {
+    GError *error = nullptr;
+    process = g_subprocess_new(
+        G_SUBPROCESS_FLAGS_STDOUT_PIPE, &error, "dbus-daemon", "--session", "--nofork", "--print-address=1", nullptr);
+    REQUIRE(process != nullptr);
+
+    GDataInputStream *output = g_data_input_stream_new(g_subprocess_get_stdout_pipe(process));
+    gchar *bus_address = g_data_input_stream_read_line(output, nullptr, nullptr, &error);
+    g_object_unref(output);
+    REQUIRE(bus_address != nullptr);
+    std::string address = bus_address;
+    g_free(bus_address);
+    return address;
+  }
+};
+
+struct DelayedRepositoryDaemon {
+  PrivateRepositoryTestBus bus;
+  GDBusConnection *server = nullptr;
+  GDBusNodeInfo *info = nullptr;
+  GMainContext *context = nullptr;
+  GMainLoop *loop = nullptr;
+  guint manager_registration = 0;
+  guint repository_registration = 0;
+  std::thread worker;
+  std::string address;
+
+  DelayedRepositoryDaemon()
+  {
+    GError *error = nullptr;
+    address = bus.start();
+
+    server = connect_to_test_bus(address.c_str(), &error);
+    REQUIRE(server != nullptr);
+    GVariant *name_reply = g_dbus_connection_call_sync(server,
+                                                       "org.freedesktop.DBus",
+                                                       "/org/freedesktop/DBus",
+                                                       "org.freedesktop.DBus",
+                                                       "RequestName",
+                                                       g_variant_new("(su)", "org.rpm.dnf.v0", 0u),
+                                                       G_VARIANT_TYPE("(u)"),
+                                                       G_DBUS_CALL_FLAGS_NONE,
+                                                       -1,
+                                                       nullptr,
+                                                       &error);
+    REQUIRE(name_reply != nullptr);
+    g_variant_unref(name_reply);
+
+    info = g_dbus_node_info_new_for_xml(kDelayedDaemonXml, &error);
+    REQUIRE(info != nullptr);
+    context = g_main_context_new();
+    loop = g_main_loop_new(context, FALSE);
+
+    static const GDBusInterfaceVTable table = {
+      +[](GDBusConnection *,
+          const gchar *,
+          const gchar *,
+          const gchar *,
+          const gchar *method,
+          GVariant *,
+          GDBusMethodInvocation *invocation,
+          gpointer) {
+        if (g_strcmp0(method, "open_session") == 0) {
+          g_dbus_method_invocation_return_value(invocation, g_variant_new("(o)", kDelayedSessionPath));
+        } else if (g_strcmp0(method, "close_session") == 0) {
+          g_dbus_method_invocation_return_value(invocation, g_variant_new("(b)", TRUE));
+        } else if (g_strcmp0(method, "enable_with_options") == 0) {
+          std::this_thread::sleep_for(std::chrono::seconds(27));
+          g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
+        }
+      },
+      nullptr,
+      nullptr,
+      {}
+    };
+
+    g_main_context_push_thread_default(context);
+    manager_registration = g_dbus_connection_register_object(
+        server, "/org/rpm/dnf/v0", info->interfaces[0], &table, nullptr, nullptr, &error);
+    repository_registration = g_dbus_connection_register_object(
+        server, kDelayedSessionPath, info->interfaces[1], &table, nullptr, nullptr, &error);
+    g_main_context_pop_thread_default(context);
+    REQUIRE(manager_registration != 0);
+    REQUIRE(repository_registration != 0);
+
+    worker = std::thread([this] { g_main_loop_run(loop); });
+  }
+
+  ~DelayedRepositoryDaemon()
+  {
+    g_main_loop_quit(loop);
+    worker.join();
+    g_dbus_connection_unregister_object(server, manager_registration);
+    g_dbus_connection_unregister_object(server, repository_registration);
+    g_dbus_connection_close_sync(server, nullptr, nullptr);
+    g_object_unref(server);
+    g_dbus_node_info_unref(info);
+    g_main_loop_unref(loop);
+    g_main_context_unref(context);
+  }
 };
 
 GVariant *
@@ -187,6 +326,24 @@ TEST_CASE("Repository client parser rejects duplicate repository IDs")
 
   REQUIRE(error.find("duplicate") != std::string::npos);
   REQUIRE(parsed.empty());
+}
+
+// -----------------------------------------------------------------------------
+// Verify that repository writes can wait beyond the default D-Bus timeout.
+// -----------------------------------------------------------------------------
+TEST_CASE("Repository client waits for a delayed write reply", "[.slow]")
+{
+  DelayedRepositoryDaemon daemon;
+  ScopedEnvVar system_bus("DBUS_SYSTEM_BUS_ADDRESS", daemon.address.c_str());
+
+  auto started = std::chrono::steady_clock::now();
+  RepositoryWriteResult result = repository_service_client_apply_changes({ "test-repo" }, {});
+  auto elapsed = std::chrono::steady_clock::now() - started;
+
+  REQUIRE(result.enable_attempted);
+  REQUIRE(result.enable_succeeded);
+  REQUIRE(result.error.empty());
+  REQUIRE(elapsed >= std::chrono::seconds(25));
 }
 
 // -----------------------------------------------------------------------------

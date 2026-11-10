@@ -24,6 +24,7 @@ constexpr const char *kDnfDaemonName = "org.rpm.dnf.v0";
 constexpr const char *kDnfDaemonManagerPath = "/org/rpm/dnf/v0";
 constexpr const char *kDnfDaemonSessionManagerInterface = "org.rpm.dnf.v0.SessionManager";
 constexpr const char *kDnfDaemonRpmRepoInterface = "org.rpm.dnf.v0.rpm.Repo";
+constexpr int kRepositoryWriteTimeoutMs = 3 * 60 * 1000;
 
 // -----------------------------------------------------------------------------
 // Return session options for repository configuration work.
@@ -403,7 +404,7 @@ call_repository_write_method(GDBusConnection *connection,
                                                 repository_id_parameters(repo_ids),
                                                 nullptr,
                                                 G_DBUS_CALL_FLAGS_NONE,
-                                                -1,
+                                                kRepositoryWriteTimeoutMs,
                                                 nullptr,
                                                 &error);
   if (!reply) {
