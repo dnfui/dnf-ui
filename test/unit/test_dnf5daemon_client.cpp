@@ -668,6 +668,40 @@ TEST_CASE("dnf5daemon client previews upgrade-all requests", "[dnf5daemon]")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that the client can preview an explicitly selected upgrade.
+// -----------------------------------------------------------------------------
+TEST_CASE("dnf5daemon client previews selected upgrade requests", "[dnf5daemon]")
+{
+  require_dnf5daemon_test_enabled();
+  transaction_service_client_reset_for_tests();
+
+  const char *upgrade_spec = g_getenv("DNFUI_TEST_DNF5DAEMON_UPGRADE_SPEC");
+  const char *expected_nevra = g_getenv("DNFUI_TEST_DNF5DAEMON_UPGRADE_EXPECTED_NEVRA");
+  if (!upgrade_spec || !*upgrade_spec || !expected_nevra || !*expected_nevra) {
+    SKIP("Set the upgrade spec and expected NEVRA to run the selected upgrade preview test.");
+  }
+
+  TransactionRequest request;
+  request.upgrade.push_back(upgrade_spec);
+
+  TransactionPreview preview;
+  std::string transaction_path;
+  std::string error;
+
+  bool previewed = transaction_service_client_preview_request(request, preview, transaction_path, error);
+  INFO(error);
+  REQUIRE(previewed);
+  REQUIRE_FALSE(transaction_path.empty());
+
+  bool preview_contains_package = preview_section_contains_label(preview.upgrade, expected_nevra);
+
+  transaction_service_client_release_request(transaction_path);
+  transaction_service_client_reset_for_tests();
+
+  REQUIRE(preview_contains_package);
+}
+
+// -----------------------------------------------------------------------------
 // Verify that the client can ask dnf5daemon for a downgrade preview.
 // -----------------------------------------------------------------------------
 TEST_CASE("dnf5daemon client previews downgrade requests", "[dnf5daemon]")

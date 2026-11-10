@@ -233,6 +233,7 @@ Tests:
 - pending transaction request builder tests
 - transaction preview tests
 - empty upgrade-all preview test path
+- Docker tests for selected upgrade and exact downgrade previews with two versions of a local package
 - optional native downgrade preview test path
 
 Maintenance check:

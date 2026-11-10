@@ -4,6 +4,7 @@ FROM fedora:latest
 RUN dnf install -y \
     appstream \
     catch-devel \
+    createrepo_c \
     desktop-file-utils \
     gtk4-devel \
     libdnf5-devel \

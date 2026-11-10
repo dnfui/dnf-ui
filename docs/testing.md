@@ -74,6 +74,10 @@ That Docker target also creates a disposable disabled repository and verifies th
 enable it and disable it again through fresh dnf5daemon sessions.
 The test repository does not need package metadata because repository listing and enabled-state changes
 do not load available package data.
+It also builds two versions of a small local RPM. With the older version installed, it checks a selected
+upgrade preview through dnf5daemon. It then installs the newer version and checks an exact downgrade preview.
+The test removes the package and repository before continuing. The scheduled GitHub CI runs this Docker target
+daily against the current Fedora-packaged dnf5daemon in `fedora:latest`.
 
 Run the dnf5daemon transaction client tests on native Fedora in a disposable test environment.
 This target skips daemon apply tests by default, but the test setup uses `sudo dnf5` to remove and
@@ -223,8 +227,8 @@ List Upgradable row handling:
 ## Docker notes
 
 - `make dockerrun` starts a system bus in the container and uses dnf5daemon
-- `make dockerdnf5daemontest` runs upgrade-target listing, preview, downgrade preview when configured, apply,
-  remove, reinstall, and failure checks against dnf5daemon
+- `make dockerdnf5daemontest` runs upgrade-target listing, selected upgrade and downgrade previews using a local
+  package, apply, remove, reinstall, and failure checks against dnf5daemon
 - The dnf5daemon failure checks include applying a prepared session after another session changed package
   state. The stale prepared session must fail and remain releasable.
 - Use native Fedora to test the real desktop Polkit prompt
