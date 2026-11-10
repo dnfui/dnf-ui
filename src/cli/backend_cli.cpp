@@ -41,7 +41,7 @@ void
 print_usage(const char *program_name)
 {
   std::cout << "Usage:\n"
-            << "  " << program_name << " search [--description] [--exact] [--all-versions] TERM\n"
+            << "  " << program_name << " search [--description] [--exact] [--all-versions] [--] TERM\n"
             << "  " << program_name << " list-installed [FILTER]\n"
             << "  " << program_name << " list-packages [--all-versions]\n"
             << "  " << program_name << " list-upgrades\n"
@@ -80,19 +80,30 @@ print_rows(const std::vector<PackageRow> &rows, const std::string &filter = {})
 bool
 parse_search_options(int argc, char *argv[], int start, DnfBackendSearchOptions &options, std::string &term)
 {
+  bool options_done = false;
   for (int i = start; i < argc; i++) {
     const std::string arg = argv[i];
-    if (arg == "--description") {
+    if (!options_done && arg == "--") {
+      if (!term.empty()) {
+        return false;
+      }
+      options_done = true;
+      continue;
+    }
+    if (!options_done && arg == "--description") {
       options.search_in_description = true;
       continue;
     }
-    if (arg == "--exact") {
+    if (!options_done && arg == "--exact") {
       options.exact_match = true;
       continue;
     }
-    if (arg == "--all-versions") {
+    if (!options_done && arg == "--all-versions") {
       options.latest_only = false;
       continue;
+    }
+    if (!options_done && !arg.empty() && arg[0] == '-') {
+      return false;
     }
     if (!term.empty()) {
       return false;
@@ -311,7 +322,14 @@ run_details(int argc, char *argv[])
   }
 
   dnf_backend_refresh_installed_snapshot();
-  std::cout << dnf_backend_get_package_info(argv[2], PackageDetailsContext::SELECTED_VERSION) << '\n';
+  PackageInfoPresentation info =
+      dnf_backend_get_package_info_presentation(argv[2], PackageDetailsContext::SELECTED_VERSION);
+  if (info.name.empty()) {
+    std::cerr << info.full_text << '\n';
+    return 1;
+  }
+
+  std::cout << info.full_text << '\n';
   return 0;
 }
 
