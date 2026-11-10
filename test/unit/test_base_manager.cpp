@@ -79,6 +79,7 @@ TEST_CASE("BaseManager generation increments on rebuild")
 // -----------------------------------------------------------------------------
 TEST_CASE("BaseManager reads package data without loading libdnf5 plugins")
 {
+  ProviderRepositoryFixture fixture;
   UnloadablePluginConfig config;
   ScopedEnvVar plugin_directory("LIBDNF_PLUGINS_CONFIG_DIR", config.directory.c_str());
   auto &mgr = BaseManager::instance();
