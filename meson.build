@@ -20,7 +20,6 @@ add_project_arguments(
 if get_option('final_build')
   add_project_arguments(
     [
-      '-DNDEBUG_BUILD',
       '-Wpedantic',
       '-Wmaybe-uninitialized',
       '-W',
@@ -31,8 +30,6 @@ if get_option('final_build')
     ],
     language: 'cpp',
   )
-else
-  add_project_arguments('-DDEBUG_BUILD', language: 'cpp')
 endif
 
 if get_option('debug_trace')

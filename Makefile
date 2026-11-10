@@ -343,7 +343,7 @@ cppcheck:
 	@echo "*** Static code analysis"
 	@for gtk_check_version in 0 1; do \
 		cppcheck $(shell find src -name "*.cpp" -o -name "*.hpp") \
-			--quiet --enable=warning --error-exitcode=1 -Isrc -DDEBUG=1 \
+			--quiet --enable=warning --error-exitcode=1 -Isrc \
 			"-DGTK_CHECK_VERSION(a,b,c)=$$gtk_check_version" \
 			--suppress=missingIncludeSystem \
 			--suppress=uninitMemberVarNoCtor || exit 1; \
