@@ -20,10 +20,6 @@
 #include <string>
 #include <set>
 
-#ifndef DNFUI_VERSION
-#define DNFUI_VERSION "unknown"
-#endif
-
 struct MainMenuActionData {
   MainWindowUiState *widgets = nullptr;
   GtkWidget *window = nullptr;
