@@ -686,6 +686,8 @@ annotate_installed_rows_with_repo_candidates_best_effort(std::vector<PackageRow>
 // keep the installed row so the UI can show that state directly.
 //
 // Note on repo_candidate_relation in the returned rows:
+// Without repository metadata, installed rows retain UNKNOWN.
+// With repository metadata:
 //   - Installed rows promoted into the map carry a fully resolved relation.
 //     This covers LOCAL_ONLY, OLDER, and installed-newer-than-repo rows.
 //   - Available rows that stay in the map without a matching installed entry
@@ -699,11 +701,14 @@ annotate_installed_rows_with_repo_candidates_best_effort(std::vector<PackageRow>
 // -----------------------------------------------------------------------------
 std::vector<PackageRow>
 visible_rows_from_maps(std::map<std::string, PackageRow> available_rows,
-                       const std::map<std::string, PackageRow> &installed_rows)
+                       const std::map<std::string, PackageRow> &installed_rows,
+                       bool repo_metadata_available)
 {
   for (const auto &[key, stored_installed_row] : installed_rows) {
     PackageRow installed_row = stored_installed_row;
-    annotate_installed_row_with_repo_candidate(installed_row, available_rows);
+    if (repo_metadata_available) {
+      annotate_installed_row_with_repo_candidate(installed_row, available_rows);
+    }
 
     auto visible_it = available_rows.find(key);
     if (visible_it == available_rows.end()) {
@@ -729,19 +734,25 @@ visible_rows_from_maps(std::map<std::string, PackageRow> available_rows,
 // Available rows remain one row per exact NEVRA. Installed NEVRAs that are not already visible are added separately.
 // -----------------------------------------------------------------------------
 std::vector<PackageRow>
-visible_rows_from_available_view(AvailableViewRows available_rows, const InstalledQueryResult &installed)
+visible_rows_from_available_view(AvailableViewRows available_rows,
+                                 const InstalledQueryResult &installed,
+                                 bool repo_metadata_available)
 {
   for (const auto &stored_installed_row : installed.rows) {
     auto visible_it = available_rows.row_index_by_nevra.find(stored_installed_row.nevra);
     if (visible_it != available_rows.row_index_by_nevra.end()) {
       PackageRow &visible_row = available_rows.rows[visible_it->second];
-      annotate_installed_row_with_repo_candidate(visible_row, available_rows.newest_visible_by_name_arch);
+      if (repo_metadata_available) {
+        annotate_installed_row_with_repo_candidate(visible_row, available_rows.newest_visible_by_name_arch);
+      }
       visible_row.repo_candidate_exact_available = true;
       continue;
     }
 
     PackageRow installed_row = stored_installed_row;
-    annotate_installed_row_with_repo_candidate(installed_row, available_rows.newest_visible_by_name_arch);
+    if (repo_metadata_available) {
+      annotate_installed_row_with_repo_candidate(installed_row, available_rows.newest_visible_by_name_arch);
+    }
     const size_t row_index = available_rows.rows.size();
     available_rows.rows.push_back(installed_row);
     available_rows.row_index_by_nevra.emplace(available_rows.rows[row_index].nevra, row_index);
@@ -775,6 +786,7 @@ dnf_backend_search_package_rows_interruptible(const std::string &pattern,
         normal_read.emplace(acquire_interruptible_base_read(cancellable));
       }
       libdnf5::Base &base = provider_read ? *provider_read->base : normal_read->base;
+      const bool repo_metadata_available = provider_read || normal_read->repo_state != BaseRepoState::INSTALLED_ONLY;
       // The shared installed snapshot must contain every installed package, not
       // only the rows that matched this search.
       // The UI uses it later for package status, action buttons, and pending action handling.
@@ -817,7 +829,8 @@ dnf_backend_search_package_rows_interruptible(const std::string &pattern,
         }
         annotate_installed_result_with_exact_available_nevras(filtered_installed, available_nevras);
 
-        rows = visible_rows_from_maps(std::move(available_rows), filtered_installed.rows_by_name_arch);
+        rows = visible_rows_from_maps(
+            std::move(available_rows), filtered_installed.rows_by_name_arch, repo_metadata_available);
       } else {
         AvailableViewRows available_rows =
             collect_available_view_rows(base, cancellable, search_options, &pattern, provider_nevras);
@@ -832,7 +845,7 @@ dnf_backend_search_package_rows_interruptible(const std::string &pattern,
         }
         annotate_installed_result_with_exact_available_nevras(filtered_installed, available_nevras);
 
-        rows = visible_rows_from_available_view(std::move(available_rows), filtered_installed);
+        rows = visible_rows_from_available_view(std::move(available_rows), filtered_installed, repo_metadata_available);
       }
     } catch (const BaseOperationCancelled &) {
       return {};
@@ -861,7 +874,8 @@ get_installed_package_rows_interruptible(GCancellable *cancellable, bool unneede
   std::vector<PackageRow> unneeded_rows;
   {
     try {
-      auto [base, guard] = acquire_interruptible_base_read(cancellable);
+      auto read = acquire_interruptible_base_read(cancellable);
+      libdnf5::Base &base = read.base;
       const DnfBackendSearchOptions search_options {};
       installed = collect_installed_rows(base, cancellable, search_options);
       if (package_query_cancelled(cancellable)) {
@@ -873,10 +887,12 @@ get_installed_package_rows_interruptible(GCancellable *cancellable, bool unneede
       // Installed listing is allowed to work from the local rpmdb alone.
       // Repo annotation adds upgrade and local-only status when repo metadata
       // is available, but it must not make the installed list fail.
-      annotate_installed_rows_with_repo_candidates_best_effort(
-          installed.rows, cancellable, [&base, &installed](GCancellable *annotation_cancellable) {
-            return collect_newest_available_rows_for_package_names(base, annotation_cancellable, installed.rows);
-          });
+      if (read.repo_state != BaseRepoState::INSTALLED_ONLY) {
+        annotate_installed_rows_with_repo_candidates_best_effort(
+            installed.rows, cancellable, [&base, &installed](GCancellable *annotation_cancellable) {
+              return collect_newest_available_rows_for_package_names(base, annotation_cancellable, installed.rows);
+            });
+      }
       if (package_query_cancelled(cancellable)) {
         return {};
       }
@@ -955,7 +971,9 @@ dnf_backend_get_browse_package_rows_interruptible(const DnfBackendSearchOptions 
   std::set<std::string> protected_names;
   {
     try {
-      auto [base, guard] = acquire_interruptible_base_read(cancellable);
+      auto read = acquire_interruptible_base_read(cancellable);
+      libdnf5::Base &base = read.base;
+      const bool repo_metadata_available = read.repo_state != BaseRepoState::INSTALLED_ONLY;
 
       // Browse uses the full installed set because installed-only packages must
       // still be visible even when no enabled repo contains them.
@@ -976,14 +994,14 @@ dnf_backend_get_browse_package_rows_interruptible(const DnfBackendSearchOptions 
         if (package_query_cancelled(cancellable)) {
           return {};
         }
-        rows = visible_rows_from_maps(std::move(available_rows), installed.rows_by_name_arch);
+        rows = visible_rows_from_maps(std::move(available_rows), installed.rows_by_name_arch, repo_metadata_available);
       } else {
         AvailableViewRows available_rows =
             collect_available_view_rows(base, cancellable, search_options, nullptr, nullptr);
         if (package_query_cancelled(cancellable)) {
           return {};
         }
-        rows = visible_rows_from_available_view(std::move(available_rows), installed);
+        rows = visible_rows_from_available_view(std::move(available_rows), installed, repo_metadata_available);
       }
     } catch (const BaseOperationCancelled &) {
       return {};
@@ -1012,7 +1030,8 @@ dnf_backend_get_available_package_metadata_by_nevras_interruptible(const std::ve
   }
 
   try {
-    auto [base, guard] = acquire_interruptible_base_read(cancellable);
+    auto read = acquire_interruptible_base_read(cancellable);
+    libdnf5::Base &base = read.base;
     const std::set<std::string> installonly_nevras = collect_installonly_nevras(base, cancellable);
     if (package_query_cancelled(cancellable)) {
       return {};
@@ -1052,7 +1071,8 @@ dnf_backend_get_installed_package_rows_by_nevra(const std::string &pkg_nevra)
 {
   std::vector<PackageRow> packages;
 
-  auto [base, guard] = BaseManager::instance().acquire_read();
+  auto read = BaseManager::instance().acquire_read();
+  libdnf5::Base &base = read.base;
   const std::set<std::string> installonly_nevras = collect_installonly_nevras(base, nullptr);
   libdnf5::rpm::PackageQuery query(base);
   query.filter_nevra(pkg_nevra);
@@ -1063,10 +1083,12 @@ dnf_backend_get_installed_package_rows_by_nevra(const std::string &pkg_nevra)
         make_package_row_with_installonly(pkg, PackageRepoCandidateRelation::UNKNOWN, installonly_nevras));
   }
 
-  annotate_installed_rows_with_repo_candidates_best_effort(
-      packages, nullptr, [&base, &packages](GCancellable *annotation_cancellable) {
-        return collect_newest_available_rows_for_package_names(base, annotation_cancellable, packages);
-      });
+  if (read.repo_state != BaseRepoState::INSTALLED_ONLY) {
+    annotate_installed_rows_with_repo_candidates_best_effort(
+        packages, nullptr, [&base, &packages](GCancellable *annotation_cancellable) {
+          return collect_newest_available_rows_for_package_names(base, annotation_cancellable, packages);
+        });
+  }
   InstalledQueryResult installed;
   installed.rows = packages;
   annotate_installed_result_with_exact_available_nevras_best_effort(base, installed, nullptr);
@@ -1084,7 +1106,8 @@ dnf_backend_get_available_package_rows_by_nevra(const std::string &pkg_nevra)
 {
   AvailableViewRows visible_rows;
 
-  auto [base, guard] = BaseManager::instance().acquire_read();
+  auto read = BaseManager::instance().acquire_read();
+  libdnf5::Base &base = read.base;
   const std::set<std::string> installonly_nevras = collect_installonly_nevras(base, nullptr);
   {
     libdnf5::rpm::PackageQuery query(base);

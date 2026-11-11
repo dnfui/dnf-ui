@@ -112,7 +112,8 @@ dnf_backend_get_package_info_presentation(const std::string &pkg_nevra,
   bool selected_installed_is_newest = true;
   unsigned long long upgrade_download_size = 0;
 
-  auto [base, guard] = BaseManager::instance().acquire_read();
+  auto read = BaseManager::instance().acquire_read();
+  libdnf5::Base &base = read.base;
   libdnf5::rpm::PackageQuery query(base);
   query.filter_nevra(pkg_nevra);
 
@@ -284,7 +285,8 @@ dnf_backend_get_installed_package_files(const std::string &pkg_nevra,
   }
 
   DNFUI_TRACE("Backend file list start nevra=%s max_display=%zu", pkg_nevra.c_str(), max_files_for_display);
-  auto [base, guard] = BaseManager::instance().acquire_read();
+  auto read = BaseManager::instance().acquire_read();
+  libdnf5::Base &base = read.base;
   libdnf5::rpm::PackageQuery query(base);
 
   query.filter_nevra(pkg_nevra);
@@ -410,7 +412,8 @@ dnf_backend_get_package_deps(const std::string &pkg_nevra)
 std::string
 dnf_backend_get_package_deps(const std::string &pkg_nevra, PackageDetailsContext context)
 {
-  auto [base, guard] = BaseManager::instance().acquire_read();
+  auto read = BaseManager::instance().acquire_read();
+  libdnf5::Base &base = read.base;
   libdnf5::rpm::PackageQuery query(base);
 
   query.filter_nevra(pkg_nevra);

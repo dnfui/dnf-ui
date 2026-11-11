@@ -93,12 +93,14 @@ void add_available_view_row(AvailableViewRows &rows, PackageRow row);
 // Merge exact-version available rows with missing exact installed rows.
 // -----------------------------------------------------------------------------
 std::vector<PackageRow> visible_rows_from_available_view(AvailableViewRows available_rows,
-                                                         const InstalledQueryResult &installed);
+                                                         const InstalledQueryResult &installed,
+                                                         bool repo_metadata_available);
 // -----------------------------------------------------------------------------
 // Merge available and installed row maps into the visible package list.
 // -----------------------------------------------------------------------------
 std::vector<PackageRow> visible_rows_from_maps(std::map<std::string, PackageRow> available_rows,
-                                               const std::map<std::string, PackageRow> &installed_rows);
+                                               const std::map<std::string, PackageRow> &installed_rows,
+                                               bool repo_metadata_available);
 
 // -----------------------------------------------------------------------------
 // State-cache helpers owned by dnf_state.cpp and used by query refresh paths.

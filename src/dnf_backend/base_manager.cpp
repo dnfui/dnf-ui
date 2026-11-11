@@ -619,7 +619,7 @@ BaseManager::acquire_read()
     throw std::runtime_error("DNF backend not initialized (Base is null).");
   }
 
-  return { *base_ptr, BaseGuard(std::move(lock)) };
+  return { *base_ptr, BaseGuard(std::move(lock)), repo_state };
 }
 
 // -----------------------------------------------------------------------------
@@ -650,7 +650,7 @@ BaseManager::acquire_read(std::shared_ptr<std::atomic<bool>> cancel_requested)
     throw std::runtime_error("DNF backend not initialized (Base is null).");
   }
 
-  return { *base_ptr, BaseGuard(std::move(lock)) };
+  return { *base_ptr, BaseGuard(std::move(lock)), repo_state };
 }
 
 // -----------------------------------------------------------------------------

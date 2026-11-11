@@ -196,6 +196,59 @@ TEST_CASE("Installed package rows expose install reason")
 }
 
 // -----------------------------------------------------------------------------
+// Installed-only queries cannot determine whether a repository copy exists.
+// -----------------------------------------------------------------------------
+TEST_CASE("Installed-only package rows keep repository relation unknown")
+{
+  reset_backend_globals();
+  auto &manager = BaseManager::instance();
+  manager.reset_for_tests();
+  manager.initialize_system_only_base_for_tests();
+
+  auto installed = dnf_backend_get_installed_package_rows_interruptible(nullptr);
+  REQUIRE_FALSE(installed.empty());
+  for (const auto &row : installed) {
+    REQUIRE(row.repo_candidate_relation == PackageRepoCandidateRelation::UNKNOWN);
+  }
+  REQUIRE(dnf_backend_resolve_installed_package(installed.front()).state == PackageInstallState::INSTALLED);
+
+  auto options = backend_search_options(false, true);
+  auto browse = dnf_backend_get_browse_package_rows_interruptible(options, nullptr);
+  REQUIRE_FALSE(browse.empty());
+  for (const auto &row : browse) {
+    REQUIRE(row.repo_candidate_relation == PackageRepoCandidateRelation::UNKNOWN);
+  }
+
+  auto search = dnf_backend_search_package_rows_interruptible(installed.front().name, options, nullptr);
+  REQUIRE_FALSE(search.empty());
+  for (const auto &row : search) {
+    REQUIRE(row.repo_candidate_relation == PackageRepoCandidateRelation::UNKNOWN);
+  }
+
+  options.latest_only = false;
+  browse = dnf_backend_get_browse_package_rows_interruptible(options, nullptr);
+  REQUIRE_FALSE(browse.empty());
+  for (const auto &row : browse) {
+    REQUIRE(row.repo_candidate_relation == PackageRepoCandidateRelation::UNKNOWN);
+  }
+
+  search = dnf_backend_search_package_rows_interruptible(installed.front().name, options, nullptr);
+  REQUIRE_FALSE(search.empty());
+  for (const auto &row : search) {
+    REQUIRE(row.repo_candidate_relation == PackageRepoCandidateRelation::UNKNOWN);
+  }
+
+  auto exact = dnf_backend_get_installed_package_rows_by_nevra(installed.front().nevra);
+  REQUIRE_FALSE(exact.empty());
+  for (const auto &row : exact) {
+    REQUIRE(row.repo_candidate_relation == PackageRepoCandidateRelation::UNKNOWN);
+  }
+
+  manager.reset_for_tests();
+  reset_backend_globals();
+}
+
+// -----------------------------------------------------------------------------
 // Verify that the unneeded view matches libdnf5 and keeps the full installed snapshot.
 // -----------------------------------------------------------------------------
 TEST_CASE("Unneeded package listing matches libdnf5 without filtering installed state")
@@ -412,7 +465,7 @@ TEST_CASE("All-version merge keeps distinct available package versions")
   dnf_backend_internal::add_available_view_row(available, newer);
 
   dnf_backend_internal::InstalledQueryResult installed;
-  auto rows = dnf_backend_internal::visible_rows_from_available_view(std::move(available), installed);
+  auto rows = dnf_backend_internal::visible_rows_from_available_view(std::move(available), installed, true);
 
   const PackageRow *older_result = find_backend_test_row_by_nevra(rows, older.nevra);
   const PackageRow *newer_result = find_backend_test_row_by_nevra(rows, newer.nevra);
@@ -437,7 +490,7 @@ TEST_CASE("All-version merge hides duplicate available repository copies")
   dnf_backend_internal::add_available_view_row(available, second_repo);
 
   dnf_backend_internal::InstalledQueryResult installed;
-  auto rows = dnf_backend_internal::visible_rows_from_available_view(std::move(available), installed);
+  auto rows = dnf_backend_internal::visible_rows_from_available_view(std::move(available), installed, true);
 
   REQUIRE(rows.size() == 1);
   REQUIRE(rows.front().nevra == first_repo.nevra);
@@ -464,7 +517,7 @@ TEST_CASE("All-version merge annotates installed rows also present in repositori
   installed.nevras = { installed_row.nevra };
   installed.rows_by_name_arch.emplace(installed_row.name_arch_key(), installed_row);
 
-  auto rows = dnf_backend_internal::visible_rows_from_available_view(std::move(available), installed);
+  auto rows = dnf_backend_internal::visible_rows_from_available_view(std::move(available), installed, true);
 
   const PackageRow *current_result = find_backend_test_row_by_nevra(rows, current_repo_row.nevra);
   const PackageRow *update_result = find_backend_test_row_by_nevra(rows, update_row.nevra);
@@ -506,7 +559,7 @@ TEST_CASE("All-version merge ignores hidden newest candidates for installed row 
   installed.nevras = { installed_row.nevra };
   installed.rows_by_name_arch.emplace(installed_row.name_arch_key(), installed_row);
 
-  auto rows = dnf_backend_internal::visible_rows_from_available_view(std::move(available), installed);
+  auto rows = dnf_backend_internal::visible_rows_from_available_view(std::move(available), installed, true);
   const PackageRow *installed_result = find_backend_test_row_by_nevra(rows, installed_row.nevra);
 
   REQUIRE(installed_result != nullptr);
@@ -531,7 +584,7 @@ TEST_CASE("All-version merge keeps distinct installed package versions")
   installed.nevras = { installed_one.nevra, installed_two.nevra };
   installed.rows_by_name_arch.emplace(installed_two.name_arch_key(), installed_two);
 
-  auto rows = dnf_backend_internal::visible_rows_from_available_view(std::move(available), installed);
+  auto rows = dnf_backend_internal::visible_rows_from_available_view(std::move(available), installed, true);
 
   REQUIRE(find_backend_test_row_by_nevra(rows, installed_one.nevra) != nullptr);
   REQUIRE(find_backend_test_row_by_nevra(rows, installed_two.nevra) != nullptr);
@@ -560,7 +613,7 @@ TEST_CASE("All-version merge keeps exact reinstall availability for hidden insta
   installed.nevras = { older_installed.nevra, newer_installed.nevra };
   installed.rows_by_name_arch.emplace(newer_installed.name_arch_key(), newer_installed);
 
-  auto rows = dnf_backend_internal::visible_rows_from_available_view(std::move(available), installed);
+  auto rows = dnf_backend_internal::visible_rows_from_available_view(std::move(available), installed, true);
   const PackageRow *older_result = find_backend_test_row_by_nevra(rows, older_installed.nevra);
 
   REQUIRE(older_result != nullptr);
