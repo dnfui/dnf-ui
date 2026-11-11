@@ -181,14 +181,12 @@ history_package_matches_filter(libdnf5::transaction::Package &package,
 
 // -----------------------------------------------------------------------------
 // Sort history transactions newest first before scanning package rows.
+// Transaction IDs keep the order consistent across batches when system time changes.
 // -----------------------------------------------------------------------------
 void
 sort_history_transactions_newest_first(std::vector<libdnf5::transaction::Transaction> &transactions)
 {
   std::sort(transactions.begin(), transactions.end(), [](const auto &left, const auto &right) {
-    if (left.get_dt_start() != right.get_dt_start()) {
-      return left.get_dt_start() > right.get_dt_start();
-    }
     return left.get_id() > right.get_id();
   });
 }
