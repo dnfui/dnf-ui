@@ -360,6 +360,140 @@ TEST_CASE("Provider searches use separate configured and system metadata caches"
 }
 
 // -----------------------------------------------------------------------------
+// Normal package queries must use whichever metadata cache is available offline.
+// -----------------------------------------------------------------------------
+TEST_CASE("BaseManager uses configured and system metadata caches for offline queries")
+{
+  ProviderRepositoryFixture fixture;
+  auto &manager = BaseManager::instance();
+  std::filesystem::path expected_cache;
+
+  SECTION("Configured cache contains the repository metadata")
+  {
+    {
+      auto read = manager.acquire_read();
+      libdnf5::rpm::PackageQuery query(read.base);
+      query.filter_name("dnfui-filelists-fixture", libdnf5::sack::QueryCmp::EQ);
+      REQUIRE(query.size() == 1);
+      libdnf5::repo::RepoQuery repositories(read.base);
+      repositories.filter_type(libdnf5::repo::Repo::Type::AVAILABLE);
+      REQUIRE_FALSE(repositories.empty());
+      REQUIRE_FALSE((*repositories.begin())->get_metadata_path("primary").empty());
+    }
+    REQUIRE(std::filesystem::is_empty(fixture.system_cache_dir.path));
+    expected_cache = fixture.cache_dir.path;
+  }
+
+  SECTION("System cache contains the repository metadata")
+  {
+    {
+      libdnf5::Base base;
+      base.load_config();
+      base.get_config().get_plugins_option().set(false);
+      base.get_config().get_cachedir_option().set(fixture.system_cache_dir.path.string());
+      base.setup();
+      auto repo_sack = base.get_repo_sack();
+      auto repo = repo_sack->create_repo("dnfui-filelists-cache-test");
+      repo->get_config().get_baseurl_option().set(std::vector<std::string> { fixture.repo_url });
+      repo_sack->load_repos(libdnf5::repo::Repo::Type::AVAILABLE);
+    }
+    REQUIRE(std::filesystem::is_empty(fixture.cache_dir.path));
+    expected_cache = fixture.system_cache_dir.path;
+  }
+
+  manager.reset_for_tests();
+  ScopedEnvVar offline("DNFUI_TEST_FORCE_FULL_REPO_LOAD_FAILURE", "1");
+  REQUIRE(manager.rebuild() == BaseRepoState::CACHED_METADATA);
+  {
+    auto read = manager.acquire_read();
+    REQUIRE(read.base.get_config().get_cachedir_option().get_value() == expected_cache.string());
+    libdnf5::rpm::PackageQuery query(read.base);
+    query.filter_name("dnfui-filelists-fixture", libdnf5::sack::QueryCmp::EQ);
+    REQUIRE(query.size() == 1);
+  }
+}
+
+// -----------------------------------------------------------------------------
+// A partial configured cache must not hide repositories present in the system cache.
+// -----------------------------------------------------------------------------
+TEST_CASE("BaseManager prefers the system cache when the configured cache is partial")
+{
+  TemporaryTestDirectory repo_dir;
+  TemporaryTestDirectory cache_dir;
+  TemporaryTestDirectory system_cache_dir;
+  const std::string repo_url = std::string("file://") + DNFUI_TEST_PROVIDER_REPO;
+
+  std::ofstream repo_config(repo_dir.path / "dnfui-cache-test.repo");
+  for (const char *repo_id : { "dnfui-cache-a", "dnfui-cache-b" }) {
+    repo_config << '[' << repo_id << "]\nname=" << repo_id << "\nbaseurl=" << repo_url
+                << "\nenabled=1\nskip_if_unavailable=1\n";
+  }
+  repo_config.close();
+  REQUIRE(repo_config.good());
+
+  auto populate_cache = [&repo_url](const std::filesystem::path &directory, bool include_second_repo) {
+    libdnf5::Base base;
+    base.load_config();
+    base.get_config().get_plugins_option().set(false);
+    base.get_config().get_cachedir_option().set(directory.string());
+    base.setup();
+    auto repo_sack = base.get_repo_sack();
+    auto first_repo = repo_sack->create_repo("dnfui-cache-a");
+    first_repo->get_config().get_baseurl_option().set(std::vector<std::string> { repo_url });
+    if (include_second_repo) {
+      auto second_repo = repo_sack->create_repo("dnfui-cache-b");
+      second_repo->get_config().get_baseurl_option().set(std::vector<std::string> { repo_url });
+    }
+    repo_sack->load_repos(libdnf5::repo::Repo::Type::AVAILABLE);
+  };
+  populate_cache(cache_dir.path, false);
+  populate_cache(system_cache_dir.path, true);
+
+  ScopedEnvVar isolated_repos("DNFUI_TEST_REPOS_DIR", repo_dir.path.c_str());
+  ScopedEnvVar isolated_cache("DNFUI_TEST_CACHE_DIR", cache_dir.path.c_str());
+  ScopedEnvVar isolated_system_cache("DNFUI_TEST_SYSTEM_CACHE_DIR", system_cache_dir.path.c_str());
+  ScopedEnvVar offline("DNFUI_TEST_FORCE_FULL_REPO_LOAD_FAILURE", "1");
+  auto &manager = BaseManager::instance();
+  manager.reset_for_tests();
+
+  REQUIRE(manager.rebuild() == BaseRepoState::CACHED_METADATA);
+  {
+    auto read = manager.acquire_read();
+    REQUIRE(read.base.get_config().get_cachedir_option().get_value() == system_cache_dir.path.string());
+    libdnf5::repo::RepoQuery repositories(read.base);
+    repositories.filter_enabled(true);
+    repositories.filter_type(libdnf5::repo::Repo::Type::AVAILABLE);
+    std::set<std::string> loaded_repositories;
+    for (auto repo : repositories) {
+      if (!repo->get_metadata_path("primary").empty()) {
+        loaded_repositories.insert(repo->get_id());
+      }
+    }
+    REQUIRE(loaded_repositories == std::set<std::string> { "dnfui-cache-a", "dnfui-cache-b" });
+  }
+  manager.reset_for_tests();
+}
+
+// -----------------------------------------------------------------------------
+// Empty metadata caches must leave only the local installed package database.
+// -----------------------------------------------------------------------------
+TEST_CASE("BaseManager uses installed-only mode when metadata caches are empty")
+{
+  ProviderRepositoryFixture fixture;
+  ScopedEnvVar offline("DNFUI_TEST_FORCE_FULL_REPO_LOAD_FAILURE", "1");
+  auto &manager = BaseManager::instance();
+
+  REQUIRE(std::filesystem::is_empty(fixture.cache_dir.path));
+  REQUIRE(std::filesystem::is_empty(fixture.system_cache_dir.path));
+  REQUIRE(manager.rebuild() == BaseRepoState::INSTALLED_ONLY);
+  auto read = manager.acquire_read();
+  REQUIRE(read.repo_state == BaseRepoState::INSTALLED_ONLY);
+  libdnf5::rpm::PackageQuery query(read.base);
+  query.filter_installed();
+  REQUIRE_FALSE(query.empty());
+}
+
+// -----------------------------------------------------------------------------
 // Cached primary metadata must survive a missing optional filelists cache.
 // Provides must report that file search is incomplete rather than returning empty results.
 // -----------------------------------------------------------------------------

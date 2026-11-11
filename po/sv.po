@@ -895,6 +895,9 @@ msgstr "Inläsning av förråd avbröts."
 msgid "Failed to load repositories."
 msgstr "Kunde inte läsa in förråd."
 
+msgid "Package data could not be loaded. Repository metadata and installed packages are unavailable."
+msgstr "Paketdata kunde inte läsas in. Förrådsmetadata och installerade paket är inte tillgängliga."
+
 #, c-format
 msgid "%zu repository change is pending."
 msgid_plural "%zu repository changes are pending."

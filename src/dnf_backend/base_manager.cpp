@@ -501,6 +501,24 @@ build_provider_base(const std::shared_ptr<std::atomic<bool>> &cancel_requested)
 }
 
 // -----------------------------------------------------------------------------
+// Return true when at least one enabled repository loaded primary metadata.
+// An empty cache can otherwise appear to load successfully when repositories are skipped.
+// -----------------------------------------------------------------------------
+static bool
+has_loaded_available_repo_metadata(libdnf5::Base &base)
+{
+  libdnf5::repo::RepoQuery repositories(base);
+  repositories.filter_enabled(true);
+  repositories.filter_type(libdnf5::repo::Repo::Type::AVAILABLE);
+  for (auto repo : repositories) {
+    if (!repo->get_metadata_path("primary").empty()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// -----------------------------------------------------------------------------
 // Try the normal live repo load first, then cached metadata, then finally
 // installed-package-only mode so the app stays usable when the network is down.
 // -----------------------------------------------------------------------------
@@ -524,31 +542,40 @@ build_base_with_offline_fallback(BaseRefreshMode refresh_mode = BaseRefreshMode:
     std::cerr << "Warning: live repo load failed, retrying from cached metadata: " << repo_error.what() << std::endl;
     DNFUI_TRACE("BaseManager live repo load failed, trying cached metadata fallback: %s", repo_error.what());
 
+    for (const RepoLoadMode mode :
+         { RepoLoadMode::CACHE_ONLY_METADATA, RepoLoadMode::CONFIGURED_CACHE_ONLY_METADATA }) {
+      const char *cache_source = mode == RepoLoadMode::CACHE_ONLY_METADATA ? "system" : "configured";
+      try {
+        BuiltBase cached =
+            build_base_for_mode(mode, BaseRefreshMode::NORMAL, cancel_requested, {}, load_changelog_metadata);
+        if (!has_loaded_available_repo_metadata(*cached.base)) {
+          throw std::runtime_error("No enabled repository metadata was loaded from the cache.");
+        }
+        return cached;
+      } catch (const BaseOperationCancelled &) {
+        // Stop is not a cache load failure. Do not continue into fallback modes.
+        DNFUI_TRACE("BaseManager cached repo load stopped before fallback");
+        throw;
+      } catch (const std::exception &cache_error) {
+        throw_if_rebuild_cancelled(cancel_requested);
+        std::cerr << "Warning: " << cache_source << " repository metadata cache load failed: " << cache_error.what()
+                  << std::endl;
+        DNFUI_TRACE("BaseManager %s cache repo load failed: %s", cache_source, cache_error.what());
+      }
+    }
+
     try {
       return build_base_for_mode(
-          RepoLoadMode::CACHE_ONLY_METADATA, BaseRefreshMode::NORMAL, cancel_requested, {}, load_changelog_metadata);
+          RepoLoadMode::SYSTEM_ONLY, BaseRefreshMode::NORMAL, cancel_requested, {}, load_changelog_metadata);
     } catch (const BaseOperationCancelled &) {
-      // Stop is not a cache load failure. Do not continue into fallback modes.
-      DNFUI_TRACE("BaseManager cached repo load stopped before fallback");
+      // Stop is not a system load failure.
+      DNFUI_TRACE("BaseManager system-only load stopped");
       throw;
-    } catch (const std::exception &cache_error) {
-      throw_if_rebuild_cancelled(cancel_requested);
-      std::cerr << "Warning: cached repo metadata load failed: " << cache_error.what() << std::endl;
-      DNFUI_TRACE("BaseManager cached repo load failed, trying system-only fallback: %s", cache_error.what());
-
-      try {
-        return build_base_for_mode(
-            RepoLoadMode::SYSTEM_ONLY, BaseRefreshMode::NORMAL, cancel_requested, {}, load_changelog_metadata);
-      } catch (const BaseOperationCancelled &) {
-        // Stop is not a system load failure.
-        DNFUI_TRACE("BaseManager system-only load stopped");
-        throw;
-      } catch (const std::exception &fallback_error) {
-        throw std::runtime_error(
-            "DNF backend initialization failed after repo load error: " + std::string(repo_error.what()) +
-            "; cached metadata fallback failed: " + cache_error.what() +
-            "; system-only fallback failed: " + fallback_error.what());
-      }
+    } catch (const std::exception &fallback_error) {
+      std::cerr << "Error: system-only backend initialization failed: " << fallback_error.what() << std::endl;
+      DNFUI_TRACE("BaseManager system-only load failed: %s", fallback_error.what());
+      throw std::runtime_error(
+          _("Package data could not be loaded. Repository metadata and installed packages are unavailable."));
     }
   }
 }
