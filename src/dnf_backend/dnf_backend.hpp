@@ -334,7 +334,7 @@ bool dnf_backend_is_self_protected_package_name(const std::string &name);
 bool dnf_backend_is_self_protected_transaction_spec(const std::string &spec);
 
 // -----------------------------------------------------------------------------
-// Query all installed packages. This path remains local-first and should still work when repository metadata is
+// Query all installed packages through the shared Base, with installed-only fallback when repository metadata is
 // unavailable. Repo relation is added only as an optional extra when possible.
 // -----------------------------------------------------------------------------
 std::vector<PackageRow> dnf_backend_get_installed_package_rows_interruptible(GCancellable *cancellable);
