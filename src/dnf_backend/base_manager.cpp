@@ -784,7 +784,14 @@ BaseManager::rebuild(BaseRefreshMode refresh_mode,
                      BaseProgressCallback progress_callback)
 {
   // Allow only one Base rebuild at a time.
-  std::unique_lock lock(base_mutex);
+  // Check Stop while waiting for another Base operation to release the lock.
+  std::unique_lock<std::mutex> lock(base_mutex, std::defer_lock);
+  while (!lock.try_lock()) {
+    throw_if_rebuild_cancelled(cancel_requested);
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+  }
+
+  throw_if_rebuild_cancelled(cancel_requested);
 
   // Build the replacement first so a refresh failure does not discard the last usable Base.
   // Offline fallback keeps the UI query paths working from cached

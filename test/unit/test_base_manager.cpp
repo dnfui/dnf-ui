@@ -19,6 +19,7 @@
 #include <filesystem>
 #include <fstream>
 #include <future>
+#include <memory>
 #include <set>
 #include <string>
 #include <thread>
@@ -72,6 +73,55 @@ TEST_CASE("BaseManager generation increments on rebuild")
   auto after = mgr.current_generation();
 
   REQUIRE(after > before);
+}
+
+// -----------------------------------------------------------------------------
+// A stopped rebuild must finish while another operation still owns the Base lock.
+// -----------------------------------------------------------------------------
+TEST_CASE("BaseManager rebuild can be cancelled while waiting for the Base lock")
+{
+  ProviderRepositoryFixture fixture;
+  auto &manager = BaseManager::instance();
+  auto cancel_requested = std::make_shared<std::atomic<bool>>(false);
+  std::promise<void> rebuild_started;
+  auto started = rebuild_started.get_future();
+  std::future<bool> rebuild;
+  std::future_status cancelled_status = std::future_status::timeout;
+  libdnf5::Base *original_base = nullptr;
+  BaseRepoState original_repo_state = BaseRepoState::LIVE_METADATA;
+  const auto original_generation = manager.current_generation();
+
+  {
+    auto read = manager.acquire_read();
+    original_base = &read.base;
+    original_repo_state = read.repo_state;
+    rebuild = std::async(std::launch::async, [&manager, &rebuild_started, cancel_requested]() {
+      rebuild_started.set_value();
+      try {
+        manager.rebuild(BaseRefreshMode::NORMAL, cancel_requested);
+      } catch (const BaseOperationCancelled &) {
+        return true;
+      }
+      return false;
+    });
+
+    REQUIRE(started.wait_for(std::chrono::seconds(2)) == std::future_status::ready);
+    REQUIRE(rebuild.wait_for(std::chrono::milliseconds(50)) == std::future_status::timeout);
+    cancel_requested->store(true, std::memory_order_relaxed);
+    cancelled_status = rebuild.wait_for(std::chrono::seconds(2));
+  }
+
+  REQUIRE(cancelled_status == std::future_status::ready);
+  REQUIRE(rebuild.get());
+  REQUIRE(manager.current_generation() == original_generation);
+  {
+    auto read = manager.acquire_read();
+    REQUIRE(&read.base == original_base);
+    REQUIRE(read.repo_state == original_repo_state);
+    libdnf5::rpm::PackageQuery query(read.base);
+    query.filter_name("dnfui-filelists-fixture", libdnf5::sack::QueryCmp::EQ);
+    REQUIRE(query.size() == 1);
+  }
 }
 
 // -----------------------------------------------------------------------------
