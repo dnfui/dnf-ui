@@ -473,7 +473,17 @@ update_selected_package_actions(MainWindowUiState *widgets,
 void
 package_details_refresh_selected_package_actions(MainWindowUiState *widgets)
 {
-  if (!widgets || widgets->results.selected_nevra.empty()) {
+  if (!widgets) {
+    return;
+  }
+
+  if (package_table_get_selected_packages(widgets).size() > 1) {
+    pending_transaction_update_multi_selection_buttons(widgets);
+    set_details_status_text(widgets, nullptr);
+    return;
+  }
+
+  if (widgets->results.selected_nevra.empty()) {
     set_details_status_text(widgets, nullptr);
     return;
   }

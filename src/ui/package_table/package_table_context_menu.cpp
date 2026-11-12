@@ -63,7 +63,7 @@ package_table_show_context_menu(GtkWidget *anchor,
                                 const PackageTableRow &row,
                                 double x,
                                 double y,
-                                const std::function<bool(const std::string &)> &select_row)
+                                const std::function<bool()> &select_row)
 {
   if (!anchor || !widgets) {
     return;
@@ -74,7 +74,7 @@ package_table_show_context_menu(GtkWidget *anchor,
     return;
   }
 
-  if (!select_row(row.row.nevra)) {
+  if (!select_row()) {
     return;
   }
 
@@ -131,6 +131,7 @@ package_table_show_context_menu(GtkWidget *anchor,
   gboolean reinstall_sensitive = actions.can_reinstall;
 
   if (multiple_selected) {
+    pending_transaction_update_multi_selection_buttons(widgets);
     install_label = _("Mark Selected for Install or Upgrade");
     remove_label = _("Mark Selected for Removal");
     reinstall_label = _("Mark Selected for Reinstall");

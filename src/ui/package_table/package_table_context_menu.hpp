@@ -22,7 +22,7 @@ void package_table_show_context_menu(GtkWidget *anchor,
                                      const PackageTableRow &row,
                                      double x,
                                      double y,
-                                     const std::function<bool(const std::string &)> &select_row);
+                                     const std::function<bool()> &select_row);
 
 // -----------------------------------------------------------------------------
 // EOF

@@ -1359,6 +1359,9 @@ msgstr "Det finns inga väntande åtgärder att rensa."
 msgid "No selected packages support this action."
 msgstr "Inget av de valda paketen stöder den här åtgärden."
 
+msgid "This action is not available for every selected package."
+msgstr "Den här åtgärden är inte tillgänglig för alla valda paket."
+
 msgid "Selected packages contain conflicting versions or invalid actions."
 msgstr "De valda paketen innehåller motstridiga versioner eller ogiltiga åtgärder."
 

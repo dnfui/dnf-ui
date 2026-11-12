@@ -62,9 +62,9 @@ pending_transaction_update_multi_selection_buttons(MainWindowUiState *widgets)
     return;
   }
 
-  bool can_install = false;
-  bool can_remove = false;
-  bool can_reinstall = false;
+  bool can_install = true;
+  bool can_remove = true;
+  bool can_reinstall = true;
   for (const auto &row : selected) {
     PendingTransactionSelectionActions actions =
         pending_transaction_actions_for_selection(row.row,
@@ -72,12 +72,9 @@ pending_transaction_update_multi_selection_buttons(MainWindowUiState *widgets)
                                                   row.upgrade_generation(),
                                                   widgets->query_state.displayed_query,
                                                   widgets->transaction_state.actions);
-    can_install = can_install || actions.can_install;
-    can_remove = can_remove || actions.can_remove;
-    can_reinstall = can_reinstall || actions.can_reinstall;
-    if (can_install && can_remove && can_reinstall) {
-      break;
-    }
+    can_install = can_install && actions.can_install;
+    can_remove = can_remove && actions.can_remove;
+    can_reinstall = can_reinstall && actions.can_reinstall;
   }
 
   ui_helpers_set_icon_button(widgets->transaction_widgets.install_button,
@@ -108,9 +105,13 @@ pending_transaction_mark_selected_packages(MainWindowUiState *widgets,
     return;
   }
 
+  if (package_table_quick_filter_is_pending(widgets)) {
+    ui_helpers_set_status(widgets->query.status_label, _("Wait for package filtering to finish."), "blue");
+    return;
+  }
+
   std::vector<PendingTransactionBatchAction> batch;
   batch.reserve(selected.size());
-  size_t skipped = 0;
   for (const auto &row : selected) {
     PendingTransactionSelectionActions actions =
         pending_transaction_actions_for_selection(row.row,
@@ -134,16 +135,13 @@ pending_transaction_mark_selected_packages(MainWindowUiState *widgets,
       allowed = actions.can_reinstall;
     }
 
-    if (allowed) {
-      batch.push_back({ actions.rows, action_type });
-    } else {
-      ++skipped;
+    if (!allowed) {
+      ui_helpers_set_status(widgets->query.status_label,
+                            _("This action is not available for every selected package."),
+                            "gray");
+      return;
     }
-  }
-
-  if (batch.empty()) {
-    ui_helpers_set_status(widgets->query.status_label, _("No selected packages support this action."), "gray");
-    return;
+    batch.push_back({ actions.rows, action_type });
   }
 
   size_t marked_count = 0;
@@ -166,9 +164,6 @@ pending_transaction_mark_selected_packages(MainWindowUiState *widgets,
 
   std::string message = dnfui_i18n_format_count(
       marked_count, "Marked %zu selected package.", "Marked %zu selected packages.");
-  if (skipped > 0) {
-    message += " " + dnfui_i18n_format_count(skipped, "Skipped %zu package.", "Skipped %zu packages.");
-  }
   ui_helpers_set_status(widgets->query.status_label, message, "blue");
 }
 

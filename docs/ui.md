@@ -192,14 +192,16 @@ supplies the description and metadata separately, so the UI does not parse trans
 
 ### Package table view
 
-The package table supports Ctrl-click for individual rows, Shift-click for ranges, and Ctrl+A to select all
-displayed packages. Sorting retains selected rows. Loading a new package list clears a multi-selection.
+The package table supports Ctrl-click for individual rows in every list. List Upgradable also supports
+Shift-click for ranges and Ctrl+A to select all displayed upgrades. Other lists do not support range or
+select-all shortcuts. Sorting retains selected rows. Loading a new package list clears a multi-selection.
 When more than one package is selected, the details panel shows a selection message instead of fetching
 individual package details. Double-click activates only the clicked package.
 
 Install, Remove, and Reinstall mark eligible selected packages in one batch. Install also handles the
-upgrade and downgrade actions available for those rows. Ineligible packages are skipped. A batch that
-includes conflicting selected versions for the same package is rejected without changing pending actions,
+upgrade and downgrade actions available for those rows. An action is available only when every selected
+package qualifies. A batch that includes conflicting selected versions for the same package is rejected
+without changing pending actions,
 except that separate exact install-only versions may be installed together. Already marked actions are
 left unchanged. The Pending Actions tab and the daemon transaction preview remain the review and apply
 steps; selecting packages by itself never queues a transaction.

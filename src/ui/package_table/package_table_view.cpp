@@ -12,6 +12,7 @@
 #include "ui/package_table/package_table_status.hpp"
 #include "ui/package_table/package_table_view.hpp"
 #include "ui/package_table/package_table_view_internal.hpp"
+#include "ui/package_query/package_query_controller_internal.hpp"
 #include "ui/transaction/pending_transaction_action_rows.hpp"
 #include "ui/transaction/pending_transaction_controller.hpp"
 #include "ui/common/widgets.hpp"
@@ -434,7 +435,7 @@ create_status_cell()
 // Select the package row used by the context menu action.
 // -----------------------------------------------------------------------------
 static bool
-select_package_table_row(GtkColumnView *view, const std::string &nevra)
+select_package_table_row(GtkColumnView *view, guint position)
 {
   if (!view) {
     return false;
@@ -445,27 +446,43 @@ select_package_table_row(GtkColumnView *view, const std::string &nevra)
     return false;
   }
 
-  GListModel *items_model = G_LIST_MODEL(model);
-  if (!items_model) {
+  if (position == GTK_INVALID_LIST_POSITION || position >= g_list_model_get_n_items(G_LIST_MODEL(model))) {
     return false;
   }
 
-  guint n_items = g_list_model_get_n_items(items_model);
-  for (guint i = 0; i < n_items; ++i) {
-    GObject *obj = G_OBJECT(g_list_model_get_item(items_model, i));
-    const PackageRow *row = package_row_from_object(obj);
-    bool match = row && row->nevra == nevra;
-    g_object_unref(obj);
-
-    if (match) {
-      if (!gtk_selection_model_is_selected(model, i)) {
-        gtk_selection_model_select_item(model, i, TRUE);
-      }
-      return true;
-    }
+  if (!gtk_selection_model_is_selected(model, position)) {
+    return gtk_selection_model_select_item(model, position, TRUE);
   }
 
-  return false;
+  return true;
+}
+
+static bool
+is_range_selection_key(guint keyval)
+{
+  switch (keyval) {
+  case GDK_KEY_Up:
+  case GDK_KEY_Down:
+  case GDK_KEY_Left:
+  case GDK_KEY_Right:
+  case GDK_KEY_Home:
+  case GDK_KEY_End:
+  case GDK_KEY_Page_Up:
+  case GDK_KEY_Page_Down:
+  case GDK_KEY_KP_Up:
+  case GDK_KEY_KP_Down:
+  case GDK_KEY_KP_Left:
+  case GDK_KEY_KP_Right:
+  case GDK_KEY_KP_Home:
+  case GDK_KEY_KP_End:
+  case GDK_KEY_KP_Page_Up:
+  case GDK_KEY_KP_Page_Down:
+  case GDK_KEY_space:
+  case GDK_KEY_KP_Space:
+    return true;
+  default:
+    return false;
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -657,14 +674,17 @@ create_text_column(MainWindowUiState *widgets, const PackageTableColumnDefinitio
                              return;
                            }
 
-                           package_table_show_context_menu(cell, widgets, *row, x, y, [view](const std::string &nevra) {
-                             return select_package_table_row(GTK_COLUMN_VIEW(view), nevra);
+                           GtkListItem *item = static_cast<GtkListItem *>(
+                               g_object_get_data(G_OBJECT(cell), "package-list-item"));
+                           package_table_show_context_menu(cell, widgets, *row, x, y, [view, item]() {
+                             return select_package_table_row(GTK_COLUMN_VIEW(view), gtk_list_item_get_position(item));
                            });
                          }),
                          g_object_get_data(G_OBJECT(factory), "package-table-widgets"));
         gtk_widget_add_controller(cell, GTK_EVENT_CONTROLLER(context_click));
 
         gtk_list_item_set_child(item, cell);
+        g_object_set_data(G_OBJECT(cell), "package-list-item", item);
         g_signal_connect(
             item,
             "notify::position",
@@ -1018,6 +1038,68 @@ finish_package_table_view(MainWindowUiState *widgets,
   gtk_column_view_set_single_click_activate(view, FALSE);
   gtk_column_view_set_show_row_separators(view, TRUE);
   gtk_column_view_set_show_column_separators(view, FALSE);
+
+  GtkEventController *selection_keys = gtk_event_controller_key_new();
+  gtk_event_controller_set_propagation_phase(selection_keys, GTK_PHASE_CAPTURE);
+  g_signal_connect(selection_keys,
+                   "key-pressed",
+                   G_CALLBACK(+[](GtkEventControllerKey *controller,
+                                  guint keyval,
+                                  guint,
+                                  GdkModifierType state,
+                                  gpointer user_data) -> gboolean {
+                     MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
+                     bool upgradeable =
+                         widgets->query_state.displayed_query.kind == DisplayedPackageQueryKind::LIST_UPGRADEABLE;
+                     bool control = (state & GDK_CONTROL_MASK) != 0;
+                     bool shift = (state & GDK_SHIFT_MASK) != 0;
+                     if (control && ((gdk_keyval_to_lower(keyval) == GDK_KEY_a && !shift) ||
+                                     keyval == GDK_KEY_slash)) {
+                       if (upgradeable) {
+                         if (package_query_has_active_package_list_request(widgets)) {
+                           ui_helpers_set_status(widgets->query.status_label,
+                                                 _("Wait for the current package query to finish."),
+                                                 "blue");
+                         } else if (package_table_quick_filter_is_pending(widgets)) {
+                           ui_helpers_set_status(widgets->query.status_label,
+                                                 _("Wait for package filtering to finish."),
+                                                 "blue");
+                         } else {
+                           GtkWidget *view = gtk_event_controller_get_widget(GTK_EVENT_CONTROLLER(controller));
+                           gtk_selection_model_select_all(gtk_column_view_get_model(GTK_COLUMN_VIEW(view)));
+                         }
+                       }
+                       return TRUE;
+                     }
+
+                     return !upgradeable && shift && is_range_selection_key(keyval);
+                   }),
+                   widgets);
+  gtk_widget_add_controller(GTK_WIDGET(view), selection_keys);
+
+  GtkGesture *selection_click = gtk_gesture_click_new();
+  gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(selection_click), GDK_BUTTON_PRIMARY);
+  gtk_event_controller_set_propagation_phase(GTK_EVENT_CONTROLLER(selection_click), GTK_PHASE_CAPTURE);
+  g_signal_connect(selection_click,
+                   "pressed",
+                   G_CALLBACK(+[](GtkGestureClick *gesture, int, double x, double y, gpointer user_data) {
+                     MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
+                     if (widgets->query_state.displayed_query.kind == DisplayedPackageQueryKind::LIST_UPGRADEABLE) {
+                       return;
+                     }
+                     GdkModifierType state =
+                         gtk_event_controller_get_current_event_state(GTK_EVENT_CONTROLLER(gesture));
+                     if (!(state & GDK_SHIFT_MASK)) {
+                       return;
+                     }
+                     GtkWidget *view = gtk_event_controller_get_widget(GTK_EVENT_CONTROLLER(gesture));
+                     GtkWidget *target = gtk_widget_pick(view, x, y, GTK_PICK_DEFAULT);
+                     if (target && gtk_widget_get_ancestor(target, GTK_TYPE_LIST_VIEW)) {
+                       gtk_gesture_set_state(GTK_GESTURE(gesture), GTK_EVENT_SEQUENCE_CLAIMED);
+                     }
+                   }),
+                   widgets);
+  gtk_widget_add_controller(GTK_WIDGET(view), GTK_EVENT_CONTROLLER(selection_click));
 
   for (const auto &column : package_table_column_definitions()) {
     append_package_column(view, create_text_column(widgets, column));
