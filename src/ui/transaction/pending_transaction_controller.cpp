@@ -52,7 +52,7 @@ pending_transaction_action_is_busy(MainWindowUiState *widgets)
 
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
-// Enable package actions when at least one selected row supports them.
+// Enable package actions only when every selected row supports them.
 // -----------------------------------------------------------------------------
 void
 pending_transaction_update_multi_selection_buttons(MainWindowUiState *widgets)

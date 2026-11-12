@@ -57,6 +57,33 @@ package_table_quick_filter_is_pending(MainWindowUiState *widgets)
   return model && gtk_filter_list_model_get_pending(model) > 0;
 }
 
+bool
+package_table_select_all_upgrades(MainWindowUiState *widgets)
+{
+  if (!widgets || !widgets->results.list_scroller ||
+      widgets->query_state.displayed_query.kind != DisplayedPackageQueryKind::LIST_UPGRADEABLE) {
+    return false;
+  }
+
+  GtkWidget *view = gtk_scrolled_window_get_child(widgets->results.list_scroller);
+  if (!GTK_IS_COLUMN_VIEW(view)) {
+    return false;
+  }
+
+  if (package_query_has_active_package_list_request(widgets)) {
+    ui_helpers_set_status(widgets->query.status_label, _("Wait for the current package query to finish."), "blue");
+    return true;
+  }
+
+  if (package_table_quick_filter_is_pending(widgets)) {
+    ui_helpers_set_status(widgets->query.status_label, _("Wait for package filtering to finish."), "blue");
+    return true;
+  }
+
+  gtk_selection_model_select_all(gtk_column_view_get_model(GTK_COLUMN_VIEW(view)));
+  return true;
+}
+
 // -----------------------------------------------------------------------------
 // Update the count of packages shown by the filter.
 // -----------------------------------------------------------------------------
@@ -1024,6 +1051,40 @@ package_table_reset_columns_to_default(MainWindowUiState *widgets)
 }
 
 static void
+update_package_table_selection(GtkSelectionModel *selection, MainWindowUiState *widgets)
+{
+  GtkBitset *selected_rows = gtk_selection_model_get_selection(selection);
+  guint count = gtk_bitset_get_size(selected_rows);
+  guint index = count == 1 ? gtk_bitset_get_nth(selected_rows, 0) : GTK_INVALID_LIST_POSITION;
+  gtk_bitset_unref(selected_rows);
+
+  if (count > 1) {
+    package_details_show_multiple_selected_packages(widgets);
+    return;
+  }
+  if (index == GTK_INVALID_LIST_POSITION) {
+    package_details_cancel_active_load(widgets);
+    package_details_clear_selected_package_state(widgets);
+    package_details_reset_details_view(widgets);
+    return;
+  }
+
+  GObject *obj = G_OBJECT(g_list_model_get_item(G_LIST_MODEL(selection), index));
+  const PackageItem *item = package_item_from_object(obj);
+  if (!item) {
+    if (obj) {
+      g_object_unref(obj);
+    }
+    package_details_clear_selected_package_state(widgets);
+    return;
+  }
+
+  PackageTableRow selected = package_table_row_from_item(*item);
+  g_object_unref(obj);
+  package_details_load_selected_package_info(widgets, selected);
+}
+
+static void
 finish_package_table_view(MainWindowUiState *widgets,
                           GListStore *store,
                           size_t item_count,
@@ -1041,40 +1102,25 @@ finish_package_table_view(MainWindowUiState *widgets,
 
   GtkEventController *selection_keys = gtk_event_controller_key_new();
   gtk_event_controller_set_propagation_phase(selection_keys, GTK_PHASE_CAPTURE);
-  g_signal_connect(selection_keys,
-                   "key-pressed",
-                   G_CALLBACK(+[](GtkEventControllerKey *controller,
-                                  guint keyval,
-                                  guint,
-                                  GdkModifierType state,
-                                  gpointer user_data) -> gboolean {
-                     MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
-                     bool upgradeable =
-                         widgets->query_state.displayed_query.kind == DisplayedPackageQueryKind::LIST_UPGRADEABLE;
-                     bool control = (state & GDK_CONTROL_MASK) != 0;
-                     bool shift = (state & GDK_SHIFT_MASK) != 0;
-                     if (control && ((gdk_keyval_to_lower(keyval) == GDK_KEY_a && !shift) ||
-                                     keyval == GDK_KEY_slash)) {
-                       if (upgradeable) {
-                         if (package_query_has_active_package_list_request(widgets)) {
-                           ui_helpers_set_status(widgets->query.status_label,
-                                                 _("Wait for the current package query to finish."),
-                                                 "blue");
-                         } else if (package_table_quick_filter_is_pending(widgets)) {
-                           ui_helpers_set_status(widgets->query.status_label,
-                                                 _("Wait for package filtering to finish."),
-                                                 "blue");
-                         } else {
-                           GtkWidget *view = gtk_event_controller_get_widget(GTK_EVENT_CONTROLLER(controller));
-                           gtk_selection_model_select_all(gtk_column_view_get_model(GTK_COLUMN_VIEW(view)));
-                         }
-                       }
-                       return TRUE;
-                     }
+  g_signal_connect(
+      selection_keys,
+      "key-pressed",
+      G_CALLBACK(+[](GtkEventControllerKey *, guint keyval, guint, GdkModifierType state, gpointer user_data)
+                     -> gboolean {
+        MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
+        bool upgradeable = widgets->query_state.displayed_query.kind == DisplayedPackageQueryKind::LIST_UPGRADEABLE;
+        bool control = (state & GDK_CONTROL_MASK) != 0;
+        bool shift = (state & GDK_SHIFT_MASK) != 0;
+        if (control && ((gdk_keyval_to_lower(keyval) == GDK_KEY_a && !shift) || keyval == GDK_KEY_slash)) {
+          if (upgradeable) {
+            package_table_select_all_upgrades(widgets);
+          }
+          return TRUE;
+        }
 
-                     return !upgradeable && shift && is_range_selection_key(keyval);
-                   }),
-                   widgets);
+        return !upgradeable && shift && is_range_selection_key(keyval);
+      }),
+      widgets);
   gtk_widget_add_controller(GTK_WIDGET(view), selection_keys);
 
   GtkGesture *selection_click = gtk_gesture_click_new();
@@ -1125,36 +1171,7 @@ finish_package_table_view(MainWindowUiState *widgets,
   g_signal_connect(sel,
                    "selection-changed",
                    G_CALLBACK(+[](GtkSelectionModel *self, guint, guint, gpointer user_data) {
-                     MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
-                     GtkBitset *selected_rows = gtk_selection_model_get_selection(self);
-                     guint count = gtk_bitset_get_size(selected_rows);
-                     guint index = count == 1 ? gtk_bitset_get_nth(selected_rows, 0) : GTK_INVALID_LIST_POSITION;
-                     gtk_bitset_unref(selected_rows);
-
-                     if (count > 1) {
-                       package_details_show_multiple_selected_packages(widgets);
-                       return;
-                     }
-                     if (index == GTK_INVALID_LIST_POSITION) {
-                       package_details_cancel_active_load(widgets);
-                       package_details_clear_selected_package_state(widgets);
-                       package_details_reset_details_view(widgets);
-                       return;
-                     }
-
-                     GObject *obj = G_OBJECT(g_list_model_get_item(G_LIST_MODEL(self), index));
-                     const PackageItem *item = package_item_from_object(obj);
-                     if (!item) {
-                       if (obj) {
-                         g_object_unref(obj);
-                       }
-                       package_details_clear_selected_package_state(widgets);
-                       return;
-                     }
-
-                     PackageTableRow selected = package_table_row_from_item(*item);
-                     g_object_unref(obj);
-                     package_details_load_selected_package_info(widgets, selected);
+                     update_package_table_selection(self, static_cast<MainWindowUiState *>(user_data));
                    }),
                    widgets);
 
@@ -1209,6 +1226,13 @@ finish_package_table_view(MainWindowUiState *widgets,
                    widgets);
 
   gtk_scrolled_window_set_child(widgets->results.list_scroller, GTK_WIDGET(view));
+  g_signal_connect(sel,
+                   "items-changed",
+                   G_CALLBACK(+[](GListModel *self, guint, guint, guint, gpointer user_data) {
+                     update_package_table_selection(GTK_SELECTION_MODEL(self),
+                                                    static_cast<MainWindowUiState *>(user_data));
+                   }),
+                   widgets);
   gtk_search_bar_set_key_capture_widget(widgets->results.quick_filter_bar, GTK_WIDGET(view));
 
   // Update count label

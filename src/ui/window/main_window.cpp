@@ -139,6 +139,25 @@ setup_shortcuts(GtkWidget *window, GtkWidget *entry, MainWindowUiState *widgets)
           NULL));
   gtk_shortcut_controller_add_shortcut(GTK_SHORTCUT_CONTROLLER(shortcuts), quick_filter);
 
+  // Select displayed upgrades with Ctrl+A after using the package list controls.
+  GtkShortcut *select_upgrades = gtk_shortcut_new(
+      gtk_keyval_trigger_new(GDK_KEY_a, GDK_CONTROL_MASK),
+      gtk_callback_action_new(
+          +[](GtkWidget *window, GVariant *, gpointer user_data) -> gboolean {
+            MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
+            GtkWidget *focus = gtk_window_get_focus(GTK_WINDOW(window));
+            if (focus && focus != GTK_WIDGET(widgets->query.list_upgradeable_button) &&
+                focus != GTK_WIDGET(widgets->query.list_button) &&
+                focus != GTK_WIDGET(widgets->query.list_packages_button) &&
+                focus != GTK_WIDGET(widgets->query.search_button)) {
+              return FALSE;
+            }
+            return package_table_select_all_upgrades(widgets);
+          },
+          widgets,
+          NULL));
+  gtk_shortcut_controller_add_shortcut(GTK_SHORTCUT_CONTROLLER(shortcuts), select_upgrades);
+
   GtkShortcut *clear_list = gtk_shortcut_new(gtk_keyval_trigger_new(GDK_KEY_l, GDK_CONTROL_MASK),
                                              gtk_callback_action_new(
                                                  +[](GtkWidget *widget, GVariant *, gpointer) -> gboolean {

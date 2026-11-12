@@ -80,6 +80,10 @@ void package_table_on_quick_filter_mode_changed(GObject *bar, GParamSpec *, gpoi
 // -----------------------------------------------------------------------------
 bool package_table_quick_filter_is_pending(MainWindowUiState *widgets);
 // -----------------------------------------------------------------------------
+// Select displayed upgrades when the upgradable package list is active.
+// -----------------------------------------------------------------------------
+bool package_table_select_all_upgrades(MainWindowUiState *widgets);
+// -----------------------------------------------------------------------------
 // Refresh status values for all package rows.
 // -----------------------------------------------------------------------------
 void package_table_refresh_statuses(MainWindowUiState *widgets);
