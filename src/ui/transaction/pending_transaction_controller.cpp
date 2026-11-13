@@ -77,12 +77,10 @@ pending_transaction_update_multi_selection_buttons(MainWindowUiState *widgets)
     can_reinstall = can_reinstall && actions.can_reinstall;
   }
 
-  ui_helpers_set_icon_button(widgets->transaction_widgets.install_button,
-                             "list-add-symbolic",
-                             _("Mark Selected for Install or Upgrade"));
-  ui_helpers_set_icon_button(widgets->transaction_widgets.remove_button,
-                             "user-trash-symbolic",
-                             _("Mark Selected for Removal"));
+  ui_helpers_set_icon_button(
+      widgets->transaction_widgets.install_button, "list-add-symbolic", _("Mark Selected for Install or Upgrade"));
+  ui_helpers_set_icon_button(
+      widgets->transaction_widgets.remove_button, "user-trash-symbolic", _("Mark Selected for Removal"));
   ui_helpers_set_icon_button_with_fallback(widgets->transaction_widgets.reinstall_button,
                                            "document-revert-symbolic",
                                            "view-refresh-symbolic",
@@ -136,9 +134,8 @@ pending_transaction_mark_selected_packages(MainWindowUiState *widgets,
     }
 
     if (!allowed) {
-      ui_helpers_set_status(widgets->query.status_label,
-                            _("This action is not available for every selected package."),
-                            "gray");
+      ui_helpers_set_status(
+          widgets->query.status_label, _("This action is not available for every selected package."), "gray");
       return;
     }
     batch.push_back({ actions.rows, action_type });
@@ -146,9 +143,8 @@ pending_transaction_mark_selected_packages(MainWindowUiState *widgets,
 
   size_t marked_count = 0;
   if (!pending_transaction_mark_batch(widgets->transaction_state.actions, batch, marked_count)) {
-    ui_helpers_set_status(widgets->query.status_label,
-                          _("Selected packages contain conflicting versions or invalid actions."),
-                          "red");
+    ui_helpers_set_status(
+        widgets->query.status_label, _("Selected packages contain conflicting versions or invalid actions."), "red");
     return;
   }
 
@@ -162,8 +158,8 @@ pending_transaction_mark_selected_packages(MainWindowUiState *widgets,
   package_table_refresh_statuses(widgets);
   pending_transaction_update_multi_selection_buttons(widgets);
 
-  std::string message = dnfui_i18n_format_count(
-      marked_count, "Marked %zu selected package.", "Marked %zu selected packages.");
+  std::string message =
+      dnfui_i18n_format_count(marked_count, "Marked %zu selected package.", "Marked %zu selected packages.");
   ui_helpers_set_status(widgets->query.status_label, message, "blue");
 }
 
@@ -176,7 +172,6 @@ pending_transaction_on_install_button_clicked(GtkButton *, gpointer user_data)
   if (pending_transaction_action_is_busy(widgets)) {
     return;
   }
-
 
   std::vector<PackageTableRow> selected_packages = package_table_get_selected_packages(widgets);
   if (selected_packages.size() > 1) {
@@ -267,7 +262,6 @@ pending_transaction_on_remove_button_clicked(GtkButton *, gpointer user_data)
     return;
   }
 
-
   std::vector<PackageTableRow> selected_packages = package_table_get_selected_packages(widgets);
   if (selected_packages.size() > 1) {
     pending_transaction_mark_selected_packages(widgets, selected_packages, PendingAction::REMOVE);
@@ -338,7 +332,6 @@ pending_transaction_on_reinstall_button_clicked(GtkButton *, gpointer user_data)
   if (pending_transaction_action_is_busy(widgets)) {
     return;
   }
-
 
   std::vector<PackageTableRow> selected_packages = package_table_get_selected_packages(widgets);
   if (selected_packages.size() > 1) {

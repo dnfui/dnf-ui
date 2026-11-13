@@ -701,8 +701,8 @@ create_text_column(MainWindowUiState *widgets, const PackageTableColumnDefinitio
                              return;
                            }
 
-                           GtkListItem *item = static_cast<GtkListItem *>(
-                               g_object_get_data(G_OBJECT(cell), "package-list-item"));
+                           GtkListItem *item =
+                               static_cast<GtkListItem *>(g_object_get_data(G_OBJECT(cell), "package-list-item"));
                            package_table_show_context_menu(cell, widgets, *row, x, y, [view, item]() {
                              return select_package_table_row(GTK_COLUMN_VIEW(view), gtk_list_item_get_position(item));
                            });
@@ -1053,34 +1053,65 @@ package_table_reset_columns_to_default(MainWindowUiState *widgets)
 static void
 update_package_table_selection(GtkSelectionModel *selection, MainWindowUiState *widgets)
 {
+  GPtrArray *items = g_ptr_array_new_with_free_func(g_object_unref);
   GtkBitset *selected_rows = gtk_selection_model_get_selection(selection);
-  guint count = gtk_bitset_get_size(selected_rows);
-  guint index = count == 1 ? gtk_bitset_get_nth(selected_rows, 0) : GTK_INVALID_LIST_POSITION;
+  GtkBitsetIter iter;
+  guint index;
+  if (gtk_bitset_iter_init_first(&iter, selected_rows, &index)) {
+    do {
+      GObject *obj = G_OBJECT(g_list_model_get_item(G_LIST_MODEL(selection), index));
+      if (obj) {
+        g_ptr_array_add(items, obj);
+      }
+    } while (gtk_bitset_iter_next(&iter, &index));
+  }
   gtk_bitset_unref(selected_rows);
 
-  if (count > 1) {
+  // Ignore model row changes that leave the selected package objects unchanged.
+  GPtrArray *previous =
+      static_cast<GPtrArray *>(g_object_get_data(G_OBJECT(selection), "dnfui-selected-package-items"));
+  bool unchanged = previous && previous->len == items->len;
+  if (unchanged) {
+    for (guint i = 0; i < items->len; ++i) {
+      if (g_ptr_array_index(previous, i) != g_ptr_array_index(items, i)) {
+        unchanged = false;
+        break;
+      }
+    }
+  }
+
+  if (unchanged && items->len == 1) {
+    const PackageItem *item = package_item_from_object(G_OBJECT(g_ptr_array_index(items, 0)));
+    unchanged = item && widgets->results.selected_nevra == item->row.nevra;
+  }
+  if (unchanged) {
+    g_ptr_array_unref(items);
+    return;
+  }
+
+  g_object_set_data_full(G_OBJECT(selection),
+                         "dnfui-selected-package-items",
+                         items,
+                         +[](gpointer data) { g_ptr_array_unref(static_cast<GPtrArray *>(data)); });
+
+  if (items->len > 1) {
     package_details_show_multiple_selected_packages(widgets);
     return;
   }
-  if (index == GTK_INVALID_LIST_POSITION) {
+  if (items->len == 0) {
     package_details_cancel_active_load(widgets);
     package_details_clear_selected_package_state(widgets);
     package_details_reset_details_view(widgets);
     return;
   }
 
-  GObject *obj = G_OBJECT(g_list_model_get_item(G_LIST_MODEL(selection), index));
-  const PackageItem *item = package_item_from_object(obj);
+  const PackageItem *item = package_item_from_object(G_OBJECT(g_ptr_array_index(items, 0)));
   if (!item) {
-    if (obj) {
-      g_object_unref(obj);
-    }
     package_details_clear_selected_package_state(widgets);
     return;
   }
 
   PackageTableRow selected = package_table_row_from_item(*item);
-  g_object_unref(obj);
   package_details_load_selected_package_info(widgets, selected);
 }
 

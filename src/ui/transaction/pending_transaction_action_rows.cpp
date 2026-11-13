@@ -640,8 +640,7 @@ pending_transaction_mark_batch(std::vector<PendingAction> &actions,
   for (const auto &action : selected) {
     const bool install_side = pending_action_is_install_side(action.type);
     const std::string &nevra = install_side ? action.rows.install_row.nevra : action.rows.installed_row.nevra;
-    if (!seen_actions.emplace(action.type, nevra).second ||
-        has_pending_action(updated, nevra, action.type)) {
+    if (!seen_actions.emplace(action.type, nevra).second || has_pending_action(updated, nevra, action.type)) {
       continue;
     }
 
