@@ -121,6 +121,7 @@ also opens it directly. The filter matches package names and summaries without r
 Escape or the close button clears it and restores the full list. The count shows matching and total rows while
 filtering. Mark Listed Upgrades and package export use the filtered rows, not hidden results. Both require
 filtering to finish before they can run. Loading a new package list clears the filter.
+In List Upgradable, Ctrl+A marks the displayed upgrades when the package table has focus.
 
 After startup, DNF UI quietly checks dnf5daemon's read-only upgrade target list. When that check succeeds, the
 List Upgradable button shows the current number of daemon-reported upgrades. The count check defers while a
