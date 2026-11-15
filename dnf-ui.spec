@@ -1,5 +1,5 @@
 Name:           dnf-ui
-Version:        0.8.1
+Version:        0.8.2
 Release:        1%{?dist}
 Summary:        GTK interface for DNF5
 
@@ -56,6 +56,14 @@ appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/io.github.dnfui.
 %{_datadir}/metainfo/io.github.dnfui.dnfui.metainfo.xml
 
 %changelog
+* Sun Nov 15 2026 ErikMN <dnfui@proton.me> - 0.8.2-1
+- Enable Reinstall for upgradable packages when the installed version is still available
+- Add Ctrl+A to mark listed upgrades when the package table has focus
+- Keep installed packages correctly identified when repository metadata is unavailable
+- Use the configured metadata cache when live and system cache loads fail
+- Make repository refresh stoppable while it waits and allow more time for authorization
+- Keep transaction history order consistent across pages
+
 * Mon Nov 09 2026 ErikMN <dnfui@proton.me> - 0.8.1-1
 - Filter package lists by name or summary while browsing
 - Show expected installed size in a sortable Size column
