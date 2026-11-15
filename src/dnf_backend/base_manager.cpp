@@ -303,7 +303,9 @@ create_configured_base(RepoLoadMode mode, bool load_changelog_metadata = false, 
   DNFUI_TRACE("BaseManager create repos start");
 #ifdef DNFUI_BUILD_TESTS
   // An explicit fixture repository must also exclude repositories defined in the main DNF configuration.
-  if (!std::getenv("DNFUI_TEST_PROVIDER_REPO_URL")) {
+  if (const char *repos_dir = std::getenv("DNFUI_TEST_REPOS_DIR")) {
+    repo_sack->create_repos_from_dir(repos_dir);
+  } else if (!std::getenv("DNFUI_TEST_PROVIDER_REPO_URL")) {
     repo_sack->create_repos_from_system_configuration();
   }
 #else
