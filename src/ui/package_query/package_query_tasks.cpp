@@ -373,7 +373,9 @@ on_list_upgradeable_task(GTask *task, gpointer, gpointer, GCancellable *cancella
 #endif
 
     std::vector<std::string> target_nevras;
+    std::vector<std::string> target_names;
     for (const auto &target : targets) {
+      target_names.push_back(target.name);
       if (target.summary.empty()) {
         target_nevras.push_back(target.nevra.empty() ? target.full_nevra : target.nevra);
       }
@@ -389,6 +391,8 @@ on_list_upgradeable_task(GTask *task, gpointer, gpointer, GCancellable *cancella
       // visible because it is the upgrade reported by the transaction service.
       metadata_rows.clear();
     }
+
+    dnf_backend_refresh_reinstall_availability_interruptible(target_names, cancellable);
 
     if (dnf_backend_refresh_installed_snapshot()) {
       return_package_state_changed_result(task);

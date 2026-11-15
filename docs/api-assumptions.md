@@ -60,8 +60,8 @@ Why this matters:
 
 - List Unneeded uses libdnf5 for a read-only dependency query while removal still goes through the
   regular daemon preview and apply flow.
-- List Upgradable uses dnf5daemon's upgrade target list first. libdnf5 is then used only to add package
-  metadata to those exact daemon-reported NEVRAs.
+- List Upgradable uses dnf5daemon's upgrade target list first. libdnf5 then adds metadata for exact
+  daemon-reported NEVRAs and checks whether installed versions remain available for Reinstall.
 - Missing libdnf5 metadata must not hide a daemon-reported upgrade. The UI should keep a basic daemon row
   rather than showing a false empty list.
 - Upgradable rows are available package candidates. UI actions that remove or reinstall such a row must

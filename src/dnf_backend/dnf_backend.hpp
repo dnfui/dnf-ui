@@ -360,6 +360,12 @@ dnf_backend_get_available_package_metadata_by_nevras_interruptible(const std::ve
                                                                    GCancellable *cancellable);
 
 // -----------------------------------------------------------------------------
+// Refresh exact reinstall availability for installed packages named by daemon upgrade targets.
+// -----------------------------------------------------------------------------
+void dnf_backend_refresh_reinstall_availability_interruptible(const std::vector<std::string> &package_names,
+                                                              GCancellable *cancellable);
+
+// -----------------------------------------------------------------------------
 // Search the merged browse view using one request-local option snapshot.
 // -----------------------------------------------------------------------------
 std::vector<PackageRow> dnf_backend_search_package_rows_interruptible(const std::string &pattern,

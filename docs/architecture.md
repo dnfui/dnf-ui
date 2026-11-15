@@ -71,7 +71,8 @@ be used as current upgrade information. Refreshing, stale, error, and not-loaded
 upgrade claims.
 
 The List Upgradable view uses dnf5daemon to decide which upgrades exist. The worker loads one complete daemon
-upgrade-target result and asks libdnf5 only for metadata that matches those exact package IDs.
+upgrade-target result and asks libdnf5 for metadata that matches those exact package IDs and for exact
+installed-version availability used by Reinstall.
 The GTK completion publishes the daemon snapshot only when it accepts the matching table rows.
 The table keeps a daemon-reported row visible even if libdnf5 metadata is missing,
 because hiding that row would make the UI disagree with the service that applies upgrades.

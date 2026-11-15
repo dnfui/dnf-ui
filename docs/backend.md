@@ -188,8 +188,8 @@ snapshot for status and pending actions, and does not create an autoremove trans
 is not necessarily removable. dnf5daemon still resolves and validates any manually marked removal.
 
 The List Upgradable view uses dnf5daemon to decide which upgrades exist.
-The worker refreshes installed-package state, loads the daemon upgrade targets, asks libdnf5 only for matching package metadata,
-and then refreshes installed-package state again.
+The worker refreshes installed-package state, loads the daemon upgrade targets, asks libdnf5 for matching package
+metadata and exact installed-version availability for Reinstall, and then refreshes installed-package state again.
 
 If installed state changed while the daemon result was being loaded, the result is rejected and the user must
 reload List Upgradable. The GTK completion stores the daemon targets in the shared daemon upgrade snapshot

@@ -1062,6 +1062,50 @@ dnf_backend_get_available_package_metadata_by_nevras_interruptible(const std::ve
 }
 
 // -----------------------------------------------------------------------------
+// Check repository copies of installed packages named by daemon upgrade targets.
+// Preserve the installed snapshot so a later local refresh can detect package changes.
+// -----------------------------------------------------------------------------
+void
+dnf_backend_refresh_reinstall_availability_interruptible(const std::vector<std::string> &package_names,
+                                                         GCancellable *cancellable)
+{
+  std::set<std::string> names(package_names.begin(), package_names.end());
+  names.erase("");
+  if (names.empty()) {
+    return;
+  }
+
+  std::set<std::string> available_nevras;
+  try {
+    auto read = acquire_interruptible_base_read(cancellable);
+    if (package_query_cancelled(cancellable)) {
+      return;
+    }
+
+    if (read.repo_state != BaseRepoState::INSTALLED_ONLY) {
+      libdnf5::rpm::PackageQuery query(read.base);
+      query.filter_name(std::vector<std::string>(names.begin(), names.end()), libdnf5::sack::QueryCmp::EQ);
+      query.filter_repo_id("@System", libdnf5::sack::QueryCmp::NEQ);
+      for (auto pkg : query) {
+        if (package_query_cancelled(cancellable)) {
+          return;
+        }
+        available_nevras.insert(pkg.get_nevra());
+      }
+    }
+  } catch (const BaseOperationCancelled &) {
+    return;
+  } catch (const std::exception &) {
+    // Repository failures cannot establish that an exact reinstall package is available.
+    available_nevras.clear();
+  }
+
+  if (!package_query_cancelled(cancellable)) {
+    update_installed_reinstall_availability(names, available_nevras);
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Return installed package rows that exactly match one NEVRA.
 // Repo relation is added when repository data is available, so pending-action navigation
 // can still show local-only or newer-than-repo status when possible.

@@ -8,6 +8,9 @@
 #include "dnf_backend/dnf_backend.hpp"
 #include "dnf_backend/dnf_internal.hpp"
 #include "test_utils.hpp"
+#include "ui/package_query/package_query_state.hpp"
+#include "ui/transaction/pending_transaction_action_rows.hpp"
+#include "upgrade/daemon_upgrade_state.hpp"
 
 #include <algorithm>
 #include <map>
@@ -154,6 +157,74 @@ TEST_CASE_METHOD(ProviderRepositoryFixture, "Daemon upgrade metadata lookup does
   REQUIRE(metadata_rows.size() == 1);
   REQUIRE(metadata_rows.front().nevra == target_nevra);
   REQUIRE(dnf_backend_installed_snapshot_size_for_tests() == 0);
+}
+
+// -----------------------------------------------------------------------------
+// Verify that upgrade listing can find an exact repository copy without replacing installed state.
+// -----------------------------------------------------------------------------
+TEST_CASE_METHOD(ProviderRepositoryFixture, "Upgrade reinstall availability keeps installed identities")
+{
+  reset_backend_globals();
+
+  std::vector<PackageRow> rows =
+      dnf_backend_get_browse_package_rows_interruptible(backend_search_options(false, false), nullptr);
+  PackageRow installed;
+  for (const auto &row : rows) {
+    if (row.repo != "@System") {
+      installed = row;
+      break;
+    }
+  }
+  REQUIRE(!installed.nevra.empty());
+
+  installed.repo = "@System";
+  installed.repo_candidate_exact_available = false;
+  reset_backend_globals();
+  REQUIRE(dnf_backend_testonly_publish_installed_snapshot_rows({ installed }, {}));
+
+  dnf_backend_refresh_reinstall_availability_interruptible({ installed.name }, nullptr);
+
+  dnf_backend_internal::InstalledQueryResult local_refresh;
+  local_refresh.rows = { installed };
+  local_refresh.nevras = { installed.nevra };
+  local_refresh.rows_by_name_arch.emplace(installed.name_arch_key(), installed);
+  REQUIRE_FALSE(dnf_backend_internal::publish_local_installed_snapshot(local_refresh, {}));
+
+  InstalledPackageResolution resolution = dnf_backend_resolve_installed_package(installed);
+  REQUIRE(resolution.has_installed_row);
+  REQUIRE(resolution.installed_row.nevra == installed.nevra);
+  REQUIRE(resolution.installed_row.repo_candidate_exact_available);
+  REQUIRE(dnf_backend_installed_snapshot_size_for_tests() == 1);
+
+  DaemonUpgradeTarget target;
+  target.name = installed.name;
+  target.arch = installed.arch;
+  target.version = "9999";
+  target.release = "1";
+  target.nevra = target.name + "-" + target.version + "-" + target.release + "." + target.arch;
+  target.full_nevra = target.nevra;
+  target.summary = "Available update";
+
+  DaemonUpgradeState &daemon_state = DaemonUpgradeState::instance();
+  daemon_state.reset_for_tests();
+  auto refresh_id = daemon_state.begin_refresh();
+  REQUIRE(refresh_id.has_value());
+  std::string error;
+  REQUIRE(daemon_state.publish_success(refresh_id.value(), { target }, error) == DaemonUpgradePublishResult::PUBLISHED);
+  DaemonUpgradeSnapshot snapshot = daemon_state.snapshot();
+
+  PackageRow update = installed;
+  update.nevra = target.nevra;
+  update.version = target.version;
+  update.release = target.release;
+  update.repo = "updates";
+
+  DisplayedPackageQueryState displayed;
+  displayed.kind = DisplayedPackageQueryKind::LIST_UPGRADEABLE;
+  PendingTransactionSelectionActions actions =
+      pending_transaction_actions_for_selection(update, &target, snapshot.generation, displayed, {});
+  REQUIRE(actions.can_reinstall);
+  REQUIRE(actions.installed_action_nevra == installed.nevra);
 }
 
 // -----------------------------------------------------------------------------

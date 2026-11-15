@@ -272,6 +272,22 @@ publish_local_installed_snapshot(InstalledQueryResult installed, std::set<std::s
 }
 
 // -----------------------------------------------------------------------------
+// Update exact reinstall availability without replacing installed-package state.
+// -----------------------------------------------------------------------------
+void
+update_installed_reinstall_availability(const std::set<std::string> &package_names,
+                                        const std::set<std::string> &available_nevras)
+{
+  std::lock_guard<std::mutex> lock(g_installed_mutex);
+  for (auto &entry : g_installed_state.rows_by_name_arch) {
+    PackageRow &row = entry.second;
+    if (package_names.count(row.name) > 0) {
+      row.repo_candidate_exact_available = available_nevras.count(row.nevra) > 0;
+    }
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Refresh the installed snapshot through a short-lived system-only Base.
 // The caller chooses whether this should also discard the cached shared Base.
 //

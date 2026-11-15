@@ -117,6 +117,12 @@ bool publish_installed_snapshot(InstalledQueryResult installed, std::set<std::st
 // -----------------------------------------------------------------------------
 bool publish_local_installed_snapshot(InstalledQueryResult installed, std::set<std::string> protected_names);
 
+// -----------------------------------------------------------------------------
+// Update reinstall availability without changing the installed package identities.
+// -----------------------------------------------------------------------------
+void update_installed_reinstall_availability(const std::set<std::string> &package_names,
+                                             const std::set<std::string> &available_nevras);
+
 } // namespace dnf_backend_internal
 
 // -----------------------------------------------------------------------------
