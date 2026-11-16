@@ -187,6 +187,8 @@ the Changelog tab can show the update package while Description, Details, Files,
 installed package context. When the Status column is hidden, the Description tab keeps Status as a live label
 outside the fetched package metadata text, so pending transaction changes do not leave stale Status text in the
 details panel.
+Single-clicking an underlined Requires entry in the Dependencies tab searches for packages that provide it.
+RPM feature requirements such as `rpmlib(...)` remain plain text because they have no package provider.
 The Description tab shows the package name and summary above the scrollable long description. Copy Description
 copies all three. The Details tab shows the package metadata without a fixed header or copy button. The backend
 supplies the description and metadata separately, so the UI does not parse translated labels from the details text.

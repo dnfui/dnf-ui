@@ -191,6 +191,21 @@ TEST_CASE_METHOD(ProviderRepositoryFixture, "Find Provider resolves a package ca
 }
 
 // -----------------------------------------------------------------------------
+// Versioned requirements must find packages whose provides satisfy them.
+// -----------------------------------------------------------------------------
+TEST_CASE_METHOD(ProviderRepositoryFixture, "Find Provider resolves a versioned requirement")
+{
+  reset_backend_globals();
+  auto options = backend_search_options(false, false);
+  options.find_provider = true;
+  auto results = dnf_backend_search_package_rows_interruptible("dnfui-filelists-fixture >= 1", options, nullptr);
+  REQUIRE(contains_package_name(results, "dnfui-filelists-fixture"));
+
+  auto unsatisfied = dnf_backend_search_package_rows_interruptible("dnfui-filelists-fixture >= 2", options, nullptr);
+  REQUIRE_FALSE(contains_package_name(unsatisfied, "dnfui-filelists-fixture"));
+}
+
+// -----------------------------------------------------------------------------
 // Unknown providers must not fall back to package-text search.
 // -----------------------------------------------------------------------------
 TEST_CASE_METHOD(ProviderRepositoryFixture, "Find Provider returns no matches for an unknown capability")

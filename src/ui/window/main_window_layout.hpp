@@ -65,6 +65,7 @@ struct AppWidgets {
   GtkSearchEntry *files_search_entry = NULL;
   GtkLabel *files_count_label = NULL;
   GtkTextBuffer *deps_buffer = NULL;
+  GtkTextView *deps_view = NULL;
   GtkTextBuffer *changelog_buffer = NULL;
   GtkWidget *pending_list = NULL;
 

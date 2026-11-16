@@ -570,6 +570,8 @@ main_window_build_layout(AppWidgets *ui)
   GtkWidget *scrolled_deps =
       create_scrolled_text_view(_("Select a package to view dependencies."), GTK_WRAP_WORD, &deps_buffer);
   ui->deps_buffer = deps_buffer;
+  ui->deps_view = GTK_TEXT_VIEW(gtk_scrolled_window_get_child(GTK_SCROLLED_WINDOW(scrolled_deps)));
+  gtk_text_buffer_create_tag(deps_buffer, "requirement-link", "underline", PANGO_UNDERLINE_SINGLE, nullptr);
 
   gtk_stack_add_titled(GTK_STACK(details_stack), scrolled_deps, "dependencies", _("Dependencies"));
 

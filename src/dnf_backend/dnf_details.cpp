@@ -410,8 +410,14 @@ dnf_backend_get_package_deps(const std::string &pkg_nevra)
 }
 
 std::string
-dnf_backend_get_package_deps(const std::string &pkg_nevra, PackageDetailsContext context)
+dnf_backend_get_package_deps(const std::string &pkg_nevra,
+                             PackageDetailsContext context,
+                             std::vector<PackageRequirementLink> *requirement_links)
 {
+  if (requirement_links) {
+    requirement_links->clear();
+  }
+
   auto read = BaseManager::instance().acquire_read();
   libdnf5::Base &base = read.base;
   libdnf5::rpm::PackageQuery query(base);
@@ -482,19 +488,31 @@ dnf_backend_get_package_deps(const std::string &pkg_nevra, PackageDetailsContext
 
   std::ostringstream out;
 
-  auto list_field = [&](const char *title, const auto &items) {
+  auto list_field = [&](const char *title, const auto &items, std::vector<PackageRequirementLink> *links = nullptr) {
     out << title << ":\n";
     if (items.empty()) {
       out << "  " << _("(none)") << "\n\n";
       return;
     }
+    int offset = links ? static_cast<int>(g_utf8_strlen(out.str().c_str(), -1)) : 0;
     for (const auto &i : items) {
-      out << "  " << i.to_string() << "\n";
+      std::string text = i.to_string();
+      if (links) {
+        int start = offset + 2;
+        int end = start + static_cast<int>(g_utf8_strlen(text.c_str(), -1));
+        // RPM satisfies rpmlib requirements internally.
+        std::string name = i.get_name();
+        if (!name.starts_with("rpmlib(")) {
+          links->push_back({ start, end, text });
+        }
+        offset = end + 1;
+      }
+      out << "  " << text << "\n";
     }
     out << "\n";
   };
 
-  list_field(_("Requires"), pkg.get_requires());
+  list_field(_("Requires"), pkg.get_requires(), requirement_links);
   out << _("Required By") << ":\n";
   if (!pkg.is_installed()) {
     out << "  " << _("(installed packages only)") << "\n\n";

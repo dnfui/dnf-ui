@@ -411,8 +411,17 @@ std::string dnf_backend_get_installed_package_files(const std::string &pkg_nevra
 // -----------------------------------------------------------------------------
 // Return formatted dependency details for one NEVRA.
 // -----------------------------------------------------------------------------
+// Character offsets use zero based indexing in the formatted text.
+struct PackageRequirementLink {
+  int start = 0;
+  int end = 0;
+  std::string requirement;
+};
+
 std::string dnf_backend_get_package_deps(const std::string &pkg_nevra);
-std::string dnf_backend_get_package_deps(const std::string &pkg_nevra, PackageDetailsContext context);
+std::string dnf_backend_get_package_deps(const std::string &pkg_nevra,
+                                         PackageDetailsContext context,
+                                         std::vector<PackageRequirementLink> *requirement_links = nullptr);
 // -----------------------------------------------------------------------------
 // Return formatted changelog entries for one NEVRA.
 // -----------------------------------------------------------------------------

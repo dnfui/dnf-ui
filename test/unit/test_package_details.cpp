@@ -218,6 +218,37 @@ TEST_CASE("Dependency info contains expected section headers")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that requirement links cover the displayed Requires entries.
+// -----------------------------------------------------------------------------
+TEST_CASE_METHOD(ProviderRepositoryFixture, "Requirement links cover displayed Requires entries")
+{
+  reset_backend_globals();
+
+  auto results = dnf_backend_search_package_rows_interruptible(
+      "dnfui-filelists-fixture", backend_search_options(false, true), nullptr);
+  REQUIRE(!results.empty());
+
+  std::vector<PackageRequirementLink> links;
+  std::string details =
+      dnf_backend_get_package_deps(results.front().nevra, PackageDetailsContext::SELECTED_VERSION, &links);
+  REQUIRE(details.find("  dnfui-link-capability\n") != std::string::npos);
+  REQUIRE(details.find("  rpmlib(CompressedFileNames) <= 3.0.4-1\n") != std::string::npos);
+  REQUIRE(links.size() == 1);
+  size_t requires_end = details.find("\n\n");
+  REQUIRE(requires_end != std::string::npos);
+  int requires_end_offset = static_cast<int>(g_utf8_strlen(details.c_str(), requires_end));
+
+  const auto &link = links.front();
+  REQUIRE(link.requirement == "dnfui-link-capability");
+  REQUIRE(link.start >= 0);
+  REQUIRE(link.end > link.start);
+  REQUIRE(link.end <= requires_end_offset);
+  const char *start = g_utf8_offset_to_pointer(details.c_str(), link.start);
+  const char *end = g_utf8_offset_to_pointer(details.c_str(), link.end);
+  REQUIRE(std::string(start, end) == link.requirement);
+}
+
+// -----------------------------------------------------------------------------
 // Verify that dependency details for an update row describe the currently installed package.
 // -----------------------------------------------------------------------------
 TEST_CASE("Dependency info uses installed package for update rows")

@@ -303,6 +303,7 @@ create_main_window_ui_state(const AppWidgets *ui)
   widgets->results.files_search_entry = ui->files_search_entry;
   widgets->results.files_count_label = ui->files_count_label;
   widgets->results.deps_buffer = ui->deps_buffer;
+  widgets->results.deps_view = ui->deps_view;
   widgets->results.changelog_buffer = ui->changelog_buffer;
   widgets->results.count_label = GTK_LABEL(ui->count_label);
 
@@ -744,6 +745,8 @@ connect_signals(const AppWidgets *ui, MainWindowUiState *widgets)
   g_signal_connect(ui->files_model, "items-changed", G_CALLBACK(on_files_model_changed), widgets);
   g_signal_connect(ui->filtered_files_model, "items-changed", G_CALLBACK(on_files_model_changed), widgets);
   g_signal_connect(ui->filtered_files_model, "notify::pending", G_CALLBACK(on_files_filter_pending_changed), widgets);
+
+  package_details_connect_requirement_links(widgets);
 
   // Intercept window close when pending or running transaction work needs attention.
   g_signal_connect(ui->window, "close-request", G_CALLBACK(on_main_window_close_request), widgets);

@@ -38,6 +38,10 @@ void package_details_on_details_page_changed(GtkStack *stack, GParamSpec *, gpoi
 // Reset the package details panel to its empty state.
 // -----------------------------------------------------------------------------
 void package_details_reset_details_view(MainWindowUiState *widgets);
+// -----------------------------------------------------------------------------
+// Connect provider links in the Dependencies tab.
+// -----------------------------------------------------------------------------
+void package_details_connect_requirement_links(MainWindowUiState *widgets);
 
 // -----------------------------------------------------------------------------
 // EOF

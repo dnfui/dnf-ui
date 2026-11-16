@@ -16,6 +16,10 @@
       <rpm:sourcerpm>dnfui-filelists-fixture-1-1.src.rpm</rpm:sourcerpm>
       <rpm:header-range start="0" end="1"/>
       <rpm:provides><rpm:entry name="dnfui-filelists-fixture" flags="EQ" epoch="0" ver="1" rel="1"/></rpm:provides>
+      <rpm:requires>
+        <rpm:entry name="dnfui-link-capability"/>
+        <rpm:entry name="rpmlib(CompressedFileNames)" flags="LE" epoch="0" ver="3.0.4" rel="1"/>
+      </rpm:requires>
     </format>
   </package>
 </metadata>

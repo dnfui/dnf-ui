@@ -13,6 +13,7 @@
 #include "ui/common/ui_helpers.hpp"
 #include "ui/common/widgets.hpp"
 #include "ui/common/widgets_internal.hpp"
+#include "ui/package_query/package_query_controller.hpp"
 #include "ui/package_table/package_table_view.hpp"
 #include "ui/package_table/package_table_status.hpp"
 
@@ -49,6 +50,7 @@ struct DeferredDetailsTaskData {
   uint64_t generation;
   DeferredDetailsPage page;
   std::optional<std::vector<std::string>> file_paths;
+  std::vector<PackageRequirementLink> requirement_links;
 };
 
 // Widgets and request state used by one deferred details tab.
@@ -221,6 +223,160 @@ set_files_paths(GtkStringList *model, const std::vector<std::string> &paths)
 }
 
 // -----------------------------------------------------------------------------
+// Mark requirements that can open a provider search.
+// -----------------------------------------------------------------------------
+static void
+apply_requirement_link_tags(GtkTextBuffer *buffer, const std::vector<PackageRequirementLink> &links)
+{
+  GtkTextTagTable *table = gtk_text_buffer_get_tag_table(buffer);
+  GtkTextTag *tag = gtk_text_tag_table_lookup(table, "requirement-link");
+  if (!tag) {
+    return;
+  }
+
+  for (const auto &link : links) {
+    GtkTextIter start;
+    GtkTextIter end;
+    gtk_text_buffer_get_iter_at_offset(buffer, &start, link.start);
+    gtk_text_buffer_get_iter_at_offset(buffer, &end, link.end);
+    gtk_text_buffer_apply_tag(buffer, tag, &start, &end);
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Find the linked requirement under a position in the Dependencies tab.
+// -----------------------------------------------------------------------------
+static const PackageRequirementLink *
+requirement_link_at_position(MainWindowUiState *widgets, gdouble x, gdouble y)
+{
+  GtkTextView *view = widgets->results.deps_view;
+  int buffer_x = 0;
+  int buffer_y = 0;
+  gtk_text_view_window_to_buffer_coords(
+      view, GTK_TEXT_WINDOW_WIDGET, static_cast<int>(x), static_cast<int>(y), &buffer_x, &buffer_y);
+
+  GtkTextIter iter;
+  if (!gtk_text_view_get_iter_at_position(view, &iter, nullptr, buffer_x, buffer_y)) {
+    return nullptr;
+  }
+
+  int offset = gtk_text_iter_get_offset(&iter);
+  for (const auto &link : widgets->results.requirement_links) {
+    if (offset >= link.start && offset < link.end) {
+      return &link;
+    }
+  }
+  return nullptr;
+}
+
+// -----------------------------------------------------------------------------
+// Show the pointer cursor only over linked requirements.
+// -----------------------------------------------------------------------------
+static void
+on_requirement_motion(GtkEventControllerMotion *, gdouble x, gdouble y, gpointer user_data)
+{
+  MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
+  GtkWidget *view = GTK_WIDGET(widgets->results.deps_view);
+  bool linked =
+      gtk_widget_is_sensitive(GTK_WIDGET(widgets->query.mode_dropdown)) && requirement_link_at_position(widgets, x, y);
+  const char *cursor_name = linked ? "pointer" : "text";
+  GdkCursor *current = gtk_widget_get_cursor(view);
+  if (g_strcmp0(current ? gdk_cursor_get_name(current) : nullptr, cursor_name) != 0) {
+    gtk_widget_set_cursor_from_name(view, cursor_name);
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Restore the usual cursor when the pointer leaves the Dependencies tab.
+// -----------------------------------------------------------------------------
+static void
+on_requirement_motion_left(GtkEventControllerMotion *, gpointer user_data)
+{
+  MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
+  gtk_widget_set_cursor_from_name(GTK_WIDGET(widgets->results.deps_view), nullptr);
+}
+
+// -----------------------------------------------------------------------------
+// Clear a pending click when the displayed dependencies change.
+// -----------------------------------------------------------------------------
+static void
+on_dependencies_changed(GtkTextBuffer *, gpointer user_data)
+{
+  MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
+  widgets->results.pressed_requirement_start = -1;
+  gtk_widget_set_cursor_from_name(GTK_WIDGET(widgets->results.deps_view), "text");
+}
+
+// -----------------------------------------------------------------------------
+// Record where a link click began.
+// -----------------------------------------------------------------------------
+static void
+on_requirement_pressed(GtkGestureClick *, gint n_press, gdouble x, gdouble y, gpointer user_data)
+{
+  MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
+  widgets->results.pressed_requirement_start = -1;
+  if (n_press != 1 || !gtk_widget_is_sensitive(GTK_WIDGET(widgets->query.mode_dropdown))) {
+    return;
+  }
+
+  const PackageRequirementLink *link = requirement_link_at_position(widgets, x, y);
+  if (link) {
+    widgets->results.pressed_requirement_start = link->start;
+    widgets->results.pressed_requirement_x = static_cast<int>(x);
+    widgets->results.pressed_requirement_y = static_cast<int>(y);
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Find packages that provide a clicked requirement.
+// -----------------------------------------------------------------------------
+static void
+on_requirement_released(GtkGestureClick *, gint n_press, gdouble x, gdouble y, gpointer user_data)
+{
+  MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
+  int pressed_start = widgets->results.pressed_requirement_start;
+  widgets->results.pressed_requirement_start = -1;
+  if (n_press != 1 || pressed_start < 0 || !gtk_widget_is_sensitive(GTK_WIDGET(widgets->query.mode_dropdown)) ||
+      gtk_drag_check_threshold(GTK_WIDGET(widgets->results.deps_view),
+                               widgets->results.pressed_requirement_x,
+                               widgets->results.pressed_requirement_y,
+                               static_cast<int>(x),
+                               static_cast<int>(y))) {
+    return;
+  }
+
+  const PackageRequirementLink *link = requirement_link_at_position(widgets, x, y);
+  if (!link || link->start != pressed_start) {
+    return;
+  }
+
+  std::string requirement = link->requirement;
+  gtk_drop_down_set_selected(widgets->query.mode_dropdown, 1);
+  gtk_editable_set_text(GTK_EDITABLE(widgets->query.entry), requirement.c_str());
+  package_query_on_search_button_clicked(nullptr, widgets);
+}
+
+// -----------------------------------------------------------------------------
+// Connect provider links in the Dependencies tab.
+// -----------------------------------------------------------------------------
+void
+package_details_connect_requirement_links(MainWindowUiState *widgets)
+{
+  GtkGesture *click = gtk_gesture_click_new();
+  gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(click), GDK_BUTTON_PRIMARY);
+  gtk_event_controller_set_propagation_phase(GTK_EVENT_CONTROLLER(click), GTK_PHASE_CAPTURE);
+  g_signal_connect(click, "pressed", G_CALLBACK(on_requirement_pressed), widgets);
+  g_signal_connect(click, "released", G_CALLBACK(on_requirement_released), widgets);
+  gtk_widget_add_controller(GTK_WIDGET(widgets->results.deps_view), GTK_EVENT_CONTROLLER(click));
+
+  GtkEventController *motion = gtk_event_controller_motion_new();
+  g_signal_connect(motion, "motion", G_CALLBACK(on_requirement_motion), widgets);
+  g_signal_connect(motion, "leave", G_CALLBACK(on_requirement_motion_left), widgets);
+  gtk_widget_add_controller(GTK_WIDGET(widgets->results.deps_view), motion);
+  g_signal_connect(widgets->results.deps_buffer, "changed", G_CALLBACK(on_dependencies_changed), widgets);
+}
+
+// -----------------------------------------------------------------------------
 // Replace the content of one deferred details tab.
 // -----------------------------------------------------------------------------
 static void
@@ -347,6 +503,7 @@ package_details_reset_details_view(MainWindowUiState *widgets)
   widgets->results.changelog_query_nevra.clear();
   set_details_status_text(widgets, nullptr);
   widgets->results.files_total_count.reset();
+  widgets->results.requirement_links.clear();
   gtk_widget_set_visible(GTK_WIDGET(widgets->results.files_count_label), FALSE);
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->results.files_search_entry), FALSE);
   gtk_editable_set_text(GTK_EDITABLE(widgets->results.files_search_entry), "");
@@ -375,6 +532,13 @@ package_details_clear_selected_package_state(MainWindowUiState *widgets)
   widgets->results.files_loaded_nevra.clear();
   widgets->results.deps_loaded_nevra.clear();
   widgets->results.changelog_loaded_nevra.clear();
+  widgets->results.requirement_links.clear();
+  widgets->results.pressed_requirement_start = -1;
+  GtkTextIter start;
+  GtkTextIter end;
+  gtk_text_buffer_get_bounds(widgets->results.deps_buffer, &start, &end);
+  gtk_text_buffer_remove_tag_by_name(widgets->results.deps_buffer, "requirement-link", &start, &end);
+  gtk_widget_set_cursor_from_name(GTK_WIDGET(widgets->results.deps_view), "text");
   set_package_description_header(widgets, "", "");
   set_package_copy_button_sensitive(widgets, false);
   set_details_status_text(widgets, nullptr);
@@ -601,7 +765,7 @@ on_deferred_details_task(GTask *task, gpointer, gpointer task_data, GCancellable
       break;
     case DeferredDetailsPage::DEPENDENCIES:
       DNFUI_TRACE("Package dependencies load start nevra=%s", td->details_query_nevra.c_str());
-      text = dnf_backend_get_package_deps(td->details_query_nevra, td->details_context);
+      text = dnf_backend_get_package_deps(td->details_query_nevra, td->details_context, &td->requirement_links);
       DNFUI_TRACE("Package dependencies loaded nevra=%s bytes=%zu", td->details_query_nevra.c_str(), text.size());
       break;
     case DeferredDetailsPage::CHANGELOG:
@@ -672,6 +836,9 @@ on_deferred_details_task_finished(GObject *, GAsyncResult *res, gpointer user_da
       widgets->results.files_total_count.reset();
       gtk_widget_set_visible(GTK_WIDGET(widgets->results.files_count_label), FALSE);
     }
+    if (td->page == DeferredDetailsPage::DEPENDENCIES) {
+      widgets->results.requirement_links.clear();
+    }
     set_deferred_details_text(ui, ui.error_text);
     if (error && error->message) {
       ui_helpers_set_status(widgets->query.status_label, error->message, "red");
@@ -690,10 +857,16 @@ on_deferred_details_task_finished(GObject *, GAsyncResult *res, gpointer user_da
       widgets->results.files_total_count.reset();
     }
   }
+  if (td->page == DeferredDetailsPage::DEPENDENCIES) {
+    widgets->results.requirement_links = td->requirement_links;
+  }
   if (td->page == DeferredDetailsPage::FILES && td->file_paths && !td->file_paths->empty()) {
     set_files_paths(ui.files_model, *td->file_paths);
   } else {
     set_deferred_details_text(ui, text);
+  }
+  if (td->page == DeferredDetailsPage::DEPENDENCIES) {
+    apply_requirement_link_tags(ui.buffer, td->requirement_links);
   }
   if (td->page == DeferredDetailsPage::FILES) {
     gtk_widget_set_visible(GTK_WIDGET(widgets->results.files_count_label), td->file_paths.has_value());
@@ -735,6 +908,9 @@ load_selected_package_details_page(MainWindowUiState *widgets, DeferredDetailsPa
     widgets->results.files_total_count.reset();
     gtk_widget_set_visible(GTK_WIDGET(widgets->results.files_count_label), FALSE);
     gtk_widget_set_sensitive(GTK_WIDGET(widgets->results.files_search_entry), FALSE);
+  }
+  if (page == DeferredDetailsPage::DEPENDENCIES) {
+    widgets->results.requirement_links.clear();
   }
   set_deferred_details_text(ui, ui.loading_text);
   if (page == DeferredDetailsPage::FILES) {
@@ -809,6 +985,7 @@ package_details_load_selected_package_info(MainWindowUiState *widgets, const Pac
   widgets->results.deps_loaded_nevra.clear();
   widgets->results.changelog_loaded_nevra.clear();
   widgets->results.files_total_count.reset();
+  widgets->results.requirement_links.clear();
   gtk_widget_set_visible(GTK_WIDGET(widgets->results.files_count_label), FALSE);
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->results.files_search_entry), FALSE);
   gtk_editable_set_text(GTK_EDITABLE(widgets->results.files_search_entry), "");

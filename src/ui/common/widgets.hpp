@@ -62,6 +62,11 @@ struct PackageResultsWidgets {
   GtkLabel *files_count_label = nullptr;
   std::optional<size_t> files_total_count;
   GtkTextBuffer *deps_buffer = nullptr;
+  GtkTextView *deps_view = nullptr;
+  std::vector<PackageRequirementLink> requirement_links;
+  int pressed_requirement_start = -1;
+  int pressed_requirement_x = 0;
+  int pressed_requirement_y = 0;
   GtkTextBuffer *changelog_buffer = nullptr;
   GtkLabel *count_label = nullptr;
   std::string selected_nevra;
