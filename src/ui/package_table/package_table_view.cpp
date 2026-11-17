@@ -160,7 +160,7 @@ reset_quick_filter(MainWindowUiState *widgets)
 // Refresh stored package status values without changing the GTK model.
 // -----------------------------------------------------------------------------
 static void
-refresh_model_status_values(GtkColumnView *view, MainWindowUiState *widgets)
+refresh_model_status_values(GtkColumnView *view, MainWindowUiState *widgets, bool additional_only)
 {
   GtkSelectionModel *model = gtk_column_view_get_model(view);
   if (!model || !GTK_IS_SINGLE_SELECTION(model)) {
@@ -177,8 +177,12 @@ refresh_model_status_values(GtkColumnView *view, MainWindowUiState *widgets)
     GObject *obj = G_OBJECT(g_list_model_get_item(items_model, i));
     PackageItem *item = mutable_package_item_from_object(obj);
     if (item) {
-      InstalledPackageResolution resolution = dnf_backend_resolve_installed_package(item->row);
-      package_table_fill_item_status(widgets, *item, resolution);
+      if (additional_only) {
+        package_table_fill_additional_item_status(widgets, *item);
+      } else {
+        InstalledPackageResolution resolution = dnf_backend_resolve_installed_package(item->row);
+        package_table_fill_item_status(widgets, *item, resolution);
+      }
     }
     g_object_unref(obj);
   }
@@ -895,8 +899,8 @@ package_table_get_displayed_packages(MainWindowUiState *widgets)
 // -----------------------------------------------------------------------------
 // Refresh package status text and colors without rebuilding the package table.
 // -----------------------------------------------------------------------------
-void
-package_table_refresh_statuses(MainWindowUiState *widgets)
+static void
+refresh_package_table_statuses(MainWindowUiState *widgets, bool additional_only)
 {
   if (!widgets || !widgets->results.list_scroller) {
     return;
@@ -907,8 +911,23 @@ package_table_refresh_statuses(MainWindowUiState *widgets)
     return;
   }
 
-  refresh_model_status_values(GTK_COLUMN_VIEW(child), widgets);
+  refresh_model_status_values(GTK_COLUMN_VIEW(child), widgets, additional_only);
   refresh_visible_status_labels(child, widgets);
+}
+
+void
+package_table_refresh_statuses(MainWindowUiState *widgets)
+{
+  refresh_package_table_statuses(widgets, false);
+}
+
+// -----------------------------------------------------------------------------
+// Update daemon-selected statuses without rescanning every explicit action per row.
+// -----------------------------------------------------------------------------
+void
+package_table_refresh_additional_statuses(MainWindowUiState *widgets)
+{
+  refresh_package_table_statuses(widgets, true);
 }
 
 // -----------------------------------------------------------------------------

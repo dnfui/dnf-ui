@@ -43,6 +43,7 @@ struct PackageItem {
   PackageTableSortEvr update_evr;
   std::string status_text;
   int status_rank = 0;
+  bool status_is_explicit_pending = false;
 
   const DaemonUpgradeTarget *upgrade_target() const
   {
@@ -60,6 +61,7 @@ PackageTableRow package_table_row_from_item(const PackageItem &item);
 void package_table_fill_item_status(MainWindowUiState *widgets,
                                     PackageItem &item,
                                     const InstalledPackageResolution &resolution);
+void package_table_fill_additional_item_status(MainWindowUiState *widgets, PackageItem &item);
 void package_table_fill_item_display_values(PackageItem &item,
                                             const InstalledPackageResolution &resolution,
                                             bool compact_view);

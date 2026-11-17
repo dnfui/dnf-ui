@@ -103,12 +103,50 @@ package_table_fill_item_status(MainWindowUiState *widgets,
   PendingTransactionActionRows action_rows = pending_transaction_action_rows_for_resolved_selection_with_pending(
       item.row, item.upgrade_target(), table_row.upgrade_generation(), resolution, exact_installonly_actions, actions);
   PendingAction::Type action_type;
-  if (package_table_pending_action_for_resolved_row(widgets, table_row, action_rows, action_type)) {
-    item.status_text = package_table_pending_action_status_text(action_type, install_state);
+  bool resolved_only = false;
+  if (package_table_pending_action_for_resolved_row(widgets, table_row, action_rows, action_type, &resolved_only)) {
+    item.status_text = resolved_only ? package_table_resolved_action_status_text(action_type)
+                                     : package_table_pending_action_status_text(action_type, install_state);
+    item.status_is_explicit_pending = !resolved_only;
     return;
   }
 
   item.status_text = package_table_status_text_for_resolved_row(table_row, action_rows, exact_available_rows);
+  item.status_is_explicit_pending = false;
+}
+
+// -----------------------------------------------------------------------------
+// Update only daemon-selected statuses after the normal pending refresh.
+// Explicit statuses were already updated when the user changed marks.
+// -----------------------------------------------------------------------------
+void
+package_table_fill_additional_item_status(MainWindowUiState *widgets, PackageItem &item)
+{
+  if (!widgets || item.status_is_explicit_pending) {
+    return;
+  }
+
+  const auto &state = widgets->transaction_state;
+  const auto &displayed = widgets->query_state.displayed_query;
+  const bool project_stream = displayed_package_query_uses_compact_rows(displayed) ||
+      displayed.kind == DisplayedPackageQueryKind::LIST_INSTALLED ||
+      displayed.kind == DisplayedPackageQueryKind::LIST_UNNEEDED;
+  const bool exact = state.resolved_actions_by_nevra.count(item.row.nevra) != 0;
+  const bool daemon_target = item.upgrade_target() &&
+      state.resolved_actions_by_nevra.count(item.upgrade_target()->nevra) != 0;
+  const bool stream = project_stream && state.resolved_actions_by_name_arch.count(item.row.name_arch_key()) != 0;
+  if (!exact && !daemon_target && !stream) {
+    return;
+  }
+
+  PackageTableRow table_row {
+    .row = item.row,
+    .daemon_upgrade = item.daemon_upgrade,
+  };
+  PendingAction::Type action_type;
+  if (package_table_resolved_action_for_row(widgets, table_row, action_type)) {
+    item.status_text = package_table_resolved_action_status_text(action_type);
+  }
 }
 
 // -----------------------------------------------------------------------------

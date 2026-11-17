@@ -80,6 +80,10 @@ bool package_table_quick_filter_is_pending(MainWindowUiState *widgets);
 // -----------------------------------------------------------------------------
 void package_table_refresh_statuses(MainWindowUiState *widgets);
 // -----------------------------------------------------------------------------
+// Refresh daemon-selected statuses after a display-only preview completes.
+// -----------------------------------------------------------------------------
+void package_table_refresh_additional_statuses(MainWindowUiState *widgets);
+// -----------------------------------------------------------------------------
 // Return true when one package table column is visible in the current GTK view.
 // -----------------------------------------------------------------------------
 bool package_table_column_is_visible(MainWindowUiState *widgets, PackageColumnKind kind);

@@ -255,6 +255,43 @@ TEST_CASE("Package table compact rows do not borrow actions for another installe
 
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
+// Background status updates must not re-evaluate explicit marks or unrelated rows.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package table updates only daemon-selected additional statuses")
+{
+  reset_backend_globals();
+
+  MainWindowUiState widgets;
+  set_all_version_package_view(widgets);
+
+  PackageItem additional;
+  additional.row = make_status_test_row("dependency-1-1.x86_64", "dependency", "1", "1", "x86_64");
+  package_table_fill_item_status(&widgets, additional, dnf_backend_resolve_installed_package(additional.row));
+  REQUIRE(additional.status_text == "Available");
+  REQUIRE_FALSE(additional.status_is_explicit_pending);
+
+  PackageItem unrelated;
+  unrelated.row = make_status_test_row("unrelated-1-1.x86_64", "unrelated", "1", "1", "x86_64");
+  package_table_fill_item_status(&widgets, unrelated, dnf_backend_resolve_installed_package(unrelated.row));
+  REQUIRE(unrelated.status_text == "Available");
+
+  widgets.transaction_state.resolved_actions_by_nevra[additional.row.nevra] = PendingAction::INSTALL;
+  package_table_fill_additional_item_status(&widgets, additional);
+  package_table_fill_additional_item_status(&widgets, unrelated);
+  REQUIRE(additional.status_text == "Additional Install");
+  REQUIRE(unrelated.status_text == "Available");
+
+  widgets.transaction_state.actions.push_back(
+      { PendingAction::INSTALL, additional.row.nevra, additional.row.nevra });
+  package_table_fill_item_status(&widgets, additional, dnf_backend_resolve_installed_package(additional.row));
+  REQUIRE(additional.status_text == "Pending Install");
+  REQUIRE(additional.status_is_explicit_pending);
+
+  package_table_fill_additional_item_status(&widgets, additional);
+  REQUIRE(additional.status_text == "Pending Install");
+}
+
+// -----------------------------------------------------------------------------
 // Multiple installed versions must not inherit an unrelated upgrade.
 // -----------------------------------------------------------------------------
 TEST_CASE("Package table installed installonly rows do not project resolved upgrades")

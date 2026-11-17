@@ -131,7 +131,7 @@ pending_transaction_update_resolved_preview(MainWindowUiState *widgets)
         state.resolved_actions_by_nevra = std::move(resolved.by_nevra);
         state.resolved_actions_by_name_arch = std::move(resolved.by_name_arch);
         if (!state.resolved_actions_by_nevra.empty() || !state.resolved_actions_by_name_arch.empty()) {
-          package_table_refresh_statuses(widgets);
+          package_table_refresh_additional_statuses(widgets);
         }
       });
   g_task_set_task_data(task, task_data, resolved_preview_task_data_free);
