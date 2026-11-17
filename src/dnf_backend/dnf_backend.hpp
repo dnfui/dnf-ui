@@ -296,6 +296,10 @@ bool dnf_backend_refresh_installed_snapshot_preserving_cached_base();
 // Resolve installed-package state for one visible row from one installed snapshot.
 // -----------------------------------------------------------------------------
 InstalledPackageResolution dnf_backend_resolve_installed_package(const PackageRow &row);
+// -----------------------------------------------------------------------------
+// Return true when multiple installed versions share a name and architecture.
+// -----------------------------------------------------------------------------
+bool dnf_backend_installed_name_arch_is_ambiguous(const std::string &key);
 
 // -----------------------------------------------------------------------------
 // Return the default package-table sort priority for one package state.

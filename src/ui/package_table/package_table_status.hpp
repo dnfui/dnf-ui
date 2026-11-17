@@ -31,7 +31,14 @@ const char *package_table_status_text_for_resolved_row(const PackageTableRow &ro
 bool package_table_pending_action_for_resolved_row(MainWindowUiState *widgets,
                                                    const PackageTableRow &row,
                                                    const PendingTransactionActionRows &action_rows,
-                                                   PendingAction::Type &out_type);
+                                                   PendingAction::Type &out_type,
+                                                   bool *resolved_only = nullptr);
+// -----------------------------------------------------------------------------
+// Look up a display-only daemon action without searching explicit marks.
+// -----------------------------------------------------------------------------
+bool package_table_resolved_action_for_row(MainWindowUiState *widgets,
+                                           const PackageTableRow &row,
+                                           PendingAction::Type &out_type);
 // -----------------------------------------------------------------------------
 // Return display text for one pending package action.
 // -----------------------------------------------------------------------------
@@ -41,6 +48,10 @@ const char *package_table_pending_action_status_text(PendingAction::Type action_
 // Return the Status-cell CSS class for one pending action type.
 // -----------------------------------------------------------------------------
 const char *package_table_pending_action_css_class_for_type(PendingAction::Type action_type);
+// -----------------------------------------------------------------------------
+// Return text that distinguishes daemon-resolved actions from explicit marks.
+// -----------------------------------------------------------------------------
+const char *package_table_resolved_action_status_text(PendingAction::Type action_type);
 // Remove all status CSS classes from a Status cell.
 // -----------------------------------------------------------------------------
 void package_table_clear_status_css(GtkWidget *cell);

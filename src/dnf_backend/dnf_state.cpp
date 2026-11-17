@@ -28,6 +28,7 @@ namespace {
 struct InstalledStateSnapshot {
   std::set<std::string> nevras;
   std::map<std::string, PackageRow> rows_by_name_arch;
+  std::set<std::string> ambiguous_name_arch;
   std::set<std::string> self_protected_package_names;
 };
 
@@ -173,6 +174,7 @@ publish_installed_snapshot_locked(dnf_backend_internal::InstalledQueryResult ins
       g_installed_state.self_protected_package_names != next_protected_names;
   g_installed_state.nevras.swap(installed.nevras);
   g_installed_state.rows_by_name_arch.swap(installed.rows_by_name_arch);
+  g_installed_state.ambiguous_name_arch.swap(installed.ambiguous_name_arch);
   g_installed_state.self_protected_package_names.swap(next_protected_names);
   return changed;
 }
@@ -377,6 +379,16 @@ dnf_backend_resolve_installed_package(const PackageRow &row)
 }
 
 // -----------------------------------------------------------------------------
+// Return true when multiple installed versions share a name and architecture.
+// -----------------------------------------------------------------------------
+bool
+dnf_backend_installed_name_arch_is_ambiguous(const std::string &key)
+{
+  std::lock_guard<std::mutex> lock(g_installed_mutex);
+  return g_installed_state.ambiguous_name_arch.count(key) != 0;
+}
+
+// -----------------------------------------------------------------------------
 // Return the default package table sort priority for one install state. Lower
 // values sort first and keep installed rows ahead of repo-only rows.
 // -----------------------------------------------------------------------------
@@ -483,6 +495,7 @@ dnf_backend_testonly_replace_installed_snapshot(const std::set<std::string> &nev
   std::lock_guard<std::mutex> lock(g_installed_mutex);
   g_installed_state.nevras = nevras;
   g_installed_state.rows_by_name_arch.clear();
+  g_installed_state.ambiguous_name_arch.clear();
   g_installed_state.self_protected_package_names.clear();
 }
 
@@ -497,7 +510,11 @@ dnf_backend_testonly_replace_installed_snapshot_rows(const std::vector<PackageRo
 
   for (const auto &row : rows) {
     g_installed_state.nevras.insert(row.nevra);
-    g_installed_state.rows_by_name_arch[row.name_arch_key()] = row;
+    const std::string key = row.name_arch_key();
+    if (g_installed_state.rows_by_name_arch.count(key) != 0) {
+      g_installed_state.ambiguous_name_arch.insert(key);
+    }
+    g_installed_state.rows_by_name_arch[key] = row;
   }
 }
 
@@ -511,7 +528,11 @@ dnf_backend_testonly_publish_installed_snapshot_rows(const std::vector<PackageRo
   InstalledQueryResult installed;
   for (const auto &row : rows) {
     installed.nevras.insert(row.nevra);
-    installed.rows_by_name_arch[row.name_arch_key()] = row;
+    const std::string key = row.name_arch_key();
+    if (installed.rows_by_name_arch.count(key) != 0) {
+      installed.ambiguous_name_arch.insert(key);
+    }
+    installed.rows_by_name_arch[key] = row;
   }
 
   return publish_installed_snapshot(std::move(installed), protected_names);

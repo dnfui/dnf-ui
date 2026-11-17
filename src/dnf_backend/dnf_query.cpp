@@ -104,11 +104,19 @@ acquire_interruptible_provider_read(GCancellable *cancellable)
 // Keep the newest row for one package name and architecture tuple.
 // -----------------------------------------------------------------------------
 static void
-remember_newest_row(std::map<std::string, PackageRow> &rows_by_name_arch, const PackageRow &row)
+remember_newest_row(std::map<std::string, PackageRow> &rows_by_name_arch,
+                    const PackageRow &row,
+                    std::set<std::string> *ambiguous_name_arch = nullptr)
 {
-  auto [it, inserted] = rows_by_name_arch.emplace(row.name_arch_key(), row);
-  if (!inserted && libdnf5::rpm::evrcmp(row, it->second) > 0) {
-    it->second = row;
+  const std::string key = row.name_arch_key();
+  auto [it, inserted] = rows_by_name_arch.emplace(key, row);
+  if (!inserted) {
+    if (ambiguous_name_arch) {
+      ambiguous_name_arch->insert(key);
+    }
+    if (libdnf5::rpm::evrcmp(row, it->second) > 0) {
+      it->second = row;
+    }
   }
 }
 
@@ -549,6 +557,7 @@ collect_installed_rows(libdnf5::Base &base,
       result.rows.clear();
       result.nevras.clear();
       result.rows_by_name_arch.clear();
+      result.ambiguous_name_arch.clear();
       return result;
     }
 
@@ -561,7 +570,7 @@ collect_installed_rows(libdnf5::Base &base,
     // The name and architecture map answers "which installed package matches
     // this available update candidate".
     result.nevras.insert(row.nevra);
-    remember_newest_row(result.rows_by_name_arch, row);
+    remember_newest_row(result.rows_by_name_arch, row, &result.ambiguous_name_arch);
     result.rows.push_back(row);
   }
 
@@ -576,8 +585,9 @@ static void
 refresh_installed_row_lookup(InstalledQueryResult &installed)
 {
   installed.rows_by_name_arch.clear();
+  installed.ambiguous_name_arch.clear();
   for (const auto &row : installed.rows) {
-    remember_newest_row(installed.rows_by_name_arch, row);
+    remember_newest_row(installed.rows_by_name_arch, row, &installed.ambiguous_name_arch);
   }
 }
 

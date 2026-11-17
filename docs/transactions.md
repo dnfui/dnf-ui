@@ -42,6 +42,23 @@ Important files:
 
 Dependency changes are not stored in the request. dnf5daemon resolves those changes when the preview is built.
 
+After the user marks a package, DNF UI starts a background daemon preview to show additional installs,
+upgrades, downgrades, reinstalls, and removals in the package table. These display-only markings are
+labeled "Additional"; they never become explicit pending actions. Mark changes cancel old resolution,
+and only the newest complete result is displayed. Apply prepares a separate authoritative preview.
+If background resolution fails, explicit marks remain and Apply still performs its normal review.
+If the Apply preview fails, background resolution starts again for any remaining explicit marks.
+Background previews do not refresh the installed snapshot or discard the cached libdnf5 Base, so
+marking packages does not force subsequent package queries to reload metadata. Apply performs
+its usual installed-state safety checks and remains authoritative.
+Additional markings are cleared when Apply begins because the Apply preview is authoritative; closing its
+summary without applying starts the background resolution again.
+Only packages in the current table can show additional markings. Exact-version lists mark only exact
+resolved versions, while compact lists may show one unambiguous action for a package stream.
+List Installed and List Unneeded also show additional upgrades or downgrades on installed rows
+only when a single installed version exists for that name and architecture. Repository changes and refreshes
+discard older markings and trigger a new background resolution for remaining explicit marks.
+
 Upgrade-all requests are separate from explicit package action lists. DNF UI asks dnf5daemon to prepare its
 native Upgrade All transaction. Selected package upgrades are sent as explicit upgrade specs.
 Selected downgrades are sent as exact NEVRA specs so the daemon is asked for the version the user selected.
@@ -70,6 +87,8 @@ When the user clicks Apply:
 Pending actions are cleared after a successful apply. If apply fails after the daemon reports that RPM work
 started, pending actions are also cleared because the old request no longer describes what still needs to be
 done. Failures before RPM work starts keep pending actions so the user can retry.
+For a failed online Apply, a successful package data rebuild also restarts background resolution
+so additional markings reappear for the remaining explicit actions.
 
 When the user clicks Upgrade All, the GUI skips the pending action list and asks the transaction client to
 prepare a daemon-side Upgrade All session. If the resolved preview is empty, the session is closed. The GUI

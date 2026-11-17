@@ -33,6 +33,7 @@ struct InstalledQueryResult {
   std::vector<PackageRow> rows;
   std::set<std::string> nevras;
   std::map<std::string, PackageRow> rows_by_name_arch;
+  std::set<std::string> ambiguous_name_arch;
 };
 
 struct AvailableViewRows {

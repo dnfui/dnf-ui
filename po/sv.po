@@ -1762,5 +1762,23 @@ msgstr "Kopiera beskrivning"
 msgid "Copy the title, summary, and description."
 msgstr "Kopiera titel, sammanfattning och beskrivning."
 
+msgid "Additional Install"
+msgstr "Ytterligare installation"
+
+msgid "Additional Upgrade"
+msgstr "Ytterligare uppgradering"
+
+msgid "Additional Downgrade"
+msgstr "Ytterligare nedgradering"
+
+msgid "Additional Reinstall"
+msgstr "Ytterligare ominstallation"
+
+msgid "Additional Removal"
+msgstr "Ytterligare borttagning"
+
+msgid "Additional Action"
+msgstr "Ytterligare åtgärd"
+
 msgid "Could not resolve additional package actions. Apply will show the final preview."
 msgstr "Kunde inte lösa ytterligare paketåtgärder. Verkställ visar den slutliga förhandsgranskningen."

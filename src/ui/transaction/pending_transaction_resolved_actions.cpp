@@ -39,8 +39,7 @@ append_resolved_actions(PendingTransactionResolvedActions &actions,
 
 // -----------------------------------------------------------------------------
 // Build display-only markings from actions selected by dnf5daemon.
-// Replaced packages are not treated as removals; they are already represented
-// by the corresponding upgrade or installation action.
+// Replaced entries are not removal actions and remain in the final preview.
 // -----------------------------------------------------------------------------
 PendingTransactionResolvedActions
 pending_transaction_resolved_actions_from_preview(const TransactionPreview &preview)

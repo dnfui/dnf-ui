@@ -166,8 +166,15 @@ bool
 package_table_pending_action_for_resolved_row(MainWindowUiState *widgets,
                                               const PackageTableRow &row,
                                               const PendingTransactionActionRows &action_rows,
-                                              PendingAction::Type &out_type)
+                                              PendingAction::Type &out_type,
+                                              bool *resolved_only)
 {
+  if (!widgets) {
+    return false;
+  }
+  if (resolved_only) {
+    *resolved_only = false;
+  }
   for (const auto &action : widgets->transaction_state.actions) {
     if (pending_action_matches_row(widgets, action, row, action_rows)) {
       out_type = action.type;
@@ -175,7 +182,67 @@ package_table_pending_action_for_resolved_row(MainWindowUiState *widgets,
     }
   }
 
-  return false;
+  if (!package_table_resolved_action_for_row(widgets, row, out_type)) {
+    return false;
+  }
+  if (resolved_only) {
+    *resolved_only = true;
+  }
+  return true;
+}
+
+// -----------------------------------------------------------------------------
+// Look up a daemon-selected action without searching explicit marks.
+// -----------------------------------------------------------------------------
+bool
+package_table_resolved_action_for_row(MainWindowUiState *widgets,
+                                      const PackageTableRow &row,
+                                      PendingAction::Type &out_type)
+{
+  if (!widgets) {
+    return false;
+  }
+  const auto &state = widgets->transaction_state;
+  if (state.resolved_actions_by_nevra.empty() && state.resolved_actions_by_name_arch.empty()) {
+    return false;
+  }
+
+  auto exact = state.resolved_actions_by_nevra.find(row.row.nevra);
+  if (exact == state.resolved_actions_by_nevra.end()) {
+    if (const DaemonUpgradeTarget *target = row.upgrade_target()) {
+      auto upgrade = state.resolved_actions_by_nevra.find(target->nevra);
+      if (upgrade != state.resolved_actions_by_nevra.end() &&
+          (upgrade->second == PendingAction::UPGRADE || upgrade->second == PendingAction::DOWNGRADE)) {
+        exact = upgrade;
+      }
+    }
+  }
+  if (exact != state.resolved_actions_by_nevra.end()) {
+    out_type = exact->second;
+  } else {
+    auto stream = state.resolved_actions_by_name_arch.find(row.row.name_arch_key());
+    if (stream == state.resolved_actions_by_name_arch.end()) {
+      return false;
+    }
+
+    const auto &displayed = widgets->query_state.displayed_query;
+    const bool compact = displayed_package_query_uses_compact_rows(displayed);
+    const bool installed_view = displayed.kind == DisplayedPackageQueryKind::LIST_INSTALLED ||
+        displayed.kind == DisplayedPackageQueryKind::LIST_UNNEEDED;
+    const bool installed_upgrade = installed_view && !row.row.installonly &&
+        (stream->second == PendingAction::UPGRADE || stream->second == PendingAction::DOWNGRADE);
+    if (!compact && !installed_upgrade) {
+      return false;
+    }
+    const bool version_specific = stream->second != PendingAction::INSTALL;
+    if ((installed_upgrade || (compact && version_specific)) &&
+        dnf_backend_installed_name_arch_is_ambiguous(row.row.name_arch_key())) {
+      return false;
+    }
+    out_type = stream->second;
+  }
+
+  return true;
 }
 
 // -----------------------------------------------------------------------------
@@ -198,6 +265,27 @@ package_table_pending_action_status_text(PendingAction::Type action_type, Packag
   }
 
   return package_table_status_text(install_state);
+}
+
+// -----------------------------------------------------------------------------
+// Return the Status label for an additional daemon-resolved action.
+// -----------------------------------------------------------------------------
+const char *
+package_table_resolved_action_status_text(PendingAction::Type action_type)
+{
+  switch (action_type) {
+  case PendingAction::INSTALL:
+    return _("Additional Install");
+  case PendingAction::UPGRADE:
+    return _("Additional Upgrade");
+  case PendingAction::DOWNGRADE:
+    return _("Additional Downgrade");
+  case PendingAction::REINSTALL:
+    return _("Additional Reinstall");
+  case PendingAction::REMOVE:
+    return _("Additional Removal");
+  }
+  return _("Additional Action");
 }
 
 // -----------------------------------------------------------------------------
@@ -332,6 +420,7 @@ package_table_clear_pending_action_css(GtkWidget *cell)
   gtk_widget_remove_css_class(cell, "package-status-pending-install");
   gtk_widget_remove_css_class(cell, "package-status-pending-reinstall");
   gtk_widget_remove_css_class(cell, "package-status-pending-remove");
+  gtk_widget_remove_css_class(cell, "package-status-additional");
 }
 
 // -----------------------------------------------------------------------------
@@ -349,9 +438,12 @@ package_table_update_resolved_status_label(GtkWidget *cell,
   const char *text = package_table_status_text_for_resolved_row(row, action_rows, exact_available_rows);
   const char *icon_name = status_icon_name(install_state);
   PendingAction::Type action_type;
-  bool has_pending_action = package_table_pending_action_for_resolved_row(widgets, row, action_rows, action_type);
+  bool resolved_only = false;
+  bool has_pending_action =
+      package_table_pending_action_for_resolved_row(widgets, row, action_rows, action_type, &resolved_only);
   if (has_pending_action) {
-    text = package_table_pending_action_status_text(action_type, install_state);
+    text = resolved_only ? package_table_resolved_action_status_text(action_type)
+                         : package_table_pending_action_status_text(action_type, install_state);
     icon_name = pending_icon_name(action_type, install_state);
   }
 
@@ -369,6 +461,9 @@ package_table_update_resolved_status_label(GtkWidget *cell,
   if (has_pending_action) {
     const char *pending_class = package_table_pending_action_css_class_for_type(action_type);
     gtk_widget_add_css_class(cell, pending_class);
+    if (resolved_only) {
+      gtk_widget_add_css_class(cell, "package-status-additional");
+    }
   } else {
     if (install_state == PackageInstallState::LOCAL_ONLY) {
       gtk_widget_add_css_class(cell, "package-status-local-only");

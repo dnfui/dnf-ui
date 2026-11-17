@@ -101,6 +101,201 @@ TEST_CASE("Package table pending install status is shared")
 }
 
 // -----------------------------------------------------------------------------
+// Compact package rows can display a resolved version different from the row.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package table compact rows show additional resolved actions")
+{
+  reset_backend_globals();
+  MainWindowUiState widgets;
+  set_compact_package_view(widgets);
+  PackageItem item;
+  item.row = make_status_test_row("dependency-1-1.x86_64", "dependency", "1", "1", "x86_64");
+  widgets.transaction_state.resolved_actions_by_nevra["dependency-2-1.x86_64"] = PendingAction::INSTALL;
+  widgets.transaction_state.resolved_actions_by_name_arch[item.row.name_arch_key()] = PendingAction::INSTALL;
+
+  package_table_fill_item_status(&widgets, item, dnf_backend_resolve_installed_package(item.row));
+  REQUIRE(item.status_text == "Additional Install");
+}
+
+// -----------------------------------------------------------------------------
+// An exact package list must never mark another available version.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package table exact rows show only the resolved version")
+{
+  reset_backend_globals();
+  MainWindowUiState widgets;
+  set_all_version_package_view(widgets);
+  widgets.transaction_state.resolved_actions_by_nevra["dependency-2-1.x86_64"] = PendingAction::INSTALL;
+  widgets.transaction_state.resolved_actions_by_name_arch["dependency\nx86_64"] = PendingAction::INSTALL;
+
+  PackageItem older;
+  older.row = make_status_test_row("dependency-1-1.x86_64", "dependency", "1", "1", "x86_64");
+  package_table_fill_item_status(&widgets, older, dnf_backend_resolve_installed_package(older.row));
+  REQUIRE(older.status_text == "Available");
+
+  PackageItem target;
+  target.row = make_status_test_row("dependency-2-1.x86_64", "dependency", "2", "1", "x86_64");
+  package_table_fill_item_status(&widgets, target, dnf_backend_resolve_installed_package(target.row));
+  REQUIRE(target.status_text == "Additional Install");
+}
+
+// -----------------------------------------------------------------------------
+// Show daemon-selected removals without adding them to explicit marks.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package table shows additional resolved removals")
+{
+  reset_backend_globals();
+
+  PackageRow installed = make_status_test_row("dependent-1-1.x86_64", "dependent", "1", "1", "x86_64");
+  dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
+
+  MainWindowUiState widgets;
+  set_installed_package_view(widgets);
+  widgets.transaction_state.resolved_actions_by_nevra[installed.nevra] = PendingAction::REMOVE;
+
+  PackageItem item;
+  item.row = installed;
+  package_table_fill_item_status(&widgets, item, dnf_backend_resolve_installed_package(item.row));
+
+  REQUIRE(item.status_text == "Additional Removal");
+  REQUIRE(widgets.transaction_state.actions.empty());
+}
+
+// -----------------------------------------------------------------------------
+// An installed package row represents an unambiguous upgrade target.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package table installed rows show additional resolved upgrades")
+{
+  reset_backend_globals();
+
+  PackageRow installed = make_status_test_row("library-1-1.x86_64", "library", "1", "1", "x86_64");
+  dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
+
+  MainWindowUiState widgets;
+  set_installed_package_view(widgets);
+  widgets.transaction_state.resolved_actions_by_nevra["library-2-1.x86_64"] = PendingAction::UPGRADE;
+  widgets.transaction_state.resolved_actions_by_name_arch[installed.name_arch_key()] = PendingAction::UPGRADE;
+
+  PackageItem item;
+  item.row = installed;
+  package_table_fill_item_status(&widgets, item, dnf_backend_resolve_installed_package(item.row));
+
+  REQUIRE(item.status_text == "Additional Upgrade");
+}
+
+// -----------------------------------------------------------------------------
+// A name and architecture fallback cannot identify one of several installed versions.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package table does not project an additional upgrade across installed versions")
+{
+  reset_backend_globals();
+
+  PackageRow old_version = make_status_test_row("library-1-1.x86_64", "library", "1", "1", "x86_64");
+  PackageRow new_version = make_status_test_row("library-2-1.x86_64", "library", "2", "1", "x86_64");
+  dnf_backend_testonly_replace_installed_snapshot_rows({ old_version, new_version });
+
+  MainWindowUiState widgets;
+  set_installed_package_view(widgets);
+  widgets.transaction_state.resolved_actions_by_nevra["library-3-1.x86_64"] = PendingAction::UPGRADE;
+  widgets.transaction_state.resolved_actions_by_name_arch[old_version.name_arch_key()] = PendingAction::UPGRADE;
+
+  PackageItem old_item;
+  old_item.row = old_version;
+  package_table_fill_item_status(&widgets, old_item, dnf_backend_resolve_installed_package(old_item.row));
+  REQUIRE(old_item.status_text != "Additional Upgrade");
+
+  PackageItem new_item;
+  new_item.row = new_version;
+  package_table_fill_item_status(&widgets, new_item, dnf_backend_resolve_installed_package(new_item.row));
+  REQUIRE(new_item.status_text != "Additional Upgrade");
+
+  widgets.transaction_state.resolved_actions_by_nevra[old_version.nevra] = PendingAction::REMOVE;
+  package_table_fill_item_status(&widgets, old_item, dnf_backend_resolve_installed_package(old_item.row));
+  REQUIRE(old_item.status_text == "Additional Removal");
+  package_table_fill_item_status(&widgets, new_item, dnf_backend_resolve_installed_package(new_item.row));
+  REQUIRE(new_item.status_text != "Additional Removal");
+}
+
+// -----------------------------------------------------------------------------
+// Compact rows cannot identify which installed version is being removed or reinstalled.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package table compact rows do not borrow actions for another installed version")
+{
+  reset_backend_globals();
+
+  PackageRow old_version = make_status_test_row("library-1-1.x86_64", "library", "1", "1", "x86_64");
+  PackageRow new_version = make_status_test_row("library-2-1.x86_64", "library", "2", "1", "x86_64");
+  dnf_backend_testonly_replace_installed_snapshot_rows({ old_version, new_version });
+
+  for (const PendingAction::Type action_type : { PendingAction::REMOVE, PendingAction::REINSTALL,
+                                                 PendingAction::UPGRADE, PendingAction::DOWNGRADE }) {
+    MainWindowUiState widgets;
+    set_compact_package_view(widgets);
+    widgets.transaction_state.resolved_actions_by_name_arch[new_version.name_arch_key()] = action_type;
+
+    PackageItem item;
+    item.row = new_version;
+    package_table_fill_item_status(&widgets, item, dnf_backend_resolve_installed_package(item.row));
+    REQUIRE(item.status_text != package_table_resolved_action_status_text(action_type));
+  }
+
+  MainWindowUiState explicit_widgets;
+  set_compact_package_view(explicit_widgets);
+  explicit_widgets.transaction_state.actions = {
+    { PendingAction::REMOVE, old_version.nevra, old_version.nevra, old_version.name_arch_key() },
+  };
+  explicit_widgets.transaction_state.resolved_actions_by_nevra[old_version.nevra] = PendingAction::REMOVE;
+  explicit_widgets.transaction_state.resolved_actions_by_name_arch[old_version.name_arch_key()] = PendingAction::REMOVE;
+
+  PackageItem visible;
+  visible.row = new_version;
+  package_table_fill_item_status(&explicit_widgets, visible, dnf_backend_resolve_installed_package(visible.row));
+  REQUIRE(visible.status_text != "Additional Removal");
+}
+
+// -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// Multiple installed versions must not inherit an unrelated upgrade.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package table installed installonly rows do not project resolved upgrades")
+{
+  reset_backend_globals();
+
+  PackageRow installed = make_status_test_row("kernel-1-1.x86_64", "kernel", "1", "1", "x86_64");
+  installed.installonly = true;
+  dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
+
+  MainWindowUiState widgets;
+  set_installed_package_view(widgets);
+  widgets.transaction_state.resolved_actions_by_nevra["kernel-2-1.x86_64"] = PendingAction::UPGRADE;
+  widgets.transaction_state.resolved_actions_by_name_arch[installed.name_arch_key()] = PendingAction::UPGRADE;
+
+  PackageItem item;
+  item.row = installed;
+  package_table_fill_item_status(&widgets, item, dnf_backend_resolve_installed_package(item.row));
+
+  REQUIRE(item.status_text != "Additional Upgrade");
+}
+
+// -----------------------------------------------------------------------------
+// User marks take priority over markings from a previous daemon resolve.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package table preserves explicitly marked actions")
+{
+  reset_backend_globals();
+  MainWindowUiState widgets;
+  PackageItem item;
+  item.row = make_status_test_row("dependency-1-1.x86_64", "dependency", "1", "1", "x86_64");
+  widgets.transaction_state.actions = {
+    { PendingAction::INSTALL, item.row.nevra, item.row.nevra },
+  };
+  widgets.transaction_state.resolved_actions_by_nevra[item.row.nevra] = PendingAction::INSTALL;
+
+  package_table_fill_item_status(&widgets, item, dnf_backend_resolve_installed_package(item.row));
+  REQUIRE(item.status_text == "Pending Install");
+}
+
+// -----------------------------------------------------------------------------
 // Verify that an exact install action does not borrow upgrade wording from the row state.
 // -----------------------------------------------------------------------------
 TEST_CASE("Package table installonly update action shows pending install status")
@@ -580,6 +775,69 @@ TEST_CASE("Package table daemon upgrade pending status is shared")
   });
 
   require_stored_status_matches_pending_action(widgets, item, "Pending Upgrade");
+}
+
+// -----------------------------------------------------------------------------
+// An installed row with a daemon target must use that exact target for cross-architecture upgrades.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package table daemon upgrade target shows additional cross-architecture action")
+{
+  reset_backend_globals();
+
+  PackageRow installed = make_status_test_row("demo-1-1.noarch", "demo", "1", "1", "noarch");
+  dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
+
+  DaemonUpgradeTarget target;
+  target.name = "demo";
+  target.arch = "x86_64";
+  target.version = "2";
+  target.release = "1";
+  target.nevra = "demo-2-1.x86_64";
+  target.full_nevra = target.nevra;
+  target.repo_id = "updates";
+
+  MainWindowUiState widgets;
+  widgets.query_state.displayed_query.kind = DisplayedPackageQueryKind::LIST_UPGRADEABLE;
+  widgets.transaction_state.resolved_actions_by_nevra[target.nevra] = PendingAction::UPGRADE;
+
+  PackageItem item;
+  item.row = installed;
+  item.daemon_upgrade = std::make_shared<DaemonUpgradeRowContext>(DaemonUpgradeRowContext {
+      .target = target,
+  });
+
+  package_table_fill_item_status(&widgets, item, dnf_backend_resolve_installed_package(item.row));
+  REQUIRE(item.status_text == "Additional Upgrade");
+  REQUIRE(package_table_column_text(item, PackageColumnKind::STATUS) == "Additional Upgrade");
+}
+
+// -----------------------------------------------------------------------------
+// A daemon target does not turn unrelated resolved installs into upgrades.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package table daemon upgrade target does not borrow install actions")
+{
+  reset_backend_globals();
+
+  DaemonUpgradeTarget target;
+  target.name = "demo";
+  target.arch = "x86_64";
+  target.version = "2";
+  target.release = "1";
+  target.nevra = "demo-2-1.x86_64";
+  target.full_nevra = target.nevra;
+
+  MainWindowUiState widgets;
+  widgets.query_state.displayed_query.kind = DisplayedPackageQueryKind::LIST_UPGRADEABLE;
+  widgets.transaction_state.resolved_actions_by_nevra[target.nevra] = PendingAction::INSTALL;
+
+  PackageItem item;
+  item.row = make_status_test_row("demo-1-1.noarch", "demo", "1", "1", "noarch");
+  item.daemon_upgrade = std::make_shared<DaemonUpgradeRowContext>(DaemonUpgradeRowContext {
+      .target = target,
+  });
+
+  package_table_fill_item_status(&widgets, item, dnf_backend_resolve_installed_package(item.row));
+  REQUIRE(item.status_text != "Additional Install");
 }
 
 // -----------------------------------------------------------------------------
