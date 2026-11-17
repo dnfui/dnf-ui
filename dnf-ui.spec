@@ -1,5 +1,5 @@
 Name:           dnf-ui
-Version:        0.8.2
+Version:        0.8.3
 Release:        1%{?dist}
 Summary:        GTK interface for DNF5
 
@@ -56,6 +56,11 @@ appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/io.github.dnfui.
 %{_datadir}/metainfo/io.github.dnfui.dnfui.metainfo.xml
 
 %changelog
+* Tue Nov 17 2026 ErikMN <dnfui@proton.me> - 0.8.3-1
+- Make requirements in the Dependencies tab clickable to find packages that provide them
+- Add a Package menu option to clear search history
+- Add a clear button to the main search field
+
 * Sun Nov 15 2026 ErikMN <dnfui@proton.me> - 0.8.2-1
 - Enable Reinstall for upgradable packages when the installed version is still available
 - Add Ctrl+A to mark listed upgrades when the package table has focus
