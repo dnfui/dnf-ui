@@ -42,6 +42,10 @@ void package_query_on_search_mode_changed(GObject *, GParamSpec *, gpointer user
 // -----------------------------------------------------------------------------
 void package_query_on_history_row_selected(GtkListBox *, GtkListBoxRow *row, gpointer user_data);
 // -----------------------------------------------------------------------------
+// Clear the search history list.
+// -----------------------------------------------------------------------------
+void package_query_clear_search_history(MainWindowUiState *widgets);
+// -----------------------------------------------------------------------------
 // Clear the current package list and search status.
 // -----------------------------------------------------------------------------
 void package_query_on_clear_button_clicked(GtkButton *, gpointer user_data);

@@ -1552,6 +1552,12 @@ msgstr "Visa"
 msgid "Clear List"
 msgstr "Rensa lista"
 
+msgid "Clear Search History"
+msgstr "Rensa sökhistorik"
+
+msgid "Search history cleared."
+msgstr "Sökhistoriken har rensats."
+
 msgid "Clear Search Cache"
 msgstr "Rensa sökcache"
 

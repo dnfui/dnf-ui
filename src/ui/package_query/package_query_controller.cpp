@@ -278,6 +278,29 @@ package_query_on_history_row_selected(GtkListBox *, GtkListBoxRow *row, gpointer
 }
 
 // -----------------------------------------------------------------------------
+// Clear saved search terms and their visible history rows.
+// -----------------------------------------------------------------------------
+void
+package_query_clear_search_history(MainWindowUiState *widgets)
+{
+  if (!widgets) {
+    return;
+  }
+
+  widgets->query_state.history.clear();
+  if (!widgets->query.history_list) {
+    return;
+  }
+
+  GtkWidget *child = gtk_widget_get_first_child(GTK_WIDGET(widgets->query.history_list));
+  while (child) {
+    GtkWidget *next = gtk_widget_get_next_sibling(child);
+    gtk_list_box_remove(widgets->query.history_list, child);
+    child = next;
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Handle the Clear List button.
 // Clears displayed package rows and resets the details panel.
 // -----------------------------------------------------------------------------

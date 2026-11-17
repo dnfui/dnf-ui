@@ -151,6 +151,21 @@ on_menu_clear_cache(GSimpleAction *, GVariant *, gpointer user_data)
 }
 
 // -----------------------------------------------------------------------------
+// Clear search history from the menu.
+// -----------------------------------------------------------------------------
+static void
+on_menu_clear_search_history(GSimpleAction *, GVariant *, gpointer user_data)
+{
+  MainMenuActionData *data = static_cast<MainMenuActionData *>(user_data);
+  if (!data || !data->widgets) {
+    return;
+  }
+
+  package_query_clear_search_history(data->widgets);
+  ui_helpers_set_status(data->widgets->query.status_label, _("Search history cleared."), "gray");
+}
+
+// -----------------------------------------------------------------------------
 // Close the main window from the menu.
 // -----------------------------------------------------------------------------
 static void
@@ -348,6 +363,7 @@ main_menu_create()
   GMenu *package_menu = g_menu_new();
   g_menu_append(package_menu, _("List Unneeded"), "win.list-unneeded");
   g_menu_append(package_menu, _("Clear List"), "win.clear-list");
+  g_menu_append(package_menu, _("Clear Search History"), "win.clear-search-history");
   g_menu_append(package_menu, _("Clear Search Cache"), "win.clear-cache");
   g_menu_append(package_menu, _("Transaction History..."), "win.transaction-history");
   g_menu_append(package_menu, _("Discard Prepared Updates..."), "win.discard-prepared-updates");
@@ -381,7 +397,7 @@ main_menu_connect_actions(const MainMenuWidgets &menu_widgets, MainWindowUiState
         delete static_cast<MainMenuActionData *>(p);
       });
 
-  GActionEntry entries[13] = {};
+  GActionEntry entries[14] = {};
   entries[0].name = "quit";
   entries[0].activate = on_menu_quit;
   entries[1].name = "clear-list";
@@ -415,6 +431,8 @@ main_menu_connect_actions(const MainMenuWidgets &menu_widgets, MainWindowUiState
   };
   entries[12].name = "list-unneeded";
   entries[12].activate = on_menu_list_unneeded;
+  entries[13].name = "clear-search-history";
+  entries[13].activate = on_menu_clear_search_history;
 
   GSimpleActionGroup *actions = g_simple_action_group_new();
   g_action_map_add_action_entries(G_ACTION_MAP(actions), entries, G_N_ELEMENTS(entries), data);
