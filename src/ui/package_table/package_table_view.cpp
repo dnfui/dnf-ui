@@ -342,6 +342,7 @@ clear_pending_row_css(GtkWidget *widget)
   gtk_widget_remove_css_class(widget, "package-row-pending-install");
   gtk_widget_remove_css_class(widget, "package-row-pending-reinstall");
   gtk_widget_remove_css_class(widget, "package-row-pending-remove");
+  gtk_widget_remove_css_class(widget, "package-row-additional");
 }
 
 // -----------------------------------------------------------------------------
@@ -360,10 +361,11 @@ clear_pending_row_css_for_cell(GtkWidget *cell)
 static const char *
 pending_row_css_class(MainWindowUiState *widgets,
                       const PackageTableRow &row,
-                      const PendingTransactionActionRows &action_rows)
+                      const PendingTransactionActionRows &action_rows,
+                      bool &resolved_only)
 {
   PendingAction::Type action_type;
-  if (!package_table_pending_action_for_resolved_row(widgets, row, action_rows, action_type)) {
+  if (!package_table_pending_action_for_resolved_row(widgets, row, action_rows, action_type, &resolved_only)) {
     return nullptr;
   }
 
@@ -393,13 +395,17 @@ update_pending_action_css_for_cell(GtkWidget *cell,
                                    const PackageTableRow &row,
                                    const PendingTransactionActionRows &action_rows)
 {
-  const char *pending_class = pending_row_css_class(widgets, row, action_rows);
+  bool resolved_only = false;
+  const char *pending_class = pending_row_css_class(widgets, row, action_rows, resolved_only);
   GtkWidget *target = table_cell_color_target(cell);
 
   clear_pending_row_css(cell);
   clear_pending_row_css(target);
   if (pending_class) {
     gtk_widget_add_css_class(target, pending_class);
+    if (resolved_only) {
+      gtk_widget_add_css_class(target, "package-row-additional");
+    }
   }
 }
 

@@ -878,5 +878,52 @@ TEST_CASE("Package table daemon upgrade target does not borrow install actions")
 }
 
 // -----------------------------------------------------------------------------
+// Additional status styling must be distinct from explicit marks and reset when marks change.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package table additional statuses use separate CSS styling", "[gtk]")
+{
+  if (!gtk_init_check()) {
+    REQUIRE(g_getenv("DNFUI_TEST_REQUIRE_DISPLAY") == nullptr);
+    SKIP("A GTK display is required for status styling tests.");
+  }
+
+  for (const PendingAction::Type action_type : { PendingAction::INSTALL, PendingAction::REMOVE }) {
+    reset_backend_globals();
+    MainWindowUiState widgets;
+    set_all_version_package_view(widgets);
+
+    PackageRow pkg = make_status_test_row("demo-1-1.x86_64", "demo", "1", "1", "x86_64");
+    if (action_type == PendingAction::REMOVE) {
+      dnf_backend_testonly_replace_installed_snapshot_rows({ pkg });
+    }
+
+    PackageTableRow row {
+      .row = pkg,
+      .daemon_upgrade = {},
+    };
+    PendingTransactionActionRows action_rows = pending_transaction_action_rows_for_selection(pkg, nullptr, 0, false);
+
+    GtkWidget *cell = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+    g_object_ref_sink(cell);
+    GtkWidget *label = gtk_label_new(nullptr);
+    gtk_box_append(GTK_BOX(cell), label);
+    g_object_set_data(G_OBJECT(cell), "package-status-label", label);
+
+    widgets.transaction_state.resolved_actions_by_nevra[pkg.nevra] = action_type;
+    package_table_update_resolved_status_label(cell, &widgets, row, action_rows);
+    REQUIRE(gtk_widget_has_css_class(cell, "package-status-additional"));
+    REQUIRE(gtk_widget_has_css_class(cell, package_table_pending_action_css_class_for_type(action_type)));
+
+    widgets.transaction_state.resolved_actions_by_nevra.clear();
+    widgets.transaction_state.actions.push_back({ action_type, pkg.nevra, pkg.nevra, pkg.name_arch_key() });
+    package_table_update_resolved_status_label(cell, &widgets, row, action_rows);
+    REQUIRE_FALSE(gtk_widget_has_css_class(cell, "package-status-additional"));
+    REQUIRE(gtk_widget_has_css_class(cell, package_table_pending_action_css_class_for_type(action_type)));
+
+    g_object_unref(cell);
+  }
+}
+
+// -----------------------------------------------------------------------------
 // EOF
 // -----------------------------------------------------------------------------
