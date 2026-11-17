@@ -656,6 +656,28 @@ on_files_filter_pending_changed(GObject *, GParamSpec *, gpointer user_data)
   update_files_count(static_cast<MainWindowUiState *>(user_data));
 }
 
+// -----------------------------------------------------------------------------
+// Show the clear icon only while the main search entry contains text.
+// -----------------------------------------------------------------------------
+static void
+on_search_entry_changed(GtkEditable *editable, gpointer)
+{
+  const char *text = gtk_editable_get_text(editable);
+  gtk_entry_set_icon_from_icon_name(
+      GTK_ENTRY(editable), GTK_ENTRY_ICON_SECONDARY, text[0] ? "edit-clear-symbolic" : nullptr);
+}
+
+// -----------------------------------------------------------------------------
+// Clear the main search entry when its trailing icon is clicked.
+// -----------------------------------------------------------------------------
+static void
+on_search_entry_icon_pressed(GtkEntry *entry, GtkEntryIconPosition position, gpointer)
+{
+  if (position == GTK_ENTRY_ICON_SECONDARY) {
+    gtk_editable_set_text(GTK_EDITABLE(entry), "");
+  }
+}
+
 static void
 on_copy_description_clicked(GtkButton *button, gpointer user_data)
 {
@@ -725,6 +747,8 @@ connect_signals(const AppWidgets *ui, MainWindowUiState *widgets)
   g_signal_connect(ui->search_button, "clicked", G_CALLBACK(package_query_on_search_button_clicked), widgets);
 
   g_signal_connect(ui->entry, "activate", G_CALLBACK(package_query_on_search_button_clicked), widgets);
+  g_signal_connect(ui->entry, "changed", G_CALLBACK(on_search_entry_changed), nullptr);
+  g_signal_connect(ui->entry, "icon-press", G_CALLBACK(on_search_entry_icon_pressed), nullptr);
   g_signal_connect(ui->quick_filter_entry, "changed", G_CALLBACK(package_table_on_quick_filter_changed), widgets);
   g_signal_connect(ui->quick_filter_bar,
                    "notify::search-mode-enabled",

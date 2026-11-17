@@ -184,6 +184,7 @@ main_window_build_layout(AppWidgets *ui)
 
   GtkWidget *entry = gtk_entry_new();
   gtk_entry_set_placeholder_text(GTK_ENTRY(entry), _("Search packages..."));
+  gtk_entry_set_icon_tooltip_text(GTK_ENTRY(entry), GTK_ENTRY_ICON_SECONDARY, _("Clear search text"));
   gtk_widget_set_hexpand(entry, TRUE);
   gtk_box_append(GTK_BOX(hbox_search), entry);
   ui->entry = entry;
