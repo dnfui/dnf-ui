@@ -1761,3 +1761,6 @@ msgstr "Kopiera beskrivning"
 
 msgid "Copy the title, summary, and description."
 msgstr "Kopiera titel, sammanfattning och beskrivning."
+
+msgid "Could not resolve additional package actions. Apply will show the final preview."
+msgstr "Kunde inte lösa ytterligare paketåtgärder. Verkställ visar den slutliga förhandsgranskningen."

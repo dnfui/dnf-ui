@@ -18,6 +18,7 @@
 #include "ui/package_query/package_query_controller_internal.hpp"
 #include "ui/transaction/pending_transaction_controller.hpp"
 #include "ui/transaction/pending_transaction_request.hpp"
+#include "ui/transaction/pending_transaction_resolved_preview.hpp"
 #include "ui/transaction/pending_transaction_view.hpp"
 #include "ui/refresh/repository_refresh_controller.hpp"
 #include "ui/transaction/transaction_progress.hpp"
@@ -120,6 +121,7 @@ pending_transaction_invalidate_service_preview(MainWindowUiState *widgets)
     return;
   }
 
+  pending_transaction_clear_resolved_preview(widgets);
   if (!widgets->transaction_state.preview_transaction_path.empty()) {
     // Drop the prepared service request without waiting on D-Bus from GTK.
     transaction_service_client_release_request_async(widgets->transaction_state.preview_transaction_path);
@@ -138,6 +140,8 @@ pending_transaction_cancel_service_preview(MainWindowUiState *widgets)
 {
   pending_transaction_invalidate_service_preview(widgets);
   if (widgets) {
+    package_table_refresh_statuses(widgets);
+    pending_transaction_update_resolved_preview(widgets);
     ui_helpers_set_status(widgets->query.status_label, _("Ready."), "gray");
   }
 }
@@ -358,7 +362,11 @@ discard_prepared_updates_async(MainWindowUiState *widgets)
     return;
   }
 
+  const bool had_resolved_actions = !widgets->transaction_state.resolved_actions_by_nevra.empty();
   pending_transaction_invalidate_service_preview(widgets);
+  if (had_resolved_actions) {
+    package_table_refresh_statuses(widgets);
+  }
   widgets->transaction_state.apply_in_progress = true;
   set_main_window_sensitive_for_apply(widgets, false);
   pending_transaction_set_preview_controls_sensitive(widgets, false);
@@ -383,6 +391,7 @@ discard_prepared_updates_async(MainWindowUiState *widgets)
         if (success) {
           set_prepared_updates_indicator_visible(widgets, false);
           ui_helpers_set_status(widgets->query.status_label, _("Prepared updates discarded."), "green");
+          pending_transaction_update_resolved_preview(widgets);
         } else {
           ui_helpers_set_status(widgets->query.status_label, _("Could not discard the prepared updates."), "red");
           transaction_dialogs_show_error_dialog(
@@ -469,6 +478,8 @@ rebuild_after_tx_finished(GObject *, GAsyncResult *res, gpointer user_data)
   // Repopulate the currently visible package view so rows removed by the transaction disappear without a manual reload.
   package_query_reload_current_view(widgets);
   package_query_start_upgrade_indicator_refresh(widgets);
+  // Failed applies that preserve explicit marks need a new display-only resolution.
+  pending_transaction_update_resolved_preview(widgets);
 }
 
 // -----------------------------------------------------------------------------
@@ -677,7 +688,11 @@ static void
 start_preview_request(MainWindowUiState *widgets, TransactionRequest request)
 {
   package_details_cancel_active_load(widgets);
+  const bool had_resolved_actions = !widgets->transaction_state.resolved_actions_by_nevra.empty();
   pending_transaction_invalidate_service_preview(widgets);
+  if (had_resolved_actions) {
+    package_table_refresh_statuses(widgets);
+  }
   widgets->transaction_state.preview_upgrade_all = request.upgrade_all;
   DNFUI_TRACE("Transaction preview request start upgrade_all=%d install=%zu upgrade=%zu downgrade=%zu remove=%zu "
               "reinstall=%zu",
@@ -728,6 +743,7 @@ start_preview_request(MainWindowUiState *widgets, TransactionRequest request)
           if (error) {
             g_error_free(error);
           }
+          pending_transaction_update_resolved_preview(widgets);
           return;
         }
 

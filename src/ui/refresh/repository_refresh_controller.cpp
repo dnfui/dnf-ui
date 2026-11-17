@@ -15,6 +15,7 @@
 #include "ui/package_query/package_query_controller_internal.hpp"
 #include "ui/package_table/package_table_view.hpp"
 #include "ui/transaction/pending_transaction_apply.hpp"
+#include "ui/transaction/pending_transaction_resolved_preview.hpp"
 #include "dnf5daemon_client/transaction_service_client.hpp"
 #include "ui/common/ui_helpers.hpp"
 #include "ui/common/widgets.hpp"
@@ -296,6 +297,7 @@ repository_refresh_on_force_rebuild_task_finished(GObject *, GAsyncResult *res, 
   repository_refresh_set_button_idle(widgets);
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.refresh_button), TRUE);
   repository_refresh_finish_operation(widgets);
+  pending_transaction_update_resolved_preview(widgets);
   DaemonUpgradeState::instance().mark_stale();
   // The repository refresh result supersedes older count requests.
   // Only live metadata below starts a new count.
@@ -401,6 +403,12 @@ repository_refresh_on_button_clicked(GtkButton *, gpointer user_data)
       ui_helpers_set_status(widgets->query.status_label, _("Repository refresh is stopping."), "gray");
     }
     return;
+  }
+
+  // A repository refresh invalidates any dependency preview from the old metadata.
+  if (!widgets->transaction_state.actions.empty()) {
+    pending_transaction_clear_resolved_preview(widgets);
+    package_table_refresh_statuses(widgets);
   }
 
   // Once a rebuild starts, stop serving cached search results so the UI does

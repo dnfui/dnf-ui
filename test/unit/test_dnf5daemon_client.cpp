@@ -7,6 +7,7 @@
 
 #include "test_utils.hpp"
 #include "dnf_backend/base_manager.hpp"
+#include "dnf_backend/dnf_backend.hpp"
 #include "transaction/transaction_preview.hpp"
 #include "transaction/transaction_request.hpp"
 #include "dnf5daemon_client/transaction_service_client.hpp"
@@ -699,6 +700,41 @@ TEST_CASE("dnf5daemon client previews selected upgrade requests", "[dnf5daemon]"
   transaction_service_client_reset_for_tests();
 
   REQUIRE(preview_contains_package);
+}
+
+// -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// Background package markings must not discard cached package metadata.
+// -----------------------------------------------------------------------------
+TEST_CASE("dnf5daemon display preview preserves cached Base", "[dnf5daemon]")
+{
+  require_dnf5daemon_test_enabled();
+  transaction_service_client_reset_for_tests();
+
+  BaseManager::instance().drop_cached_base();
+  BaseManager::instance().initialize_system_only_base_for_tests();
+  REQUIRE(BaseManager::instance().has_cached_base_for_tests());
+  dnf_backend_testonly_clear_installed_snapshot();
+
+  TransactionRequest request;
+  request.install.push_back(dnf5daemon_test_install_spec());
+
+  TransactionPreview preview;
+  std::string transaction_path;
+  std::string error;
+  bool ok = transaction_service_client_preview_request(
+      request, preview, transaction_path, error, {}, nullptr, true);
+
+  if (!transaction_path.empty()) {
+    transaction_service_client_release_request(transaction_path);
+  }
+  transaction_service_client_reset_for_tests();
+
+  INFO(error);
+  REQUIRE(ok);
+  REQUIRE(BaseManager::instance().has_cached_base_for_tests());
+  REQUIRE(dnf_backend_installed_snapshot_size_for_tests() == 0);
+  BaseManager::instance().drop_cached_base();
 }
 
 // -----------------------------------------------------------------------------

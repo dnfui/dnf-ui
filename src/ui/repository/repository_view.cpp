@@ -10,10 +10,12 @@
 #include "ui/details/package_details_controller.hpp"
 #include "ui/package_query/package_query_controller.hpp"
 #include "ui/package_query/package_query_controller_internal.hpp"
+#include "ui/package_table/package_table_view.hpp"
 #include "ui/refresh/repository_refresh_controller.hpp"
 #include "ui/repository/repository_apply_feedback.hpp"
 #include "ui/repository/repository_apply_operation.hpp"
 #include "ui/transaction/pending_transaction_apply.hpp"
+#include "ui/transaction/pending_transaction_resolved_preview.hpp"
 #include "ui/common/ui_helpers.hpp"
 #include "ui/common/widgets.hpp"
 #include "upgrade/daemon_upgrade_state.hpp"
@@ -988,6 +990,7 @@ on_repository_apply_finished(GObject *, GAsyncResult *result, gpointer)
     if (error) {
       g_error_free(error);
     }
+    pending_transaction_update_resolved_preview(main_widgets.get());
     return;
   }
 
@@ -1004,6 +1007,8 @@ on_repository_apply_finished(GObject *, GAsyncResult *result, gpointer)
     repository_view_refresh_visible_pending_css(state);
     state->needs_reload = true;
   }
+
+  pending_transaction_update_resolved_preview(main_widgets.get());
 
   if (state->destroyed) {
     delete apply_result;
@@ -1038,6 +1043,10 @@ repository_view_start_apply_changes(const std::shared_ptr<RepositoryWindowState>
   }
 
   std::shared_ptr<MainWindowUiState> main_widgets = repository_view_main_widgets(state);
+  if (!main_widgets->transaction_state.actions.empty()) {
+    pending_transaction_clear_resolved_preview(main_widgets.get());
+    package_table_refresh_statuses(main_widgets.get());
+  }
   state->applying = true;
   ++state->load_id;
   package_details_cancel_active_load(main_widgets.get());

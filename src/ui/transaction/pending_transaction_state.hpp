@@ -6,6 +6,9 @@
 // -----------------------------------------------------------------------------
 #pragma once
 
+#include <cstdint>
+#include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -35,6 +38,13 @@ struct PendingTransactionState {
   bool preview_upgrade_all = false;
   bool preview_requires_offline = false;
   std::vector<PendingAction> actions;
+  // Read-only daemon results never become explicit pending actions.
+  std::map<std::string, PendingAction::Type> resolved_actions_by_nevra;
+  std::map<std::string, PendingAction::Type> resolved_actions_by_name_arch;
+  uint64_t resolved_actions_revision = 0;
+  bool resolved_actions_in_progress = false;
+  bool resolved_actions_pending = false;
+  std::shared_ptr<GCancellable> resolved_actions_cancellable;
   std::string preview_transaction_path;
 };
 

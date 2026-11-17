@@ -53,6 +53,7 @@ app_sources = files(
   'ui/transaction/pending_transaction_controller.cpp',
   'ui/transaction/pending_transaction_request.cpp',
   'ui/transaction/pending_transaction_resolved_actions.cpp',
+  'ui/transaction/pending_transaction_resolved_preview.cpp',
   'ui/transaction/pending_transaction_view.cpp',
   'ui/refresh/repository_refresh_controller.cpp',
   'ui/transaction/transaction_progress.cpp',

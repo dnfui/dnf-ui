@@ -36,13 +36,15 @@ using TransactionApplyProgressCallback = std::function<void(const TransactionApp
 
 // -----------------------------------------------------------------------------
 // Prepare one transaction through dnf5daemon and return its resolved preview.
+// Display-only previews skip local installed-state checks. Apply remains authoritative.
 // -----------------------------------------------------------------------------
 bool transaction_service_client_preview_request(const TransactionRequest &request,
                                                 TransactionPreview &preview_out,
                                                 std::string &transaction_path_out,
                                                 std::string &error_out,
                                                 const TransactionKeyImportCallback &key_import_callback = {},
-                                                GCancellable *cancellable = nullptr);
+                                                GCancellable *cancellable = nullptr,
+                                                bool display_only = false);
 // -----------------------------------------------------------------------------
 // Prepare an upgrade-all transaction through dnf5daemon.
 // -----------------------------------------------------------------------------

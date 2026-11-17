@@ -14,6 +14,7 @@
 #include "ui/transaction/pending_transaction_action_rows.hpp"
 #include "ui/package_table/package_table_view.hpp"
 #include "ui/transaction/pending_transaction_apply.hpp"
+#include "ui/transaction/pending_transaction_resolved_preview.hpp"
 #include "ui/transaction/pending_transaction_controller.hpp"
 #include "ui/transaction/pending_transaction_view.hpp"
 #include "ui/common/ui_helpers.hpp"
@@ -132,6 +133,7 @@ pending_transaction_on_install_button_clicked(GtkButton *, gpointer user_data)
   // Refresh status badges without rebuilding the package table.
   package_table_refresh_statuses(widgets);
   package_details_refresh_selected_package_actions(widgets);
+  pending_transaction_update_resolved_preview(widgets);
 }
 
 // -----------------------------------------------------------------------------
@@ -198,6 +200,7 @@ pending_transaction_on_remove_button_clicked(GtkButton *, gpointer user_data)
   // Refresh status badges without rebuilding the package table.
   package_table_refresh_statuses(widgets);
   package_details_refresh_selected_package_actions(widgets);
+  pending_transaction_update_resolved_preview(widgets);
 }
 
 // -----------------------------------------------------------------------------
@@ -267,6 +270,7 @@ pending_transaction_on_reinstall_button_clicked(GtkButton *, gpointer user_data)
 
   package_table_refresh_statuses(widgets);
   package_details_refresh_selected_package_actions(widgets);
+  pending_transaction_update_resolved_preview(widgets);
 }
 
 // -----------------------------------------------------------------------------
@@ -317,6 +321,7 @@ pending_transaction_on_mark_listed_upgrades_button_clicked(GtkButton *, gpointer
   pending_transaction_refresh_pending_tab(widgets);
   package_table_refresh_statuses(widgets);
   package_details_refresh_selected_package_actions(widgets);
+  pending_transaction_update_resolved_preview(widgets);
 
   std::string msg = dnfui_i18n_format_count(marked_count, "Marked %zu listed upgrade.", "Marked %zu listed upgrades.");
   ui_helpers_set_status(widgets->query.status_label, msg, "blue");

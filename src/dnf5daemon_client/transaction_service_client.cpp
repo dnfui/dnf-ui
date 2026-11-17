@@ -171,7 +171,8 @@ transaction_service_client_preview_request(const TransactionRequest &request,
                                            std::string &transaction_path_out,
                                            std::string &error_out,
                                            const TransactionKeyImportCallback &key_import_callback,
-                                           GCancellable *cancellable)
+                                           GCancellable *cancellable,
+                                           bool display_only)
 {
   preview_out = {};
   transaction_path_out.clear();
@@ -208,7 +209,9 @@ transaction_service_client_preview_request(const TransactionRequest &request,
     return false;
   }
 
-  if (!verify_preview_keeps_running_app_package(preview_out,
+  // A display-only result cannot apply changes. Apply always performs this safety check itself.
+  if (!display_only &&
+      !verify_preview_keeps_running_app_package(preview_out,
                                                 error_out,
                                                 _("This transaction would downgrade, reinstall, remove, or "
                                                   "replace DNF UI itself."),
