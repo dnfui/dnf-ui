@@ -775,11 +775,13 @@ using namespace dnf_backend_internal;
 std::vector<PackageRow>
 dnf_backend_search_package_rows_interruptible(const std::string &pattern,
                                               const DnfBackendSearchOptions &search_options,
-                                              GCancellable *cancellable)
+                                              GCancellable *cancellable,
+                                              BaseRepoState *repo_state_out)
 {
   std::vector<PackageRow> rows;
   InstalledQueryResult installed_snapshot;
   std::set<std::string> protected_names;
+  BaseRepoState repo_state = BaseRepoState::LIVE_METADATA;
   {
     try {
       std::optional<TemporaryBaseRead> filelists_read;
@@ -790,7 +792,8 @@ dnf_backend_search_package_rows_interruptible(const std::string &pattern,
         normal_read.emplace(acquire_interruptible_base_read(cancellable));
       }
       libdnf5::Base &base = filelists_read ? *filelists_read->base : normal_read->base;
-      const bool repo_metadata_available = filelists_read || normal_read->repo_state != BaseRepoState::INSTALLED_ONLY;
+      repo_state = filelists_read ? filelists_read->repo_state : normal_read->repo_state;
+      const bool repo_metadata_available = repo_state != BaseRepoState::INSTALLED_ONLY;
       // The shared installed snapshot must contain every installed package, not
       // only the rows that matched this search.
       // The UI uses it later for package status, action buttons, and pending action handling.
@@ -858,6 +861,9 @@ dnf_backend_search_package_rows_interruptible(const std::string &pattern,
   }
 
   publish_installed_snapshot(std::move(installed_snapshot), std::move(protected_names));
+  if (repo_state_out) {
+    *repo_state_out = repo_state;
+  }
   return rows;
 }
 

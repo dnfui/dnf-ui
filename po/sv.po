@@ -852,6 +852,12 @@ msgid_plural "Found %zu packages."
 msgstr[0] "Hittade %zu paket."
 msgstr[1] "Hittade %zu paket."
 
+msgid "Only installed packages were searched. Results may be incomplete."
+msgstr "Sökningen omfattade bara installerade paket. Resultatet kan vara ofullständigt."
+
+msgid "Using cached repository data. Results may differ from an online search."
+msgstr "Använder cachad förrådsdata. Resultatet kan skilja sig från en sökning med nätverksanslutning."
+
 msgid "dnf5daemon upgrade information is already being refreshed."
 msgstr "dnf5daemon uppgraderingsinformation uppdateras redan."
 

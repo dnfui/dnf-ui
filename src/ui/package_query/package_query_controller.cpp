@@ -114,7 +114,8 @@ perform_search(MainWindowUiState *widgets, const std::string &term, const DnfBac
   const uint64_t cache_epoch = package_query_cache_current_epoch();
   const gint64 started_at_us = g_get_monotonic_time();
   std::vector<PackageRow> cached_packages;
-  if (use_cache && package_query_cache_lookup(key, generation, cache_epoch, cached_packages)) {
+  bool cached_metadata = false;
+  if (use_cache && package_query_cache_lookup(key, generation, cache_epoch, cached_packages, &cached_metadata)) {
     // Show saved rows and skip the worker thread.
     package_query_set_displayed_search_query(widgets,
                                              term,
@@ -130,7 +131,11 @@ perform_search(MainWindowUiState *widgets, const std::string &term, const DnfBac
 
     std::string msg =
         dnfui_i18n_format_count(cached_packages.size(), "Loaded %zu cached result.", "Loaded %zu cached results.");
-    ui_helpers_set_status(widgets->query.status_label, msg, "gray");
+    if (cached_metadata) {
+      msg += " ";
+      msg += _("Using cached repository data. Results may differ from an online search.");
+    }
+    ui_helpers_set_status(widgets->query.status_label, msg, cached_metadata ? "blue" : "gray");
     package_query_show_duration_label(widgets, _("Search"), started_at_us);
     package_query_finish_results_refresh(widgets);
 

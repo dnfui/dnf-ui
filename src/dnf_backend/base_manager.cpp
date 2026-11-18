@@ -595,9 +595,12 @@ trim_free_heap()
 // -----------------------------------------------------------------------------
 // Keep one temporary Base alive while its serialized lock guard is held.
 // -----------------------------------------------------------------------------
-TemporaryBaseRead::TemporaryBaseRead(std::shared_ptr<libdnf5::Base> &&base_ptr, BaseGuard &&base_guard)
+TemporaryBaseRead::TemporaryBaseRead(std::shared_ptr<libdnf5::Base> &&base_ptr,
+                                     BaseGuard &&base_guard,
+                                     BaseRepoState state)
     : base(std::move(base_ptr))
     , guard(std::move(base_guard))
+    , repo_state(state)
 {
 }
 
@@ -697,7 +700,7 @@ BaseManager::acquire_filelists_read(std::shared_ptr<std::atomic<bool>> cancel_re
   BuiltBase filelists_base = build_filelists_base(cancel_requested);
   throw_if_base_operation_cancelled(cancel_requested, "Package query was cancelled.");
 
-  return TemporaryBaseRead(std::move(filelists_base.base), BaseGuard(std::move(lock)));
+  return TemporaryBaseRead(std::move(filelists_base.base), BaseGuard(std::move(lock)), filelists_base.repo_state);
 }
 
 // -----------------------------------------------------------------------------
@@ -712,7 +715,7 @@ BaseManager::acquire_system_only_read()
     throw std::runtime_error("System-only backend initialization failed (Base is null).");
   }
 
-  return TemporaryBaseRead(std::move(built_base), BaseGuard(std::move(lock)));
+  return TemporaryBaseRead(std::move(built_base), BaseGuard(std::move(lock)), BaseRepoState::INSTALLED_ONLY);
 }
 
 // -----------------------------------------------------------------------------
@@ -730,7 +733,7 @@ BaseManager::acquire_system_only_read_after_dropping_cached_base()
     throw std::runtime_error("System-only backend initialization failed (Base is null).");
   }
 
-  return TemporaryBaseRead(std::move(built_base), BaseGuard(std::move(lock)));
+  return TemporaryBaseRead(std::move(built_base), BaseGuard(std::move(lock)), BaseRepoState::INSTALLED_ONLY);
 }
 
 // -----------------------------------------------------------------------------

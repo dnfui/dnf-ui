@@ -20,6 +20,8 @@
 
 #include <gio/gio.h>
 
+enum class BaseRepoState;
+
 // -----------------------------------------------------------------------------
 // libdnf5 backend helpers
 // -----------------------------------------------------------------------------
@@ -374,7 +376,8 @@ void dnf_backend_refresh_reinstall_availability_interruptible(const std::vector<
 // -----------------------------------------------------------------------------
 std::vector<PackageRow> dnf_backend_search_package_rows_interruptible(const std::string &pattern,
                                                                       const DnfBackendSearchOptions &search_options,
-                                                                      GCancellable *cancellable);
+                                                                      GCancellable *cancellable,
+                                                                      BaseRepoState *repo_state_out = nullptr);
 
 // -----------------------------------------------------------------------------
 // Return installed package rows that exactly match one NEVRA.

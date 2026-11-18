@@ -52,6 +52,11 @@ struct SearchTaskData {
   DnfBackendSearchOptions options;
 };
 
+struct SearchTaskResult {
+  std::vector<PackageRow> packages;
+  BaseRepoState repo_state = BaseRepoState::LIVE_METADATA;
+};
+
 // -----------------------------------------------------------------------------
 // Free data owned by one background search task.
 // -----------------------------------------------------------------------------
@@ -568,13 +573,14 @@ on_search_task(GTask *task, gpointer, gpointer task_data, GCancellable *cancella
                 td ? static_cast<unsigned long long>(td->request_id) : 0,
                 pattern.c_str());
     const DnfBackendSearchOptions search_options = td ? td->options : DnfBackendSearchOptions {};
-    auto *results = new std::vector<PackageRow>(
-        dnf_backend_search_package_rows_interruptible(pattern, search_options, cancellable));
+    auto results = std::make_unique<SearchTaskResult>();
+    results->packages =
+        dnf_backend_search_package_rows_interruptible(pattern, search_options, cancellable, &results->repo_state);
     DNFUI_TRACE("Search task done request=%llu results=%zu",
                 td ? static_cast<unsigned long long>(td->request_id) : 0,
-                results->size());
+                results->packages.size());
     // Let GTask free results if completion is skipped or cancelled.
-    g_task_return_pointer(task, results, [](gpointer p) { delete static_cast<std::vector<PackageRow> *>(p); });
+    g_task_return_pointer(task, results.release(), [](gpointer p) { delete static_cast<SearchTaskResult *>(p); });
   } catch (const std::exception &e) {
     DNFUI_TRACE(
         "Search task failed request=%llu error=%s", td ? static_cast<unsigned long long>(td->request_id) : 0, e.what());
@@ -607,8 +613,7 @@ on_search_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
   }
 
   GError *error = nullptr;
-  std::unique_ptr<std::vector<PackageRow>> packages(
-      static_cast<std::vector<PackageRow> *>(g_task_propagate_pointer(task, &error)));
+  std::unique_ptr<SearchTaskResult> result(static_cast<SearchTaskResult *>(g_task_propagate_pointer(task, &error)));
 
   // Release this task's spinner slot.
   widgets_spinner_release(widgets->query.spinner);
@@ -617,11 +622,13 @@ on_search_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
     package_query_end_package_list_request(widgets, td->request_id, PackageListRequestKind::SEARCH);
   }
 
-  if (packages) {
+  if (result) {
+    const bool installed_only = result->repo_state == BaseRepoState::INSTALLED_ONLY;
+    const bool cached_metadata = result->repo_state == BaseRepoState::CACHED_METADATA;
     // Save rows so the same search can be shown faster next time.
     // Dropping the cached Base releases memory, but it does not make this result stale.
-    if (td && !td->cache_key.empty()) {
-      package_query_cache_store(td->cache_key, td->generation, td->cache_epoch, *packages);
+    if (td && !td->cache_key.empty() && !installed_only) {
+      package_query_cache_store(td->cache_key, td->generation, td->cache_epoch, result->packages, cached_metadata);
     }
 
     if (td) {
@@ -639,10 +646,19 @@ on_search_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
     } else {
       widgets->results.selected_nevra.clear();
     }
-    package_table_fill_package_view(
-        widgets, *packages, packages->empty() ? PackageTableEmptyState::NO_RESULTS : PackageTableEmptyState::READY);
-    std::string msg = dnfui_i18n_format_count(packages->size(), "Found %zu package.", "Found %zu packages.");
-    ui_helpers_set_status(widgets->query.status_label, msg, "green");
+    package_table_fill_package_view(widgets,
+                                    result->packages,
+                                    result->packages.empty() ? PackageTableEmptyState::NO_RESULTS
+                                                             : PackageTableEmptyState::READY);
+    std::string msg = dnfui_i18n_format_count(result->packages.size(), "Found %zu package.", "Found %zu packages.");
+    if (installed_only) {
+      msg += " ";
+      msg += _("Only installed packages were searched. Results may be incomplete.");
+    } else if (cached_metadata) {
+      msg += " ";
+      msg += _("Using cached repository data. Results may differ from an online search.");
+    }
+    ui_helpers_set_status(widgets->query.status_label, msg, installed_only || cached_metadata ? "blue" : "green");
     package_query_show_duration_label(widgets, _("Search"), td ? td->started_at_us : 0);
     package_query_finish_results_refresh(widgets);
   } else {

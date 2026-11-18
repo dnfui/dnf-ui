@@ -22,6 +22,7 @@ struct CachedSearchResults {
   uint64_t cache_epoch;
   uint64_t last_used;
   std::vector<PackageRow> packages;
+  bool cached_metadata;
 };
 
 using SearchCacheEntries = std::map<std::string, CachedSearchResults>;
@@ -139,7 +140,8 @@ bool
 package_query_cache_lookup(const std::string &key,
                            uint64_t generation,
                            uint64_t cache_epoch,
-                           std::vector<PackageRow> &out_packages)
+                           std::vector<PackageRow> &out_packages,
+                           bool *out_cached_metadata)
 {
   std::lock_guard<std::mutex> lock(g_search_cache.mutex);
   auto &entries = package_query_cache_entries_locked(key);
@@ -155,6 +157,9 @@ package_query_cache_lookup(const std::string &key,
 
   it->second.last_used = ++g_search_cache.use_counter;
   out_packages = it->second.packages;
+  if (out_cached_metadata) {
+    *out_cached_metadata = it->second.cached_metadata;
+  }
   return true;
 }
 
@@ -166,7 +171,8 @@ void
 package_query_cache_store(const std::string &key,
                           uint64_t generation,
                           uint64_t cache_epoch,
-                          const std::vector<PackageRow> &packages)
+                          const std::vector<PackageRow> &packages,
+                          bool cached_metadata)
 {
   std::lock_guard<std::mutex> lock(g_search_cache.mutex);
   if (cache_epoch != g_search_cache.epoch) {
@@ -174,7 +180,8 @@ package_query_cache_store(const std::string &key,
   }
 
   auto &entries = package_query_cache_entries_locked(key);
-  entries[key] = CachedSearchResults { generation, cache_epoch, ++g_search_cache.use_counter, packages };
+  entries[key] =
+      CachedSearchResults { generation, cache_epoch, ++g_search_cache.use_counter, packages, cached_metadata };
   package_query_cache_prune_locked(entries);
 }
 

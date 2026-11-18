@@ -77,10 +77,12 @@ TEST_CASE("Package query cache returns rows for matching key and generation")
     make_cache_row("demo-libs-1-1.x86_64", "demo-libs"),
   };
   std::vector<PackageRow> loaded;
+  bool cached_metadata = false;
 
-  package_query_cache_store(key, 7, cache_epoch, stored);
+  package_query_cache_store(key, 7, cache_epoch, stored, true);
 
-  REQUIRE(package_query_cache_lookup(key, 7, cache_epoch, loaded));
+  REQUIRE(package_query_cache_lookup(key, 7, cache_epoch, loaded, &cached_metadata));
+  REQUIRE(cached_metadata);
   REQUIRE(loaded.size() == 2);
   REQUIRE(loaded[0].nevra == "demo-1-1.x86_64");
   REQUIRE(loaded[1].nevra == "demo-libs-1-1.x86_64");

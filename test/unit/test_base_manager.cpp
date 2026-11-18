@@ -287,8 +287,10 @@ TEST_CASE_METHOD(ProviderRepositoryFixture, "Provides search works with installe
   auto options = backend_search_options(false, false);
   options.mode = DnfBackendSearchMode::PROVIDES;
 
-  auto installed = dnf_backend_search_package_rows_interruptible("bash", options, nullptr);
+  BaseRepoState search_state = BaseRepoState::LIVE_METADATA;
+  auto installed = dnf_backend_search_package_rows_interruptible("bash", options, nullptr, &search_state);
   REQUIRE(manager.current_repo_state() == BaseRepoState::INSTALLED_ONLY);
+  REQUIRE(search_state == BaseRepoState::INSTALLED_ONLY);
   REQUIRE_FALSE(installed.empty());
   REQUIRE(installed.front().name == "bash");
 
@@ -359,8 +361,10 @@ TEST_CASE("File searches keep filelists separate from normal package queries")
   REQUIRE(manager.current_generation() == generation);
   {
     ScopedEnvVar offline("DNFUI_TEST_FORCE_FULL_REPO_LOAD_FAILURE", "1");
-    rows = dnf_backend_search_package_rows_interruptible("file-2", file_options, nullptr);
+    BaseRepoState search_state = BaseRepoState::LIVE_METADATA;
+    rows = dnf_backend_search_package_rows_interruptible("file-2", file_options, nullptr, &search_state);
     REQUIRE(rows.size() == 1);
+    REQUIRE(search_state == BaseRepoState::CACHED_METADATA);
   }
 
   GCancellable *cancelled = g_cancellable_new();
@@ -618,10 +622,12 @@ TEST_CASE("BaseManager preserves offline cached packages without cached filelist
 
     auto capability_options = backend_search_options(false, false);
     capability_options.mode = DnfBackendSearchMode::PROVIDES;
-    auto capability_rows =
-        dnf_backend_search_package_rows_interruptible("dnfui-filelists-fixture >= 1", capability_options, nullptr);
+    BaseRepoState search_state = BaseRepoState::LIVE_METADATA;
+    auto capability_rows = dnf_backend_search_package_rows_interruptible(
+        "dnfui-filelists-fixture >= 1", capability_options, nullptr, &search_state);
     REQUIRE(capability_rows.size() == 1);
     REQUIRE(capability_rows[0].name == "dnfui-filelists-fixture");
+    REQUIRE(search_state == BaseRepoState::CACHED_METADATA);
 
     auto file_options = backend_search_options(false, false);
     file_options.mode = DnfBackendSearchMode::FILES;

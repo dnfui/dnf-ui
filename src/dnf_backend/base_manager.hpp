@@ -63,8 +63,9 @@ struct BaseRead {
 struct TemporaryBaseRead {
   std::shared_ptr<libdnf5::Base> base;
   BaseGuard guard;
+  BaseRepoState repo_state;
 
-  TemporaryBaseRead(std::shared_ptr<libdnf5::Base> &&base_ptr, BaseGuard &&base_guard);
+  TemporaryBaseRead(std::shared_ptr<libdnf5::Base> &&base_ptr, BaseGuard &&base_guard, BaseRepoState state);
   TemporaryBaseRead(TemporaryBaseRead &&) noexcept = default;
   TemporaryBaseRead &operator=(TemporaryBaseRead &&) noexcept = default;
   TemporaryBaseRead(const TemporaryBaseRead &) = delete;

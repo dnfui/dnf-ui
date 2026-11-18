@@ -36,14 +36,16 @@ uint64_t package_query_cache_current_epoch();
 bool package_query_cache_lookup(const std::string &key,
                                 uint64_t generation,
                                 uint64_t cache_epoch,
-                                std::vector<PackageRow> &out_packages);
+                                std::vector<PackageRow> &out_packages,
+                                bool *out_cached_metadata = nullptr);
 // -----------------------------------------------------------------------------
 // Store package rows for one key, generation, and cache epoch.
 // -----------------------------------------------------------------------------
 void package_query_cache_store(const std::string &key,
                                uint64_t generation,
                                uint64_t cache_epoch,
-                               const std::vector<PackageRow> &packages);
+                               const std::vector<PackageRow> &packages,
+                               bool cached_metadata = false);
 
 // -----------------------------------------------------------------------------
 // EOF
