@@ -139,11 +139,11 @@ setup_shortcuts(GtkWidget *window, GtkWidget *entry, MainWindowUiState *widgets)
           NULL));
   gtk_shortcut_controller_add_shortcut(GTK_SHORTCUT_CONTROLLER(shortcuts), quick_filter);
 
-  // Mark listed upgrades with Ctrl+A while the upgrade list has focus.
-  GtkEventController *mark_listed_upgrades = GTK_EVENT_CONTROLLER(gtk_event_controller_key_new());
-  gtk_event_controller_set_propagation_phase(mark_listed_upgrades, GTK_PHASE_CAPTURE);
+  // Mark listed upgrades or unneeded packages with Ctrl+A while the table has focus.
+  GtkEventController *mark_listed_packages = GTK_EVENT_CONTROLLER(gtk_event_controller_key_new());
+  gtk_event_controller_set_propagation_phase(mark_listed_packages, GTK_PHASE_CAPTURE);
   g_signal_connect(
-      mark_listed_upgrades,
+      mark_listed_packages,
       "key-pressed",
       G_CALLBACK(+[](GtkEventControllerKey *controller, guint keyval, guint, GdkModifierType state, gpointer user_data)
                      -> gboolean {
@@ -153,7 +153,8 @@ setup_shortcuts(GtkWidget *window, GtkWidget *entry, MainWindowUiState *widgets)
         }
 
         MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
-        if (widgets->query_state.displayed_query.kind != DisplayedPackageQueryKind::LIST_UPGRADEABLE) {
+        const DisplayedPackageQueryKind kind = widgets->query_state.displayed_query.kind;
+        if (kind != DisplayedPackageQueryKind::LIST_UPGRADEABLE && kind != DisplayedPackageQueryKind::LIST_UNNEEDED) {
           return FALSE;
         }
 
@@ -165,14 +166,18 @@ setup_shortcuts(GtkWidget *window, GtkWidget *entry, MainWindowUiState *widgets)
           return FALSE;
         }
 
-        GtkButton *button = widgets->transaction_widgets.mark_listed_upgrades_button;
-        if (gtk_widget_is_sensitive(GTK_WIDGET(button))) {
-          gtk_widget_activate(GTK_WIDGET(button));
+        if (kind == DisplayedPackageQueryKind::LIST_UNNEEDED) {
+          pending_transaction_mark_listed_unneeded(widgets);
+        } else {
+          GtkButton *button = widgets->transaction_widgets.mark_listed_upgrades_button;
+          if (gtk_widget_is_sensitive(GTK_WIDGET(button))) {
+            gtk_widget_activate(GTK_WIDGET(button));
+          }
         }
         return TRUE;
       }),
       widgets);
-  gtk_widget_add_controller(window, mark_listed_upgrades);
+  gtk_widget_add_controller(window, mark_listed_packages);
 
   GtkShortcut *clear_list = gtk_shortcut_new(gtk_keyval_trigger_new(GDK_KEY_l, GDK_CONTROL_MASK),
                                              gtk_callback_action_new(

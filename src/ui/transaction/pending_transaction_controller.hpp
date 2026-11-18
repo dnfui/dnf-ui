@@ -26,6 +26,11 @@ void pending_transaction_on_reinstall_button_clicked(GtkButton *, gpointer user_
 // -----------------------------------------------------------------------------
 void pending_transaction_on_mark_listed_upgrades_button_clicked(GtkButton *, gpointer user_data);
 // -----------------------------------------------------------------------------
+// Mark displayed unneeded packages for removal.
+// -----------------------------------------------------------------------------
+struct MainWindowUiState;
+void pending_transaction_mark_listed_unneeded(MainWindowUiState *widgets);
+// -----------------------------------------------------------------------------
 // Start previewing and applying all available package upgrades.
 // -----------------------------------------------------------------------------
 void pending_transaction_on_upgrade_all_button_clicked(GtkButton *, gpointer user_data);

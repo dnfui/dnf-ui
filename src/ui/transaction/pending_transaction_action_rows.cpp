@@ -580,6 +580,19 @@ pending_transaction_mark_remove_action(std::vector<PendingAction> &actions,
 }
 
 // -----------------------------------------------------------------------------
+// Mark a removable package once without toggling an existing removal.
+// -----------------------------------------------------------------------------
+bool
+pending_transaction_mark_unique_remove_action(std::vector<PendingAction> &actions,
+                                              const PendingTransactionSelectionActions &selection)
+{
+  if (!selection.can_remove || selection.remove_is_pending) {
+    return false;
+  }
+  return pending_transaction_mark_remove_action(actions, selection.rows);
+}
+
+// -----------------------------------------------------------------------------
 // Add or replace one pending reinstall action from resolved rows.
 // -----------------------------------------------------------------------------
 bool

@@ -258,6 +258,7 @@ create_empty_package_view(PackageTableEmptyState state)
   GtkWidget *shortcuts = gtk_label_new(_("Shortcuts\n"
                                          "Ctrl+F: Focus search\n"
                                          "Ctrl+L: Clear package list\n"
+                                         "Ctrl+A: Mark all (Upgradable or Unneeded list)\n"
                                          "Ctrl+E: Export package list\n"
                                          "Ctrl+Enter: Apply pending changes\n"
                                          "F5: Refresh repositories\n"
