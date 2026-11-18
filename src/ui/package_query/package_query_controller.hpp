@@ -34,7 +34,7 @@ void package_query_on_list_upgradeable_button_clicked(GtkButton *, gpointer user
 // -----------------------------------------------------------------------------
 void package_query_on_search_button_clicked(GtkButton *, gpointer user_data);
 // -----------------------------------------------------------------------------
-// Update the search controls when switching between package and provider lookup.
+// Update the search controls when switching between search modes.
 // -----------------------------------------------------------------------------
 void package_query_on_search_mode_changed(GObject *, GParamSpec *, gpointer user_data);
 // -----------------------------------------------------------------------------

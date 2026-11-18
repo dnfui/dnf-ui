@@ -61,17 +61,16 @@ The Base has a generation counter.
 When the Base is rebuilt, the generation is incremented. UI tasks use that value to reject outdated results after
 refreshes and transactions.
 
-Provides searches use a temporary Base that requests DNF5's optional `filelists` metadata.
+Provides searches match RPM capabilities using the normal Base without requesting optional file lists.
+Files searches use a temporary Base that requests DNF5's optional `filelists` metadata.
 This finds files belonging to uninstalled packages, including paths not listed in primary metadata.
 The temporary Base uses the same serialization lock and is released when the search finishes.
 It does not replace or discard the normal cached Base.
 Ordinary package queries, startup, and repository refresh keep their existing metadata requirements and
-offline fallback behavior. Provides retries with file lists from its configured cache, then
-the system cache if live loading fails, and reports an error when those lists are unavailable rather than
-silently returning incomplete results.
-Downloading and loading file lists adds work only to Provides searches unless the user's DNF configuration
-already requests them. Repositories containing queryable packages must actually supply file-list metadata,
-requesting the optional metadata alone is not sufficient.
+offline fallback behavior. Files searches retry the configured cache, then the system cache if live loading
+fails, and report an error when file lists are unavailable rather than silently returning incomplete results.
+Repositories containing queryable packages must actually supply file-list metadata.
+Requesting the optional metadata alone is not sufficient.
 
 ## Base lifetime and search cache
 
@@ -88,8 +87,8 @@ Search cache entries are lightweight snapshots of completed Search results.
 They store copied `PackageRow` values, not libdnf5 package objects.
 They can therefore survive shared Base destruction. Base object lifetime is not the search cache lifetime.
 
-Ordinary searches and Provides searches each retain up to three entries with independent eviction.
-They share the same generation and invalidation epoch, so refresh and Clear Cache invalidate both modes.
+Packages, Provides, and Files searches each retain up to three entries with independent eviction.
+They share the same generation and invalidation epoch, so refresh and Clear Cache invalidate all search modes.
 
 Search cache validity depends on two values:
 

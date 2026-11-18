@@ -167,13 +167,13 @@ TEST_CASE("Search returns empty for impossible package name")
 }
 
 // -----------------------------------------------------------------------------
-// Find providers by installed file ownership, not package names.
+// Find file owners by installed package file paths, not package names.
 // -----------------------------------------------------------------------------
-TEST_CASE_METHOD(ProviderRepositoryFixture, "Find Provider resolves an installed executable path")
+TEST_CASE_METHOD(ProviderRepositoryFixture, "File search resolves an installed executable path")
 {
   reset_backend_globals();
   auto options = backend_search_options(false, false);
-  options.find_provider = true;
+  options.mode = DnfBackendSearchMode::FILES;
   auto results = dnf_backend_search_package_rows_interruptible("/usr/bin/bash", options, nullptr);
   REQUIRE(contains_package_name(results, "bash"));
 }
@@ -181,11 +181,11 @@ TEST_CASE_METHOD(ProviderRepositoryFixture, "Find Provider resolves an installed
 // -----------------------------------------------------------------------------
 // Find an RPM capability supplied by a package.
 // -----------------------------------------------------------------------------
-TEST_CASE_METHOD(ProviderRepositoryFixture, "Find Provider resolves a package capability")
+TEST_CASE_METHOD(ProviderRepositoryFixture, "Provides search resolves a package capability")
 {
   reset_backend_globals();
   auto options = backend_search_options(false, false);
-  options.find_provider = true;
+  options.mode = DnfBackendSearchMode::PROVIDES;
   auto results = dnf_backend_search_package_rows_interruptible("dnfui-filelists-fixture", options, nullptr);
   REQUIRE(contains_package_name(results, "dnfui-filelists-fixture"));
 }
@@ -193,11 +193,11 @@ TEST_CASE_METHOD(ProviderRepositoryFixture, "Find Provider resolves a package ca
 // -----------------------------------------------------------------------------
 // Versioned requirements must find packages whose provides satisfy them.
 // -----------------------------------------------------------------------------
-TEST_CASE_METHOD(ProviderRepositoryFixture, "Find Provider resolves a versioned requirement")
+TEST_CASE_METHOD(ProviderRepositoryFixture, "Provides search resolves a versioned requirement")
 {
   reset_backend_globals();
   auto options = backend_search_options(false, false);
-  options.find_provider = true;
+  options.mode = DnfBackendSearchMode::PROVIDES;
   auto results = dnf_backend_search_package_rows_interruptible("dnfui-filelists-fixture >= 1", options, nullptr);
   REQUIRE(contains_package_name(results, "dnfui-filelists-fixture"));
 
@@ -206,13 +206,25 @@ TEST_CASE_METHOD(ProviderRepositoryFixture, "Find Provider resolves a versioned 
 }
 
 // -----------------------------------------------------------------------------
-// Unknown providers must not fall back to package-text search.
+// Provides search must not return packages that only own a file.
 // -----------------------------------------------------------------------------
-TEST_CASE_METHOD(ProviderRepositoryFixture, "Find Provider returns no matches for an unknown capability")
+TEST_CASE_METHOD(ProviderRepositoryFixture, "Provides search does not match file ownership")
 {
   reset_backend_globals();
   auto options = backend_search_options(false, false);
-  options.find_provider = true;
+  options.mode = DnfBackendSearchMode::PROVIDES;
+  auto results = dnf_backend_search_package_rows_interruptible("file-2", options, nullptr);
+  REQUIRE_FALSE(contains_package_name(results, "dnfui-filelists-fixture"));
+}
+
+// -----------------------------------------------------------------------------
+// Unknown providers must not fall back to package-text search.
+// -----------------------------------------------------------------------------
+TEST_CASE_METHOD(ProviderRepositoryFixture, "Provides search returns no matches for an unknown capability")
+{
+  reset_backend_globals();
+  auto options = backend_search_options(false, false);
+  options.mode = DnfBackendSearchMode::PROVIDES;
   auto results =
       dnf_backend_search_package_rows_interruptible("___dnfui_nonexistent_capability_987654___", options, nullptr);
   REQUIRE(results.empty());
@@ -222,7 +234,7 @@ TEST_CASE_METHOD(ProviderRepositoryFixture, "Find Provider returns no matches fo
 // A package absent from the installed rpmdb must still be found when its file
 // appears only in repository filelists metadata (not primary metadata).
 // -----------------------------------------------------------------------------
-TEST_CASE("Find Provider resolves a repository-only file from filelists metadata")
+TEST_CASE("File search resolves a repository-only file from filelists metadata")
 {
   libdnf5::Base base;
   base.load_config();
@@ -239,17 +251,20 @@ TEST_CASE("Find Provider resolves a repository-only file from filelists metadata
   auto empty_repo = repo_sack->create_repo("dnfui-empty-filelists-test");
   empty_repo->get_config().get_enabled_option().set(true);
 
-  auto matches =
-      dnf_backend_internal::collect_provider_matching_nevras(base, "/usr/share/dnfui-review/file-2", nullptr);
+  auto matches = dnf_backend_internal::collect_matching_nevras(
+      base, "/usr/share/dnfui-review/file-2", nullptr, DnfBackendSearchMode::FILES);
   REQUIRE(matches.size() == 1);
 
   // Bare file names and filename globs must also find repository-only files.
-  REQUIRE(dnf_backend_internal::collect_provider_matching_nevras(base, "file-2", nullptr) == matches);
-  REQUIRE(dnf_backend_internal::collect_provider_matching_nevras(base, "file-*", nullptr) == matches);
-  REQUIRE(dnf_backend_internal::collect_provider_matching_nevras(base, "file-[12]", nullptr) == matches);
-  REQUIRE(dnf_backend_internal::collect_provider_matching_nevras(base, "/usr/share/dnfui-review/file-[12]", nullptr) ==
+  REQUIRE(dnf_backend_internal::collect_matching_nevras(base, "file-2", nullptr, DnfBackendSearchMode::FILES) ==
           matches);
-  REQUIRE(dnf_backend_internal::collect_provider_matching_nevras(base, "file", nullptr).empty());
+  REQUIRE(dnf_backend_internal::collect_matching_nevras(base, "file-*", nullptr, DnfBackendSearchMode::FILES) ==
+          matches);
+  REQUIRE(dnf_backend_internal::collect_matching_nevras(base, "file-[12]", nullptr, DnfBackendSearchMode::FILES) ==
+          matches);
+  REQUIRE(dnf_backend_internal::collect_matching_nevras(
+              base, "/usr/share/dnfui-review/file-[12]", nullptr, DnfBackendSearchMode::FILES) == matches);
+  REQUIRE(dnf_backend_internal::collect_matching_nevras(base, "file", nullptr, DnfBackendSearchMode::FILES).empty());
 
   libdnf5::rpm::PackageQuery query(base);
   query.filter_name(std::vector<std::string> { "dnfui-filelists-fixture" }, libdnf5::sack::QueryCmp::EQ);

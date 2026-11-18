@@ -23,9 +23,11 @@
 
 namespace dnf_backend_internal {
 
-// Collect packages that provide a capability or own a requested path.
-std::set<std::string>
-collect_provider_matching_nevras(libdnf5::Base &base, const std::string &pattern, GCancellable *cancellable);
+// Collect matching capabilities or file owners using the requested search mode.
+std::set<std::string> collect_matching_nevras(libdnf5::Base &base,
+                                              const std::string &pattern,
+                                              GCancellable *cancellable,
+                                              DnfBackendSearchMode mode);
 
 // Installed package scan result published into the shared UI cache only after a full uncancelled scan.
 // Keeping rows, exact NEVRAs, and name and architecture lookup together avoids partial cache updates.
@@ -65,14 +67,14 @@ collect_available_rows_by_name_arch(libdnf5::Base &base,
                                     GCancellable *cancellable,
                                     const DnfBackendSearchOptions &search_options,
                                     const std::string *pattern = nullptr,
-                                    const std::set<std::string> *provider_nevras = nullptr);
+                                    const std::set<std::string> *matching_nevras = nullptr);
 // Collect installed rows and exact NEVRA cache data in one scan.
 // -----------------------------------------------------------------------------
 InstalledQueryResult collect_installed_rows(libdnf5::Base &base,
                                             GCancellable *cancellable,
                                             const DnfBackendSearchOptions &search_options,
                                             const std::string *pattern = nullptr,
-                                            const std::set<std::string> *provider_nevras = nullptr);
+                                            const std::set<std::string> *matching_nevras = nullptr);
 
 // -----------------------------------------------------------------------------
 // Repo-candidate annotation and row merge helpers used by query code and tests.

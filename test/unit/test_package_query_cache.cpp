@@ -46,8 +46,12 @@ TEST_CASE("Package query cache key includes search options")
   REQUIRE(package_query_cache_key_for("bash", backend_search_options(false, false, false)) == "name:contains:all:bash");
 
   auto provider_options = backend_search_options(false, false);
-  provider_options.find_provider = true;
+  provider_options.mode = DnfBackendSearchMode::PROVIDES;
   REQUIRE(package_query_cache_key_for("bash", provider_options) == "provides:contains:latest:bash");
+
+  auto file_options = backend_search_options(false, false);
+  file_options.mode = DnfBackendSearchMode::FILES;
+  REQUIRE(package_query_cache_key_for("bash", file_options) == "files:contains:latest:bash");
 }
 
 // -----------------------------------------------------------------------------
@@ -118,10 +122,12 @@ TEST_CASE("Package query cache clear removes stored rows")
 
   package_query_cache_store(key, 7, cache_epoch, stored);
   package_query_cache_store("provides:contains:latest:demo", 7, cache_epoch, stored);
+  package_query_cache_store("files:contains:latest:demo", 7, cache_epoch, stored);
   package_query_cache_clear();
 
   REQUIRE_FALSE(package_query_cache_lookup(key, 7, cache_epoch, loaded));
   REQUIRE_FALSE(package_query_cache_lookup("provides:contains:latest:demo", 7, cache_epoch, loaded));
+  REQUIRE_FALSE(package_query_cache_lookup("files:contains:latest:demo", 7, cache_epoch, loaded));
 }
 
 // -----------------------------------------------------------------------------
@@ -269,7 +275,7 @@ TEST_CASE("Package query cache modes have independent capacity")
   const uint64_t epoch = package_query_cache_current_epoch();
   const auto packages = backend_search_options(false, false);
   auto providers = packages;
-  providers.find_provider = true;
+  providers.mode = DnfBackendSearchMode::PROVIDES;
   const std::vector<PackageRow> rows = { make_cache_row("demo-1-1.x86_64", "demo") };
   std::vector<PackageRow> loaded;
 

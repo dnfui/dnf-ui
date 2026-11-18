@@ -7,6 +7,8 @@
 // -----------------------------------------------------------------------------
 #pragma once
 
+#include "dnf_backend/dnf_backend.hpp"
+
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -36,6 +38,18 @@ struct ActivePackageListRequest {
 };
 
 // -----------------------------------------------------------------------------
+// File requirements need complete file ownership search.
+// -----------------------------------------------------------------------------
+inline DnfBackendSearchMode
+package_query_mode_for_requirement(const std::string &requirement)
+{
+  if (!requirement.empty() && requirement.front() == '/') {
+    return DnfBackendSearchMode::FILES;
+  }
+  return DnfBackendSearchMode::PROVIDES;
+}
+
+// -----------------------------------------------------------------------------
 // Last query-backed package view shown in the main table.
 // This intentionally tracks only views that can be reproduced through the main query controls.
 // Exact one-package views from the pending-actions sidebar are
@@ -49,7 +63,7 @@ struct DisplayedPackageQueryState {
   bool search_in_description = false;
   bool exact_match = false;
   bool latest_only = true;
-  bool find_provider = false;
+  DnfBackendSearchMode mode = DnfBackendSearchMode::PACKAGES;
   bool exact_installonly_action = false;
 };
 

@@ -266,6 +266,11 @@ dnf_backend_transaction_history_page_for_tests(const std::vector<TransactionHist
 #endif
 
 // -----------------------------------------------------------------------------
+// Search modes used by backend package queries.
+// -----------------------------------------------------------------------------
+enum class DnfBackendSearchMode { PACKAGES, PROVIDES, FILES };
+
+// -----------------------------------------------------------------------------
 // Search flags used by backend search queries.
 // Each search request carries its own options so worker tasks do not depend on
 // mutable global checkbox state.
@@ -275,8 +280,7 @@ struct DnfBackendSearchOptions {
   bool exact_match = false;
   // Keep the current one-row-per-package view unless the caller asks for exact versions.
   bool latest_only = true;
-  // Search for the package providing a capability or owning a file.
-  bool find_provider = false;
+  DnfBackendSearchMode mode = DnfBackendSearchMode::PACKAGES;
 };
 
 // -----------------------------------------------------------------------------

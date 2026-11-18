@@ -1717,17 +1717,23 @@ msgstr "En pakettransaktion är redan förberedd för omstart. Andra paketändri
 msgid "Packages"
 msgstr "Paket"
 
-msgid "Search package names or find packages by file path and capability."
-msgstr "Sök efter paketnamn eller hitta paket med hjälp av filsökväg och RPM-kapacitet."
-
-msgid "File path or capability..."
-msgstr "Filsökväg eller kapacitet..."
-
 msgid "Finding providers for '%s'..."
 msgstr "Söker efter tillhandahållare av '%s'..."
 
-msgid "Provides search needs file lists that are unavailable in the cached repository metadata."
-msgstr "Provides-sökning kräver fillistor som saknas i cachad förrådsmetadata."
+msgid "Search package names, RPM capabilities, or files owned by packages."
+msgstr "Sök efter paketnamn, RPM-kapaciteter eller filer som tillhör paket."
+
+msgid "Finding files for '%s'..."
+msgstr "Söker efter filer för '%s'..."
+
+msgid "Capability..."
+msgstr "RPM-kapacitet..."
+
+msgid "File path or filename..."
+msgstr "Filsökväg eller filnamn..."
+
+msgid "File search needs file lists that are unavailable in the cached repository metadata."
+msgstr "Filsökning kräver fillistor som saknas i cachad förrådsmetadata."
 
 msgid "Options"
 msgstr "Alternativ"

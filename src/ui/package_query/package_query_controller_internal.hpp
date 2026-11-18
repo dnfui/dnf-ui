@@ -33,7 +33,7 @@ void package_query_set_displayed_search_query(MainWindowUiState *widgets,
                                               bool search_in_description,
                                               bool exact_match,
                                               bool latest_only,
-                                              bool find_provider);
+                                              DnfBackendSearchMode mode);
 // -----------------------------------------------------------------------------
 // Remember the List Packages options that produced the current table.
 // -----------------------------------------------------------------------------

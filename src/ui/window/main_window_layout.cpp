@@ -195,9 +195,9 @@ main_window_build_layout(AppWidgets *ui)
 
   append_button_group_separator(hbox_search);
 
-  const char *search_modes[] = { _("Packages"), _("Provides"), nullptr };
+  const char *search_modes[] = { _("Packages"), _("Provides"), _("Files"), nullptr };
   GtkWidget *mode_dropdown = gtk_drop_down_new_from_strings(search_modes);
-  gtk_widget_set_tooltip_text(mode_dropdown, _("Search package names or find packages by file path and capability."));
+  gtk_widget_set_tooltip_text(mode_dropdown, _("Search package names, RPM capabilities, or files owned by packages."));
   gtk_box_append(GTK_BOX(hbox_search), mode_dropdown);
   ui->mode_dropdown = mode_dropdown;
 

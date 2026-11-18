@@ -279,7 +279,7 @@ TEST_CASE("BaseManager rebuild keeps the app usable when repo-backed refresh fai
 // -----------------------------------------------------------------------------
 // Ordinary package queries must retain their metadata requirements before and after provider searches.
 // -----------------------------------------------------------------------------
-TEST_CASE("Provider searches keep filelists separate from normal package queries")
+TEST_CASE("File searches keep filelists separate from normal package queries")
 {
   TemporaryTestDirectory repo_dir;
   TemporaryTestDirectory cache_dir;
@@ -321,7 +321,7 @@ TEST_CASE("Provider searches keep filelists separate from normal package queries
 
   const uint64_t generation = manager.current_generation();
   auto provider_options = backend_search_options(false, false);
-  provider_options.find_provider = true;
+  provider_options.mode = DnfBackendSearchMode::FILES;
   rows = dnf_backend_search_package_rows_interruptible("file-2", provider_options, nullptr);
   REQUIRE(rows.size() == 1);
   REQUIRE(rows[0].name == "dnfui-filelists-fixture");
@@ -352,7 +352,7 @@ TEST_CASE("Provider searches keep filelists separate from normal package queries
 // -----------------------------------------------------------------------------
 // Provider searches must reuse their own cached metadata before trying the system cache.
 // -----------------------------------------------------------------------------
-TEST_CASE("Provider searches use separate configured and system metadata caches")
+TEST_CASE("File searches use separate configured and system metadata caches")
 {
   TemporaryTestDirectory repo_dir;
   TemporaryTestDirectory cache_dir;
@@ -365,7 +365,7 @@ TEST_CASE("Provider searches use separate configured and system metadata caches"
   auto &manager = BaseManager::instance();
   manager.reset_for_tests();
   auto options = backend_search_options(false, false);
-  options.find_provider = true;
+  options.mode = DnfBackendSearchMode::FILES;
 
   SECTION("A previous provider search supplies the offline metadata")
   {
@@ -545,7 +545,7 @@ TEST_CASE("BaseManager uses installed-only mode when metadata caches are empty")
 
 // -----------------------------------------------------------------------------
 // Cached primary metadata must survive a missing optional filelists cache.
-// Provides must report that file search is incomplete rather than returning empty results.
+// File search must report missing metadata rather than returning incomplete results.
 // -----------------------------------------------------------------------------
 TEST_CASE("BaseManager preserves offline cached packages without cached filelists")
 {
@@ -585,8 +585,15 @@ TEST_CASE("BaseManager preserves offline cached packages without cached filelist
         "dnfui-filelists-fixture", backend_search_options(false, true), nullptr);
     REQUIRE_FALSE(rows.empty());
 
+    auto capability_options = backend_search_options(false, false);
+    capability_options.mode = DnfBackendSearchMode::PROVIDES;
+    auto capability_rows =
+        dnf_backend_search_package_rows_interruptible("dnfui-filelists-fixture >= 1", capability_options, nullptr);
+    REQUIRE(capability_rows.size() == 1);
+    REQUIRE(capability_rows[0].name == "dnfui-filelists-fixture");
+
     auto provider_options = backend_search_options(false, false);
-    provider_options.find_provider = true;
+    provider_options.mode = DnfBackendSearchMode::FILES;
     REQUIRE_THROWS_WITH(dnf_backend_search_package_rows_interruptible("file-2", provider_options, nullptr),
                         Catch::Matchers::ContainsSubstring("file lists"));
   }
@@ -595,9 +602,9 @@ TEST_CASE("BaseManager preserves offline cached packages without cached filelist
 
 // -----------------------------------------------------------------------------
 // Repositories may omit optional filelists even when the caller requested them.
-// Provider searches must report incomplete metadata rather than a false negative.
+// File searches must report incomplete metadata rather than a false negative.
 // -----------------------------------------------------------------------------
-TEST_CASE("Provider searches reject repositories that omit filelists metadata")
+TEST_CASE("File searches reject repositories that omit filelists metadata")
 {
   TemporaryTestDirectory repo_dir;
   TemporaryTestDirectory cache_dir;
@@ -611,7 +618,7 @@ TEST_CASE("Provider searches reject repositories that omit filelists metadata")
   manager.reset_for_tests();
 
   auto options = backend_search_options(false, false);
-  options.find_provider = true;
+  options.mode = DnfBackendSearchMode::FILES;
   REQUIRE_THROWS_WITH(dnf_backend_search_package_rows_interruptible("/usr/share/dnfui-review/file-2", options, nullptr),
                       Catch::Matchers::ContainsSubstring("file lists"));
   REQUIRE_FALSE(manager.has_cached_base_for_tests());

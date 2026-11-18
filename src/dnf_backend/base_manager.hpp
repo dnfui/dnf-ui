@@ -115,7 +115,7 @@ class BaseManager {
   // -----------------------------------------------------------------------------
   // Return serialized access to a temporary Base with repository file lists.
   // -----------------------------------------------------------------------------
-  TemporaryBaseRead acquire_provider_read(std::shared_ptr<std::atomic<bool>> cancel_requested);
+  TemporaryBaseRead acquire_filelists_read(std::shared_ptr<std::atomic<bool>> cancel_requested);
   // -----------------------------------------------------------------------------
   // Build a temporary Base that includes repository changelog metadata.
   // -----------------------------------------------------------------------------

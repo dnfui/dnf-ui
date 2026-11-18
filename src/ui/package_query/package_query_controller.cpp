@@ -63,12 +63,20 @@ add_to_history(MainWindowUiState *widgets, const std::string &term)
 static DnfBackendSearchOptions
 package_query_options_from_controls(MainWindowUiState *widgets)
 {
-  const bool provider = gtk_drop_down_get_selected(widgets->query.mode_dropdown) == 1;
+  const guint selected = gtk_drop_down_get_selected(widgets->query.mode_dropdown);
+  DnfBackendSearchMode mode = DnfBackendSearchMode::PACKAGES;
+  if (selected == 1) {
+    mode = DnfBackendSearchMode::PROVIDES;
+  } else if (selected == 2) {
+    mode = DnfBackendSearchMode::FILES;
+  }
+  const bool package_search = mode == DnfBackendSearchMode::PACKAGES;
   return {
-    .search_in_description = !provider && gtk_check_button_get_active(GTK_CHECK_BUTTON(widgets->query.desc_checkbox)),
-    .exact_match = !provider && gtk_check_button_get_active(GTK_CHECK_BUTTON(widgets->query.exact_checkbox)),
+    .search_in_description =
+        package_search && gtk_check_button_get_active(GTK_CHECK_BUTTON(widgets->query.desc_checkbox)),
+    .exact_match = package_search && gtk_check_button_get_active(GTK_CHECK_BUTTON(widgets->query.exact_checkbox)),
     .latest_only = static_cast<bool>(gtk_check_button_get_active(GTK_CHECK_BUTTON(widgets->query.latest_checkbox))),
-    .find_provider = provider,
+    .mode = mode,
   };
 }
 
@@ -83,9 +91,14 @@ perform_search(MainWindowUiState *widgets, const std::string &term, const DnfBac
   }
 
   gtk_editable_set_text(GTK_EDITABLE(widgets->query.entry), term.c_str());
-  std::string searching_message = search_options.find_provider
-      ? dnfui_i18n_format(_("Finding providers for '%s'..."), term.c_str())
-      : dnfui_i18n_format(_("Searching for '%s'..."), term.c_str());
+  std::string searching_message;
+  if (search_options.mode == DnfBackendSearchMode::PROVIDES) {
+    searching_message = dnfui_i18n_format(_("Finding providers for '%s'..."), term.c_str());
+  } else if (search_options.mode == DnfBackendSearchMode::FILES) {
+    searching_message = dnfui_i18n_format(_("Finding files for '%s'..."), term.c_str());
+  } else {
+    searching_message = dnfui_i18n_format(_("Searching for '%s'..."), term.c_str());
+  }
   ui_helpers_set_status(widgets->query.status_label, searching_message, "blue");
   package_query_clear_duration_label(widgets);
   if (widgets->query_state.reload_selected_nevra.empty()) {
@@ -108,7 +121,7 @@ perform_search(MainWindowUiState *widgets, const std::string &term, const DnfBac
                                              search_options.search_in_description,
                                              search_options.exact_match,
                                              search_options.latest_only,
-                                             search_options.find_provider);
+                                             search_options.mode);
 
     package_table_fill_package_view(widgets,
                                     cached_packages,
@@ -129,17 +142,22 @@ perform_search(MainWindowUiState *widgets, const std::string &term, const DnfBac
 }
 
 // -----------------------------------------------------------------------------
-// Provides mode uses the same search entry, worker and results table.
+// All search modes use the same search entry, worker and results table.
 // -----------------------------------------------------------------------------
 void
 package_query_on_search_mode_changed(GObject *, GParamSpec *, gpointer user_data)
 {
   MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
-  const bool provider = gtk_drop_down_get_selected(widgets->query.mode_dropdown) == 1;
-  gtk_entry_set_placeholder_text(widgets->query.entry,
-                                 provider ? _("File path or capability...") : _("Search packages..."));
+  const guint selected = gtk_drop_down_get_selected(widgets->query.mode_dropdown);
+  const char *placeholder = _("Search packages...");
+  if (selected == 1) {
+    placeholder = _("Capability...");
+  } else if (selected == 2) {
+    placeholder = _("File path or filename...");
+  }
+  gtk_entry_set_placeholder_text(widgets->query.entry, placeholder);
   const bool idle = !package_query_has_active_package_list_request(widgets);
-  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.options_button), idle && !provider);
+  gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.options_button), idle && selected == 0);
 }
 
 // -----------------------------------------------------------------------------
@@ -351,7 +369,7 @@ package_query_reload_current_view(MainWindowUiState *widgets)
       .search_in_description = view_state.search_in_description,
       .exact_match = view_state.exact_match,
       .latest_only = view_state.latest_only,
-      .find_provider = view_state.find_provider,
+      .mode = view_state.mode,
     };
     perform_search(widgets, view_state.search_term, options);
     return;

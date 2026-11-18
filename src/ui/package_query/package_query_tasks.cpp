@@ -558,7 +558,7 @@ on_search_task(GTask *task, gpointer, gpointer task_data, GCancellable *cancella
 {
   const SearchTaskData *td = static_cast<const SearchTaskData *>(task_data);
   std::optional<QueryBackendBaseDropGuard> base_drop_guard;
-  if (!td || !td->options.find_provider) {
+  if (!td || td->options.mode != DnfBackendSearchMode::FILES) {
     base_drop_guard.emplace(cancellable);
   }
 
@@ -630,7 +630,7 @@ on_search_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
                                                td->options.search_in_description,
                                                td->options.exact_match,
                                                td->options.latest_only,
-                                               td->options.find_provider);
+                                               td->options.mode);
     }
 
     // Fill the package table and display the result count.

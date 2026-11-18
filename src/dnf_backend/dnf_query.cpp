@@ -91,13 +91,13 @@ acquire_interruptible_base_read(GCancellable *cancellable)
 }
 
 // -----------------------------------------------------------------------------
-// Keep provider metadata separate from the Base used by ordinary package queries.
+// Keep file-list metadata separate from the Base used by ordinary package queries.
 // -----------------------------------------------------------------------------
 static TemporaryBaseRead
-acquire_interruptible_provider_read(GCancellable *cancellable)
+acquire_interruptible_filelists_read(GCancellable *cancellable)
 {
   BaseCancelToken cancel_token(cancellable);
-  return BaseManager::instance().acquire_provider_read(cancel_token.token());
+  return BaseManager::instance().acquire_filelists_read(cancel_token.token());
 }
 
 // -----------------------------------------------------------------------------
@@ -175,10 +175,10 @@ static bool
 package_matches_search(const libdnf5::rpm::Package &pkg,
                        const std::string &pattern_lower,
                        const DnfBackendSearchOptions &search_options,
-                       const std::set<std::string> *provider_nevras)
+                       const std::set<std::string> *matching_nevras)
 {
-  if (search_options.find_provider) {
-    return provider_nevras && provider_nevras->count(pkg.get_nevra()) > 0;
+  if (search_options.mode != DnfBackendSearchMode::PACKAGES) {
+    return matching_nevras && matching_nevras->count(pkg.get_nevra()) > 0;
   }
 
   std::string name = utf8_casefold_copy(pkg.get_name());
@@ -205,28 +205,33 @@ package_matches_search(const libdnf5::rpm::Package &pkg,
 }
 
 // -----------------------------------------------------------------------------
-// Resolve provider matches once, before building merged installed and repository rows.
+// Resolve capability or file matches before merging installed and repository rows.
 // -----------------------------------------------------------------------------
 std::set<std::string>
-collect_provider_matching_nevras(libdnf5::Base &base, const std::string &pattern, GCancellable *cancellable)
+collect_matching_nevras(libdnf5::Base &base,
+                        const std::string &pattern,
+                        GCancellable *cancellable,
+                        DnfBackendSearchMode mode)
 {
-  // Requesting filelists does not guarantee that each repository supplies them.
-  libdnf5::repo::RepoQuery repositories(base);
-  repositories.filter_enabled(true);
-  repositories.filter_type(libdnf5::repo::Repo::Type::AVAILABLE);
-  for (auto repo : repositories) {
-    if (package_query_cancelled(cancellable)) {
-      return {};
-    }
-    if (!repo->get_metadata_path(libdnf5::METADATA_TYPE_FILELISTS).empty()) {
-      continue;
-    }
+  // File searches must report incomplete metadata rather than missing matches.
+  if (mode == DnfBackendSearchMode::FILES) {
+    libdnf5::repo::RepoQuery repositories(base);
+    repositories.filter_enabled(true);
+    repositories.filter_type(libdnf5::repo::Repo::Type::AVAILABLE);
+    for (auto repo : repositories) {
+      if (package_query_cancelled(cancellable)) {
+        return {};
+      }
+      if (!repo->get_metadata_path(libdnf5::METADATA_TYPE_FILELISTS).empty()) {
+        continue;
+      }
 
-    libdnf5::rpm::PackageQuery packages(base);
-    packages.filter_repo_id(std::vector<std::string> { repo->get_id() });
-    if (!packages.empty()) {
-      throw std::runtime_error(
-          _("Provides search needs file lists that are unavailable in the cached repository metadata."));
+      libdnf5::rpm::PackageQuery packages(base);
+      packages.filter_repo_id(std::vector<std::string> { repo->get_id() });
+      if (!packages.empty()) {
+        throw std::runtime_error(
+            _("File search needs file lists that are unavailable in the cached repository metadata."));
+      }
     }
   }
 
@@ -242,16 +247,15 @@ collect_provider_matching_nevras(libdnf5::Base &base, const std::string &pattern
     }
   };
 
-  libdnf5::rpm::PackageQuery provides(base);
-  provides.filter_provides(std::vector<std::string> { pattern }, cmp);
-  collect(provides);
-  if (package_query_cancelled(cancellable)) {
-    return {};
+  if (mode == DnfBackendSearchMode::PROVIDES) {
+    libdnf5::rpm::PackageQuery provides(base);
+    provides.filter_provides(std::vector<std::string> { pattern }, cmp);
+    collect(provides);
   }
 
-  // Also match file names without requiring callers to know their directories.
+  // Match file names without requiring callers to know their directories.
   // Absolute paths retain their exact or wildcard semantics.
-  if (!pattern.empty()) {
+  if (mode == DnfBackendSearchMode::FILES && !pattern.empty()) {
     const bool absolute_path = pattern.front() == '/';
     const std::string file_pattern = absolute_path ? pattern : "*/" + pattern;
     libdnf5::rpm::PackageQuery files(base);
@@ -308,7 +312,7 @@ collect_available_rows_by_name_arch(libdnf5::Base &base,
                                     GCancellable *cancellable,
                                     const DnfBackendSearchOptions &search_options,
                                     const std::string *pattern,
-                                    const std::set<std::string> *provider_nevras)
+                                    const std::set<std::string> *matching_nevras)
 {
   libdnf5::rpm::PackageQuery query(base);
   query.filter_available();
@@ -329,7 +333,7 @@ collect_available_rows_by_name_arch(libdnf5::Base &base,
 
     // Use the same case-folded search check as installed rows.
     // Otherwise search casing can change whether an installed row finds its repository candidate.
-    if (pattern && !package_matches_search(pkg, pattern_lower, search_options, provider_nevras)) {
+    if (pattern && !package_matches_search(pkg, pattern_lower, search_options, matching_nevras)) {
       continue;
     }
 
@@ -406,7 +410,7 @@ collect_available_view_rows(libdnf5::Base &base,
                             GCancellable *cancellable,
                             const DnfBackendSearchOptions &search_options,
                             const std::string *pattern,
-                            const std::set<std::string> *provider_nevras)
+                            const std::set<std::string> *matching_nevras)
 {
   AvailableViewRows result;
   result.newest_available_by_name_arch = collect_newest_available_rows_by_name_arch(base, cancellable);
@@ -431,7 +435,7 @@ collect_available_view_rows(libdnf5::Base &base,
       return result;
     }
 
-    if (pattern && !package_matches_search(pkg, pattern_lower, search_options, provider_nevras)) {
+    if (pattern && !package_matches_search(pkg, pattern_lower, search_options, matching_nevras)) {
       continue;
     }
 
@@ -532,7 +536,7 @@ collect_installed_rows(libdnf5::Base &base,
                        GCancellable *cancellable,
                        const DnfBackendSearchOptions &search_options,
                        const std::string *pattern,
-                       const std::set<std::string> *provider_nevras)
+                       const std::set<std::string> *matching_nevras)
 {
   InstalledQueryResult result;
   const std::string pattern_lower = pattern ? utf8_casefold_copy(*pattern) : "";
@@ -552,7 +556,7 @@ collect_installed_rows(libdnf5::Base &base,
       return result;
     }
 
-    if (pattern && !package_matches_search(pkg, pattern_lower, search_options, provider_nevras)) {
+    if (pattern && !package_matches_search(pkg, pattern_lower, search_options, matching_nevras)) {
       continue;
     }
 
@@ -778,15 +782,15 @@ dnf_backend_search_package_rows_interruptible(const std::string &pattern,
   std::set<std::string> protected_names;
   {
     try {
-      std::optional<TemporaryBaseRead> provider_read;
+      std::optional<TemporaryBaseRead> filelists_read;
       std::optional<BaseRead> normal_read;
-      if (search_options.find_provider) {
-        provider_read.emplace(acquire_interruptible_provider_read(cancellable));
+      if (search_options.mode == DnfBackendSearchMode::FILES) {
+        filelists_read.emplace(acquire_interruptible_filelists_read(cancellable));
       } else {
         normal_read.emplace(acquire_interruptible_base_read(cancellable));
       }
-      libdnf5::Base &base = provider_read ? *provider_read->base : normal_read->base;
-      const bool repo_metadata_available = provider_read || normal_read->repo_state != BaseRepoState::INSTALLED_ONLY;
+      libdnf5::Base &base = filelists_read ? *filelists_read->base : normal_read->base;
+      const bool repo_metadata_available = filelists_read || normal_read->repo_state != BaseRepoState::INSTALLED_ONLY;
       // The shared installed snapshot must contain every installed package, not
       // only the rows that matched this search.
       // The UI uses it later for package status, action buttons, and pending action handling.
@@ -804,17 +808,18 @@ dnf_backend_search_package_rows_interruptible(const std::string &pattern,
       annotate_installed_result_with_exact_available_nevras(installed_snapshot, available_nevras);
 
       protected_names = collect_self_protected_package_names(base);
-      std::set<std::string> provider_matches;
-      if (search_options.find_provider) {
-        provider_matches = collect_provider_matching_nevras(base, pattern, cancellable);
+      std::set<std::string> found_nevras;
+      if (search_options.mode != DnfBackendSearchMode::PACKAGES) {
+        found_nevras = collect_matching_nevras(base, pattern, cancellable, search_options.mode);
       }
       if (package_query_cancelled(cancellable)) {
         return {};
       }
-      const std::set<std::string> *provider_nevras = search_options.find_provider ? &provider_matches : nullptr;
+      const std::set<std::string> *matching_nevras =
+          search_options.mode != DnfBackendSearchMode::PACKAGES ? &found_nevras : nullptr;
       if (search_options.latest_only) {
         auto available_rows =
-            collect_available_rows_by_name_arch(base, cancellable, search_options, &pattern, provider_nevras);
+            collect_available_rows_by_name_arch(base, cancellable, search_options, &pattern, matching_nevras);
         if (package_query_cancelled(cancellable)) {
           return {};
         }
@@ -823,7 +828,7 @@ dnf_backend_search_package_rows_interruptible(const std::string &pattern,
         // Those rows can still appear in the visible search result when no repo candidate
         // is shown for the same package name and architecture.
         InstalledQueryResult filtered_installed =
-            collect_installed_rows(base, cancellable, search_options, &pattern, provider_nevras);
+            collect_installed_rows(base, cancellable, search_options, &pattern, matching_nevras);
         if (package_query_cancelled(cancellable)) {
           return {};
         }
@@ -833,13 +838,13 @@ dnf_backend_search_package_rows_interruptible(const std::string &pattern,
             std::move(available_rows), filtered_installed.rows_by_name_arch, repo_metadata_available);
       } else {
         AvailableViewRows available_rows =
-            collect_available_view_rows(base, cancellable, search_options, &pattern, provider_nevras);
+            collect_available_view_rows(base, cancellable, search_options, &pattern, matching_nevras);
         if (package_query_cancelled(cancellable)) {
           return {};
         }
 
         InstalledQueryResult filtered_installed =
-            collect_installed_rows(base, cancellable, search_options, &pattern, provider_nevras);
+            collect_installed_rows(base, cancellable, search_options, &pattern, matching_nevras);
         if (package_query_cancelled(cancellable)) {
           return {};
         }

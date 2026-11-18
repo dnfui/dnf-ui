@@ -14,6 +14,7 @@
 #include "ui/common/widgets.hpp"
 #include "ui/common/widgets_internal.hpp"
 #include "ui/package_query/package_query_controller.hpp"
+#include "ui/package_query/package_query_state.hpp"
 #include "ui/package_table/package_table_view.hpp"
 #include "ui/package_table/package_table_status.hpp"
 
@@ -351,7 +352,8 @@ on_requirement_released(GtkGestureClick *, gint n_press, gdouble x, gdouble y, g
   }
 
   std::string requirement = link->requirement;
-  gtk_drop_down_set_selected(widgets->query.mode_dropdown, 1);
+  const DnfBackendSearchMode mode = package_query_mode_for_requirement(requirement);
+  gtk_drop_down_set_selected(widgets->query.mode_dropdown, mode == DnfBackendSearchMode::FILES ? 2 : 1);
   gtk_editable_set_text(GTK_EDITABLE(widgets->query.entry), requirement.c_str());
   package_query_on_search_button_clicked(nullptr, widgets);
 }

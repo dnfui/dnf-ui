@@ -69,7 +69,7 @@ package_query_set_displayed_search_query(MainWindowUiState *widgets,
                                          bool search_in_description,
                                          bool exact_match,
                                          bool latest_only,
-                                         bool find_provider)
+                                         DnfBackendSearchMode mode)
 {
   if (!widgets) {
     return;
@@ -81,7 +81,7 @@ package_query_set_displayed_search_query(MainWindowUiState *widgets,
   widgets->query_state.displayed_query.search_in_description = search_in_description;
   widgets->query_state.displayed_query.exact_match = exact_match;
   widgets->query_state.displayed_query.latest_only = latest_only;
-  widgets->query_state.displayed_query.find_provider = find_provider;
+  widgets->query_state.displayed_query.mode = mode;
 }
 
 // -----------------------------------------------------------------------------

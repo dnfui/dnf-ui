@@ -321,7 +321,7 @@ create_configured_base(RepoLoadMode mode, bool load_changelog_metadata = false, 
 #endif
 
   if (load_filelists_metadata && mode != RepoLoadMode::SYSTEM_ONLY) {
-    // Provider searches must report missing metadata rather than silently skip an enabled repository.
+    // File searches must report missing metadata rather than silently skip an enabled repository.
     libdnf5::repo::RepoQuery enabled_repos(*base);
     enabled_repos.filter_enabled(true);
     enabled_repos.filter_type(libdnf5::repo::Repo::Type::AVAILABLE);
@@ -470,11 +470,11 @@ build_base_for_mode(RepoLoadMode mode,
 }
 
 // -----------------------------------------------------------------------------
-// Load file lists only for provider searches and retain the normal cached Base.
-// Offline provider searches require a complete cached file list.
+// Load file lists only for file searches and retain the normal cached Base.
+// Offline file searches require a complete cached file list.
 // -----------------------------------------------------------------------------
 static BuiltBase
-build_provider_base(const std::shared_ptr<std::atomic<bool>> &cancel_requested)
+build_filelists_base(const std::shared_ptr<std::atomic<bool>> &cancel_requested)
 {
   try {
     return build_base_for_mode(RepoLoadMode::FULL, BaseRefreshMode::NORMAL, cancel_requested, {}, false, true);
@@ -482,7 +482,7 @@ build_provider_base(const std::shared_ptr<std::atomic<bool>> &cancel_requested)
     throw;
   } catch (const std::exception &error) {
     throw_if_rebuild_cancelled(cancel_requested);
-    DNFUI_TRACE("BaseManager provider repo load failed, trying cached filelists: %s", error.what());
+    DNFUI_TRACE("BaseManager file search repo load failed, trying cached filelists: %s", error.what());
   }
 
   // Reuse file lists downloaded by this user before trying the system cache.
@@ -494,12 +494,11 @@ build_provider_base(const std::shared_ptr<std::atomic<bool>> &cancel_requested)
     } catch (const std::exception &cache_error) {
       throw_if_rebuild_cancelled(cancel_requested);
       DNFUI_TRACE(
-          "BaseManager cached provider repo load failed mode=%d: %s", static_cast<int>(mode), cache_error.what());
+          "BaseManager cached file search repo load failed mode=%d: %s", static_cast<int>(mode), cache_error.what());
     }
   }
 
-  throw std::runtime_error(
-      _("Provides search needs file lists that are unavailable in the cached repository metadata."));
+  throw std::runtime_error(_("File search needs file lists that are unavailable in the cached repository metadata."));
 }
 
 // -----------------------------------------------------------------------------
@@ -683,10 +682,10 @@ BaseManager::acquire_read(std::shared_ptr<std::atomic<bool>> cancel_requested)
 }
 
 // -----------------------------------------------------------------------------
-// Return serialized access to a temporary Base for provider searches.
+// Return serialized access to a temporary Base for file searches.
 // -----------------------------------------------------------------------------
 TemporaryBaseRead
-BaseManager::acquire_provider_read(std::shared_ptr<std::atomic<bool>> cancel_requested)
+BaseManager::acquire_filelists_read(std::shared_ptr<std::atomic<bool>> cancel_requested)
 {
   std::unique_lock<std::mutex> lock(base_mutex, std::defer_lock);
   while (!lock.try_lock()) {
@@ -695,10 +694,10 @@ BaseManager::acquire_provider_read(std::shared_ptr<std::atomic<bool>> cancel_req
   }
 
   throw_if_base_operation_cancelled(cancel_requested, "Package query was cancelled.");
-  BuiltBase provider_base = build_provider_base(cancel_requested);
+  BuiltBase filelists_base = build_filelists_base(cancel_requested);
   throw_if_base_operation_cancelled(cancel_requested, "Package query was cancelled.");
 
-  return TemporaryBaseRead(std::move(provider_base.base), BaseGuard(std::move(lock)));
+  return TemporaryBaseRead(std::move(filelists_base.base), BaseGuard(std::move(lock)));
 }
 
 // -----------------------------------------------------------------------------

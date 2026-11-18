@@ -30,6 +30,7 @@ struct SearchCacheState {
   std::mutex mutex;
   SearchCacheEntries package_entries;
   SearchCacheEntries provider_entries;
+  SearchCacheEntries file_entries;
   uint64_t use_counter = 0;
   uint64_t epoch = 0;
 };
@@ -38,13 +39,16 @@ static SearchCacheState g_search_cache;
 
 // -----------------------------------------------------------------------------
 // Select storage by the search mode encoded in the cache key.
-// Each mode retains its own entry limit so Provides cannot evict ordinary searches.
+// Each search mode retains its own entry limit.
 // -----------------------------------------------------------------------------
 static SearchCacheEntries &
 package_query_cache_entries_locked(const std::string &key)
 {
   if (key.starts_with("provides:")) {
     return g_search_cache.provider_entries;
+  }
+  if (key.starts_with("files:")) {
+    return g_search_cache.file_entries;
   }
   return g_search_cache.package_entries;
 }
@@ -74,7 +78,14 @@ package_query_cache_prune_locked(SearchCacheEntries &entries)
 std::string
 package_query_cache_key_for(const std::string &term, const DnfBackendSearchOptions &options)
 {
-  std::string key = options.find_provider ? "provides:" : (options.search_in_description ? "desc:" : "name:");
+  std::string key;
+  if (options.mode == DnfBackendSearchMode::PROVIDES) {
+    key = "provides:";
+  } else if (options.mode == DnfBackendSearchMode::FILES) {
+    key = "files:";
+  } else {
+    key = options.search_in_description ? "desc:" : "name:";
+  }
   key += (options.exact_match ? "exact:" : "contains:");
   key += (options.latest_only ? "latest:" : "all:");
   key += term;
@@ -104,6 +115,7 @@ package_query_cache_clear()
   std::lock_guard<std::mutex> lock(g_search_cache.mutex);
   g_search_cache.package_entries.clear();
   g_search_cache.provider_entries.clear();
+  g_search_cache.file_entries.clear();
   g_search_cache.use_counter = 0;
   g_search_cache.epoch++;
 }
