@@ -1428,6 +1428,102 @@ TEST_CASE("Pending transaction list installed bulk upgrade marking uses installe
 }
 
 // -----------------------------------------------------------------------------
+// Bulk removal must use the same eligibility checks as the Remove button.
+// -----------------------------------------------------------------------------
+TEST_CASE("Pending transaction bulk removal skips protected and unavailable packages")
+{
+  reset_backend_globals();
+
+  PackageRow eligible = make_test_package_row("eligible-1.0-1.x86_64", "eligible", "1.0", "1", "x86_64");
+  PackageRow protected_row = make_test_package_row("protected-1.0-1.x86_64", "protected", "1.0", "1", "x86_64");
+  PackageRow available = make_test_package_row("available-1.0-1.x86_64", "available", "1.0", "1", "x86_64");
+  REQUIRE(dnf_backend_testonly_publish_installed_snapshot_rows({ eligible, protected_row }, { "protected" }));
+
+  DisplayedPackageQueryState displayed;
+  displayed.kind = DisplayedPackageQueryKind::LIST_UNNEEDED;
+  std::vector<PendingAction> actions;
+  auto mark = [&](const PackageRow &row) {
+    PendingTransactionSelectionActions selection =
+        pending_transaction_actions_for_selection(row, nullptr, 0, displayed, actions);
+    return pending_transaction_mark_unique_remove_action(actions, selection);
+  };
+
+  REQUIRE(mark(eligible));
+  REQUIRE_FALSE(mark(protected_row));
+  REQUIRE_FALSE(mark(available));
+  REQUIRE(actions.size() == 1);
+  REQUIRE(actions[0].type == PendingAction::REMOVE);
+  REQUIRE(actions[0].nevra == eligible.nevra);
+  REQUIRE(actions[0].transaction_spec == eligible.nevra);
+}
+
+// -----------------------------------------------------------------------------
+// Repeating bulk removal must keep existing removals and unrelated actions.
+// -----------------------------------------------------------------------------
+TEST_CASE("Pending transaction bulk removal preserves existing marks")
+{
+  reset_backend_globals();
+
+  PackageRow first = make_test_package_row("first-1.0-1.x86_64", "first", "1.0", "1", "x86_64");
+  PackageRow second = make_test_package_row("second-1.0-1.x86_64", "second", "1.0", "1", "x86_64");
+  PackageRow unrelated = make_test_package_row("unrelated-1.0-1.x86_64", "unrelated", "1.0", "1", "x86_64");
+  dnf_backend_testonly_replace_installed_snapshot_rows({ first, second });
+
+  std::vector<PendingAction> actions = {
+    { PendingAction::REMOVE, first.nevra, first.nevra, first.name_arch_key() },
+    { PendingAction::UPGRADE, "second-2.0-1.x86_64", "second.x86_64", second.name_arch_key() },
+    { PendingAction::INSTALL, unrelated.nevra, unrelated.nevra, unrelated.name_arch_key() },
+  };
+  DisplayedPackageQueryState displayed;
+  displayed.kind = DisplayedPackageQueryKind::LIST_UNNEEDED;
+  auto mark = [&](const PackageRow &row) {
+    PendingTransactionSelectionActions selection =
+        pending_transaction_actions_for_selection(row, nullptr, 0, displayed, actions);
+    return pending_transaction_mark_unique_remove_action(actions, selection);
+  };
+
+  REQUIRE_FALSE(mark(first));
+  REQUIRE(mark(second));
+  REQUIRE_FALSE(mark(second));
+  REQUIRE(actions.size() == 3);
+  REQUIRE(actions[0].type == PendingAction::REMOVE);
+  REQUIRE(actions[0].nevra == first.nevra);
+  REQUIRE(actions[1].type == PendingAction::INSTALL);
+  REQUIRE(actions[1].nevra == unrelated.nevra);
+  REQUIRE(actions[2].type == PendingAction::REMOVE);
+  REQUIRE(actions[2].nevra == second.nevra);
+}
+
+// -----------------------------------------------------------------------------
+// Parallel installed versions must be marked by their exact package IDs.
+// -----------------------------------------------------------------------------
+TEST_CASE("Pending transaction bulk removal keeps parallel installed versions separate")
+{
+  reset_backend_globals();
+
+  PackageRow older = make_test_package_row("installonly-demo-1.0-1.x86_64", "installonly-demo", "1.0", "1", "x86_64");
+  PackageRow newer = make_test_package_row("installonly-demo-2.0-1.x86_64", "installonly-demo", "2.0", "1", "x86_64");
+  older.installonly = true;
+  newer.installonly = true;
+  dnf_backend_testonly_replace_installed_snapshot_rows({ older, newer });
+
+  DisplayedPackageQueryState displayed;
+  displayed.kind = DisplayedPackageQueryKind::LIST_UNNEEDED;
+  std::vector<PendingAction> actions;
+  for (const PackageRow &row : { older, newer }) {
+    PendingTransactionSelectionActions selection =
+        pending_transaction_actions_for_selection(row, nullptr, 0, displayed, actions);
+    REQUIRE(pending_transaction_mark_unique_remove_action(actions, selection));
+  }
+
+  REQUIRE(actions.size() == 2);
+  REQUIRE(actions[0].type == PendingAction::REMOVE);
+  REQUIRE(actions[0].nevra == older.nevra);
+  REQUIRE(actions[1].type == PendingAction::REMOVE);
+  REQUIRE(actions[1].nevra == newer.nevra);
+}
+
+// -----------------------------------------------------------------------------
 // Verify that local-only installed packages cannot be reinstalled from repositories.
 // -----------------------------------------------------------------------------
 TEST_CASE("Pending transaction action rows reject reinstall for local only installed package")

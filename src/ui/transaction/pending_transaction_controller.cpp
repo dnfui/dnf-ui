@@ -323,6 +323,53 @@ pending_transaction_on_mark_listed_upgrades_button_clicked(GtkButton *, gpointer
 }
 
 // -----------------------------------------------------------------------------
+// Mark displayed unneeded packages for removal.
+// -----------------------------------------------------------------------------
+void
+pending_transaction_mark_listed_unneeded(MainWindowUiState *widgets)
+{
+  if (pending_transaction_action_is_busy(widgets)) {
+    return;
+  }
+  if (package_query_has_active_package_list_request(widgets)) {
+    ui_helpers_set_status(widgets->query.status_label, _("Wait for the current package query to finish."), "blue");
+    return;
+  }
+  if (package_table_quick_filter_is_pending(widgets)) {
+    ui_helpers_set_status(widgets->query.status_label, _("Wait for package filtering to finish."), "blue");
+    return;
+  }
+
+  std::vector<PackageTableRow> rows = package_table_get_displayed_packages(widgets);
+  size_t marked_count = 0;
+  for (const auto &row : rows) {
+    PendingTransactionSelectionActions selection =
+        pending_transaction_actions_for_selection(row.row,
+                                                  row.upgrade_target(),
+                                                  row.upgrade_generation(),
+                                                  widgets->query_state.displayed_query,
+                                                  widgets->transaction_state.actions);
+    if (pending_transaction_mark_unique_remove_action(widgets->transaction_state.actions, selection)) {
+      ++marked_count;
+    }
+  }
+
+  if (marked_count == 0) {
+    ui_helpers_set_status(widgets->query.status_label, _("No listed unneeded packages to mark for removal."), "gray");
+    return;
+  }
+
+  pending_transaction_invalidate_service_preview(widgets);
+  pending_transaction_refresh_pending_tab(widgets);
+  package_table_refresh_statuses(widgets);
+  package_details_refresh_selected_package_actions(widgets);
+
+  std::string msg =
+      dnfui_i18n_format_count(marked_count, "Marked %zu package for removal.", "Marked %zu packages for removal.");
+  ui_helpers_set_status(widgets->query.status_label, msg, "blue");
+}
+
+// -----------------------------------------------------------------------------
 // Clear all pending package actions without applying them.
 // -----------------------------------------------------------------------------
 void

@@ -143,6 +143,11 @@ bool pending_transaction_mark_install_side_action(std::vector<PendingAction> &ac
 bool pending_transaction_mark_remove_action(std::vector<PendingAction> &actions,
                                             const PendingTransactionActionRows &rows);
 // -----------------------------------------------------------------------------
+// Mark a removable package once without toggling an existing removal.
+// -----------------------------------------------------------------------------
+bool pending_transaction_mark_unique_remove_action(std::vector<PendingAction> &actions,
+                                                   const PendingTransactionSelectionActions &selection);
+// -----------------------------------------------------------------------------
 // Add or replace one pending reinstall action from resolved rows.
 // Returns false when the row has no installed package action.
 // -----------------------------------------------------------------------------

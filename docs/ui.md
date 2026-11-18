@@ -121,9 +121,10 @@ The bottom bar shows the visible row count on the left and the last completed pa
 When the package table has focus, typing opens a temporary filter in its bottom-right corner. Ctrl+Shift+F
 also opens it directly. The filter matches package names and summaries without running a new backend search.
 Escape or the close button clears it and restores the full list. The count shows matching and total rows while
-filtering. Mark Listed Upgrades and package export use the filtered rows, not hidden results. Both require
-filtering to finish before they can run. Loading a new package list clears the filter.
-In List Upgradable, Ctrl+A marks the displayed upgrades when the package table has focus.
+filtering. Mark Listed Upgrades, Ctrl+A bulk marking, and package export use the filtered rows, not hidden
+results. These actions require filtering to finish before they can run. Loading a new package list clears
+the filter. With the package table focused, Ctrl+A marks displayed upgrades in List Upgradable or displayed
+packages for removal in List Unneeded. These removal marks still require transaction preview and approval.
 
 After startup, DNF UI quietly checks dnf5daemon's read-only upgrade target list. When that check succeeds, the
 List Upgradable button shows the current number of daemon-reported upgrades. The count check defers while a
