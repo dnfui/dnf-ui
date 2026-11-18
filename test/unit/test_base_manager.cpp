@@ -277,7 +277,27 @@ TEST_CASE("BaseManager rebuild keeps the app usable when repo-backed refresh fai
 }
 
 // -----------------------------------------------------------------------------
-// Ordinary package queries must retain their metadata requirements before and after provider searches.
+// Capability lookup must still work for installed packages without repository metadata.
+// -----------------------------------------------------------------------------
+TEST_CASE_METHOD(ProviderRepositoryFixture, "Provides search works with installed packages offline")
+{
+  ScopedEnvVar full_failure("DNFUI_TEST_FORCE_FULL_REPO_LOAD_FAILURE", "1");
+  ScopedEnvVar cache_failure("DNFUI_TEST_FORCE_CACHEONLY_REPO_LOAD_FAILURE", "1");
+  auto &manager = BaseManager::instance();
+  auto options = backend_search_options(false, false);
+  options.mode = DnfBackendSearchMode::PROVIDES;
+
+  auto installed = dnf_backend_search_package_rows_interruptible("bash", options, nullptr);
+  REQUIRE(manager.current_repo_state() == BaseRepoState::INSTALLED_ONLY);
+  REQUIRE_FALSE(installed.empty());
+  REQUIRE(installed.front().name == "bash");
+
+  auto unavailable = dnf_backend_search_package_rows_interruptible("dnfui-filelists-fixture", options, nullptr);
+  REQUIRE(unavailable.empty());
+}
+
+// -----------------------------------------------------------------------------
+// Ordinary package queries must retain their metadata requirements before and after file searches.
 // -----------------------------------------------------------------------------
 TEST_CASE("File searches keep filelists separate from normal package queries")
 {
@@ -320,21 +340,32 @@ TEST_CASE("File searches keep filelists separate from normal package queries")
   }
 
   const uint64_t generation = manager.current_generation();
-  auto provider_options = backend_search_options(false, false);
-  provider_options.mode = DnfBackendSearchMode::FILES;
-  rows = dnf_backend_search_package_rows_interruptible("file-2", provider_options, nullptr);
+  auto capability_options = backend_search_options(false, false);
+  capability_options.mode = DnfBackendSearchMode::PROVIDES;
+  auto capability_rows =
+      dnf_backend_search_package_rows_interruptible("dnfui-filelists-fixture >= 1", capability_options, nullptr);
+  REQUIRE(capability_rows.size() == 1);
+  {
+    auto read = manager.acquire_read();
+    REQUIRE(&read.base == normal_base);
+    REQUIRE(read.base.get_config().get_optional_metadata_types_option().get_value() == configured_types);
+  }
+
+  auto file_options = backend_search_options(false, false);
+  file_options.mode = DnfBackendSearchMode::FILES;
+  rows = dnf_backend_search_package_rows_interruptible("file-2", file_options, nullptr);
   REQUIRE(rows.size() == 1);
   REQUIRE(rows[0].name == "dnfui-filelists-fixture");
   REQUIRE(manager.current_generation() == generation);
   {
     ScopedEnvVar offline("DNFUI_TEST_FORCE_FULL_REPO_LOAD_FAILURE", "1");
-    rows = dnf_backend_search_package_rows_interruptible("file-2", provider_options, nullptr);
+    rows = dnf_backend_search_package_rows_interruptible("file-2", file_options, nullptr);
     REQUIRE(rows.size() == 1);
   }
 
   GCancellable *cancelled = g_cancellable_new();
   g_cancellable_cancel(cancelled);
-  rows = dnf_backend_search_package_rows_interruptible("file-2", provider_options, cancelled);
+  rows = dnf_backend_search_package_rows_interruptible("file-2", file_options, cancelled);
   g_object_unref(cancelled);
   REQUIRE(rows.empty());
   {
@@ -344,13 +375,13 @@ TEST_CASE("File searches keep filelists separate from normal package queries")
   }
 
   manager.reset_for_tests();
-  rows = dnf_backend_search_package_rows_interruptible("file-2", provider_options, nullptr);
+  rows = dnf_backend_search_package_rows_interruptible("file-2", file_options, nullptr);
   REQUIRE(rows.size() == 1);
   REQUIRE_FALSE(manager.has_cached_base_for_tests());
 }
 
 // -----------------------------------------------------------------------------
-// Provider searches must reuse their own cached metadata before trying the system cache.
+// File searches must reuse their own cached metadata before trying the system cache.
 // -----------------------------------------------------------------------------
 TEST_CASE("File searches use separate configured and system metadata caches")
 {
@@ -367,7 +398,7 @@ TEST_CASE("File searches use separate configured and system metadata caches")
   auto options = backend_search_options(false, false);
   options.mode = DnfBackendSearchMode::FILES;
 
-  SECTION("A previous provider search supplies the offline metadata")
+  SECTION("A previous file search supplies the offline metadata")
   {
     auto rows = dnf_backend_search_package_rows_interruptible("file-2", options, nullptr);
     REQUIRE(rows.size() == 1);
@@ -592,9 +623,9 @@ TEST_CASE("BaseManager preserves offline cached packages without cached filelist
     REQUIRE(capability_rows.size() == 1);
     REQUIRE(capability_rows[0].name == "dnfui-filelists-fixture");
 
-    auto provider_options = backend_search_options(false, false);
-    provider_options.mode = DnfBackendSearchMode::FILES;
-    REQUIRE_THROWS_WITH(dnf_backend_search_package_rows_interruptible("file-2", provider_options, nullptr),
+    auto file_options = backend_search_options(false, false);
+    file_options.mode = DnfBackendSearchMode::FILES;
+    REQUIRE_THROWS_WITH(dnf_backend_search_package_rows_interruptible("file-2", file_options, nullptr),
                         Catch::Matchers::ContainsSubstring("file lists"));
   }
   manager.reset_for_tests();

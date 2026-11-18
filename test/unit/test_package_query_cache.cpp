@@ -267,7 +267,7 @@ TEST_CASE("Package query cache lookup updates entry recency")
 }
 
 // -----------------------------------------------------------------------------
-// Each search mode must retain its own three entries when the other mode fills its cache.
+// Each search mode must retain its own three entries when the other modes fill their caches.
 // -----------------------------------------------------------------------------
 TEST_CASE("Package query cache modes have independent capacity")
 {
@@ -276,6 +276,8 @@ TEST_CASE("Package query cache modes have independent capacity")
   const auto packages = backend_search_options(false, false);
   auto providers = packages;
   providers.mode = DnfBackendSearchMode::PROVIDES;
+  auto files = packages;
+  files.mode = DnfBackendSearchMode::FILES;
   const std::vector<PackageRow> rows = { make_cache_row("demo-1-1.x86_64", "demo") };
   std::vector<PackageRow> loaded;
 
@@ -284,17 +286,20 @@ TEST_CASE("Package query cache modes have independent capacity")
   }
   for (const std::string term : { "one", "two", "three", "four" }) {
     package_query_cache_store(package_query_cache_key_for(term, providers), 7, epoch, rows);
+    package_query_cache_store(package_query_cache_key_for(term, files), 7, epoch, rows);
   }
   for (const std::string term : { "one", "two", "three" }) {
     REQUIRE(package_query_cache_lookup(package_query_cache_key_for(term, packages), 7, epoch, loaded));
   }
   REQUIRE_FALSE(package_query_cache_lookup(package_query_cache_key_for("one", providers), 7, epoch, loaded));
+  REQUIRE_FALSE(package_query_cache_lookup(package_query_cache_key_for("one", files), 7, epoch, loaded));
 
   for (const std::string term : { "five", "six", "seven", "eight" }) {
     package_query_cache_store(package_query_cache_key_for(term, packages), 7, epoch, rows);
   }
   for (const std::string term : { "two", "three", "four" }) {
     REQUIRE(package_query_cache_lookup(package_query_cache_key_for(term, providers), 7, epoch, loaded));
+    REQUIRE(package_query_cache_lookup(package_query_cache_key_for(term, files), 7, epoch, loaded));
   }
   REQUIRE_FALSE(package_query_cache_lookup(package_query_cache_key_for("five", packages), 7, epoch, loaded));
 }

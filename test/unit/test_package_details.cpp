@@ -5,6 +5,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "dnf_backend/dnf_backend.hpp"
+#include "ui/package_query/package_query_state.hpp"
 #include "test_utils.hpp"
 
 #include <optional>
@@ -215,6 +216,16 @@ TEST_CASE("Dependency info contains expected section headers")
   REQUIRE(deps.find("Provides:") != std::string::npos);
   REQUIRE(deps.find("Conflicts:") != std::string::npos);
   REQUIRE(deps.find("Obsoletes:") != std::string::npos);
+}
+
+// -----------------------------------------------------------------------------
+// File requirements must use file ownership lookup instead of capabilities.
+// -----------------------------------------------------------------------------
+TEST_CASE("Requirement links choose the correct search mode")
+{
+  REQUIRE(package_query_mode_for_requirement("/usr/share/dnfui-review/file-2") == DnfBackendSearchMode::FILES);
+  REQUIRE(package_query_mode_for_requirement("pkgconfig(openssl)") == DnfBackendSearchMode::PROVIDES);
+  REQUIRE(package_query_mode_for_requirement("example >= 1") == DnfBackendSearchMode::PROVIDES);
 }
 
 // -----------------------------------------------------------------------------
