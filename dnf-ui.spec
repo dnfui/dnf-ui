@@ -1,5 +1,5 @@
 Name:           dnf-ui
-Version:        0.8.3
+Version:        0.8.4
 Release:        1%{?dist}
 Summary:        GTK interface for DNF5
 
@@ -56,6 +56,12 @@ appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/io.github.dnfui.
 %{_datadir}/metainfo/io.github.dnfui.dnfui.metainfo.xml
 
 %changelog
+* Wed Nov 18 2026 ErikMN <dnfui@proton.me> - 0.8.4-1
+- Add separate Provides and Files modes to search by capability or owned file
+- Open file requirements from Dependencies in Files search
+- Warn when results use cached repository data or installed packages only
+- Retry repository loading after an installed-only search
+
 * Tue Nov 17 2026 ErikMN <dnfui@proton.me> - 0.8.3-1
 - Make requirements in the Dependencies tab clickable to find packages that provide them
 - Add a Package menu option to clear search history
