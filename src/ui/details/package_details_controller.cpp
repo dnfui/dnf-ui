@@ -397,21 +397,18 @@ set_deferred_details_text(const DeferredDetailsUiState &ui, const char *text)
 static void
 set_details_status_text(MainWindowUiState *widgets, const char *status_text)
 {
-  if (!widgets || !widgets->results.details_status_label) {
+  if (!widgets || !widgets->results.details_status_box || !widgets->results.details_status_label) {
     return;
   }
 
   if (package_table_column_is_visible(widgets, PackageColumnKind::STATUS) || !status_text || !*status_text) {
     gtk_label_set_text(widgets->results.details_status_label, "");
-    gtk_widget_set_visible(GTK_WIDGET(widgets->results.details_status_label), FALSE);
+    gtk_widget_set_visible(widgets->results.details_status_box, FALSE);
     return;
   }
 
-  std::string text = _("Status");
-  text += ": ";
-  text += status_text;
-  gtk_label_set_text(widgets->results.details_status_label, text.c_str());
-  gtk_widget_set_visible(GTK_WIDGET(widgets->results.details_status_label), TRUE);
+  gtk_label_set_text(widgets->results.details_status_label, status_text);
+  gtk_widget_set_visible(widgets->results.details_status_box, TRUE);
 }
 
 // -----------------------------------------------------------------------------
@@ -420,10 +417,12 @@ set_details_status_text(MainWindowUiState *widgets, const char *status_text)
 static const char *
 selected_package_status_text(MainWindowUiState *widgets,
                              const PackageTableRow &selected,
-                             const PendingTransactionActionRows &action_rows)
+                             const PendingTransactionActionRows &action_rows,
+                             std::optional<PendingAction::Type> &pending_action)
 {
   PendingAction::Type action_type;
   if (package_table_pending_action_for_resolved_row(widgets, selected, action_rows, action_type)) {
+    pending_action = action_type;
     return package_table_pending_action_status_text(action_type, action_rows.state);
   }
 
@@ -611,7 +610,12 @@ update_selected_package_actions(MainWindowUiState *widgets,
                                                                 actions.installed_action_nevra,
                                                                 actions.rows.install_is_upgrade,
                                                                 actions.rows.install_is_downgrade);
-  set_details_status_text(widgets, selected_package_status_text(widgets, selected, actions.rows));
+  std::optional<PendingAction::Type> pending_action;
+  const char *status_text = selected_package_status_text(widgets, selected, actions.rows, pending_action);
+  set_details_status_text(widgets, status_text);
+  if (gtk_widget_get_visible(widgets->results.details_status_box)) {
+    package_table_update_resolved_status_icon(widgets->results.details_status_icon, actions.rows.state, pending_action);
+  }
 }
 
 // -----------------------------------------------------------------------------

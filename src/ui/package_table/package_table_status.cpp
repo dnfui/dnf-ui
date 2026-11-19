@@ -304,6 +304,25 @@ status_image_set_icon(GtkImage *image, const char *icon_name, const char *fallba
 }
 
 // -----------------------------------------------------------------------------
+// Show the icon for the current package state or pending action.
+// -----------------------------------------------------------------------------
+void
+package_table_update_resolved_status_icon(GtkImage *image,
+                                          PackageInstallState install_state,
+                                          std::optional<PendingAction::Type> pending_action)
+{
+  const char *icon_name = status_icon_name(install_state);
+  const char *fallback_icon_name = status_icon_fallback_name(install_state);
+  if (pending_action) {
+    icon_name = pending_icon_name(*pending_action, install_state);
+    fallback_icon_name = nullptr;
+  }
+
+  status_image_set_icon(image, icon_name, fallback_icon_name);
+  gtk_widget_set_visible(GTK_WIDGET(image), icon_name != nullptr);
+}
+
+// -----------------------------------------------------------------------------
 // Remove all Status-column CSS classes before applying the current one.
 // -----------------------------------------------------------------------------
 void
@@ -347,12 +366,10 @@ package_table_update_resolved_status_label(GtkWidget *cell,
   const bool exact_available_rows = displayed_view_uses_exact_available_rows(widgets);
 
   const char *text = package_table_status_text_for_resolved_row(row, action_rows, exact_available_rows);
-  const char *icon_name = status_icon_name(install_state);
   PendingAction::Type action_type;
   bool has_pending_action = package_table_pending_action_for_resolved_row(widgets, row, action_rows, action_type);
   if (has_pending_action) {
     text = package_table_pending_action_status_text(action_type, install_state);
-    icon_name = pending_icon_name(action_type, install_state);
   }
 
   GtkWidget *label = status_cell_label(cell);
@@ -361,9 +378,11 @@ package_table_update_resolved_status_label(GtkWidget *cell,
   package_table_clear_status_css(cell);
 
   if (GtkWidget *icon = status_cell_icon(cell)) {
-    const char *fallback_icon_name = has_pending_action ? nullptr : status_icon_fallback_name(install_state);
-    status_image_set_icon(GTK_IMAGE(icon), icon_name, fallback_icon_name);
-    gtk_widget_set_visible(icon, icon_name != nullptr);
+    std::optional<PendingAction::Type> pending_action;
+    if (has_pending_action) {
+      pending_action = action_type;
+    }
+    package_table_update_resolved_status_icon(GTK_IMAGE(icon), install_state, pending_action);
   }
 
   if (has_pending_action) {

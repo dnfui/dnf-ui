@@ -12,6 +12,7 @@
 #include "ui/transaction/pending_transaction_state.hpp"
 
 #include <gtk/gtk.h>
+#include <optional>
 
 struct MainWindowUiState;
 
@@ -41,6 +42,12 @@ const char *package_table_pending_action_status_text(PendingAction::Type action_
 // Return the Status-cell CSS class for one pending action type.
 // -----------------------------------------------------------------------------
 const char *package_table_pending_action_css_class_for_type(PendingAction::Type action_type);
+// -----------------------------------------------------------------------------
+// Show the icon for a package state and its current pending action.
+// -----------------------------------------------------------------------------
+void package_table_update_resolved_status_icon(GtkImage *image,
+                                               PackageInstallState install_state,
+                                               std::optional<PendingAction::Type> pending_action);
 // Remove all status CSS classes from a Status cell.
 // -----------------------------------------------------------------------------
 void package_table_clear_status_css(GtkWidget *cell);

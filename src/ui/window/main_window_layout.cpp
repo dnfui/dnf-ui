@@ -13,6 +13,8 @@
 #include "ui/window/main_menu.hpp"
 #include "ui/common/ui_helpers.hpp"
 
+#include <string>
+
 // -----------------------------------------------------------------------------
 // Create selectable read-only text view inside a scrolled window.
 // -----------------------------------------------------------------------------
@@ -470,15 +472,30 @@ main_window_build_layout(AppWidgets *ui)
   gtk_box_append(GTK_BOX(description_header), description_summary_label);
   ui->description_summary_label = description_summary_label;
 
+  GtkWidget *details_status_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+  gtk_widget_set_margin_start(details_status_box, 8);
+  gtk_widget_set_margin_end(details_status_box, 8);
+  gtk_widget_set_margin_top(details_status_box, 6);
+  gtk_widget_set_margin_bottom(details_status_box, 6);
+  gtk_widget_set_visible(details_status_box, FALSE);
+  ui->details_status_box = details_status_box;
+  gtk_box_append(GTK_BOX(description_box), details_status_box);
+
+  std::string details_status_heading_text = _("Status");
+  details_status_heading_text += ':';
+  GtkWidget *details_status_heading = gtk_label_new(details_status_heading_text.c_str());
+  gtk_box_append(GTK_BOX(details_status_box), details_status_heading);
+
+  GtkWidget *details_status_icon = gtk_image_new();
+  gtk_image_set_pixel_size(GTK_IMAGE(details_status_icon), 14);
+  gtk_widget_add_css_class(details_status_icon, "package-status-icon");
+  gtk_box_append(GTK_BOX(details_status_box), details_status_icon);
+  ui->details_status_icon = details_status_icon;
+
   GtkWidget *details_status_label = gtk_label_new(NULL);
   gtk_label_set_xalign(GTK_LABEL(details_status_label), 0.0f);
-  gtk_widget_set_margin_start(details_status_label, 8);
-  gtk_widget_set_margin_end(details_status_label, 8);
-  gtk_widget_set_margin_top(details_status_label, 6);
-  gtk_widget_set_margin_bottom(details_status_label, 6);
-  gtk_widget_set_visible(details_status_label, FALSE);
   ui->details_status_label = details_status_label;
-  gtk_box_append(GTK_BOX(description_box), details_status_label);
+  gtk_box_append(GTK_BOX(details_status_box), details_status_label);
 
   GtkTextBuffer *description_buffer = NULL;
   GtkWidget *scrolled_description =

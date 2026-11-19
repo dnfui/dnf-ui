@@ -48,6 +48,8 @@ struct PackageResultsWidgets {
   GtkSearchEntry *quick_filter_entry = nullptr;
   GtkPaned *inner_paned = nullptr;
   GtkStack *details_stack = nullptr;
+  GtkWidget *details_status_box = nullptr;
+  GtkImage *details_status_icon = nullptr;
   GtkLabel *details_status_label = nullptr;
   GtkWidget *description_header = nullptr;
   GtkLabel *description_name_label = nullptr;
