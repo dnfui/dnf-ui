@@ -270,20 +270,30 @@ transaction_dialogs_show_summary_dialog(MainWindowUiState *widgets,
     gtk_box_append(GTK_BOX(summary_box), label);
   };
 
-  auto append_count_line = [&](size_t count, const char *singular, const char *plural) {
-    if (count == 0) {
-      return;
-    }
-
-    append_summary_line(dnfui_i18n_format_count(count, singular, plural));
-  };
-
-  append_count_line(preview.install.size(), "%zu package will be installed.", "%zu packages will be installed.");
-  append_count_line(preview.upgrade.size(), "%zu package will be upgraded.", "%zu packages will be upgraded.");
-  append_count_line(preview.downgrade.size(), "%zu package will be downgraded.", "%zu packages will be downgraded.");
-  append_count_line(preview.reinstall.size(), "%zu package will be reinstalled.", "%zu packages will be reinstalled.");
-  append_count_line(preview.remove.size(), "%zu package will be removed.", "%zu packages will be removed.");
-  append_count_line(preview.replaced.size(), "%zu package will be replaced.", "%zu packages will be replaced.");
+  if (!preview.install.empty()) {
+    append_summary_line(dnfui_i18n_format_count(
+        preview.install.size(), "%zu package will be installed.", "%zu packages will be installed."));
+  }
+  if (!preview.upgrade.empty()) {
+    append_summary_line(dnfui_i18n_format_count(
+        preview.upgrade.size(), "%zu package will be upgraded.", "%zu packages will be upgraded."));
+  }
+  if (!preview.downgrade.empty()) {
+    append_summary_line(dnfui_i18n_format_count(
+        preview.downgrade.size(), "%zu package will be downgraded.", "%zu packages will be downgraded."));
+  }
+  if (!preview.reinstall.empty()) {
+    append_summary_line(dnfui_i18n_format_count(
+        preview.reinstall.size(), "%zu package will be reinstalled.", "%zu packages will be reinstalled."));
+  }
+  if (!preview.remove.empty()) {
+    append_summary_line(dnfui_i18n_format_count(
+        preview.remove.size(), "%zu package will be removed.", "%zu packages will be removed."));
+  }
+  if (!preview.replaced.empty()) {
+    append_summary_line(dnfui_i18n_format_count(
+        preview.replaced.size(), "%zu package will be replaced.", "%zu packages will be replaced."));
+  }
   append_summary_line(format_transaction_space_change(preview.disk_space_delta));
 
   GtkWidget *button_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);

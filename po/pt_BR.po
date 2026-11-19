@@ -1378,6 +1378,42 @@ msgstr "Rejeitar"
 msgid "Trust Key"
 msgstr "Confiar na chave"
 
+#, c-format
+msgid "%zu package will be installed."
+msgid_plural "%zu packages will be installed."
+msgstr[0] "%zu pacote será instalado."
+msgstr[1] "%zu pacotes serão instalados."
+
+#, c-format
+msgid "%zu package will be upgraded."
+msgid_plural "%zu packages will be upgraded."
+msgstr[0] "%zu pacote será atualizado."
+msgstr[1] "%zu pacotes serão atualizados."
+
+#, c-format
+msgid "%zu package will be downgraded."
+msgid_plural "%zu packages will be downgraded."
+msgstr[0] "%zu pacote terá uma versão anterior instalada."
+msgstr[1] "%zu pacotes terão versões anteriores instaladas."
+
+#, c-format
+msgid "%zu package will be reinstalled."
+msgid_plural "%zu packages will be reinstalled."
+msgstr[0] "%zu pacote será reinstalado."
+msgstr[1] "%zu pacotes serão reinstalados."
+
+#, c-format
+msgid "%zu package will be removed."
+msgid_plural "%zu packages will be removed."
+msgstr[0] "%zu pacote será removido."
+msgstr[1] "%zu pacotes serão removidos."
+
+#, c-format
+msgid "%zu package will be replaced."
+msgid_plural "%zu packages will be replaced."
+msgstr[0] "%zu pacote será substituído."
+msgstr[1] "%zu pacotes serão substituídos."
+
 msgid "Disk space usage will be unchanged."
 msgstr "O uso do espaço em disco não será alterado."
 

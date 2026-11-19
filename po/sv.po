@@ -1442,6 +1442,42 @@ msgstr "Avvisa"
 msgid "Trust Key"
 msgstr "Lita på nyckel"
 
+#, c-format
+msgid "%zu package will be installed."
+msgid_plural "%zu packages will be installed."
+msgstr[0] "%zu paket kommer att installeras."
+msgstr[1] "%zu paket kommer att installeras."
+
+#, c-format
+msgid "%zu package will be upgraded."
+msgid_plural "%zu packages will be upgraded."
+msgstr[0] "%zu paket kommer att uppgraderas."
+msgstr[1] "%zu paket kommer att uppgraderas."
+
+#, c-format
+msgid "%zu package will be downgraded."
+msgid_plural "%zu packages will be downgraded."
+msgstr[0] "%zu paket kommer att nedgraderas."
+msgstr[1] "%zu paket kommer att nedgraderas."
+
+#, c-format
+msgid "%zu package will be reinstalled."
+msgid_plural "%zu packages will be reinstalled."
+msgstr[0] "%zu paket kommer att ominstalleras."
+msgstr[1] "%zu paket kommer att ominstalleras."
+
+#, c-format
+msgid "%zu package will be removed."
+msgid_plural "%zu packages will be removed."
+msgstr[0] "%zu paket kommer att tas bort."
+msgstr[1] "%zu paket kommer att tas bort."
+
+#, c-format
+msgid "%zu package will be replaced."
+msgid_plural "%zu packages will be replaced."
+msgstr[0] "%zu paket kommer att ersättas."
+msgstr[1] "%zu paket kommer att ersättas."
+
 msgid "Disk space usage will be unchanged."
 msgstr "Diskanvändningen ändras inte."
 
