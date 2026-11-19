@@ -9,7 +9,7 @@
 // -----------------------------------------------------------------------------
 // Open the read-only transaction history window.
 // -----------------------------------------------------------------------------
-void transaction_history_show_window(GtkWindow *parent);
+void transaction_history_show_window(GtkWindow *parent, const char *package_name = nullptr);
 
 // -----------------------------------------------------------------------------
 // Close the transaction history window if it is open.

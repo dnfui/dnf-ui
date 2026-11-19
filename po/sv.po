@@ -1617,6 +1617,9 @@ msgstr "Sökhistoriken har rensats."
 msgid "Clear Search Cache"
 msgstr "Rensa sökcache"
 
+msgid "Show in History"
+msgstr "Visa i transaktionshistoriken"
+
 msgid "Transaction History..."
 msgstr "Transaktionshistorik..."
 

@@ -1551,6 +1551,9 @@ msgstr "Historique des recherches effacé."
 msgid "Clear Search Cache"
 msgstr "Vider le cache de recherche"
 
+msgid "Show in History"
+msgstr "Afficher dans l'historique des transactions"
+
 msgid "Transaction History..."
 msgstr "Historique des transactions..."
 

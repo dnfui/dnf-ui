@@ -6,6 +6,7 @@
 #include "ui/package_table/package_table_context_menu.hpp"
 
 #include "i18n.hpp"
+#include "ui/history/transaction_history_view.hpp"
 #include "ui/transaction/pending_transaction_action_rows.hpp"
 #include "ui/transaction/pending_transaction_controller.hpp"
 #include "ui/common/ui_helpers.hpp"
@@ -51,6 +52,26 @@ install_context_menu_icon(const PendingTransactionSelectionActions &actions)
   }
 
   return "list-add-symbolic";
+}
+
+// -----------------------------------------------------------------------------
+// Open transaction history for the selected package.
+// -----------------------------------------------------------------------------
+static void
+on_show_in_history_clicked(GtkButton *button, gpointer user_data)
+{
+  auto *widgets = static_cast<MainWindowUiState *>(user_data);
+  GtkRoot *root = gtk_widget_get_root(GTK_WIDGET(button));
+  PackageTableRow selected;
+  if (!GTK_IS_WINDOW(root) || !package_table_get_selected_package(widgets, selected)) {
+    return;
+  }
+
+  if (GtkWidget *popover = gtk_widget_get_ancestor(GTK_WIDGET(button), GTK_TYPE_POPOVER)) {
+    gtk_popover_popdown(GTK_POPOVER(popover));
+  }
+
+  transaction_history_show_window(GTK_WINDOW(root), selected.row.name.c_str());
 }
 
 // -----------------------------------------------------------------------------
@@ -155,6 +176,13 @@ package_table_show_context_menu(GtkWidget *anchor,
                                }
                                pending_transaction_on_reinstall_button_clicked(button, user_data);
                              }),
+                             widgets);
+
+  append_context_menu_action(GTK_BOX(box),
+                             _("Show in History"),
+                             "document-open-recent-symbolic",
+                             TRUE,
+                             G_CALLBACK(on_show_in_history_clicked),
                              widgets);
 
   g_signal_connect(popover,

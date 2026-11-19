@@ -245,7 +245,8 @@ builds right-click actions for package rows.
 
 `Package -> Transaction History...` or Ctrl+Shift+H opens a read-only window backed by libdnf5 transaction
 history. It lists recent package changes and lets the user filter them by package, action, result, date range,
-repository, architecture, or command text.
+repository, architecture, or command text. Right-clicking a package and choosing **Show in History**
+opens this window filtered to that package, clearing any previous history filters.
 
 [transaction_history_view.cpp](../src/ui/history/transaction_history_view.cpp) loads history on a worker
 thread and displays backend values instead of libdnf5 objects. It shows 100 package changes per page, with

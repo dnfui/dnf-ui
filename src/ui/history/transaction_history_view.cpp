@@ -661,6 +661,25 @@ history_reload_from_controls(const std::shared_ptr<TransactionHistoryWindowState
 }
 
 // -----------------------------------------------------------------------------
+// Open history for one package without retaining unrelated filters.
+// -----------------------------------------------------------------------------
+void
+history_search_package(const std::shared_ptr<TransactionHistoryWindowState> &state, const char *package_name)
+{
+  if (!state || state->destroyed || state->transaction_busy || !package_name || !*package_name) {
+    return;
+  }
+
+  gtk_editable_set_text(GTK_EDITABLE(state->package_entry), package_name);
+  gtk_editable_set_text(GTK_EDITABLE(state->text_entry), "");
+  gtk_editable_set_text(GTK_EDITABLE(state->from_entry), "");
+  gtk_editable_set_text(GTK_EDITABLE(state->to_entry), "");
+  history_set_all_action_checks(state, true);
+  gtk_drop_down_set_selected(state->result_dropdown, 0);
+  history_reload_from_controls(state);
+}
+
+// -----------------------------------------------------------------------------
 // Load one requested page using the filter that is already applied.
 // -----------------------------------------------------------------------------
 void
@@ -925,9 +944,12 @@ transaction_history_close_window()
 // Open the read-only transaction history window.
 // -----------------------------------------------------------------------------
 void
-transaction_history_show_window(GtkWindow *parent)
+transaction_history_show_window(GtkWindow *parent, const char *package_name)
 {
   if (g_transaction_history_window) {
+    if (package_name && *package_name) {
+      history_search_package(history_open_window_state(), package_name);
+    }
     gtk_window_present(g_transaction_history_window);
     return;
   }
@@ -1175,7 +1197,11 @@ transaction_history_show_window(GtkWindow *parent)
                    state_holder);
 
   gtk_window_present(window);
-  history_start_load(state, TransactionHistoryCursor {}, TransactionHistoryFilter {}, nullptr, true);
+  if (package_name && *package_name) {
+    history_search_package(state, package_name);
+  } else {
+    history_start_load(state, TransactionHistoryCursor {}, TransactionHistoryFilter {}, nullptr, true);
+  }
 }
 
 // -----------------------------------------------------------------------------

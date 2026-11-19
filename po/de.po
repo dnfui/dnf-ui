@@ -1551,6 +1551,9 @@ msgstr "Suchverlauf gelöscht."
 msgid "Clear Search Cache"
 msgstr "Suchcache leeren"
 
+msgid "Show in History"
+msgstr "Im Transaktionsverlauf anzeigen"
+
 msgid "Transaction History..."
 msgstr "Transaktionsverlauf..."
 
