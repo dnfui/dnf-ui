@@ -11,6 +11,7 @@
 #include <iterator>
 #include <limits>
 #include <mutex>
+#include <optional>
 #include <stdexcept>
 #include <utility>
 
@@ -151,9 +152,7 @@ history_text_contains_filter(const std::string &text, const std::string &filter_
 // Match one history package against the package name filter.
 // -----------------------------------------------------------------------------
 bool
-history_package_matches_name_filter(const std::string &name,
-                                    const std::string &package_id,
-                                    const TransactionHistoryFilter &filter)
+history_package_matches_name_filter(const std::string &name, const TransactionHistoryFilter &filter)
 {
   if (filter.package_text.empty()) {
     return true;
@@ -163,8 +162,55 @@ history_package_matches_name_filter(const std::string &name,
     return history_filter_text(name) == filter.package_text;
   }
 
-  return history_text_contains_filter(name, filter.package_text) ||
-      history_text_contains_filter(package_id, filter.package_text);
+  return history_text_contains_filter(name, filter.package_text);
+}
+
+// -----------------------------------------------------------------------------
+// Build a case-insensitive glob for the libdnf5 package-name filter.
+// Unicode searches keep the full scan so case folding remains correct.
+// -----------------------------------------------------------------------------
+std::optional<std::string>
+history_package_name_glob(const TransactionHistoryFilter &filter)
+{
+  if (filter.package_text.empty()) {
+    return std::nullopt;
+  }
+
+  for (unsigned char character : filter.package_text) {
+    if (character >= 128) {
+      return std::nullopt;
+    }
+  }
+
+  std::string normalized_text = history_filter_text(filter.package_text);
+  std::string pattern;
+  if (!filter.exact_match) {
+    pattern = "*";
+  }
+
+  for (unsigned char character : normalized_text) {
+    if (character >= 'a' && character <= 'z') {
+      pattern += '[';
+      pattern += static_cast<char>(character);
+      pattern += static_cast<char>(character - 'a' + 'A');
+      pattern += ']';
+    } else if (character == '*') {
+      pattern += "[*]";
+    } else if (character == '?') {
+      pattern += "[?]";
+    } else if (character == '[') {
+      pattern += "[[]";
+    } else if (character == ']') {
+      pattern += "[]]";
+    } else {
+      pattern += static_cast<char>(character);
+    }
+  }
+
+  if (!filter.exact_match) {
+    pattern += '*';
+  }
+  return pattern;
 }
 
 // -----------------------------------------------------------------------------
@@ -181,7 +227,7 @@ history_package_matches_filter(libdnf5::transaction::Package &package,
     return false;
   }
 
-  if (!history_package_matches_name_filter(package.get_name(), package.to_string(), filter)) {
+  if (!history_package_matches_name_filter(package.get_name(), filter)) {
     return false;
   }
 
@@ -380,11 +426,15 @@ dnf_backend_history_text_matches_filter_for_tests(const std::string &text, const
 }
 
 bool
-dnf_backend_history_package_matches_filter_for_tests(const std::string &name,
-                                                     const std::string &package_id,
-                                                     const TransactionHistoryFilter &filter)
+dnf_backend_history_package_matches_filter_for_tests(const std::string &name, const TransactionHistoryFilter &filter)
 {
-  return history_package_matches_name_filter(name, package_id, normalize_history_filter(filter));
+  return history_package_matches_name_filter(name, normalize_history_filter(filter));
+}
+
+std::optional<std::string>
+dnf_backend_history_package_name_glob_for_tests(const TransactionHistoryFilter &filter)
+{
+  return history_package_name_glob(filter);
 }
 
 TransactionHistoryPage
@@ -437,6 +487,23 @@ dnf_backend_create_transaction_history_query(const TransactionHistoryFilter &fil
   TransactionHistoryFilter normalized_filter = normalize_history_filter(filter);
   std::vector<int64_t> transaction_ids = history->list_transaction_ids();
   throw_if_history_cancelled(cancellable);
+
+  std::optional<std::string> pattern = history_package_name_glob(filter);
+  if (pattern && !transaction_ids.empty()) {
+    std::vector<libdnf5::transaction::Transaction> transactions = history->list_transactions(transaction_ids);
+    throw_if_history_cancelled(cancellable);
+    // Include Unicode names because case folding can match an ASCII search term.
+    history->filter_transactions_by_pkg_names(transactions, { *pattern, "*[^ -~]*" });
+    throw_if_history_cancelled(cancellable);
+
+    transaction_ids.clear();
+    transaction_ids.reserve(transactions.size());
+    for (const auto &transaction : transactions) {
+      transaction_ids.push_back(transaction.get_id());
+    }
+    std::sort(transaction_ids.begin(), transaction_ids.end());
+  }
+
   return std::make_shared<TransactionHistoryQuery>(
       std::move(base), std::move(normalized_filter), std::move(transaction_ids));
 }

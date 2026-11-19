@@ -262,8 +262,12 @@ bool dnf_backend_history_text_matches_filter_for_tests(const std::string &text, 
 // Return true when a package name matches the history package filter.
 // -----------------------------------------------------------------------------
 bool dnf_backend_history_package_matches_filter_for_tests(const std::string &name,
-                                                          const std::string &package_id,
                                                           const TransactionHistoryFilter &filter);
+
+// -----------------------------------------------------------------------------
+// Return the libdnf5 package-name glob for a history filter when available.
+// -----------------------------------------------------------------------------
+std::optional<std::string> dnf_backend_history_package_name_glob_for_tests(const TransactionHistoryFilter &filter);
 
 // -----------------------------------------------------------------------------
 // Return one page from rows already discovered by a history query.

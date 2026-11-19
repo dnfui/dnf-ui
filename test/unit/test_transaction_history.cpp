@@ -102,12 +102,34 @@ TEST_CASE("Transaction history exact match excludes related package names")
   filter.package_text = "foo";
   filter.exact_match = true;
 
-  REQUIRE(dnf_backend_history_package_matches_filter_for_tests("foo", "foo-1.0-1.x86_64", filter));
-  REQUIRE(dnf_backend_history_package_matches_filter_for_tests("FOO", "FOO-1.0-1.x86_64", filter));
-  REQUIRE_FALSE(dnf_backend_history_package_matches_filter_for_tests("foo-devel", "foo-devel-1.0-1.x86_64", filter));
+  REQUIRE(dnf_backend_history_package_matches_filter_for_tests("foo", filter));
+  REQUIRE(dnf_backend_history_package_matches_filter_for_tests("FOO", filter));
+  REQUIRE_FALSE(dnf_backend_history_package_matches_filter_for_tests("foo-devel", filter));
 
   filter.exact_match = false;
-  REQUIRE(dnf_backend_history_package_matches_filter_for_tests("foo-devel", "foo-devel-1.0-1.x86_64", filter));
+  REQUIRE(dnf_backend_history_package_matches_filter_for_tests("foo-devel", filter));
+
+  filter.package_text = "strasse";
+  REQUIRE(dnf_backend_history_package_matches_filter_for_tests("Straße", filter));
+}
+
+// -----------------------------------------------------------------------------
+// The backend glob keeps name searches case-insensitive and treats punctuation literally.
+// -----------------------------------------------------------------------------
+TEST_CASE("Transaction history package name prefilter preserves search text")
+{
+  TransactionHistoryFilter filter;
+  filter.package_text = "GlIbC";
+  REQUIRE(dnf_backend_history_package_name_glob_for_tests(filter) == "*[gG][lL][iI][bB][cC]*");
+
+  filter.exact_match = true;
+  REQUIRE(dnf_backend_history_package_name_glob_for_tests(filter) == "[gG][lL][iI][bB][cC]");
+
+  filter.package_text = "a*?[]";
+  REQUIRE(dnf_backend_history_package_name_glob_for_tests(filter) == "[aA][*][?][[][]]");
+
+  filter.package_text = "Å";
+  REQUIRE_FALSE(dnf_backend_history_package_name_glob_for_tests(filter));
 }
 
 // -----------------------------------------------------------------------------
