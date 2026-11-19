@@ -297,7 +297,6 @@ create_main_window_ui_state(const AppWidgets *ui)
   widgets->results.inner_paned = GTK_PANED(ui->inner_paned);
   widgets->results.details_stack = GTK_STACK(ui->details_stack);
   widgets->results.details_status_box = ui->details_status_box;
-  widgets->results.details_status_icon = GTK_IMAGE(ui->details_status_icon);
   widgets->results.details_status_label = GTK_LABEL(ui->details_status_label);
   widgets->results.description_header = ui->description_header;
   widgets->results.description_name_label = GTK_LABEL(ui->description_name_label);

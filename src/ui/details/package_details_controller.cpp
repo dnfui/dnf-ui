@@ -614,7 +614,8 @@ update_selected_package_actions(MainWindowUiState *widgets,
   const char *status_text = selected_package_status_text(widgets, selected, actions.rows, pending_action);
   set_details_status_text(widgets, status_text);
   if (gtk_widget_get_visible(widgets->results.details_status_box)) {
-    package_table_update_resolved_status_icon(widgets->results.details_status_icon, actions.rows.state, pending_action);
+    package_table_apply_resolved_status_label(
+        widgets->results.details_status_box, widgets, selected, actions.rows, status_text, pending_action);
   }
 }
 

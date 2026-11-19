@@ -55,6 +55,15 @@ void package_table_clear_status_css(GtkWidget *cell);
 // Remove pending action CSS classes from one table cell.
 // -----------------------------------------------------------------------------
 void package_table_clear_pending_action_css(GtkWidget *cell);
+// -----------------------------------------------------------------------------
+// Apply resolved Status text and appearance without resolving the action again.
+// -----------------------------------------------------------------------------
+void package_table_apply_resolved_status_label(GtkWidget *cell,
+                                               MainWindowUiState *widgets,
+                                               const PackageTableRow &row,
+                                               const PendingTransactionActionRows &action_rows,
+                                               const char *text,
+                                               std::optional<PendingAction::Type> pending_action);
 void package_table_update_resolved_status_label(GtkWidget *cell,
                                                 MainWindowUiState *widgets,
                                                 const PackageTableRow &row,

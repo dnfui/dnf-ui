@@ -362,15 +362,31 @@ package_table_update_resolved_status_label(GtkWidget *cell,
                                            const PackageTableRow &row,
                                            const PendingTransactionActionRows &action_rows)
 {
+  const bool exact_available_rows = displayed_view_uses_exact_available_rows(widgets);
+  const char *text = package_table_status_text_for_resolved_row(row, action_rows, exact_available_rows);
+  std::optional<PendingAction::Type> pending_action;
+  PendingAction::Type action_type;
+  if (package_table_pending_action_for_resolved_row(widgets, row, action_rows, action_type)) {
+    pending_action = action_type;
+    text = package_table_pending_action_status_text(action_type, action_rows.state);
+  }
+
+  package_table_apply_resolved_status_label(cell, widgets, row, action_rows, text, pending_action);
+}
+
+// -----------------------------------------------------------------------------
+// Apply resolved Status text, icon, and CSS to one badge.
+// -----------------------------------------------------------------------------
+void
+package_table_apply_resolved_status_label(GtkWidget *cell,
+                                          MainWindowUiState *widgets,
+                                          const PackageTableRow &row,
+                                          const PendingTransactionActionRows &action_rows,
+                                          const char *text,
+                                          std::optional<PendingAction::Type> pending_action)
+{
   PackageInstallState install_state = action_rows.state;
   const bool exact_available_rows = displayed_view_uses_exact_available_rows(widgets);
-
-  const char *text = package_table_status_text_for_resolved_row(row, action_rows, exact_available_rows);
-  PendingAction::Type action_type;
-  bool has_pending_action = package_table_pending_action_for_resolved_row(widgets, row, action_rows, action_type);
-  if (has_pending_action) {
-    text = package_table_pending_action_status_text(action_type, install_state);
-  }
 
   GtkWidget *label = status_cell_label(cell);
   gtk_label_set_text(GTK_LABEL(label), text);
@@ -378,15 +394,11 @@ package_table_update_resolved_status_label(GtkWidget *cell,
   package_table_clear_status_css(cell);
 
   if (GtkWidget *icon = status_cell_icon(cell)) {
-    std::optional<PendingAction::Type> pending_action;
-    if (has_pending_action) {
-      pending_action = action_type;
-    }
     package_table_update_resolved_status_icon(GTK_IMAGE(icon), install_state, pending_action);
   }
 
-  if (has_pending_action) {
-    const char *pending_class = package_table_pending_action_css_class_for_type(action_type);
+  if (pending_action) {
+    const char *pending_class = package_table_pending_action_css_class_for_type(*pending_action);
     gtk_widget_add_css_class(cell, pending_class);
   } else {
     if (install_state == PackageInstallState::LOCAL_ONLY) {

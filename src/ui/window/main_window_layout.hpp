@@ -53,7 +53,6 @@ struct AppWidgets {
   GtkWidget *details_panel = NULL;
   GtkWidget *details_stack = NULL;
   GtkWidget *details_status_box = NULL;
-  GtkWidget *details_status_icon = NULL;
   GtkWidget *details_status_label = NULL;
   GtkWidget *description_header = NULL;
   GtkWidget *description_name_label = NULL;
