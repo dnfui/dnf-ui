@@ -1,5 +1,5 @@
 Name:           dnf-ui
-Version:        0.8.4
+Version:        0.8.5
 Release:        1%{?dist}
 Summary:        GTK interface for DNF5
 
@@ -56,6 +56,13 @@ appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/io.github.dnfui.
 %{_datadir}/metainfo/io.github.dnfui.dnfui.metainfo.xml
 
 %changelog
+* Thu Nov 19 2026 ErikMN <dnfui@proton.me> - 0.8.5-1
+- Make transaction history package searches much faster
+- Add Exact match to transaction history to find changes for one package name
+- Use Ctrl+A in List Unneeded to mark visible packages for removal
+- Add Brazilian Portuguese, German, Spanish, and French translations
+- Translate package counts in transaction summaries
+
 * Wed Nov 18 2026 ErikMN <dnfui@proton.me> - 0.8.4-1
 - Add separate Provides and Files modes to search by capability or owned file
 - Open file requirements from Dependencies in Files search
