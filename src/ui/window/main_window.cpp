@@ -319,6 +319,7 @@ create_main_window_ui_state(const AppWidgets *ui)
   widgets->transaction_widgets.mark_listed_upgrades_button = GTK_BUTTON(ui->mark_listed_upgrades_button);
   widgets->transaction_widgets.apply_button = GTK_BUTTON(ui->apply_button);
   widgets->transaction_widgets.clear_pending_button = GTK_BUTTON(ui->clear_pending_button);
+  widgets->transaction_widgets.list_pending_button = GTK_BUTTON(ui->list_pending_button);
   widgets->transaction_widgets.pending_list = GTK_LIST_BOX(ui->pending_list);
 
   widgets->window_state.prepared_updates_banner = ui->prepared_updates_banner;
@@ -764,6 +765,8 @@ connect_signals(const AppWidgets *ui, MainWindowUiState *widgets)
   g_signal_connect(ui->apply_button, "clicked", G_CALLBACK(pending_transaction_on_apply_button_clicked), widgets);
   g_signal_connect(
       ui->clear_pending_button, "clicked", G_CALLBACK(pending_transaction_on_clear_pending_button_clicked), widgets);
+  g_signal_connect(
+      ui->list_pending_button, "clicked", G_CALLBACK(package_query_on_list_pending_button_clicked), widgets);
 
   g_signal_connect(ui->refresh_button, "clicked", G_CALLBACK(repository_refresh_on_button_clicked), widgets);
 

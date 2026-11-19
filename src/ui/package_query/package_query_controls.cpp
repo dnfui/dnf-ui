@@ -208,6 +208,10 @@ package_query_set_idle_controls_sensitive(MainWindowUiState *widgets, bool sensi
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.list_packages_button), sensitive);
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.list_upgradeable_button), sensitive);
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.search_button), sensitive);
+  gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction_widgets.list_pending_button),
+                           sensitive && !widgets->transaction_state.actions.empty() &&
+                               !widgets->transaction_state.preview_request_in_progress &&
+                               !widgets->transaction_state.apply_in_progress);
 }
 
 // -----------------------------------------------------------------------------
@@ -228,6 +232,8 @@ package_list_stop_button(MainWindowUiState *widgets, PackageListRequestKind kind
     return widgets->query.list_packages_button;
   case PackageListRequestKind::LIST_UPGRADEABLE:
     return widgets->query.list_upgradeable_button;
+  case PackageListRequestKind::LIST_PENDING:
+    return widgets->query.search_button;
   case PackageListRequestKind::SEARCH:
   case PackageListRequestKind::EXACT_RELOAD:
   case PackageListRequestKind::NONE:
@@ -253,6 +259,8 @@ package_list_cancelled_status(PackageListRequestKind kind)
     return _("Listing packages cancelled.");
   case PackageListRequestKind::LIST_UPGRADEABLE:
     return _("Listing upgradable packages cancelled.");
+  case PackageListRequestKind::LIST_PENDING:
+    return _("Listing pending packages cancelled.");
   case PackageListRequestKind::EXACT_RELOAD:
     return _("Selected package refresh cancelled.");
   case PackageListRequestKind::NONE:
@@ -279,6 +287,8 @@ package_list_stopping_status(PackageListRequestKind kind)
     return _("Stopping package listing...");
   case PackageListRequestKind::LIST_UPGRADEABLE:
     return _("Stopping upgradable package listing...");
+  case PackageListRequestKind::LIST_PENDING:
+    return _("Stopping pending package listing...");
   case PackageListRequestKind::EXACT_RELOAD:
     return _("Stopping selected package refresh...");
   case PackageListRequestKind::NONE:

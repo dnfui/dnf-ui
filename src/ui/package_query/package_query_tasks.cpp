@@ -104,6 +104,14 @@ struct ExactPackageReloadTaskData {
   gint64 started_at_us;
 };
 
+// Data passed to one pending-package list task.
+struct PendingPackageListTaskData {
+  std::vector<PendingAction> actions;
+  uint64_t request_id;
+  uint64_t generation;
+  gint64 started_at_us;
+};
+
 // -----------------------------------------------------------------------------
 // Free data owned by one exact selected-package reload task.
 // -----------------------------------------------------------------------------
@@ -764,6 +772,135 @@ on_exact_package_reload_task_finished(GObject *, GAsyncResult *res, gpointer use
 }
 
 // -----------------------------------------------------------------------------
+// List the exact package rows named by pending actions on a worker thread.
+// -----------------------------------------------------------------------------
+static void
+on_list_pending_task(GTask *task, gpointer, gpointer task_data, GCancellable *cancellable)
+{
+  QueryBackendBaseDropGuard base_drop_guard(cancellable);
+  const PendingPackageListTaskData *td = static_cast<const PendingPackageListTaskData *>(task_data);
+
+  try {
+    dnf_backend_refresh_installed_snapshot();
+    auto results = std::make_unique<std::vector<PackageRow>>();
+    std::set<std::string> listed_nevras;
+
+    for (const PendingAction &action : td->actions) {
+      if (cancellable && g_cancellable_is_cancelled(cancellable)) {
+        g_task_return_error(task, g_error_new_literal(G_IO_ERROR, G_IO_ERROR_CANCELLED, "Listing cancelled."));
+        return;
+      }
+      if (!listed_nevras.insert(action.nevra).second) {
+        continue;
+      }
+
+      const bool installed_action = action.type == PendingAction::REMOVE || action.type == PendingAction::REINSTALL;
+      std::vector<PackageRow> rows = installed_action ? dnf_backend_get_installed_package_rows_by_nevra(action.nevra)
+                                                      : dnf_backend_get_available_package_rows_by_nevra(action.nevra);
+      if (rows.empty()) {
+        rows = installed_action ? dnf_backend_get_available_package_rows_by_nevra(action.nevra)
+                                : dnf_backend_get_installed_package_rows_by_nevra(action.nevra);
+      }
+      results->insert(results->end(), rows.begin(), rows.end());
+    }
+
+    g_task_return_pointer(
+        task, results.release(), [](gpointer p) { delete static_cast<std::vector<PackageRow> *>(p); });
+  } catch (const std::exception &e) {
+    g_task_return_error(task, g_error_new_literal(G_IO_ERROR, G_IO_ERROR_FAILED, e.what()));
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Return true when the pending package rows still match the task snapshot.
+// -----------------------------------------------------------------------------
+static bool
+pending_package_list_matches_actions(const std::vector<PendingAction> &expected,
+                                     const std::vector<PendingAction> &current)
+{
+  if (expected.size() != current.size()) {
+    return false;
+  }
+
+  for (size_t i = 0; i < expected.size(); ++i) {
+    if (expected[i].nevra != current[i].nevra || expected[i].type != current[i].type) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// -----------------------------------------------------------------------------
+// Finish pending-package listing on the GTK thread.
+// -----------------------------------------------------------------------------
+static void
+on_list_pending_task_finished(GObject *, GAsyncResult *res, gpointer user_data)
+{
+  GTask *task = G_TASK(res);
+  MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
+  const PendingPackageListTaskData *td = static_cast<const PendingPackageListTaskData *>(g_task_get_task_data(task));
+
+  if (widgets_task_should_skip_completion(task, widgets)) {
+    if (widgets && !widgets->window_state.destroyed && td) {
+      if (GCancellable *c = g_task_get_cancellable(task)) {
+        if (g_cancellable_is_cancelled(c)) {
+          widgets_spinner_release(widgets->query.spinner);
+          package_query_end_package_list_request(widgets, td->request_id, PackageListRequestKind::LIST_PENDING);
+        }
+      }
+    }
+    return;
+  }
+
+  if (td && td->generation != BaseManager::instance().current_generation()) {
+    package_query_finish_generation_rejected_request(widgets, td->request_id, PackageListRequestKind::LIST_PENDING);
+    return;
+  }
+
+  GError *error = nullptr;
+  std::unique_ptr<std::vector<PackageRow>> packages(
+      static_cast<std::vector<PackageRow> *>(g_task_propagate_pointer(task, &error)));
+
+  widgets_spinner_release(widgets->query.spinner);
+  if (td) {
+    package_query_end_package_list_request(widgets, td->request_id, PackageListRequestKind::LIST_PENDING);
+  }
+
+  if (packages && td && !pending_package_list_matches_actions(td->actions, widgets->transaction_state.actions)) {
+    if (widgets->transaction_state.actions.empty()) {
+      packages->clear();
+    } else {
+      package_query_start_list_pending_task(widgets, widgets->transaction_state.actions);
+      return;
+    }
+  }
+
+  if (packages) {
+    package_query_set_displayed_query_kind(widgets, DisplayedPackageQueryKind::LIST_PENDING);
+    if (!widgets->query_state.reload_selected_nevra.empty()) {
+      widgets->results.selected_nevra = widgets->query_state.reload_selected_nevra;
+    } else {
+      widgets->results.selected_nevra.clear();
+    }
+    package_table_fill_package_view(
+        widgets, *packages, packages->empty() ? PackageTableEmptyState::NO_RESULTS : PackageTableEmptyState::READY);
+    std::string msg =
+        dnfui_i18n_format_count(packages->size(), "Found %zu pending package.", "Found %zu pending packages.");
+    ui_helpers_set_status(widgets->query.status_label, msg, "green");
+    package_query_show_duration_label(widgets, _("Pending"), td ? td->started_at_us : 0);
+    package_query_finish_results_refresh(widgets);
+  } else {
+    widgets->query_state.reload_selected_nevra.clear();
+    ui_helpers_set_status(
+        widgets->query.status_label, error ? error->message : _("Error listing pending packages."), "red");
+    package_query_show_duration_label(widgets, _("Pending"), td ? td->started_at_us : 0);
+    if (error) {
+      g_error_free(error);
+    }
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Start one installed-package list worker.
 // -----------------------------------------------------------------------------
 void
@@ -835,6 +972,29 @@ package_query_start_list_upgradeable_task(MainWindowUiState *widgets)
   g_task_set_task_data(task, td, [](gpointer p) { delete static_cast<PackageListTaskData *>(p); });
 
   g_task_run_in_thread(task, on_list_upgradeable_task);
+  g_object_unref(task);
+  g_object_unref(c);
+}
+
+// -----------------------------------------------------------------------------
+// Start one pending-package list worker.
+// -----------------------------------------------------------------------------
+void
+package_query_start_list_pending_task(MainWindowUiState *widgets, const std::vector<PendingAction> &actions)
+{
+  widgets_spinner_acquire(widgets->query.spinner);
+
+  PendingPackageListTaskData *td = new PendingPackageListTaskData;
+  td->actions = actions;
+  td->request_id = widgets->query_state.next_package_list_request_id++;
+  td->generation = BaseManager::instance().current_generation();
+  td->started_at_us = g_get_monotonic_time();
+
+  GCancellable *c = widgets_make_task_cancellable_for(GTK_WIDGET(widgets->query.entry));
+  package_query_begin_package_list_request(widgets, c, td->request_id, PackageListRequestKind::LIST_PENDING);
+  GTask *task = widgets_task_new_for_main_window_ui_state(widgets, c, on_list_pending_task_finished);
+  g_task_set_task_data(task, td, [](gpointer p) { delete static_cast<PendingPackageListTaskData *>(p); });
+  g_task_run_in_thread(task, on_list_pending_task);
   g_object_unref(task);
   g_object_unref(c);
 }

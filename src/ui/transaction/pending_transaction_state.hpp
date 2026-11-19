@@ -49,6 +49,7 @@ struct PendingTransactionWidgets {
   GtkButton *mark_listed_upgrades_button = nullptr;
   GtkButton *apply_button = nullptr;
   GtkButton *clear_pending_button = nullptr;
+  GtkButton *list_pending_button = nullptr;
   GtkListBox *pending_list = nullptr;
 };
 

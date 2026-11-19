@@ -585,9 +585,16 @@ main_window_build_layout(AppWidgets *ui)
   gtk_stack_add_titled(GTK_STACK(details_stack), scrolled_changelog, "changelog", _("Changelog"));
 
   // Pending actions tab.
+  GtkWidget *pending_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
+  GtkWidget *list_pending_button = ui_helpers_create_icon_button("view-list-symbolic", _("List Pending in Table"));
+  gtk_widget_set_sensitive(list_pending_button, FALSE);
+  gtk_box_append(GTK_BOX(pending_box), list_pending_button);
+  ui->list_pending_button = list_pending_button;
+
   GtkWidget *pending_scrolled = gtk_scrolled_window_new();
   gtk_widget_set_hexpand(pending_scrolled, TRUE);
   gtk_widget_set_vexpand(pending_scrolled, TRUE);
+  gtk_box_append(GTK_BOX(pending_box), pending_scrolled);
 
   GtkWidget *pending_list = gtk_list_box_new();
   // Pending rows act as direct action buttons and should not keep listbox selection state.
@@ -595,7 +602,7 @@ main_window_build_layout(AppWidgets *ui)
   gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(pending_scrolled), pending_list);
   ui->pending_list = pending_list;
 
-  gtk_stack_add_titled(GTK_STACK(details_stack), pending_scrolled, "pending", _("Pending"));
+  gtk_stack_add_titled(GTK_STACK(details_stack), pending_box, "pending", _("Pending"));
 
   // Item count bar.
   GtkWidget *bottom_bar = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);

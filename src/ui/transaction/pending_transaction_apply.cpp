@@ -241,6 +241,12 @@ pending_transaction_set_preview_controls_sensitive(MainWindowUiState *widgets, b
   if (widgets->transaction_widgets.pending_list) {
     gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction_widgets.pending_list), sensitive);
   }
+  if (widgets->transaction_widgets.list_pending_button) {
+    gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction_widgets.list_pending_button),
+                             sensitive && !widgets->transaction_state.actions.empty() &&
+                                 !widgets->query_state.active_request.cancellable &&
+                                 !widgets->transaction_state.apply_in_progress);
+  }
   if (widgets->transaction_widgets.upgrade_all_button) {
     gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction_widgets.upgrade_all_button), sensitive);
   }

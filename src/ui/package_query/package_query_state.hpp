@@ -25,6 +25,7 @@ enum class PackageListRequestKind {
   LIST_UNNEEDED,
   LIST_PACKAGES,
   LIST_UPGRADEABLE,
+  LIST_PENDING,
   EXACT_RELOAD
 };
 
@@ -55,7 +56,15 @@ package_query_mode_for_requirement(const std::string &requirement)
 // Exact one-package views from the pending-actions sidebar are
 // refreshed via the currently selected NEVRA instead of adding more global UI state.
 // -----------------------------------------------------------------------------
-enum class DisplayedPackageQueryKind { NONE, SEARCH, LIST_INSTALLED, LIST_UNNEEDED, LIST_PACKAGES, LIST_UPGRADEABLE };
+enum class DisplayedPackageQueryKind {
+  NONE,
+  SEARCH,
+  LIST_INSTALLED,
+  LIST_UNNEEDED,
+  LIST_PACKAGES,
+  LIST_UPGRADEABLE,
+  LIST_PENDING
+};
 
 struct DisplayedPackageQueryState {
   DisplayedPackageQueryKind kind = DisplayedPackageQueryKind::NONE;

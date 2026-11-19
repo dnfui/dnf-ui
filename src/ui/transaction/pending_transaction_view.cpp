@@ -66,6 +66,10 @@ update_apply_button(MainWindowUiState *widgets)
   ui_helpers_set_icon_button(widgets->transaction_widgets.apply_button, "system-run-symbolic", apply_label.c_str());
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction_widgets.apply_button), has_pending);
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction_widgets.clear_pending_button), has_pending);
+  gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction_widgets.list_pending_button),
+                           has_pending && !widgets->query_state.active_request.cancellable &&
+                               !widgets->transaction_state.preview_request_in_progress &&
+                               !widgets->transaction_state.apply_in_progress);
 }
 
 // -----------------------------------------------------------------------------
@@ -140,6 +144,11 @@ pending_transaction_refresh_pending_tab(MainWindowUiState *widgets)
     gtk_list_box_append(widgets->transaction_widgets.pending_list, button);
   }
   update_apply_button(widgets);
+  if (widgets->query_state.displayed_query.kind == DisplayedPackageQueryKind::LIST_PENDING &&
+      !widgets->query_state.active_request.cancellable && !widgets->transaction_state.preview_request_in_progress &&
+      !widgets->transaction_state.apply_in_progress) {
+    package_query_reload_current_view(widgets);
+  }
 }
 
 // -----------------------------------------------------------------------------

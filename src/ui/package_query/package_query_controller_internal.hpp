@@ -10,9 +10,11 @@
 
 #include "dnf_backend/dnf_backend.hpp"
 #include "ui/package_query/package_query_state.hpp"
+#include "ui/transaction/pending_transaction_state.hpp"
 
 #include <cstdint>
 #include <string>
+#include <vector>
 
 #include <gio/gio.h>
 
@@ -99,6 +101,10 @@ void package_query_start_list_packages_task(MainWindowUiState *widgets, const Dn
 // Start one upgradable-package list worker.
 // -----------------------------------------------------------------------------
 void package_query_start_list_upgradeable_task(MainWindowUiState *widgets);
+// -----------------------------------------------------------------------------
+// Start one pending-package list worker.
+// -----------------------------------------------------------------------------
+void package_query_start_list_pending_task(MainWindowUiState *widgets, const std::vector<PendingAction> &actions);
 // -----------------------------------------------------------------------------
 // Start one package search worker.
 // -----------------------------------------------------------------------------

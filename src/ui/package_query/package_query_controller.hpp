@@ -30,6 +30,10 @@ void package_query_on_list_packages_button_clicked(GtkButton *, gpointer user_da
 // -----------------------------------------------------------------------------
 void package_query_on_list_upgradeable_button_clicked(GtkButton *, gpointer user_data);
 // -----------------------------------------------------------------------------
+// Show all pending package actions in the main table.
+// -----------------------------------------------------------------------------
+void package_query_on_list_pending_button_clicked(GtkButton *, gpointer user_data);
+// -----------------------------------------------------------------------------
 // Handle the package search button click.
 // -----------------------------------------------------------------------------
 void package_query_on_search_button_clicked(GtkButton *, gpointer user_data);

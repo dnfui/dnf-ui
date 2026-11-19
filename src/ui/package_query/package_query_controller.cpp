@@ -396,6 +396,15 @@ package_query_reload_current_view(MainWindowUiState *widgets)
   case DisplayedPackageQueryKind::LIST_UPGRADEABLE:
     package_query_on_list_upgradeable_button_clicked(nullptr, widgets);
     return;
+  case DisplayedPackageQueryKind::LIST_PENDING:
+    if (widgets->transaction_state.actions.empty()) {
+      widgets->results.selected_nevra.clear();
+      package_table_fill_package_view(widgets, std::vector<PackageRow>());
+      package_query_finish_results_refresh(widgets);
+    } else {
+      package_query_on_list_pending_button_clicked(nullptr, widgets);
+    }
+    return;
   case DisplayedPackageQueryKind::NONE:
   default:
     break;
@@ -436,6 +445,26 @@ package_query_show_exact_package(MainWindowUiState *widgets, const std::string &
   ui_helpers_set_status(widgets->query.status_label, _("Loading package..."), "blue");
   package_query_clear_duration_label(widgets);
   package_query_start_exact_package_reload_task(widgets, nevra);
+}
+
+// -----------------------------------------------------------------------------
+// List all pending package actions in the main table.
+// -----------------------------------------------------------------------------
+void
+package_query_on_list_pending_button_clicked(GtkButton *, gpointer user_data)
+{
+  MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
+  if (!widgets || widgets->transaction_state.actions.empty()) {
+    return;
+  }
+
+  if (package_query_has_active_package_list_request(widgets)) {
+    ui_helpers_set_status(widgets->query.status_label, _("Wait for the current package query to finish."), "blue");
+    return;
+  }
+
+  ui_helpers_set_status(widgets->query.status_label, _("Listing pending packages..."), "blue");
+  package_query_start_list_pending_task(widgets, widgets->transaction_state.actions);
 }
 
 // -----------------------------------------------------------------------------
