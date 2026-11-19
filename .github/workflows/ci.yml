@@ -67,6 +67,8 @@ jobs:
               msgfmt --check --output-file=/tmp/dnfui-de-check.mo po/de.po
               msgcmp --no-fuzzy-matching po/es.po po/dnf-ui.pot
               msgfmt --check --output-file=/tmp/dnfui-es-check.mo po/es.po
+              msgcmp --no-fuzzy-matching po/fr.po po/dnf-ui.pot
+              msgfmt --check --output-file=/tmp/dnfui-fr-check.mo po/fr.po
               desktop-file-validate build/ci/packaging/io.github.dnfui.dnfui.desktop
               appstreamcli validate --no-net build/ci/packaging/io.github.dnfui.dnfui.metainfo.xml
               meson test -C build/ci --print-errorlogs
