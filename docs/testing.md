@@ -175,6 +175,13 @@ LANG=sv_SE.UTF-8 LANGUAGE=sv make dockerrun
 CONTAINER_RUNTIME=podman LANG=sv_SE.UTF-8 LANGUAGE=sv make dockerrun
 ```
 
+Run the Docker app target with the Brazilian Portuguese translation:
+
+```sh
+LANG=pt_BR.UTF-8 LANGUAGE=pt_BR make dockerrun
+CONTAINER_RUNTIME=podman LANG=pt_BR.UTF-8 LANGUAGE=pt_BR make dockerrun
+```
+
 The Makefile is a task runner. Meson owns build configuration and test definitions.
 
 ## Memory checks
