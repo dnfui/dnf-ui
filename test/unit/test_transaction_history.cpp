@@ -94,6 +94,23 @@ TEST_CASE("Transaction history filter uses UTF-8 case folding")
 }
 
 // -----------------------------------------------------------------------------
+// Exact history matching uses the complete package name.
+// -----------------------------------------------------------------------------
+TEST_CASE("Transaction history exact match excludes related package names")
+{
+  TransactionHistoryFilter filter;
+  filter.package_text = "foo";
+  filter.exact_match = true;
+
+  REQUIRE(dnf_backend_history_package_matches_filter_for_tests("foo", "foo-1.0-1.x86_64", filter));
+  REQUIRE(dnf_backend_history_package_matches_filter_for_tests("FOO", "FOO-1.0-1.x86_64", filter));
+  REQUIRE_FALSE(dnf_backend_history_package_matches_filter_for_tests("foo-devel", "foo-devel-1.0-1.x86_64", filter));
+
+  filter.exact_match = false;
+  REQUIRE(dnf_backend_history_package_matches_filter_for_tests("foo-devel", "foo-devel-1.0-1.x86_64", filter));
+}
+
+// -----------------------------------------------------------------------------
 // Verify whitespace handling shared by the history filter entries.
 // -----------------------------------------------------------------------------
 TEST_CASE("Transaction history filters trim surrounding text", "[history-filters]")

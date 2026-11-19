@@ -148,6 +148,26 @@ history_text_contains_filter(const std::string &text, const std::string &filter_
 }
 
 // -----------------------------------------------------------------------------
+// Match one history package against the package name filter.
+// -----------------------------------------------------------------------------
+bool
+history_package_matches_name_filter(const std::string &name,
+                                    const std::string &package_id,
+                                    const TransactionHistoryFilter &filter)
+{
+  if (filter.package_text.empty()) {
+    return true;
+  }
+
+  if (filter.exact_match) {
+    return history_filter_text(name) == filter.package_text;
+  }
+
+  return history_text_contains_filter(name, filter.package_text) ||
+      history_text_contains_filter(package_id, filter.package_text);
+}
+
+// -----------------------------------------------------------------------------
 // Return true when one history package matches the current package-level filters.
 // The transaction-level filters are checked before this function is called.
 // -----------------------------------------------------------------------------
@@ -161,11 +181,8 @@ history_package_matches_filter(libdnf5::transaction::Package &package,
     return false;
   }
 
-  if (!filter.package_text.empty()) {
-    if (!history_text_contains_filter(package.get_name(), filter.package_text) &&
-        !history_text_contains_filter(package.to_string(), filter.package_text)) {
-      return false;
-    }
+  if (!history_package_matches_name_filter(package.get_name(), package.to_string(), filter)) {
+    return false;
   }
 
   if (!filter.detail_text.empty()) {
@@ -360,6 +377,14 @@ bool
 dnf_backend_history_text_matches_filter_for_tests(const std::string &text, const std::string &filter_text)
 {
   return history_text_contains_filter(text, history_filter_text(filter_text));
+}
+
+bool
+dnf_backend_history_package_matches_filter_for_tests(const std::string &name,
+                                                     const std::string &package_id,
+                                                     const TransactionHistoryFilter &filter)
+{
+  return history_package_matches_name_filter(name, package_id, normalize_history_filter(filter));
 }
 
 TransactionHistoryPage

@@ -210,6 +210,7 @@ enum class TransactionHistoryResultFilter {
 
 struct TransactionHistoryFilter {
   std::string package_text;
+  bool exact_match = false;
   std::string detail_text;
   int64_t from = 0;
   int64_t to = std::numeric_limits<int64_t>::max();
@@ -256,6 +257,13 @@ TransactionHistoryPage dnf_backend_list_transaction_history_page(const std::shar
 // Return true when one history text value matches the same case-insensitive filter used by history searches.
 // -----------------------------------------------------------------------------
 bool dnf_backend_history_text_matches_filter_for_tests(const std::string &text, const std::string &filter_text);
+
+// -----------------------------------------------------------------------------
+// Return true when a package name matches the history package filter.
+// -----------------------------------------------------------------------------
+bool dnf_backend_history_package_matches_filter_for_tests(const std::string &name,
+                                                          const std::string &package_id,
+                                                          const TransactionHistoryFilter &filter);
 
 // -----------------------------------------------------------------------------
 // Return one page from rows already discovered by a history query.

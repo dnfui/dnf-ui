@@ -41,6 +41,7 @@ GtkWindow *g_transaction_history_window = nullptr;
 struct TransactionHistoryWindowState {
   GtkWindow *window = nullptr;
   GtkEntry *package_entry = nullptr;
+  GtkCheckButton *exact_match_check_button = nullptr;
   GtkEntry *text_entry = nullptr;
   GtkEntry *from_entry = nullptr;
   GtkEntry *to_entry = nullptr;
@@ -360,6 +361,8 @@ history_current_filters(const std::shared_ptr<TransactionHistoryWindowState> &st
 
   filters.backend.package_text =
       history_trim_filter_text(state->package_entry ? gtk_editable_get_text(GTK_EDITABLE(state->package_entry)) : "");
+  filters.backend.exact_match =
+      state->exact_match_check_button && gtk_check_button_get_active(state->exact_match_check_button);
   filters.backend.detail_text =
       history_trim_filter_text(state->text_entry ? gtk_editable_get_text(GTK_EDITABLE(state->text_entry)) : "");
   filters.backend.actions = history_selected_actions(state);
@@ -483,6 +486,7 @@ history_set_loading(const std::shared_ptr<TransactionHistoryWindowState> &state,
   bool controls_sensitive = !state->loading && !state->transaction_busy;
 
   gtk_widget_set_sensitive(GTK_WIDGET(state->package_entry), controls_sensitive);
+  gtk_widget_set_sensitive(GTK_WIDGET(state->exact_match_check_button), controls_sensitive);
   gtk_widget_set_sensitive(GTK_WIDGET(state->text_entry), controls_sensitive);
   gtk_widget_set_sensitive(GTK_WIDGET(state->from_entry), controls_sensitive);
   gtk_widget_set_sensitive(GTK_WIDGET(state->to_entry), controls_sensitive);
@@ -1024,6 +1028,10 @@ transaction_history_show_window(GtkWindow *parent)
   gtk_widget_set_hexpand(to_entry, TRUE);
   gtk_box_append(GTK_BOX(date_row), to_entry);
   state->to_entry = GTK_ENTRY(to_entry);
+
+  GtkWidget *exact_match_check_button = gtk_check_button_new_with_label(_("Exact match"));
+  gtk_box_append(GTK_BOX(date_row), exact_match_check_button);
+  state->exact_match_check_button = GTK_CHECK_BUTTON(exact_match_check_button);
 
   GtkWidget *search_button = ui_helpers_create_icon_button("system-search-symbolic", _("Search"));
   gtk_box_append(GTK_BOX(date_row), search_button);
