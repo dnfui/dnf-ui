@@ -1829,3 +1829,102 @@ msgstr "Kopiera beskrivning"
 
 msgid "Copy the title, summary, and description."
 msgstr "Kopiera titel, sammanfattning och beskrivning."
+
+msgid "DNF5 Command Reference"
+msgstr "DNF5-kommandoreferens"
+
+msgid "DNF5 Command Reference..."
+msgstr "DNF5-kommandoreferens..."
+
+msgid "Select command text and press Ctrl+C to copy it. Replace example package names and review proposed changes before confirming."
+msgstr "Markera kommandotext och tryck Ctrl+C för att kopiera den. Ersätt paketnamnen i exemplen och granska de föreslagna ändringarna innan du bekräftar."
+
+msgid "Inspect packages"
+msgstr "Granska paket"
+
+msgid "Search packages by name or description."
+msgstr "Sök efter paket efter namn eller beskrivning."
+
+msgid "Show package information."
+msgstr "Visa paketinformation."
+
+msgid "Find packages providing a file or capability."
+msgstr "Hitta paket som tillhandahåller en fil eller kapabilitet."
+
+msgid "List installed packages."
+msgstr "Lista installerade paket."
+
+msgid "List installed dependencies no longer needed."
+msgstr "Lista installerade beroenden som inte längre behövs."
+
+msgid "Check for available package upgrades."
+msgstr "Kontrollera om det finns paketuppdateringar."
+
+msgid "List configured repositories."
+msgstr "Lista konfigurerade förråd."
+
+msgid "Manage packages"
+msgstr "Hantera paket"
+
+msgid "Install a package and its dependencies."
+msgstr "Installera ett paket och dess beroenden."
+
+msgid "Remove a package. Check which dependencies will also be removed."
+msgstr "Ta bort ett paket. Kontrollera vilka beroenden som också tas bort."
+
+msgid "Upgrade installed packages."
+msgstr "Uppdatera installerade paket."
+
+msgid "Reinstall an installed package."
+msgstr "Installera om ett installerat paket."
+
+msgid "Downgrade when an older version is available."
+msgstr "Nedgradera när en äldre version finns tillgänglig."
+
+msgid "Remove unneeded dependencies. Review the proposed removals."
+msgstr "Ta bort överflödiga beroenden. Granska de föreslagna borttagningarna."
+
+msgid "Upgrade to a new distribution release"
+msgstr "Uppgradera till en ny distributionsversion"
+
+msgid "Update packages in the current release. Back up important data before a release upgrade."
+msgstr "Uppdatera paketen i den nuvarande versionen. Säkerhetskopiera viktiga data före en versionsuppgradering."
+
+msgid "Replace NN with the target release number. Use system-upgrade only if your distribution supports it."
+msgstr "Ersätt NN med den önskade versionssiffran. Använd system-upgrade endast om din distribution stöder det."
+
+msgid "Reboot to install the downloaded release upgrade in the offline environment."
+msgstr "Starta om för att installera den hämtade versionsuppgraderingen i offlinemiljön."
+
+msgid "Transaction history"
+msgstr "Transaktionshistorik"
+
+msgid "List recorded transactions."
+msgstr "Lista registrerade transaktioner."
+
+msgid "Show details of transaction 123."
+msgstr "Visa information om transaktion 123."
+
+msgid "Attempt to reverse one transaction. Required versions may be unavailable."
+msgstr "Försök ångra en transaktion. Nödvändiga paketversioner kanske inte finns tillgängliga."
+
+msgid "Attempt to reverse all transactions after 123. This is not a system restore."
+msgstr "Försök ångra alla transaktioner efter 123. Detta återställer inte hela systemet."
+
+msgid "Advanced CLI operations"
+msgstr "Avancerade kommandoradsåtgärder"
+
+msgid "Find packages that require a capability."
+msgstr "Hitta paket som kräver en viss kapabilitet."
+
+msgid "Align installed versions with repositories. This may downgrade packages."
+msgstr "Anpassa installerade versioner till förråden. Detta kan nedgradera paket."
+
+msgid "Mark an installed package as explicitly installed by the user."
+msgstr "Markera ett installerat paket som uttryckligen installerat av användaren."
+
+msgid "Mark an installed package as a dependency. It may become eligible for automatic removal."
+msgstr "Markera ett installerat paket som ett beroende. Det kan då bli möjligt att ta bort automatiskt."
+
+msgid "Remove cached DNF data. Future operations may need to download it again."
+msgstr "Rensa DNF:s cachade data. De kan behöva hämtas igen vid senare åtgärder."

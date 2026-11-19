@@ -24,6 +24,7 @@ app_sources = files(
   'config.cpp',
   'i18n.cpp',
   'ui/window/main_menu.cpp',
+  'ui/window/dnf_command_reference.cpp',
   'ui/window/main_window.cpp',
   'ui/window/main_window_layout.cpp',
   'main.cpp',

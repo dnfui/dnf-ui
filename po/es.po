@@ -1760,3 +1760,102 @@ msgstr "Copiar descripción"
 
 msgid "Copy the title, summary, and description."
 msgstr "Copiar el título, el resumen y la descripción."
+
+msgid "DNF5 Command Reference"
+msgstr "Referencia de comandos de DNF5"
+
+msgid "DNF5 Command Reference..."
+msgstr "Referencia de comandos de DNF5..."
+
+msgid "Select command text and press Ctrl+C to copy it. Replace example package names and review proposed changes before confirming."
+msgstr "Seleccione el texto del comando y pulse Ctrl+C para copiarlo. Sustituya los nombres de paquete de ejemplo y revise los cambios propuestos antes de confirmar."
+
+msgid "Inspect packages"
+msgstr "Consultar paquetes"
+
+msgid "Search packages by name or description."
+msgstr "Buscar paquetes por nombre o descripción."
+
+msgid "Show package information."
+msgstr "Mostrar información del paquete."
+
+msgid "Find packages providing a file or capability."
+msgstr "Buscar paquetes que proporcionan un archivo o una capacidad."
+
+msgid "List installed packages."
+msgstr "Listar paquetes instalados."
+
+msgid "List installed dependencies no longer needed."
+msgstr "Listar dependencias instaladas que ya no se necesitan."
+
+msgid "Check for available package upgrades."
+msgstr "Comprobar si hay actualizaciones de paquetes disponibles."
+
+msgid "List configured repositories."
+msgstr "Listar repositorios configurados."
+
+msgid "Manage packages"
+msgstr "Gestionar paquetes"
+
+msgid "Install a package and its dependencies."
+msgstr "Instalar un paquete y sus dependencias."
+
+msgid "Remove a package. Check which dependencies will also be removed."
+msgstr "Eliminar un paquete. Compruebe qué dependencias se eliminarán también."
+
+msgid "Upgrade installed packages."
+msgstr "Actualizar los paquetes instalados."
+
+msgid "Reinstall an installed package."
+msgstr "Reinstalar un paquete instalado."
+
+msgid "Downgrade when an older version is available."
+msgstr "Volver a una versión anterior cuando esté disponible."
+
+msgid "Remove unneeded dependencies. Review the proposed removals."
+msgstr "Eliminar dependencias innecesarias. Revise las eliminaciones propuestas."
+
+msgid "Upgrade to a new distribution release"
+msgstr "Actualizar a una nueva versión de la distribución"
+
+msgid "Update packages in the current release. Back up important data before a release upgrade."
+msgstr "Actualizar los paquetes de la versión actual. Haga una copia de seguridad de los datos importantes antes de cambiar de versión."
+
+msgid "Replace NN with the target release number. Use system-upgrade only if your distribution supports it."
+msgstr "Sustituya NN por el número de la versión de destino. Utilice system-upgrade solo si su distribución lo admite."
+
+msgid "Reboot to install the downloaded release upgrade in the offline environment."
+msgstr "Reiniciar para instalar la actualización de versión descargada en el entorno sin conexión."
+
+msgid "Transaction history"
+msgstr "Historial de transacciones"
+
+msgid "List recorded transactions."
+msgstr "Listar transacciones registradas."
+
+msgid "Show details of transaction 123."
+msgstr "Mostrar detalles de la transacción 123."
+
+msgid "Attempt to reverse one transaction. Required versions may be unavailable."
+msgstr "Intentar revertir una transacción. Es posible que las versiones necesarias no estén disponibles."
+
+msgid "Attempt to reverse all transactions after 123. This is not a system restore."
+msgstr "Intentar revertir todas las transacciones posteriores a la 123. Esto no restaura todo el sistema."
+
+msgid "Advanced CLI operations"
+msgstr "Operaciones avanzadas de la línea de comandos"
+
+msgid "Find packages that require a capability."
+msgstr "Buscar paquetes que requieren una capacidad."
+
+msgid "Align installed versions with repositories. This may downgrade packages."
+msgstr "Ajustar las versiones instaladas a las de los repositorios. Esto puede instalar versiones anteriores de algunos paquetes."
+
+msgid "Mark an installed package as explicitly installed by the user."
+msgstr "Marcar un paquete instalado como instalado explícitamente por el usuario."
+
+msgid "Mark an installed package as a dependency. It may become eligible for automatic removal."
+msgstr "Marcar un paquete instalado como dependencia. Podría pasar a ser apto para su eliminación automática."
+
+msgid "Remove cached DNF data. Future operations may need to download it again."
+msgstr "Eliminar los datos almacenados en la caché de DNF. Es posible que deban descargarse de nuevo más adelante."
