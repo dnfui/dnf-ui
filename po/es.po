@@ -1,0 +1,1762 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: dnf-ui 0.8.4\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-11-09 18:47+0100\n"
+"PO-Revision-Date: 2026-11-19 00:00+0100\n"
+"Last-Translator: DNF UI contributors <dnfui@proton.me>\n"
+"Language-Team: Spanish\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Requesting authorization and preparing changes for reboot..."
+msgstr "Solicitando autorización y preparando los cambios para el reinicio..."
+
+msgid "Changes prepared for the next reboot. No packages have been changed yet."
+msgstr "Cambios preparados para el próximo reinicio. Todavía no se ha modificado ningún paquete."
+
+msgid "Could not check updates prepared for reboot."
+msgstr "No se pudieron comprobar las actualizaciones preparadas para el reinicio."
+
+msgid "Could not inspect dnf5daemon offline cleanup methods."
+msgstr "No se pudieron consultar los métodos de limpieza de transacciones sin conexión de dnf5daemon."
+
+msgid "dnf5daemon does not expose a supported offline cleanup method."
+msgstr "dnf5daemon no ofrece un método compatible para limpiar las transacciones sin conexión."
+
+msgid "dnf5daemon returned an unsupported offline transaction status."
+msgstr "dnf5daemon devolvió un estado de transacción sin conexión no compatible."
+
+msgid ""
+"The apply mode does not match a prepared preview. Prepare the transaction "
+"preview again."
+msgstr "El modo de aplicación no coincide con una vista previa preparada. Prepare de nuevo la vista previa de la transacción."
+
+msgid ""
+"The daemon did not confirm that the changes are ready for reboot. Use 'dnf5 "
+"offline status' to check and 'dnf5 offline clean' to discard stored changes "
+"before retrying."
+msgstr "El servicio no confirmó que los cambios estén listos para el reinicio. Utilice 'dnf5 offline status' para comprobarlo y 'dnf5 offline clean' para descartar los cambios almacenados antes de volver a intentarlo."
+
+msgid "Preparing changes for reboot. See transaction window for details."
+msgstr "Preparando cambios para el reinicio. Consulte la ventana de la transacción para obtener más información."
+
+msgid "Updates prepared. Restart to install them."
+msgstr "Actualizaciones preparadas. Reinicie para instalarlas."
+
+msgid "Preparation failed. See the transaction window for details."
+msgstr "Error de preparación. Consulte la ventana de la transacción para obtener más información."
+
+msgid "Prepare the following changes for the next reboot?"
+msgstr "¿Preparar los siguientes cambios para el próximo reinicio?"
+
+msgid ""
+"These changes update the package service itself. To prevent it from "
+"restarting during installation, all changes listed here will be applied at "
+"your next reboot. The computer will not restart now."
+msgstr "Estos cambios actualizan el propio servicio de paquetes. Para evitar que se reinicie durante la instalación, todos los cambios indicados se aplicarán en el próximo reinicio. El equipo no se reiniciará ahora."
+
+msgid "Prepare for Reboot"
+msgstr "Preparar para reiniciar"
+
+msgid "Preparing changes for reboot"
+msgstr "Preparando cambios para el reinicio"
+
+msgid "Changes prepared. Restart when you are ready to install them."
+msgstr "Cambios preparados. Reinicie cuando quiera instalarlos."
+
+msgid "Ready for Reboot"
+msgstr "Listo para reiniciar"
+
+msgid "DNF UI"
+msgstr "DNF UI"
+
+msgid "Browse packages and apply DNF transactions"
+msgstr "Explorar paquetes y aplicar transacciones de DNF"
+
+msgid "dnf;dnf5;packages;rpm;fedora;updates;"
+msgstr "dnf;dnf5;paquetes;rpm;fedora;actualizaciones;"
+
+msgid "Graphical package manager frontend for DNF5"
+msgstr "Interfaz gráfica de gestión de paquetes para DNF5"
+
+msgid "DNF UI contributors"
+msgstr "Colaboradores de DNF UI"
+
+msgid ""
+"DNF UI is a GTK frontend for DNF5 package management built on libdnf5. It "
+"focuses on fast package browsing, clear transaction review, and a dependable "
+"native desktop workflow."
+msgstr "DNF UI es una interfaz GTK para gestionar paquetes con DNF5, desarrollada con libdnf5. Se centra en la exploración rápida de paquetes, la revisión clara de transacciones y un funcionamiento de escritorio nativo y fiable."
+
+msgid ""
+"Package changes are applied through DNF5 dnf5daemon with Polkit "
+"authorization, while the main graphical application continues to run as the "
+"regular desktop user."
+msgstr "Los cambios en los paquetes se aplican mediante dnf5daemon de DNF5, con autorización de Polkit, mientras que la aplicación gráfica principal sigue ejecutándose como usuario normal."
+
+msgid "Installed package refresh failed."
+msgstr "No se pudo actualizar el estado de los paquetes instalados."
+
+msgid ""
+"Installed package state changed. Press List Upgradable to reload upgrades."
+msgstr "El estado de los paquetes instalados ha cambiado. Pulse Listar actualizables para volver a cargar las actualizaciones."
+
+msgid "Backend warm up was cancelled."
+msgstr "Se canceló la preparación inicial del motor."
+
+msgid "Backend warm up failed."
+msgstr "Error durante la preparación inicial del motor."
+
+msgid "Upgrade count check was cancelled."
+msgstr "Se canceló la comprobación del número de actualizaciones."
+
+msgid "Unable to start upgrade count check."
+msgstr "No se pudo iniciar la comprobación del número de actualizaciones."
+
+msgid "Unable to check for package upgrades from dnf5daemon."
+msgstr "No se pudieron comprobar las actualizaciones de paquetes mediante dnf5daemon."
+
+msgid "Ready. Repository metadata loaded."
+msgstr "Listo. Metadatos de los repositorios cargados."
+
+msgid "Ready. Using cached repository metadata."
+msgstr "Listo. Se están utilizando metadatos de repositorios en caché."
+
+msgid "Ready. Showing installed packages only."
+msgstr "Listo. Solo se muestran los paquetes instalados."
+
+msgid "Use the upgrade-all preview helper for upgrade-all requests."
+msgstr "Utilice la función de vista previa de actualización general para las solicitudes de actualización general."
+
+msgid "This transaction would downgrade, reinstall, remove, or replace DNF UI itself."
+msgstr "Esta transacción instalaría una versión anterior, reinstalaría, eliminaría o sustituiría el propio DNF UI."
+
+msgid "Could not verify whether this transaction would modify DNF UI."
+msgstr "No se pudo comprobar si esta transacción modificaría DNF UI."
+
+msgid "Upgrade All would downgrade, reinstall, remove, or replace DNF UI itself."
+msgstr "Actualizar todo instalaría una versión anterior, reinstalaría, eliminaría o sustituiría el propio DNF UI."
+
+msgid "Could not verify whether Upgrade All would modify DNF UI."
+msgstr "No se pudo comprobar si Actualizar todo modificaría DNF UI."
+
+msgid "dnf5daemon session path is empty."
+msgstr "La ruta de sesión de dnf5daemon está vacía."
+
+msgid "Connecting to dnf5daemon..."
+msgstr "Conectando con dnf5daemon..."
+
+msgid "Privileged transaction preview ready."
+msgstr "La vista previa de la transacción con privilegios está lista."
+
+msgid "Requesting authorization and starting apply..."
+msgstr "Solicitando autorización e iniciando la aplicación..."
+
+msgid "Transaction applied successfully."
+msgstr "Transacción aplicada correctamente."
+
+msgid ""
+"The approved transaction did not complete. Refresh package data and prepare "
+"the preview again before retrying."
+msgstr "La transacción aprobada no se completó. Actualice los datos de los paquetes y prepare de nuevo la vista previa antes de volver a intentarlo."
+
+msgid "Details: "
+msgstr "Detalles: "
+
+msgid ""
+"Required packages could not be downloaded. Check the network connection and "
+"repository availability, then prepare the preview again."
+msgstr "No se pudieron descargar los paquetes necesarios. Compruebe la conexión de red y la disponibilidad de los repositorios y prepare de nuevo la vista previa."
+
+msgid "dnf5daemon returned an incomplete package item."
+msgstr "dnf5daemon devolvió un elemento de paquete incompleto."
+
+msgid "dnf5daemon returned an incomplete upgrade item."
+msgstr "dnf5daemon devolvió un elemento de actualización incompleto."
+
+#, c-format
+msgid "%s was skipped because of a package conflict."
+msgstr "Se omitió %s por un conflicto entre paquetes."
+
+#, c-format
+msgid "%s was skipped because of broken dependencies."
+msgstr "Se omitió %s por dependencias no resueltas."
+
+#, c-format
+msgid "%s was skipped because of a vendor change restriction."
+msgstr "Se omitió %s por una restricción de cambio de proveedor."
+
+#, c-format
+msgid "%s was skipped by dnf5daemon: %s"
+msgstr "dnf5daemon omitió %s: %s"
+
+#, c-format
+msgid "%s was skipped by dnf5daemon."
+msgstr "dnf5daemon omitió %s."
+
+msgid "This transaction would remove dnf5daemon-server, which DNF UI needs to apply package changes."
+msgstr "Esta transacción eliminaría dnf5daemon-server, que DNF UI necesita para aplicar cambios en los paquetes."
+
+msgid "This transaction would replace dnf5daemon-server, which DNF UI needs to apply package changes."
+msgstr "Esta transacción sustituiría dnf5daemon-server, que DNF UI necesita para aplicar cambios en los paquetes."
+
+msgid "Repository refresh was cancelled."
+msgstr "Se canceló la actualización de los repositorios."
+
+msgid "dnf5daemon repository refresh failed."
+msgstr "Error al actualizar los repositorios mediante dnf5daemon."
+
+msgid "Could not mark packages in dnf5daemon."
+msgstr "No se pudieron marcar los paquetes en dnf5daemon."
+
+msgid ""
+"dnf5daemon is not available. Make sure dnf5daemon-server is installed and "
+"running."
+msgstr "dnf5daemon no está disponible. Asegúrese de que dnf5daemon-server está instalado y en ejecución."
+
+msgid ""
+"dnf5daemon is installed, but DNF UI is not allowed to talk to it. Reinstall "
+"dnf5daemon-server or check the D-Bus policy."
+msgstr "dnf5daemon está instalado, pero DNF UI no tiene permiso para comunicarse con él. Reinstale dnf5daemon-server o compruebe la política de D-Bus."
+
+msgid "Could not open a dnf5daemon session."
+msgstr "No se pudo abrir una sesión de dnf5daemon."
+
+msgid "dnf5daemon returned an empty session path."
+msgstr "dnf5daemon devolvió una ruta de sesión vacía."
+
+msgid "Could not connect to the system D-Bus."
+msgstr "No se pudo conectar al D-Bus del sistema."
+
+msgid "dnf5daemon connection is not available."
+msgstr "La conexión con dnf5daemon no está disponible."
+
+msgid "Could not mark upgrade-all in dnf5daemon."
+msgstr "No se pudo marcar la actualización general en dnf5daemon."
+
+msgid "Could not list upgrade targets from dnf5daemon."
+msgstr "No se pudieron obtener los paquetes actualizables de dnf5daemon."
+
+msgid "dnf5daemon returned a repository without an ID."
+msgstr "dnf5daemon devolvió un repositorio sin identificador."
+
+msgid "dnf5daemon returned a repository without a valid enabled state."
+msgstr "dnf5daemon devolvió un repositorio sin un estado de activación válido."
+
+msgid "dnf5daemon returned an invalid repository list."
+msgstr "dnf5daemon devolvió una lista de repositorios no válida."
+
+msgid "dnf5daemon returned duplicate repository IDs."
+msgstr "dnf5daemon devolvió identificadores de repositorio duplicados."
+
+msgid "dnf5daemon repository change failed."
+msgstr "Error al modificar un repositorio mediante dnf5daemon."
+
+msgid "Could not list repositories from dnf5daemon."
+msgstr "No se pudieron listar los repositorios mediante dnf5daemon."
+
+msgid "dnf5daemon transaction session is not available."
+msgstr "La sesión de transacción de dnf5daemon no está disponible."
+
+msgid "Transaction preview was cancelled."
+msgstr "Se canceló la vista previa de la transacción."
+
+msgid "dnf5daemon failed to resolve the transaction."
+msgstr "dnf5daemon no pudo resolver la transacción."
+
+msgid "dnf5daemon could not resolve the transaction."
+msgstr "dnf5daemon no pudo resolver la transacción."
+
+msgid "Repository data is unavailable. Connect to the network, refresh repositories, and try again."
+msgstr "Los datos de los repositorios no están disponibles. Conéctese a la red, actualice los repositorios y vuelva a intentarlo."
+
+msgid "dnf5daemon returned an unsupported transaction resolve result."
+msgstr "dnf5daemon devolvió un resultado no compatible al resolver la transacción."
+
+msgid "Transaction apply was cancelled."
+msgstr "Se canceló la aplicación de la transacción."
+
+msgid "Failed to close the dnf5daemon session."
+msgstr "No se pudo cerrar la sesión de dnf5daemon."
+
+msgid "dnf5daemon key import request is incomplete."
+msgstr "La solicitud de importación de clave de dnf5daemon está incompleta."
+
+msgid "Operation cancelled."
+msgstr "Operación cancelada."
+
+msgid "Could not answer the dnf5daemon key import request."
+msgstr "No se pudo responder a la solicitud de importación de clave de dnf5daemon."
+
+msgid "The repository cannot be used until its signing key is trusted."
+msgstr "El repositorio no se puede utilizar hasta que se confíe en su clave de firma."
+
+msgid "Repository signing key was rejected."
+msgstr "Se rechazó la clave de firma del repositorio."
+
+msgid "Repository signing key rejected."
+msgstr "Clave de firma del repositorio rechazada."
+
+msgid "Repository signing key accepted."
+msgstr "Clave de firma del repositorio aceptada."
+
+msgid "Starting package downloads..."
+msgstr "Iniciando las descargas de paquetes..."
+
+msgid "Downloading: "
+msgstr "Descargando: "
+
+msgid "Download progress: "
+msgstr "Progreso de la descarga: "
+
+msgid "package download"
+msgstr "descarga de paquete"
+
+msgid "Download mirror failed."
+msgstr "Error en el servidor espejo de descarga."
+
+msgid "Package download failed."
+msgstr "Error al descargar el paquete."
+
+msgid "Download ready: "
+msgstr "Descarga lista: "
+
+msgid "Running transaction."
+msgstr "Ejecutando la transacción."
+
+msgid "Verifying package files."
+msgstr "Verificando los archivos de paquetes."
+
+msgid "Preparing transaction."
+msgstr "Preparando la transacción."
+
+msgid "Processing package."
+msgstr "Procesando paquete."
+
+msgid "Processing package: "
+msgstr "Procesando paquete: "
+
+msgid "Package unpack failed."
+msgstr "Error al desempaquetar el paquete."
+
+msgid "Package unpack failed: "
+msgstr "Error al desempaquetar el paquete: "
+
+msgid "repository metadata"
+msgstr "metadatos de repositorios"
+
+msgid "(no summary)"
+msgstr "(sin resumen)"
+
+msgid "Dependency"
+msgstr "Dependencia"
+
+msgid "User"
+msgstr "Usuario"
+
+msgid "Clean"
+msgstr "Limpieza"
+
+msgid "Weak dependency"
+msgstr "Dependencia débil"
+
+msgid "Group"
+msgstr "Grupo"
+
+msgid "External"
+msgstr "Externo"
+
+msgid "Unknown"
+msgstr "Desconocido"
+
+#, c-format
+msgid "No details found for %s"
+msgstr "No se encontraron detalles de %s"
+
+msgid "Name"
+msgstr "Nombre"
+
+msgid "Package ID"
+msgstr "ID del paquete"
+
+msgid "Version"
+msgstr "Versión"
+
+msgid "Release"
+msgstr "Revisión"
+
+msgid "Arch"
+msgstr "Arquitectura"
+
+msgid "Repo"
+msgstr "Repositorio"
+
+msgid "Installed From"
+msgstr "Instalado desde"
+
+msgid "Install Size"
+msgstr "Tamaño instalado"
+
+msgid "Size"
+msgstr "Tamaño"
+
+msgid "Install Reason"
+msgstr "Motivo de instalación"
+
+msgid "Download Size"
+msgstr "Tamaño de descarga"
+
+msgid "Installed Version"
+msgstr "Versión instalada"
+
+msgid "Upgradable Version"
+msgstr "Versión actualizable"
+
+msgid "Summary"
+msgstr "Resumen"
+
+msgid "Description"
+msgstr "Descripción"
+
+msgid "File list available only for installed packages."
+msgstr "La lista de archivos solo está disponible para paquetes instalados."
+
+msgid "No files recorded for this installed package."
+msgstr "No hay archivos registrados para este paquete instalado."
+
+#, c-format
+msgid "--- %zu more file not shown ---"
+msgid_plural "--- %zu more files not shown ---"
+msgstr[0] "--- %zu archivo más no mostrado ---"
+msgstr[1] "--- %zu archivos más no mostrados ---"
+
+msgid "--- Use the package manager CLI for complete list ---"
+msgstr "--- Utilice el gestor de paquetes en la línea de comandos para ver la lista completa ---"
+
+msgid "No dependency information found for this package."
+msgstr "No se encontró información sobre dependencias de este paquete."
+
+msgid "(none)"
+msgstr "(ninguno)"
+
+msgid "Requires"
+msgstr "Requiere"
+
+msgid "Required By"
+msgstr "Requerido por"
+
+msgid "(installed packages only)"
+msgstr "(solo paquetes instalados)"
+
+msgid "Provides"
+msgstr "Proporciona"
+
+msgid "Conflicts"
+msgstr "Conflictos"
+
+msgid "Obsoletes"
+msgstr "Sustituye"
+
+msgid "No changelog entries found."
+msgstr "No se encontraron entradas en el registro de cambios."
+
+msgid "Date"
+msgstr "Fecha"
+
+msgid "Author"
+msgstr "Autor"
+
+msgid "No changelog available."
+msgstr "No hay registro de cambios disponible."
+
+msgid "History load was cancelled."
+msgstr "Se canceló la carga del historial."
+
+msgid "Install"
+msgstr "Instalar"
+
+msgid "Upgrade"
+msgstr "Actualizar"
+
+msgid "Downgrade"
+msgstr "Instalar versión anterior"
+
+msgid "Reinstall"
+msgstr "Reinstalar"
+
+msgid "Remove"
+msgstr "Eliminar"
+
+msgid "Replaced"
+msgstr "Sustituido"
+
+msgid "Reason changed"
+msgstr "Motivo modificado"
+
+msgid "Other"
+msgstr "Otro"
+
+#, c-format
+msgid "%s: %.1f s"
+msgstr "%s: %.1f s"
+
+msgid "Mark for Install"
+msgstr "Marcar para instalar"
+
+msgid "Unmark Install"
+msgstr "Desmarcar instalación"
+
+msgid "Mark for Upgrade"
+msgstr "Marcar para actualizar"
+
+msgid "Unmark Upgrade"
+msgstr "Desmarcar actualización"
+
+msgid "Mark for Downgrade"
+msgstr "Marcar para instalar versión anterior"
+
+msgid "Unmark Downgrade"
+msgstr "Desmarcar versión anterior"
+
+msgid "Mark for Removal"
+msgstr "Marcar para eliminar"
+
+msgid "Mark for Reinstall"
+msgstr "Marcar para reinstalar"
+
+msgid "Unmark Reinstall"
+msgstr "Desmarcar reinstalación"
+
+msgid "Unmark Removal"
+msgstr "Desmarcar eliminación"
+
+msgid "Fetching file list..."
+msgstr "Cargando lista de archivos..."
+
+msgid "Error loading file list."
+msgstr "Error al cargar la lista de archivos."
+
+msgid "Fetching dependencies..."
+msgstr "Cargando dependencias..."
+
+msgid "Error loading dependencies."
+msgstr "Error al cargar las dependencias."
+
+msgid "Fetching changelog..."
+msgstr "Cargando registro de cambios..."
+
+msgid "Error loading changelog."
+msgstr "Error al cargar el registro de cambios."
+
+msgid "Package details load was cancelled."
+msgstr "Se canceló la carga de los detalles del paquete."
+
+msgid "Status"
+msgstr "Estado"
+
+msgid "Select a package for details."
+msgstr "Seleccione un paquete para ver sus detalles."
+
+msgid "Select an installed package to view its file list."
+msgstr "Seleccione un paquete instalado para ver su lista de archivos."
+
+msgid "Select a package to view dependencies."
+msgstr "Seleccione un paquete para ver sus dependencias."
+
+msgid "Select a package to view its changelog."
+msgstr "Seleccione un paquete para ver su registro de cambios."
+
+msgid "Error loading info."
+msgstr "Error al cargar la información."
+
+msgid "Package info loaded."
+msgstr "Información del paquete cargada."
+
+msgid "Open the Files tab to load the file list."
+msgstr "Abra la pestaña Archivos para cargar la lista de archivos."
+
+msgid "Open the Dependencies tab to load dependencies."
+msgstr "Abra la pestaña Dependencias para cargar las dependencias."
+
+msgid "Open the Changelog tab to load the changelog."
+msgstr "Abra la pestaña Registro de cambios para cargar el registro de cambios."
+
+msgid "Fetching package info..."
+msgstr "Cargando información del paquete..."
+
+msgid "All actions"
+msgstr "Todas las acciones"
+
+msgid "No actions"
+msgstr "Ninguna acción"
+
+#, c-format
+msgid "%zu actions"
+msgstr "%zu acciones"
+
+msgid "Dates must use YYYY-MM-DD."
+msgstr "Las fechas deben tener el formato AAAA-MM-DD."
+
+msgid "The start date must be before the end date."
+msgstr "La fecha inicial debe ser anterior a la fecha final."
+
+msgid "Unknown time"
+msgstr "Hora desconocida"
+
+msgid "Page"
+msgstr "Página"
+
+msgid "Transaction"
+msgstr "Transacción"
+
+msgid "Result"
+msgstr "Resultado"
+
+msgid "OK"
+msgstr "Correcto"
+
+msgid "Failed"
+msgstr "Error"
+
+msgid "Command"
+msgstr "Comando"
+
+msgid "No transaction history rows were found on this page."
+msgstr "No se encontraron entradas del historial de transacciones en esta página."
+
+msgid "No transaction history rows match the filter."
+msgstr "Ninguna entrada del historial de transacciones coincide con el filtro."
+
+msgid "No transaction history was found."
+msgstr "No se encontró ningún historial de transacciones."
+
+#, c-format
+msgid "Showing %zu package change."
+msgid_plural "Showing %zu package changes."
+msgstr[0] "Mostrando %zu cambio de paquete."
+msgstr[1] "Mostrando %zu cambios de paquetes."
+
+#, c-format
+msgid "Page %zu."
+msgstr "Página %zu."
+
+msgid "Use Older to show more history."
+msgstr "Utilice Anteriores para ver más entradas del historial."
+
+msgid "Search"
+msgstr "Buscar"
+
+msgid "Failed to load transaction history."
+msgstr "Error al cargar el historial de transacciones."
+
+msgid "Loading transaction history..."
+msgstr "Cargando el historial de transacciones..."
+
+msgid "Transaction is running. History controls are disabled."
+msgstr "Hay una transacción en curso. Los controles del historial están desactivados."
+
+msgid "Transaction finished. Press Search to refresh transaction history."
+msgstr "Transacción finalizada. Pulse Buscar para actualizar el historial de transacciones."
+
+msgid "Transaction History"
+msgstr "Historial de transacciones"
+
+msgid "Package name..."
+msgstr "Nombre del paquete..."
+
+msgid "Command, repository, or architecture..."
+msgstr "Comando, repositorio o arquitectura..."
+
+msgid "All results"
+msgstr "Todos los resultados"
+
+msgid "From date YYYY-MM-DD"
+msgstr "Desde AAAA-MM-DD"
+
+msgid "To date YYYY-MM-DD"
+msgstr "Hasta AAAA-MM-DD"
+
+msgid "Go"
+msgstr "Ir"
+
+msgid "Newer"
+msgstr "Más recientes"
+
+msgid "Older"
+msgstr "Anteriores"
+
+#, c-format
+msgid "Searching for '%s'..."
+msgstr "Buscando '%s'..."
+
+#, c-format
+msgid "Loaded %zu cached result."
+msgid_plural "Loaded %zu cached results."
+msgstr[0] "Se ha cargado %zu resultado de la caché."
+msgstr[1] "Se han cargado %zu resultados de la caché."
+
+msgid "Listing installed packages..."
+msgstr "Listando paquetes instalados..."
+
+msgid "Listing unneeded packages..."
+msgstr "Listando paquetes innecesarios..."
+
+msgid "Listing packages..."
+msgstr "Listando paquetes..."
+
+msgid "Listing upgradable packages..."
+msgstr "Listando paquetes actualizables..."
+
+#. Reset status labels and package actions.
+msgid "Ready."
+msgstr "Listo."
+
+msgid "Wait for the current package query to finish."
+msgstr "Espere a que termine la consulta actual de paquetes."
+
+msgid "Wait for package filtering to finish."
+msgstr "Espere a que termine el filtrado de paquetes."
+
+msgid "Loading package..."
+msgstr "Cargando paquete..."
+
+msgid "Query"
+msgstr "Consulta"
+
+msgid "Search cancelled."
+msgstr "Búsqueda cancelada."
+
+msgid "Listing installed packages cancelled."
+msgstr "Listado de paquetes instalados cancelado."
+
+msgid "Listing unneeded packages cancelled."
+msgstr "Listado de paquetes innecesarios cancelado."
+
+msgid "Listing packages cancelled."
+msgstr "Listado de paquetes cancelado."
+
+msgid "Listing upgradable packages cancelled."
+msgstr "Listado de paquetes actualizables cancelado."
+
+msgid "Selected package refresh cancelled."
+msgstr "Actualización del paquete seleccionado cancelada."
+
+msgid "Stopping search..."
+msgstr "Deteniendo la búsqueda..."
+
+msgid "Stopping installed package listing..."
+msgstr "Deteniendo el listado de paquetes instalados..."
+
+msgid "Stopping unneeded package listing..."
+msgstr "Deteniendo el listado de paquetes innecesarios..."
+
+msgid "Stopping package listing..."
+msgstr "Deteniendo el listado de paquetes..."
+
+msgid "Stopping upgradable package listing..."
+msgstr "Deteniendo el listado de paquetes actualizables..."
+
+msgid "Stopping selected package refresh..."
+msgstr "Deteniendo la actualización del paquete seleccionado..."
+
+msgid "Stopping operation..."
+msgstr "Deteniendo la operación..."
+
+msgid "List Installed"
+msgstr "Listar instalados"
+
+msgid "List Unneeded"
+msgstr "Listar innecesarios"
+
+msgid "List Packages"
+msgstr "Listar paquetes"
+
+msgid "List Upgradable"
+msgstr "Listar actualizables"
+
+#, c-format
+msgid "List Upgradable (%zu)"
+msgid_plural "List Upgradable (%zu)"
+msgstr[0] "Listar actualizables (%zu)"
+msgstr[1] "Listar actualizables (%zu)"
+
+msgid "Checking Upgrades..."
+msgstr "Comprobando actualizaciones..."
+
+msgid "Checking upgradable packages..."
+msgstr "Comprobando paquetes actualizables..."
+
+msgid "Stop"
+msgstr "Detener"
+
+msgid "Package state changed while loading. Run the operation again."
+msgstr "El estado de los paquetes ha cambiado durante la carga. Ejecute de nuevo la operación."
+
+#, c-format
+msgid "Found %zu installed package."
+msgid_plural "Found %zu installed packages."
+msgstr[0] "Se ha encontrado %zu paquete instalado."
+msgstr[1] "Se han encontrado %zu paquetes instalados."
+
+#, c-format
+msgid "Found %zu unneeded package."
+msgid_plural "Found %zu unneeded packages."
+msgstr[0] "Se ha encontrado %zu paquete innecesario."
+msgstr[1] "Se han encontrado %zu paquetes innecesarios."
+
+msgid "Error listing packages."
+msgstr "Error al listar los paquetes."
+
+#, c-format
+msgid "Found %zu package."
+msgid_plural "Found %zu packages."
+msgstr[0] "Se ha encontrado %zu paquete."
+msgstr[1] "Se han encontrado %zu paquetes."
+
+msgid "Only installed packages were searched. Results may be incomplete."
+msgstr "Solo se han buscado los paquetes instalados. Es posible que falten resultados."
+
+msgid "Using cached repository data. Results may differ from an online search."
+msgstr "Se están utilizando datos de repositorios en caché. Los resultados pueden diferir de una búsqueda en línea."
+
+msgid "dnf5daemon upgrade information is already being refreshed."
+msgstr "Ya se está actualizando la información de actualizaciones de dnf5daemon."
+
+msgid "List Upgradable was cancelled."
+msgstr "Se canceló el listado de actualizables."
+
+msgid "Unable to load upgradable packages from dnf5daemon."
+msgstr "No se pudieron cargar los paquetes actualizables de dnf5daemon."
+
+msgid ""
+"Package state changed while loading upgrades. Press List Upgradable to try "
+"again."
+msgstr "El estado de los paquetes ha cambiado al cargar las actualizaciones. Pulse Listar actualizables para volver a intentarlo."
+
+msgid "Unable to publish dnf5daemon upgrade information."
+msgstr "No se pudo publicar la información de actualizaciones de dnf5daemon."
+
+#, c-format
+msgid "Found %zu upgradable package."
+msgid_plural "Found %zu upgradable packages."
+msgstr[0] "Se ha encontrado %zu paquete actualizable."
+msgstr[1] "Se han encontrado %zu paquetes actualizables."
+
+msgid "Error listing upgradable packages."
+msgstr "Error al listar los paquetes actualizables."
+
+msgid "Error or no results."
+msgstr "Error o sin resultados."
+
+msgid "Enabled"
+msgstr "Activado"
+
+msgid "Repository ID"
+msgstr "ID del repositorio"
+
+msgid "Repository load was cancelled."
+msgstr "Se canceló la carga de los repositorios."
+
+msgid "Failed to load repositories."
+msgstr "Error al cargar los repositorios."
+
+msgid "Package data could not be loaded. Repository metadata and installed packages are unavailable."
+msgstr "No se pudieron cargar los datos de los paquetes. No están disponibles los metadatos de los repositorios ni los paquetes instalados."
+
+#, c-format
+msgid "%zu repository change is pending."
+msgid_plural "%zu repository changes are pending."
+msgstr[0] "Hay %zu cambio de repositorio pendiente."
+msgstr[1] "Hay %zu cambios de repositorios pendientes."
+
+#, c-format
+msgid "Showing %zu repository."
+msgid_plural "Showing %zu repositories."
+msgstr[0] "Mostrando %zu repositorio."
+msgstr[1] "Mostrando %zu repositorios."
+
+msgid "Repositories"
+msgstr "Repositorios"
+
+msgid "Loading repositories..."
+msgstr "Cargando repositorios..."
+
+msgid "Configured repositories"
+msgstr "Repositorios configurados"
+
+msgid "Repository change failed."
+msgstr "Error al cambiar el repositorio."
+
+msgid "Failed to apply repository changes."
+msgstr "Error al aplicar los cambios en los repositorios."
+
+msgid "Repository changes applied."
+msgstr "Cambios de repositorios aplicados."
+
+msgid "Repository changes applied. Using cached repository metadata."
+msgstr "Cambios de repositorios aplicados. Se están utilizando metadatos de repositorios en caché."
+
+msgid "Repository changes applied. Showing installed packages only."
+msgstr "Cambios de repositorios aplicados. Solo se muestran los paquetes instalados."
+
+msgid "Applying repository changes..."
+msgstr "Aplicando cambios en los repositorios..."
+
+msgid "The main window is not available."
+msgstr "La ventana principal no está disponible."
+
+msgid "Wait for repository refresh to finish."
+msgstr "Espere a que termine la actualización de los repositorios."
+
+msgid "Close the transaction preview before changing repositories."
+msgstr "Cierre la vista previa de la transacción antes de modificar los repositorios."
+
+msgid "Repository changes may have changed package data. Reload packages before continuing."
+msgstr "Los cambios en los repositorios pueden haber modificado los datos de los paquetes. Vuelva a cargar los paquetes antes de continuar."
+
+msgid "Repository changes applied. Package data refreshed."
+msgstr "Cambios de repositorios aplicados. Datos de paquetes actualizados."
+
+msgid "Repository changes applied. Reload packages before continuing."
+msgstr "Cambios de repositorios aplicados. Vuelva a cargar los paquetes antes de continuar."
+
+msgid "Repository state already matched the requested changes, but package data could not be reloaded."
+msgstr "El estado de los repositorios ya coincidía con los cambios solicitados, pero no se pudieron volver a cargar los datos de los paquetes."
+
+msgid "Some repository changes were applied, but final state could not be verified."
+msgstr "Se aplicaron algunos cambios en los repositorios, pero no se pudo comprobar el estado final."
+
+msgid "Some repository changes were applied."
+msgstr "Se aplicaron algunos cambios en los repositorios."
+
+msgid "Repository changes were sent, but final state could not be verified."
+msgstr "Se enviaron los cambios en los repositorios, pero no se pudo comprobar el estado final."
+
+msgid "Repository changes were sent, but final state did not match the request."
+msgstr "Se enviaron los cambios en los repositorios, pero el estado final no coincide con lo solicitado."
+
+msgid "Repository changes applied, but package data could not be reloaded."
+msgstr "Cambios de repositorios aplicados, pero no se pudieron volver a cargar los datos de los paquetes."
+
+msgid "Repository state already matched the requested changes. Reload packages before continuing."
+msgstr "El estado de los repositorios ya coincidía con los cambios solicitados. Vuelva a cargar los paquetes antes de continuar."
+
+msgid "Repository changes may be incomplete. Package data refreshed."
+msgstr "Es posible que los cambios en los repositorios estén incompletos. Datos de paquetes actualizados."
+
+msgid "Repository changes may be incomplete. Using cached repository metadata."
+msgstr "Es posible que los cambios en los repositorios estén incompletos. Se están utilizando metadatos de repositorios en caché."
+
+msgid "Repository changes may be incomplete. Showing installed packages only."
+msgstr "Es posible que los cambios en los repositorios estén incompletos. Solo se muestran los paquetes instalados."
+
+msgid "Repository changes are still being applied."
+msgstr "Los cambios en los repositorios aún se están aplicando."
+
+msgid "Repository configuration changed before Apply. Reload repositories and try again."
+msgstr "La configuración de los repositorios cambió antes de Aplicar. Vuelva a cargar los repositorios e inténtelo de nuevo."
+
+msgid "Repository state already matched the requested changes."
+msgstr "El estado de los repositorios ya coincidía con los cambios solicitados."
+
+msgid "Repository state already matched the requested changes. Using cached repository metadata."
+msgstr "El estado de los repositorios ya coincidía con los cambios solicitados. Se están utilizando metadatos de repositorios en caché."
+
+msgid "Repository state already matched the requested changes. Showing installed packages only."
+msgstr "El estado de los repositorios ya coincidía con los cambios solicitados. Solo se muestran los paquetes instalados."
+
+msgid "No repository changes pending."
+msgstr "No hay cambios de repositorios pendientes."
+
+msgid "Some repository changes were not confirmed by dnf5daemon."
+msgstr "dnf5daemon no confirmó algunos cambios en los repositorios."
+
+msgid "Repository state could not be reloaded."
+msgstr "No se pudo volver a cargar el estado de los repositorios."
+
+msgid "Apply Repository Changes"
+msgstr "Aplicar cambios de repositorios"
+
+msgid "Apply the following repository changes?"
+msgstr "¿Aplicar los siguientes cambios en los repositorios?"
+
+msgid "To be enabled"
+msgstr "Por activar"
+
+msgid "To be disabled"
+msgstr "Por desactivar"
+
+#, c-format
+msgid "%zu repository change will be applied."
+msgid_plural "%zu repository changes will be applied."
+msgstr[0] "Se aplicará %zu cambio de repositorio."
+msgstr[1] "Se aplicarán %zu cambios de repositorios."
+
+msgid "Refresh"
+msgstr "Actualizar"
+
+msgid "Error refreshing package."
+msgstr "Error al actualizar el paquete."
+
+msgid "Package"
+msgstr "Paquete"
+
+msgid "Update"
+msgstr "Actualización"
+
+msgid "Update Release"
+msgstr "Revisión de actualización"
+
+msgid "Package list exported."
+msgstr "Lista de paquetes exportada."
+
+msgid "Could not export package list."
+msgstr "No se pudo exportar la lista de paquetes."
+
+msgid "No package rows to export."
+msgstr "No hay filas de paquetes para exportar."
+
+msgid "Export Package List"
+msgstr "Exportar lista de paquetes"
+
+msgid "Installed"
+msgstr "Instalado"
+
+msgid "Installed (local only)"
+msgstr "Instalado (solo local)"
+
+msgid "Installed (newer than repo)"
+msgstr "Instalado (más reciente que en el repositorio)"
+
+msgid "Newer in repository"
+msgstr "Versión más reciente en el repositorio"
+
+msgid "Installed, update available"
+msgstr "Instalado, actualización disponible"
+
+msgid "Available update"
+msgstr "Actualización disponible"
+
+msgid "Older in repository"
+msgstr "Versión anterior en el repositorio"
+
+msgid "Available"
+msgstr "Disponible"
+
+msgid "Pending Upgrade"
+msgstr "Actualización pendiente"
+
+msgid "Pending Install"
+msgstr "Instalación pendiente"
+
+msgid "Pending Downgrade"
+msgstr "Instalación de versión anterior pendiente"
+
+msgid "Pending Reinstall"
+msgstr "Reinstalación pendiente"
+
+msgid "Pending Removal"
+msgstr "Eliminación pendiente"
+
+msgid "Find packages"
+msgstr "Buscar paquetes"
+
+msgid "Search for packages, or choose a list option to browse packages."
+msgstr "Busque paquetes o elija una opción para explorar los paquetes."
+
+msgid "No packages found"
+msgstr "No se encontraron paquetes"
+
+msgid "Try a different search or refresh repositories."
+msgstr "Pruebe otra búsqueda o actualice los repositorios."
+
+msgid ""
+"Shortcuts\n"
+"Ctrl+F: Focus search\n"
+"Ctrl+L: Clear package list\n"
+"Ctrl+A: Mark all (Upgradable or Unneeded list)\n"
+"Ctrl+E: Export package list\n"
+"Ctrl+Enter: Apply pending changes\n"
+"F5: Refresh repositories\n"
+"Ctrl+H: Toggle history panel\n"
+"Ctrl+I: Toggle package info panel\n"
+"Ctrl+Shift+H: Open transaction history\n"
+"Ctrl+Shift+R: Open repositories\n"
+"Ctrl+Q or Ctrl+W: Quit"
+msgstr "Atajos de teclado\nCtrl+F: Enfocar la búsqueda\nCtrl+L: Vaciar la lista de paquetes\nCtrl+A: Marcar todos (lista de actualizables o innecesarios)\nCtrl+E: Exportar la lista de paquetes\nCtrl+Enter: Aplicar los cambios pendientes\nF5: Actualizar repositorios\nCtrl+H: Mostrar u ocultar el panel del historial\nCtrl+I: Mostrar u ocultar el panel de información del paquete\nCtrl+Shift+H: Abrir el historial de transacciones\nCtrl+Shift+R: Abrir los repositorios\nCtrl+Q o Ctrl+W: Salir"
+
+#. Update count label
+#, c-format
+msgid "Item: %zu"
+msgid_plural "Items: %zu"
+msgstr[0] "Elemento: %zu"
+msgstr[1] "Elementos: %zu"
+
+msgid "Items: 0"
+msgstr "Elementos: 0"
+
+#. Starts repository refresh on a background task.
+msgid "Refresh Repositories"
+msgstr "Actualizar repositorios"
+
+msgid "Refreshing dnf5daemon metadata..."
+msgstr "Actualizando metadatos de dnf5daemon..."
+
+msgid "Loading refreshed metadata..."
+msgstr "Cargando metadatos actualizados..."
+
+msgid "Repository refresh stopped."
+msgstr "Actualización de repositorios detenida."
+
+msgid "Repositories refreshed. Press List Upgradable to load updated upgrades."
+msgstr "Repositorios actualizados. Pulse Listar actualizables para cargar las actualizaciones disponibles."
+
+msgid "Repositories refreshed."
+msgstr "Repositorios actualizados."
+
+msgid "Live repo refresh failed. Using cached repository metadata."
+msgstr "Error al actualizar los repositorios en línea. Se están utilizando metadatos de repositorios en caché."
+
+msgid "Live repo refresh failed. Showing installed packages only."
+msgstr "Error al actualizar los repositorios en línea. Solo se muestran los paquetes instalados."
+
+msgid "Repo refresh failed."
+msgstr "Error al actualizar los repositorios."
+
+msgid "Stopping repository refresh..."
+msgstr "Deteniendo la actualización de repositorios..."
+
+msgid "Repository refresh is stopping."
+msgstr "Se está deteniendo la actualización de repositorios."
+
+msgid "Refreshing repositories..."
+msgstr "Actualizando repositorios..."
+
+msgid "Wait for the current transaction preview to finish."
+msgstr "Espere a que termine la vista previa de la transacción actual."
+
+msgid "All packages are already up to date."
+msgstr "Todos los paquetes ya están actualizados."
+
+msgid "No transaction changes were returned."
+msgstr "La transacción no produjo ningún cambio."
+
+msgid "Wait for the current transaction to finish."
+msgstr "Espere a que termine la transacción actual."
+
+msgid "Preparing Preview..."
+msgstr "Preparando vista previa..."
+
+msgid "Repository refresh failed after transaction."
+msgstr "Error al actualizar los repositorios después de la transacción."
+
+msgid "No prepared transaction request is available."
+msgstr "No hay ninguna solicitud de transacción preparada."
+
+msgid "Queued transaction request."
+msgstr "Solicitud de transacción puesta en cola."
+
+msgid "Applying package upgrades. See transaction window for details."
+msgstr "Aplicando actualizaciones de paquetes. Consulte la ventana de la transacción para obtener más información."
+
+msgid "Applying pending changes. See transaction window for details."
+msgstr "Aplicando cambios pendientes. Consulte la ventana de la transacción para obtener más información."
+
+msgid "Transaction successful."
+msgstr "Transacción completada correctamente."
+
+msgid "Transaction failed."
+msgstr "La transacción ha fallado."
+
+msgid "Transaction failed. See the transaction window for details."
+msgstr "La transacción ha fallado. Consulte la ventana de la transacción para obtener más información."
+
+msgid "Transaction Failed"
+msgstr "Error de transacción"
+
+msgid "Preparing transaction preview..."
+msgstr "Preparando la vista previa de la transacción..."
+
+msgid "Unable to prepare transaction preview."
+msgstr "No se pudo preparar la vista previa de la transacción."
+
+msgid "Transaction Preview Failed"
+msgstr "Error de vista previa de la transacción"
+
+msgid "The transaction could not be prepared. Review the details below."
+msgstr "No se pudo preparar la transacción. Revise los detalles a continuación."
+
+msgid "Transaction Preview Warning"
+msgstr "Aviso de vista previa de la transacción"
+
+msgid "No package changes were prepared. The resolver reported a warning."
+msgstr "No se preparó ningún cambio de paquete. El sistema de resolución de dependencias emitió un aviso."
+
+msgid "No packages were changed. The package resolver reported the following warning:"
+msgstr "No se modificó ningún paquete. El sistema de resolución de dependencias emitió el siguiente aviso:"
+
+msgid "Clear pending package actions before upgrading all packages."
+msgstr "Borre las acciones de paquetes pendientes antes de actualizar todos los paquetes."
+
+msgid "No pending changes."
+msgstr "No hay cambios pendientes."
+
+msgid "Transaction request is empty."
+msgstr "La solicitud de transacción está vacía."
+
+msgid "Upgrade all cannot be combined with other package actions."
+msgstr "Actualizar todo no se puede combinar con otras acciones de paquetes."
+
+#, c-format
+msgid "Transaction request contains an empty %s package spec."
+msgstr "La solicitud de transacción contiene una especificación de paquete %s vacía."
+
+msgid "Transaction request contains a package spec that is too long."
+msgstr "La solicitud de transacción contiene una especificación de paquete demasiado larga."
+
+#, c-format
+msgid "Transaction request contains a duplicate %s package spec."
+msgstr "La solicitud de transacción contiene una especificación de paquete %s duplicada."
+
+msgid "install"
+msgstr "instalación"
+
+msgid "upgrade"
+msgstr "actualización"
+
+msgid "downgrade"
+msgstr "instalación de versión anterior"
+
+msgid "remove"
+msgstr "eliminación"
+
+msgid "reinstall"
+msgstr "reinstalación"
+
+msgid "Transaction request contains conflicting package actions."
+msgstr "La solicitud de transacción contiene acciones de paquetes incompatibles."
+
+#, c-format
+msgid ""
+"Cannot modify %s while DNF UI is running. Close the application and use "
+"another tool."
+msgstr "No se puede modificar %s mientras DNF UI se está ejecutando. Cierre la aplicación y utilice otra herramienta."
+
+msgid "No package selected."
+msgstr "Ningún paquete seleccionado."
+
+msgid "No install, upgrade, or downgrade action is available."
+msgstr "No hay ninguna acción disponible para instalar, actualizar o instalar una versión anterior."
+
+msgid "Unmarked: "
+msgstr "Desmarcado: "
+
+msgid "Upgrade information changed. Press List Upgradable to reload."
+msgstr "La información de actualizaciones ha cambiado. Pulse Listar actualizables para volver a cargarla."
+
+msgid "Marked for install: "
+msgstr "Marcado para instalar: "
+
+msgid "Marked for upgrade: "
+msgstr "Marcado para actualizar: "
+
+msgid "Marked for downgrade: "
+msgstr "Marcado para instalar una versión anterior: "
+
+msgid "Package is not installed."
+msgstr "El paquete no está instalado."
+
+msgid "Marked for removal: "
+msgstr "Marcado para eliminar: "
+
+msgid "Package cannot be reinstalled from current repositories."
+msgstr "El paquete no se puede reinstalar desde los repositorios actuales."
+
+msgid "Marked for reinstall: "
+msgstr "Marcado para reinstalar: "
+
+msgid "No listed unneeded packages to mark for removal."
+msgstr "No hay paquetes innecesarios en la lista para marcar para su eliminación."
+
+#, c-format
+msgid "Marked %zu package for removal."
+msgid_plural "Marked %zu packages for removal."
+msgstr[0] "Se ha marcado %zu paquete para eliminar."
+msgstr[1] "Se han marcado %zu paquetes para eliminar."
+
+msgid "No listed upgrades to mark."
+msgstr "No hay actualizaciones listadas para marcar."
+
+#, c-format
+msgid "Marked %zu listed upgrade."
+msgid_plural "Marked %zu listed upgrades."
+msgstr[0] "Se ha marcado %zu actualización listada."
+msgstr[1] "Se han marcado %zu actualizaciones listadas."
+
+msgid "No pending actions to clear."
+msgstr "No hay acciones pendientes que borrar."
+
+#, c-format
+msgid "Cleared %zu pending action."
+msgid_plural "Cleared %zu pending actions."
+msgstr[0] "Se ha borrado %zu acción pendiente."
+msgstr[1] "Se han borrado %zu acciones pendientes."
+
+msgid "Pending package action is missing its transaction spec."
+msgstr "La acción de paquete pendiente no tiene especificación de transacción."
+
+msgid "Pending package action is missing its package identity."
+msgstr "La acción de paquete pendiente no tiene identidad de paquete."
+
+msgid "Pending package actions contain conflicting package identities."
+msgstr "Las acciones de paquetes pendientes contienen identidades de paquetes incompatibles."
+
+msgid "Unknown pending package action."
+msgstr "Acción de paquete pendiente desconocida."
+
+msgid ""
+"DNF UI cannot downgrade the package that owns the running application while "
+"it is running."
+msgstr "DNF UI no puede instalar una versión anterior del paquete al que pertenece la aplicación mientras está en ejecución."
+
+msgid ""
+"DNF UI cannot remove the package that owns the running application. Close "
+"DNF UI and remove it from another tool."
+msgstr "DNF UI no puede eliminar el paquete al que pertenece la aplicación en ejecución. Cierre DNF UI y elimínelo con otra herramienta."
+
+msgid ""
+"DNF UI cannot reinstall the package that owns the running application while "
+"it is running."
+msgstr "DNF UI no puede reinstalar el paquete al que pertenece la aplicación mientras está en ejecución."
+
+msgid "Could not verify whether the transaction modifies DNF UI itself."
+msgstr "No se pudo comprobar si la transacción modifica el propio DNF UI."
+
+msgid "Apply Transactions"
+msgstr "Aplicar transacciones"
+
+msgid "Install: "
+msgstr "Instalar: "
+
+msgid "Upgrade: "
+msgstr "Actualizar: "
+
+msgid "Downgrade: "
+msgstr "Instalar versión anterior: "
+
+msgid "Reinstall: "
+msgstr "Reinstalar: "
+
+msgid "Remove: "
+msgstr "Eliminar: "
+
+msgid "Key ID"
+msgstr "ID de la clave"
+
+msgid "Fingerprint"
+msgstr "Huella digital"
+
+msgid "Repository"
+msgstr "Repositorio"
+
+msgid "Key URL"
+msgstr "URL de la clave"
+
+msgid "Repository Signing Key"
+msgstr "Clave de firma del repositorio"
+
+msgid "Trust this repository signing key?"
+msgstr "¿Confiar en esta clave de firma del repositorio?"
+
+msgid "Reject"
+msgstr "Rechazar"
+
+msgid "Trust Key"
+msgstr "Confiar en la clave"
+
+#, c-format
+msgid "%zu package will be installed."
+msgid_plural "%zu packages will be installed."
+msgstr[0] "Se instalará %zu paquete."
+msgstr[1] "Se instalarán %zu paquetes."
+
+#, c-format
+msgid "%zu package will be upgraded."
+msgid_plural "%zu packages will be upgraded."
+msgstr[0] "Se actualizará %zu paquete."
+msgstr[1] "Se actualizarán %zu paquetes."
+
+#, c-format
+msgid "%zu package will be downgraded."
+msgid_plural "%zu packages will be downgraded."
+msgstr[0] "Se instalará una versión anterior de %zu paquete."
+msgstr[1] "Se instalarán versiones anteriores de %zu paquetes."
+
+#, c-format
+msgid "%zu package will be reinstalled."
+msgid_plural "%zu packages will be reinstalled."
+msgstr[0] "Se reinstalará %zu paquete."
+msgstr[1] "Se reinstalarán %zu paquetes."
+
+#, c-format
+msgid "%zu package will be removed."
+msgid_plural "%zu packages will be removed."
+msgstr[0] "Se eliminará %zu paquete."
+msgstr[1] "Se eliminarán %zu paquetes."
+
+#, c-format
+msgid "%zu package will be replaced."
+msgid_plural "%zu packages will be replaced."
+msgstr[0] "Se sustituirá %zu paquete."
+msgstr[1] "Se sustituirán %zu paquetes."
+
+msgid "Disk space usage will be unchanged."
+msgstr "El uso de espacio en disco no cambiará."
+
+#, c-format
+msgid "%s extra disk space will be used."
+msgstr "Se utilizarán %s adicionales de espacio en disco."
+
+#, c-format
+msgid "%s of disk space will be freed."
+msgstr "Se liberarán %s de espacio en disco."
+
+msgid "Apply the following changes?"
+msgstr "¿Aplicar los siguientes cambios?"
+
+msgid ""
+"This is your last opportunity to look through the list of marked changes "
+"before they are applied."
+msgstr "Esta es su última oportunidad para revisar la lista de cambios marcados antes de aplicarlos."
+
+msgid "Warnings"
+msgstr "Avisos"
+
+#. Show the resolved backend changes, not only the packages marked manually.
+msgid "To be installed"
+msgstr "Por instalar"
+
+msgid "To be upgraded"
+msgstr "Por actualizar"
+
+msgid "To be downgraded"
+msgstr "Por instalar versión anterior"
+
+msgid "To be reinstalled"
+msgstr "Por reinstalar"
+
+msgid "To be removed"
+msgstr "Por eliminar"
+
+msgid "To be replaced"
+msgstr "Por sustituir"
+
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgid "Apply"
+msgstr "Aplicar"
+
+msgid "Close"
+msgstr "Cerrar"
+
+msgid "Transaction Progress"
+msgstr "Progreso de la transacción"
+
+msgid "Applying package transaction"
+msgstr "Aplicando la transacción de paquetes"
+
+#, c-format
+msgid "Applying %zu pending package change"
+msgid_plural "Applying %zu pending package changes"
+msgstr[0] "Aplicando %zu cambio de paquete pendiente"
+msgstr[1] "Aplicando %zu cambios de paquetes pendientes"
+
+msgid "Starting transaction..."
+msgstr "Iniciando la transacción..."
+
+msgid "Transaction finished successfully."
+msgstr "Transacción finalizada correctamente."
+
+msgid "Transaction finished with errors."
+msgstr "Transacción finalizada con errores."
+
+msgid "Transaction Complete"
+msgstr "Transacción completada"
+
+msgid "Search cache cleared."
+msgstr "Caché de búsqueda vaciada."
+
+msgid "Report issues"
+msgstr "Informar de problemas"
+
+msgid "Graphical package manager frontend for DNF5."
+msgstr "Interfaz gráfica de gestión de paquetes para DNF5."
+
+msgid "GitHub repository"
+msgstr "Repositorio de GitHub"
+
+msgid "Support"
+msgstr "Soporte"
+
+msgid "At least one package table column must remain visible."
+msgstr "Debe permanecer visible al menos una columna de la tabla de paquetes."
+
+msgid "Package table columns restored to defaults."
+msgstr "Columnas de la tabla de paquetes restauradas a sus valores predeterminados."
+
+msgid "Export Package List..."
+msgstr "Exportar lista de paquetes..."
+
+msgid "Quit"
+msgstr "Salir"
+
+msgid "File"
+msgstr "Archivo"
+
+msgid "History Panel"
+msgstr "Panel del historial"
+
+msgid "Package Info Panel"
+msgstr "Panel de información del paquete"
+
+msgid "Repositories..."
+msgstr "Repositorios..."
+
+msgid "Restore Default Columns"
+msgstr "Restaurar columnas predeterminadas"
+
+msgid "Columns"
+msgstr "Columnas"
+
+msgid "View"
+msgstr "Ver"
+
+msgid "Clear List"
+msgstr "Vaciar lista"
+
+msgid "Clear Search History"
+msgstr "Borrar historial de búsquedas"
+
+msgid "Clear search text"
+msgstr "Borrar texto de búsqueda"
+
+msgid "Search history cleared."
+msgstr "Historial de búsquedas borrado."
+
+msgid "Clear Search Cache"
+msgstr "Vaciar caché de búsqueda"
+
+msgid "Transaction History..."
+msgstr "Historial de transacciones..."
+
+msgid "About DNF UI"
+msgstr "Acerca de DNF UI"
+
+msgid "Help"
+msgstr "Ayuda"
+
+msgid "Quit and discard marked changes?"
+msgstr "¿Salir y descartar los cambios marcados?"
+
+msgid ""
+"There are still marked changes that have not yet been applied. They will get "
+"lost if you choose to quit."
+msgstr "Todavía hay cambios marcados que no se han aplicado. Se perderán si sale."
+
+msgid "A transaction is still applying."
+msgstr "Todavía se está aplicando una transacción."
+
+msgid "Search History"
+msgstr "Historial de búsquedas"
+
+msgid "Search packages..."
+msgstr "Buscar paquetes..."
+
+msgid "Filter files..."
+msgstr "Filtrar archivos..."
+
+msgid "Filter results..."
+msgstr "Filtrar resultados..."
+
+#, c-format
+msgid "Item: %zu of %zu"
+msgid_plural "Items: %zu of %zu"
+msgstr[0] "Elemento: %zu de %zu"
+msgstr[1] "Elementos: %zu de %zu"
+
+#, c-format
+msgid "Item: %zu of %zu (filtering)"
+msgid_plural "Items: %zu of %zu (filtering)"
+msgstr[0] "Elemento: %zu de %zu (filtrando)"
+msgstr[1] "Elementos: %zu de %zu (filtrando)"
+
+#, c-format
+msgid "%zu of %zu file"
+msgid_plural "%zu of %zu files"
+msgstr[0] "%zu de %zu archivo"
+msgstr[1] "%zu de %zu archivos"
+
+#, c-format
+msgid "%zu of %zu file (filtering)"
+msgid_plural "%zu of %zu files (filtering)"
+msgstr[0] "%zu de %zu archivo (filtrando)"
+msgstr[1] "%zu de %zu archivos (filtrando)"
+
+msgid "Search in description"
+msgstr "Buscar en la descripción"
+
+msgid "Exact match"
+msgstr "Coincidencia exacta"
+
+msgid "Latest only"
+msgstr "Solo la versión más reciente"
+
+msgid "Upgrade All"
+msgstr "Actualizar todo"
+
+msgid "Mark Listed Upgrades"
+msgstr "Marcar actualizaciones listadas"
+
+msgid "Clear Pending"
+msgstr "Borrar pendientes"
+
+msgid "Clear Transactions"
+msgstr "Vaciar transacciones"
+
+msgid "Details"
+msgstr "Detalles"
+
+msgid "Files"
+msgstr "Archivos"
+
+msgid "Dependencies"
+msgstr "Dependencias"
+
+msgid "Changelog"
+msgstr "Registro de cambios"
+
+msgid "Pending"
+msgstr "Pendientes"
+
+#. Passive startup note shown only while the backend is warming up.
+msgid "Loading package data..."
+msgstr "Cargando datos de paquetes..."
+
+msgid "Another application still has an update scheduled for reboot. Use that application to manage it."
+msgstr "Otra aplicación todavía tiene programada una actualización para el reinicio. Utilice esa aplicación para gestionarla."
+
+msgid "Could Not Discard Prepared Updates"
+msgstr "No se pudieron descartar las actualizaciones preparadas"
+
+msgid "Could not discard the prepared updates."
+msgstr "No se pudieron descartar las actualizaciones preparadas."
+
+msgid "DNF UI could not remove the stored offline transaction. Use 'dnf5 offline status' to inspect it and 'dnf5 offline clean' for manual recovery."
+msgstr "DNF UI no pudo eliminar la transacción sin conexión almacenada. Utilice 'dnf5 offline status' para consultarla y 'dnf5 offline clean' para la recuperación manual."
+
+msgid "DNF has stored offline update data. Use Package > Discard Prepared Updates before applying more changes. For manual recovery, use 'dnf5 offline status' and 'dnf5 offline clean'."
+msgstr "DNF ha almacenado datos de actualización sin conexión. Utilice Paquete > Descartar actualizaciones preparadas antes de aplicar más cambios. Para la recuperación manual, utilice 'dnf5 offline status' y 'dnf5 offline clean'."
+
+msgid "Discard"
+msgstr "Descartar"
+
+msgid "Discard Prepared Updates"
+msgstr "Descartar actualizaciones preparadas"
+
+msgid "Discard Prepared Updates..."
+msgstr "Descartar actualizaciones preparadas..."
+
+msgid "Discard the updates prepared for the next reboot? This removes DNF's stored transaction and downloaded packages, even if another application prepared them. It does not undo installed changes or clear your current package marks."
+msgstr "¿Descartar las actualizaciones preparadas para el próximo reinicio? Esto elimina la transacción almacenada por DNF y los paquetes descargados, aunque otra aplicación los haya preparado. No deshace los cambios ya instalados ni borra las marcas actuales de paquetes."
+
+msgid "Discarding prepared updates..."
+msgstr "Descartando actualizaciones preparadas..."
+
+msgid "No packages have been changed yet. Restart when you are ready to install the prepared changes. To change the selection, use Package > Discard Prepared Updates."
+msgstr "Todavía no se ha modificado ningún paquete. Reinicie cuando quiera instalar los cambios preparados. Para cambiar la selección, utilice Paquete > Descartar actualizaciones preparadas."
+
+msgid "Preparation did not complete normally. The daemon may have stored all or part of the transaction. Use Package > Discard Prepared Updates before retrying. If that fails, use 'dnf5 offline status' and 'dnf5 offline clean' for manual recovery."
+msgstr "La preparación no terminó normalmente. Es posible que el servicio haya almacenado toda la transacción o parte de ella. Utilice Paquete > Descartar actualizaciones preparadas antes de volver a intentarlo. Si falla, utilice 'dnf5 offline status' y 'dnf5 offline clean' para la recuperación manual."
+
+msgid "Prepared update data still exists. Use 'dnf5 offline status' to inspect it and 'dnf5 offline clean' for manual recovery."
+msgstr "Todavía existen datos de actualizaciones preparadas. Utilice 'dnf5 offline status' para consultarlos y 'dnf5 offline clean' para la recuperación manual."
+
+msgid "Prepared updates discarded."
+msgstr "Actualizaciones preparadas descartadas."
+
+msgid "Updates are already prepared for reboot. Restart to install them, or use Package > Discard Prepared Updates to remove them before applying other package changes."
+msgstr "Ya hay actualizaciones preparadas para el reinicio. Reinicie para instalarlas o utilice Paquete > Descartar actualizaciones preparadas para eliminarlas antes de aplicar otros cambios."
+
+msgid "Updates Prepared for Reboot"
+msgstr "Actualizaciones preparadas para el reinicio"
+
+msgid "A package transaction is already prepared for reboot. Other package changes cannot be applied until it is installed or discarded."
+msgstr "Ya hay una transacción de paquetes preparada para el reinicio. No se pueden aplicar otros cambios hasta que se instale o se descarte."
+
+msgid "Packages"
+msgstr "Paquetes"
+
+msgid "Finding providers for '%s'..."
+msgstr "Buscando proveedores de '%s'..."
+
+msgid "Search package names, RPM capabilities, or files owned by packages."
+msgstr "Busque nombres de paquetes, capacidades RPM o archivos pertenecientes a paquetes."
+
+msgid "Finding files for '%s'..."
+msgstr "Buscando archivos para '%s'..."
+
+msgid "Capability..."
+msgstr "Capacidad..."
+
+msgid "File path or filename..."
+msgstr "Ruta o nombre de archivo..."
+
+msgid "File search needs file lists that are unavailable in the cached repository metadata."
+msgstr "La búsqueda de archivos requiere listas de archivos que no están disponibles en los metadatos de repositorios en caché."
+
+msgid "Options"
+msgstr "Opciones"
+
+msgid "Show installed packages."
+msgstr "Mostrar paquetes instalados."
+
+msgid "Browse packages in enabled repositories."
+msgstr "Explorar paquetes de los repositorios activados."
+
+msgid "Show packages with available updates."
+msgstr "Mostrar paquetes con actualizaciones disponibles."
+
+msgid "Preview all available package upgrades."
+msgstr "Vista previa de todas las actualizaciones de paquetes disponibles."
+
+msgid "Refresh package data from enabled repositories."
+msgstr "Actualizar los datos de los paquetes desde los repositorios activados."
+
+msgid "Add the selected package to pending changes."
+msgstr "Añadir el paquete seleccionado a los cambios pendientes."
+
+msgid "Reinstall the selected installed package."
+msgstr "Reinstalar el paquete instalado seleccionado."
+
+msgid "Mark the selected installed package for removal."
+msgstr "Marcar el paquete instalado seleccionado para eliminarlo."
+
+msgid "Add valid upgrade candidates from the current list to pending changes."
+msgstr "Añadir los candidatos válidos a actualización de la lista actual a los cambios pendientes."
+
+msgid "Review and apply pending package changes."
+msgstr "Revisar y aplicar los cambios de paquetes pendientes."
+
+msgid "Clear all pending package changes."
+msgstr "Borrar todos los cambios de paquetes pendientes."
+
+msgid "Copy Description"
+msgstr "Copiar descripción"
+
+msgid "Copy the title, summary, and description."
+msgstr "Copiar el título, el resumen y la descripción."
