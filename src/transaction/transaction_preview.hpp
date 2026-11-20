@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------------
 #pragma once
 
+#include <set>
 #include <string>
 #include <vector>
 
@@ -12,6 +13,7 @@ struct TransactionPreviewPackage {
   std::string label;
   std::string name;
   std::string arch;
+  bool additional_removal = false;
 
   std::string name_arch_key() const
   {
@@ -33,6 +35,17 @@ struct TransactionPreview {
   std::vector<TransactionPreviewPackage> replaced;
   long long disk_space_delta = 0;
   bool requires_offline = false;
+
+  // -----------------------------------------------------------------------------
+  // Identify removals not explicitly marked in the request by exact NEVRA.
+  // -----------------------------------------------------------------------------
+  void identify_additional_removals(const std::vector<std::string> &requested_removals)
+  {
+    const std::set<std::string> requested(requested_removals.begin(), requested_removals.end());
+    for (auto &package : remove) {
+      package.additional_removal = requested.count(package.label) == 0;
+    }
+  }
 
   // -----------------------------------------------------------------------------
   // Return true when the preview contains no resolved package actions.

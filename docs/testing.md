@@ -104,6 +104,13 @@ desktop authorization prompt.
 Without that package, run `make dnf5daemonapplytest` from the desktop session where a Polkit authentication
 agent can show the authorization dialog. Running the apply target over SSH may fail with `Not authorized`.
 
+### Additional removal warning
+
+In a disposable Fedora environment, preview a removal that also removes unmarked packages. Verify that
+requested and additional removals are shown separately, with a warning icon on the additional removals heading.
+Upgrade replacements must stay under To be replaced. Check that removing one exact installed version does not
+treat another version with the same name and architecture as explicitly marked.
+
 ### Failed live Apply recovery
 
 Use fault injection in a disposable VM or container to test:

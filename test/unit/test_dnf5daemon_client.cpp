@@ -213,6 +213,30 @@ TEST_CASE("dnf5daemon preview parser represents downgrade package actions")
 }
 
 // -----------------------------------------------------------------------------
+// Only removals absent from the exact request are marked as additional.
+// -----------------------------------------------------------------------------
+TEST_CASE("Transaction preview identifies additional removals by exact package identity")
+{
+  TransactionPreview preview;
+  preview.remove.push_back({ "example-1-1.x86_64", "example", "x86_64" });
+  preview.remove.push_back({ "example-2-1.x86_64", "example", "x86_64" });
+  preview.remove.push_back({ "other-3:1-1.noarch", "other", "noarch" });
+  preview.replaced.push_back({ "old-upgrade-1-1.x86_64", "old-upgrade", "x86_64" });
+
+  preview.identify_additional_removals({ "example-1-1.x86_64", "other-3:1-1.noarch" });
+  REQUIRE_FALSE(preview.remove[0].additional_removal);
+  REQUIRE(preview.remove[1].additional_removal);
+  REQUIRE_FALSE(preview.remove[2].additional_removal);
+  REQUIRE_FALSE(preview.replaced[0].additional_removal);
+
+  preview.identify_additional_removals({});
+  REQUIRE(preview.remove[0].additional_removal);
+  REQUIRE(preview.remove[1].additional_removal);
+  REQUIRE(preview.remove[2].additional_removal);
+  REQUIRE_FALSE(preview.replaced[0].additional_removal);
+}
+
+// -----------------------------------------------------------------------------
 // Verify that skipped packages produce warnings without executable actions or disk changes.
 // -----------------------------------------------------------------------------
 TEST_CASE("dnf5daemon preview parser represents skipped packages as warnings")
