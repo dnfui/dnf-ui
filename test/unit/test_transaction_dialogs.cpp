@@ -240,6 +240,7 @@ TEST_CASE("Transaction summary groups resolved changes by action", "[gtk]")
   }
 
   REQUIRE(find_label_with_text(GTK_WIDGET(dialog), "Disk space usage will be unchanged.") != nullptr);
+  REQUIRE(find_label_with_text(GTK_WIDGET(dialog), "Additional removals") == nullptr);
   REQUIRE(find_apply_button(GTK_WIDGET(dialog)) != nullptr);
 
   GtkWidget *outer = gtk_window_get_child(dialog);
@@ -259,6 +260,58 @@ TEST_CASE("Transaction summary groups resolved changes by action", "[gtk]")
   GtkWidget *summary_heading = find_label_with_text(GTK_WIDGET(dialog), "Summary");
   REQUIRE(summary_heading != nullptr);
   REQUIRE(gtk_widget_get_parent(summary_heading) == summary_heading_box);
+
+  gtk_window_destroy(dialog);
+  g_object_run_dispose(G_OBJECT(dialog));
+  g_object_unref(dialog);
+  gtk_window_destroy(parent);
+}
+
+// -----------------------------------------------------------------------------
+// Additional removals must be visible before Apply and separate from selected removals.
+// -----------------------------------------------------------------------------
+TEST_CASE("Transaction summary identifies additional removals", "[gtk]")
+{
+  if (!transaction_dialog_display_available()) {
+    SKIP("A GTK display is required for transaction dialog tests.");
+  }
+
+  auto widgets = std::make_shared<MainWindowUiState>();
+  GtkWindow *parent = GTK_WINDOW(gtk_window_new());
+  widgets->query.entry = GTK_ENTRY(gtk_entry_new());
+  gtk_window_set_child(parent, GTK_WIDGET(widgets->query.entry));
+
+  TransactionPreview preview;
+  preview.remove.push_back({ "Selected package", "selected", "x86_64" });
+  preview.remove.push_back({ "Additional package", "additional", "x86_64", true });
+  preview.replaced.push_back({ "Replaced package", "replaced", "x86_64" });
+
+  transaction_dialogs_show_summary_dialog(widgets.get(), preview, nullptr, nullptr);
+  GtkWindow *dialog = find_summary_dialog(parent);
+  REQUIRE(dialog != nullptr);
+  REQUIRE(find_label_with_text(GTK_WIDGET(dialog), "To be removed") != nullptr);
+  REQUIRE(find_label_with_text(GTK_WIDGET(dialog), "Selected package") != nullptr);
+  REQUIRE(find_label_with_text(GTK_WIDGET(dialog), "Additional removals") != nullptr);
+  REQUIRE(find_label_with_text(GTK_WIDGET(dialog), "Additional package") != nullptr);
+  REQUIRE(find_label_with_text(GTK_WIDGET(dialog), "To be replaced") != nullptr);
+  REQUIRE(find_label_with_text(GTK_WIDGET(dialog),
+                               "This transaction also removes packages you did not mark for removal. "
+                               "Review the additional removals below.") == nullptr);
+
+  GtkWidget *selected_heading = find_label_with_text(GTK_WIDGET(dialog), "To be removed");
+  GtkWidget *selected_package = find_label_with_text(GTK_WIDGET(dialog), "Selected package");
+  GtkWidget *additional_heading = find_label_with_text(GTK_WIDGET(dialog), "Additional removals");
+  GtkWidget *additional_package = find_label_with_text(GTK_WIDGET(dialog), "Additional package");
+  GtkWidget *warning_icon = gtk_widget_get_first_child(gtk_widget_get_parent(additional_heading));
+  REQUIRE(GTK_IS_IMAGE(warning_icon));
+  REQUIRE(g_strcmp0(gtk_image_get_icon_name(GTK_IMAGE(warning_icon)),
+                    ui_helpers_icon_name_with_fallback("dialog-warning-symbolic", "dialog-information-symbolic")) == 0);
+
+  GtkWidget *selected_section = gtk_widget_get_parent(gtk_widget_get_parent(selected_heading));
+  GtkWidget *additional_section = gtk_widget_get_parent(gtk_widget_get_parent(additional_heading));
+  REQUIRE(gtk_widget_get_parent(gtk_widget_get_parent(selected_package)) == selected_section);
+  REQUIRE(gtk_widget_get_parent(gtk_widget_get_parent(additional_package)) == additional_section);
+  REQUIRE(selected_section != additional_section);
 
   gtk_window_destroy(dialog);
   g_object_run_dispose(G_OBJECT(dialog));

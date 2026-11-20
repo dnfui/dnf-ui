@@ -236,8 +236,18 @@ transaction_dialogs_show_summary_dialog(MainWindowUiState *widgets,
                                              preview.reinstall,
                                              "document-revert-symbolic",
                                              "view-refresh-symbolic");
-  append_transaction_package_summary_section(
-      GTK_BOX(contents), _("To be removed"), preview.remove, "user-trash-symbolic", "list-remove-symbolic");
+  std::vector<std::string> selected_removals;
+  std::vector<std::string> additional_removals;
+  for (const auto &package : preview.remove) {
+    (package.additional_removal ? additional_removals : selected_removals).push_back(package.label);
+  }
+  append_transaction_summary_section(
+      GTK_BOX(contents), _("To be removed"), selected_removals, "user-trash-symbolic", "list-remove-symbolic");
+  append_transaction_summary_section(GTK_BOX(contents),
+                                     _("Additional removals"),
+                                     additional_removals,
+                                     "dialog-warning-symbolic",
+                                     "dialog-information-symbolic");
   append_transaction_package_summary_section(GTK_BOX(contents),
                                              _("To be replaced"),
                                              preview.replaced,

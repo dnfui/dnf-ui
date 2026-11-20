@@ -1847,3 +1847,7 @@ msgstr "Kopiera titel, sammanfattning och beskrivning."
 
 msgid "Installed packages may have changed. Pending actions were cleared. Review the installed packages before trying again."
 msgstr "Installerade paket kan ha ändrats. Väntande åtgärder har rensats. Kontrollera de installerade paketen innan du försöker igen."
+
+msgid "Additional removals"
+msgstr "Ytterligare borttagningar"
+

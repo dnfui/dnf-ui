@@ -134,6 +134,10 @@ The review dialog shows the complete resolved package list in a framed scrollabl
 section has a symbolic icon, and warnings appear first. All package labels remain selectable.
 The action counts and disk-space change appear below the list, directly above the confirmation buttons.
 
+Removals that were not explicitly marked are shown under Additional removals with a warning icon. The comparison
+uses exact package NEVRAs from the request and resolved transaction. Packages replaced during upgrades are not
+counted as additional removals. DNF5 still decides which packages to remove.
+
 If dnf5daemon returns an unsupported transaction item or action, preview fails instead of hiding part of the
 transaction from the user.
 

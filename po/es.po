@@ -1790,3 +1790,7 @@ msgstr "Copiar el título, el resumen y la descripción."
 
 msgid "Installed packages may have changed. Pending actions were cleared. Review the installed packages before trying again."
 msgstr "Es posible que los paquetes instalados hayan cambiado. Se borraron las acciones pendientes. Revise los paquetes instalados antes de volver a intentarlo."
+
+msgid "Additional removals"
+msgstr "Eliminaciones adicionales"
+

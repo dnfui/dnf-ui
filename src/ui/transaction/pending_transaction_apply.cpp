@@ -922,6 +922,7 @@ start_preview_request(MainWindowUiState *widgets, TransactionRequest request)
           return;
         }
 
+        td->preview.identify_additional_removals(td->request.remove);
         DNFUI_TRACE("Transaction preview worker done path=%s empty=%d",
                     td ? td->transaction_path.c_str() : "",
                     td && td->preview.empty() ? 1 : 0);
