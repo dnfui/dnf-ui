@@ -1074,20 +1074,47 @@ msgstr "Keine Pakete gefunden"
 msgid "Try a different search or refresh repositories."
 msgstr "Versuchen Sie eine andere Suche oder aktualisieren Sie die Repositories."
 
-msgid ""
-"Shortcuts\n"
-"Ctrl+F: Focus search\n"
-"Ctrl+L: Clear package list\n"
-"Ctrl+A: Mark all (Upgradable or Unneeded list)\n"
-"Ctrl+E: Export package list\n"
-"Ctrl+Enter: Apply pending changes\n"
-"F5: Refresh repositories\n"
-"Ctrl+H: Toggle history panel\n"
-"Ctrl+I: Toggle package info panel\n"
-"Ctrl+Shift+H: Open transaction history\n"
-"Ctrl+Shift+R: Open repositories\n"
-"Ctrl+Q or Ctrl+W: Quit"
-msgstr "Tastenkürzel\nCtrl+F: Suchfeld fokussieren\nCtrl+L: Paketliste leeren\nCtrl+A: Alle markieren (aktualisierbare oder nicht mehr benötigte Pakete)\nCtrl+E: Paketliste exportieren\nCtrl+Enter: Ausstehende Änderungen anwenden\nF5: Repositories aktualisieren\nCtrl+H: Verlaufsbereich ein- oder ausblenden\nCtrl+I: Paketinfobereich ein- oder ausblenden\nCtrl+Shift+H: Transaktionsverlauf öffnen\nCtrl+Shift+R: Repositories öffnen\nCtrl+Q oder Ctrl+W: Beenden"
+msgid "Shortcuts"
+msgstr "Tastenkürzel"
+
+msgid "Focus search"
+msgstr "Suchfeld fokussieren"
+
+msgid "Clear package list"
+msgstr "Paketliste leeren"
+
+msgid "Mark all (Upgradable or Unneeded list)"
+msgstr "Alle markieren (aktualisierbare oder nicht mehr benötigte Pakete)"
+
+msgid "Export package list"
+msgstr "Paketliste exportieren"
+
+msgid "Apply pending changes"
+msgstr "Ausstehende Änderungen anwenden"
+
+msgid "Refresh repositories"
+msgstr "Repositories aktualisieren"
+
+msgid "Toggle history panel"
+msgstr "Verlaufsbereich ein- oder ausblenden"
+
+msgid "Toggle package info panel"
+msgstr "Paketinfobereich ein- oder ausblenden"
+
+msgid "Open transaction history"
+msgstr "Transaktionsverlauf öffnen"
+
+msgid "Open repositories"
+msgstr "Repositories öffnen"
+
+msgid "or"
+msgstr "oder"
+
+msgid "Ctrl+Shift+H"
+msgstr "Ctrl+Shift+H"
+
+msgid "Ctrl+Shift+R"
+msgstr "Ctrl+Shift+R"
 
 #. Update count label
 #, c-format

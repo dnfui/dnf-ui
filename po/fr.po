@@ -1074,20 +1074,47 @@ msgstr "Aucun paquet trouvé"
 msgid "Try a different search or refresh repositories."
 msgstr "Essayez une autre recherche ou actualisez les dépôts."
 
-msgid ""
-"Shortcuts\n"
-"Ctrl+F: Focus search\n"
-"Ctrl+L: Clear package list\n"
-"Ctrl+A: Mark all (Upgradable or Unneeded list)\n"
-"Ctrl+E: Export package list\n"
-"Ctrl+Enter: Apply pending changes\n"
-"F5: Refresh repositories\n"
-"Ctrl+H: Toggle history panel\n"
-"Ctrl+I: Toggle package info panel\n"
-"Ctrl+Shift+H: Open transaction history\n"
-"Ctrl+Shift+R: Open repositories\n"
-"Ctrl+Q or Ctrl+W: Quit"
-msgstr "Raccourcis clavier\nCtrl+F : Activer le champ de recherche\nCtrl+L : Vider la liste des paquets\nCtrl+A : Tout marquer (paquets à mettre à jour ou inutiles)\nCtrl+E : Exporter la liste des paquets\nCtrl+Enter : Appliquer les modifications en attente\nF5 : Actualiser les dépôts\nCtrl+H : Afficher ou masquer le panneau d'historique\nCtrl+I : Afficher ou masquer les informations du paquet\nCtrl+Shift+H : Ouvrir l'historique des transactions\nCtrl+Shift+R : Ouvrir les dépôts\nCtrl+Q ou Ctrl+W : Quitter"
+msgid "Shortcuts"
+msgstr "Raccourcis clavier"
+
+msgid "Focus search"
+msgstr "Activer le champ de recherche"
+
+msgid "Clear package list"
+msgstr "Vider la liste des paquets"
+
+msgid "Mark all (Upgradable or Unneeded list)"
+msgstr "Tout marquer (paquets à mettre à jour ou inutiles)"
+
+msgid "Export package list"
+msgstr "Exporter la liste des paquets"
+
+msgid "Apply pending changes"
+msgstr "Appliquer les modifications en attente"
+
+msgid "Refresh repositories"
+msgstr "Actualiser les dépôts"
+
+msgid "Toggle history panel"
+msgstr "Afficher ou masquer le panneau d'historique"
+
+msgid "Toggle package info panel"
+msgstr "Afficher ou masquer les informations du paquet"
+
+msgid "Open transaction history"
+msgstr "Ouvrir l'historique des transactions"
+
+msgid "Open repositories"
+msgstr "Ouvrir les dépôts"
+
+msgid "or"
+msgstr "ou"
+
+msgid "Ctrl+Shift+H"
+msgstr "Ctrl+Shift+H"
+
+msgid "Ctrl+Shift+R"
+msgstr "Ctrl+Shift+R"
 
 #. Update count label
 #, c-format
