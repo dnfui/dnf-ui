@@ -104,6 +104,24 @@ desktop authorization prompt.
 Without that package, run `make dnf5daemonapplytest` from the desktop session where a Polkit authentication
 agent can show the authorization dialog. Running the apply target over SSH may fail with `Not authorized`.
 
+### Failed live Apply recovery
+
+Use fault injection in a disposable VM or container to test:
+
+- Failure before RPM starts.
+- Failure after RPM has changed some packages.
+- Lost D-Bus communication after Apply, including a missed transaction-start signal.
+
+Check that the progress window warns about possible changes, pending marks clear, and package operations stay
+disabled until recovery finishes. The package list must reload or remain empty if rebuilding or reloading
+fails. Verify that retrying requires new marks and a new preview, Upgrade All works after recovery, and failed
+offline preparation preserves marks.
+
+Record the fault, whether the start signal arrived, and installed package state before and after. Unit tests
+cover only recovery state transitions. See [Apply](transactions.md#apply) for the recovery behavior.
+
+Do not interrupt an RPM transaction on a production system to test this behavior.
+
 ### Native repository key prompt test
 
 Use a disposable Fedora VM or test machine. Do not use your main system for this test.

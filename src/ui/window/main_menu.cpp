@@ -90,6 +90,11 @@ on_menu_clear_list(GSimpleAction *, GVariant *, gpointer user_data)
     return;
   }
 
+  if (pending_transaction_apply_is_busy(data->widgets)) {
+    ui_helpers_set_status(data->widgets->query.status_label, pending_transaction_apply_busy_message(), "blue");
+    return;
+  }
+
   package_query_on_clear_button_clicked(nullptr, data->widgets);
 }
 
@@ -129,6 +134,11 @@ on_menu_list_unneeded(GSimpleAction *, GVariant *, gpointer user_data)
 {
   MainMenuActionData *data = static_cast<MainMenuActionData *>(user_data);
   if (!data || !data->widgets) {
+    return;
+  }
+
+  if (pending_transaction_apply_is_busy(data->widgets)) {
+    ui_helpers_set_status(data->widgets->query.status_label, pending_transaction_apply_busy_message(), "blue");
     return;
   }
 
