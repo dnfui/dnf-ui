@@ -9,51 +9,53 @@
 [![Release RPM](https://github.com/dnfui/dnf-ui/actions/workflows/release-rpm.yml/badge.svg)](https://github.com/dnfui/dnf-ui/actions/workflows/release-rpm.yml)
 [![Publish COPR](https://github.com/dnfui/dnf-ui/actions/workflows/publish-copr.yml/badge.svg)](https://github.com/dnfui/dnf-ui/actions/workflows/publish-copr.yml)
 
-**DNF UI** is a graphical frontend for DNF5 (Dandified YUM), inspired in part by [Synaptic](https://github.com/mvo5/synaptic).
+**DNF UI** is a graphical frontend for DNF5 (Dandified YUM), inspired in part by [Synaptic](https://github.com/mvo5/synaptic). \
 It is built with [GTK 4](https://docs.gtk.org/gtk4/) and [libdnf5](https://github.com/rpm-software-management/dnf5) and
 aims to provide a **fast** and **dependable** package management workflow for DNF5 systems.
 
 ## Supported platform
 
-DNF UI targets systems using modern **DNF5** and **dnf5daemon**. It is developed and tested primarily on Fedora Linux.
+**DNF UI** targets systems using modern **DNF5**.
+It is developed and tested primarily on **Fedora Linux**. \
 The Fedora RPM declares a runtime dependency on `dnf5daemon-server`.
 
 ## Status
 
-DNF UI is under active development and is stable for regular use. \
+**DNF UI** is under active development and is stable for regular use. \
 New features and improvements are still being added, so some interfaces and
 behavior may change slightly between releases.
 
 ## Install from COPR
 
-DNF UI is available from [COPR](https://copr.fedorainfracloud.org/coprs/):
+**DNF UI** is available from [COPR](https://copr.fedorainfracloud.org/coprs/):
 
-<https://copr.fedorainfracloud.org/coprs/erikmn/dnf-ui/>
+### <https://copr.fedorainfracloud.org/coprs/erikmn/dnf-ui/>
 
 Enable the repository and install the app:
 
 ```sh
-sudo dnf install dnf5-plugins
 sudo dnf copr enable erikmn/dnf-ui
 sudo dnf install dnf-ui
 ```
+
+If the `copr` command is unavailable, install it with `sudo dnf install dnf5-plugins`.
 
 ## Goals and principles
 
 - User experience first!
 - Reliable and fast
-- Strong focus on code quality and maintainability
+- Strong focus on quality and maintainability
+- Secure (uses the official `dnf5daemon` for privileged operations)
 - No unnecessary complexity or bloat
 
 ## Scope
 
-DNF UI is a package manager frontend, **NOT** an app store.
+**DNF UI** is a package manager frontend, **NOT** an app store.
 
-It focuses on fast package search, package details, installed package inspection,
-repository management, explicit transaction review, and applying DNF package
-transactions through Polkit.
+It provides fast package search, package inspection, repository management,
+and package transactions with explicit review and Polkit authorization.
 
-DNF UI does **NOT** aim to manage Flatpaks, firmware updates, ratings, featured
+**DNF UI** does **NOT** aim to manage Flatpaks, firmware updates, ratings, featured
 applications, or software-center discovery workflows.
 Applications such as [GNOME Software](https://apps.gnome.org/Software/) cover those workflows.
 
@@ -70,6 +72,9 @@ Applications such as [GNOME Software](https://apps.gnome.org/Software/) cover th
 
 As a long-time user of Synaptic, I wanted a similar tool for DNF5:
 a native package manager frontend that is fast, reliable, and easy to use.
+
+**DNF UI** aims to make everyday package management straightforward, especially for users new to Linux.
+It is not intended to replace the command line, but to complement it.
 
 This project is also a practical way for me to learn more about building a stable and maintainable desktop application.
 The goal is not experimentation for its own sake, but to build something genuinely useful for me and others.
