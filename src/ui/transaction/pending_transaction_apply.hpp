@@ -45,5 +45,10 @@ bool pending_transaction_apply_is_busy(MainWindowUiState *widgets);
 void pending_transaction_set_preview_controls_sensitive(MainWindowUiState *widgets, bool sensitive);
 
 // -----------------------------------------------------------------------------
+// Continue failed Apply recovery after a package query finishes.
+// -----------------------------------------------------------------------------
+void pending_transaction_on_package_query_finished(MainWindowUiState *widgets);
+
+// -----------------------------------------------------------------------------
 // EOF
 // -----------------------------------------------------------------------------

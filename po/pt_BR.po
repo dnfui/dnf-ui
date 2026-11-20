@@ -1787,3 +1787,6 @@ msgstr "Copiar descrição"
 
 msgid "Copy the title, summary, and description."
 msgstr "Copiar o título, o resumo e a descrição."
+
+msgid "Installed packages may have changed. Pending actions were cleared. Review the installed packages before trying again."
+msgstr "Os pacotes instalados podem ter sido alterados. As ações pendentes foram removidas. Confira os pacotes instalados antes de tentar novamente."

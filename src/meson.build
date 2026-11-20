@@ -49,6 +49,7 @@ app_sources = files(
   'ui/repository/repository_apply_model.cpp',
   'ui/repository/repository_apply_operation.cpp',
   'ui/repository/repository_view.cpp',
+  'ui/transaction/failed_apply_refresh_state.cpp',
   'ui/transaction/pending_transaction_apply.cpp',
   'ui/transaction/pending_transaction_controller.cpp',
   'ui/transaction/pending_transaction_request.cpp',

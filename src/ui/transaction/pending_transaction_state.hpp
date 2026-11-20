@@ -11,6 +11,8 @@
 
 #include <gtk/gtk.h>
 
+#include "ui/transaction/failed_apply_refresh_state.hpp"
+
 // -----------------------------------------------------------------------------
 // Pending actions for mark --> review --> apply workflow
 // -----------------------------------------------------------------------------
@@ -34,6 +36,8 @@ struct PendingTransactionState {
   bool apply_in_progress = false;
   bool preview_upgrade_all = false;
   bool preview_requires_offline = false;
+  FailedApplyRefreshState failed_apply_refresh_state = FailedApplyRefreshState::IDLE;
+  std::string failed_apply_exact_nevra;
   std::vector<PendingAction> actions;
   std::string preview_transaction_path;
 };

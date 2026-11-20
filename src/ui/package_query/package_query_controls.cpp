@@ -5,6 +5,7 @@
 // Owns the small pieces of package query state shared by search, list, cancellation, and reload flows.
 // -----------------------------------------------------------------------------
 #include "ui/package_query/package_query_controller_internal.hpp"
+#include "ui/transaction/pending_transaction_apply.hpp"
 
 #include "i18n.hpp"
 #include "ui/details/package_details_controller.hpp"
@@ -342,10 +343,10 @@ restore_package_list_controls(MainWindowUiState *widgets)
   ui_helpers_set_icon_button_with_fallback(
       widgets->query.list_packages_button, "package-x-generic-symbolic", "view-list-symbolic", _("List Packages"));
   package_query_refresh_upgrade_indicator(widgets);
-  package_query_set_idle_controls_sensitive(widgets, true);
+  package_query_set_idle_controls_sensitive(widgets, !pending_transaction_apply_is_busy(widgets));
   if (widgets->transaction_widgets.mark_listed_upgrades_button) {
     bool transaction_busy =
-        widgets->transaction_state.preview_request_in_progress || widgets->transaction_state.apply_in_progress;
+        widgets->transaction_state.preview_request_in_progress || pending_transaction_apply_is_busy(widgets);
     gtk_widget_set_sensitive(GTK_WIDGET(widgets->transaction_widgets.mark_listed_upgrades_button), !transaction_busy);
   }
 }
@@ -370,10 +371,13 @@ package_query_end_package_list_request(MainWindowUiState *widgets, uint64_t requ
   widgets->query_state.active_request = {};
   restore_package_list_controls(widgets);
 
-  if (request_cancelled) {
+  // Keep a failed rebuild error visible when an older cancelled query finishes.
+  if (request_cancelled &&
+      widgets->transaction_state.failed_apply_refresh_state != FailedApplyRefreshState::WAITING_AFTER_FAILURE) {
     ui_helpers_set_status(widgets->query.status_label, package_list_cancelled_status(kind), "gray");
   }
 
+  pending_transaction_on_package_query_finished(widgets);
   package_query_maybe_start_upgrade_indicator_refresh(widgets);
 }
 

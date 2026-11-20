@@ -287,11 +287,12 @@ repository_refresh_on_force_rebuild_task_finished(GObject *, GAsyncResult *res, 
     return;
   }
 
-  package_query_set_idle_controls_sensitive(widgets, true);
+  const bool transaction_busy = pending_transaction_apply_is_busy(widgets);
+  package_query_set_idle_controls_sensitive(widgets, !transaction_busy);
   if (widgets->results.list_scroller) {
-    gtk_widget_set_sensitive(GTK_WIDGET(widgets->results.list_scroller), TRUE);
+    gtk_widget_set_sensitive(GTK_WIDGET(widgets->results.list_scroller), !transaction_busy);
   }
-  pending_transaction_set_preview_controls_sensitive(widgets, true);
+  pending_transaction_set_preview_controls_sensitive(widgets, !transaction_busy);
 
   repository_refresh_set_button_idle(widgets);
   gtk_widget_set_sensitive(GTK_WIDGET(widgets->query.refresh_button), TRUE);

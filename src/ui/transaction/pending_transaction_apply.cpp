@@ -5,6 +5,7 @@
 // Keeps service preview, service apply, and post-transaction refresh code separate from package action button handlers.
 // -----------------------------------------------------------------------------
 #include "ui/transaction/pending_transaction_apply.hpp"
+#include "ui/transaction/failed_apply_refresh_state.hpp"
 
 #include "dnf_backend/base_manager.hpp"
 #include "debug_trace.hpp"
@@ -180,6 +181,68 @@ clear_package_view_after_apply_refresh_failure(MainWindowUiState *widgets, const
 }
 
 // -----------------------------------------------------------------------------
+// Restore package controls after failed Apply recovery finishes.
+// -----------------------------------------------------------------------------
+static void
+finish_failed_apply_refresh(MainWindowUiState *widgets)
+{
+  widgets->transaction_state.failed_apply_exact_nevra.clear();
+  widgets_spinner_release(widgets->query.spinner);
+  const bool repository_busy = repository_refresh_is_running();
+  package_query_set_idle_controls_sensitive(widgets, !repository_busy);
+  if (widgets->results.list_scroller) {
+    gtk_widget_set_sensitive(GTK_WIDGET(widgets->results.list_scroller), !repository_busy);
+  }
+  pending_transaction_set_preview_controls_sensitive(widgets, !repository_busy);
+}
+
+// -----------------------------------------------------------------------------
+// Reload the package view after failed Apply recovery rebuilds the Base.
+// -----------------------------------------------------------------------------
+static void
+start_failed_apply_reload(MainWindowUiState *widgets)
+{
+  if (widgets->query_state.displayed_query.kind == DisplayedPackageQueryKind::NONE &&
+      !widgets->transaction_state.failed_apply_exact_nevra.empty()) {
+    const std::string nevra = widgets->transaction_state.failed_apply_exact_nevra;
+    package_query_show_exact_package(widgets, nevra, widgets->query_state.displayed_query.exact_installonly_action);
+  } else {
+    package_query_reload_current_view(widgets);
+  }
+  FailedApplyRefreshAction action = failed_apply_refresh_after_reload_start(
+      widgets->transaction_state.failed_apply_refresh_state, package_query_has_active_package_list_request(widgets));
+  if (action == FailedApplyRefreshAction::NONE) {
+    package_query_set_idle_controls_sensitive(widgets, false);
+  } else {
+    finish_failed_apply_refresh(widgets);
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Continue failed Apply recovery after an older query or the reload finishes.
+// -----------------------------------------------------------------------------
+void
+pending_transaction_on_package_query_finished(MainWindowUiState *widgets)
+{
+  if (!widgets) {
+    return;
+  }
+
+  FailedApplyRefreshAction action =
+      failed_apply_refresh_after_query(widgets->transaction_state.failed_apply_refresh_state);
+  switch (action) {
+  case FailedApplyRefreshAction::RELOAD:
+    start_failed_apply_reload(widgets);
+    break;
+  case FailedApplyRefreshAction::FINISH:
+    finish_failed_apply_refresh(widgets);
+    break;
+  default:
+    break;
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Return the status text shown while a preview request is running.
 // -----------------------------------------------------------------------------
 const char *
@@ -225,7 +288,9 @@ pending_transaction_apply_busy_message()
 bool
 pending_transaction_apply_is_busy(MainWindowUiState *widgets)
 {
-  return widgets && widgets->transaction_state.apply_in_progress;
+  return widgets &&
+      (widgets->transaction_state.apply_in_progress ||
+       widgets->transaction_state.failed_apply_refresh_state != FailedApplyRefreshState::IDLE);
 }
 
 // -----------------------------------------------------------------------------
@@ -447,6 +512,13 @@ rebuild_after_tx_finished(GObject *, GAsyncResult *res, gpointer user_data)
 #endif
     const char *message = error ? error->message : _("Repository refresh failed after transaction.");
     clear_package_view_after_apply_refresh_failure(widgets, message);
+    FailedApplyRefreshAction action =
+        failed_apply_refresh_after_rebuild(widgets->transaction_state.failed_apply_refresh_state,
+                                           false,
+                                           package_query_has_active_package_list_request(widgets));
+    if (action == FailedApplyRefreshAction::FINISH) {
+      finish_failed_apply_refresh(widgets);
+    }
     if (error) {
       g_error_free(error);
     }
@@ -467,7 +539,17 @@ rebuild_after_tx_finished(GObject *, GAsyncResult *res, gpointer user_data)
   package_query_clear_search_cache();
 
   // Repopulate the currently visible package view so rows removed by the transaction disappear without a manual reload.
-  package_query_reload_current_view(widgets);
+  if (widgets->transaction_state.failed_apply_refresh_state != FailedApplyRefreshState::IDLE) {
+    FailedApplyRefreshAction action =
+        failed_apply_refresh_after_rebuild(widgets->transaction_state.failed_apply_refresh_state,
+                                           true,
+                                           package_query_has_active_package_list_request(widgets));
+    if (action == FailedApplyRefreshAction::RELOAD) {
+      start_failed_apply_reload(widgets);
+    }
+  } else {
+    package_query_reload_current_view(widgets);
+  }
   package_query_start_upgrade_indicator_refresh(widgets);
 }
 
@@ -619,15 +701,26 @@ start_apply_transaction(MainWindowUiState *widgets)
             g_clear_error(&error);
             return;
           }
+          DNFUI_TRACE("Transaction apply failed transaction_started=%d", td && td->transaction_started ? 1 : 0);
+          details += "\n";
+          details += _("Installed packages may have changed. Pending actions were cleared. "
+                       "Review the installed packages before trying again.");
           transaction_progress_finish(td ? td->progress_window : nullptr, false, details);
           mark_package_state_uncertain_after_apply(widgets);
           pending_transaction_invalidate_service_preview(widgets);
-          if (td && td->transaction_started) {
-            widgets->transaction_state.actions.clear();
-            refresh_package_table_statuses_after_apply(widgets);
-            package_details_refresh_selected_package_actions(widgets);
+          // Progress signals can be lost even if the RPM transaction started.
+          widgets->transaction_state.failed_apply_refresh_state = FailedApplyRefreshState::REBUILDING;
+          widgets_spinner_acquire(widgets->query.spinner);
+          package_query_cancel_active_package_list_request(widgets);
+          widgets->transaction_state.actions.clear();
+          pending_transaction_refresh_pending_tab(widgets);
+          if (widgets->query_state.displayed_query.kind == DisplayedPackageQueryKind::NONE) {
+            widgets->transaction_state.failed_apply_exact_nevra = widgets->results.selected_nevra;
           }
-          pending_transaction_set_preview_controls_sensitive(widgets, true);
+          package_table_fill_package_view(widgets, std::vector<PackageRow> {});
+          package_details_reset_details_view(widgets);
+          package_query_set_idle_controls_sensitive(widgets, false);
+          pending_transaction_set_preview_controls_sensitive(widgets, false);
           ui_helpers_set_status(
               widgets->query.status_label, _("Transaction failed. See the transaction window for details."), "red");
           if (error) {

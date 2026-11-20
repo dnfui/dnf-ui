@@ -67,9 +67,7 @@ When the user clicks Apply:
 10. dnf5daemon handles privileged apply work and Polkit behavior.
 11. The GUI refreshes package state and closes the daemon session.
 
-Pending actions are cleared after a successful apply. If apply fails after the daemon reports that RPM work
-started, pending actions are also cleared because the old request no longer describes what still needs to be
-done. Failures before RPM work starts keep pending actions so the user can retry.
+Pending actions are cleared after a successful Apply. See [Apply](#apply) for failure recovery.
 
 When the user clicks Upgrade All, the GUI skips the pending action list and asks the transaction client to
 prepare a daemon-side Upgrade All session. If the resolved preview is empty, the session is closed. The GUI
@@ -162,6 +160,19 @@ answer a Polkit prompt. A short D-Bus timeout can make the GUI report failure wh
 is still open.
 
 The GUI does not perform authorization itself. dnf5daemon owns that boundary.
+
+After a failed live Apply, DNF UI cannot assume that installed packages are unchanged. If D-Bus communication
+fails, the GUI may miss the transaction-start signal even though RPM operations have begun. Retrying the old
+pending actions could then apply changes to a system that is already different.
+
+DNF UI discards the prepared transaction and pending marks, warns the user in the progress window, and clears
+the package table. It cancels any running package query so outdated results cannot reappear, then rebuilds
+package data and reloads the previous view. Package queries and transaction controls remain disabled until
+recovery finishes. If the rebuild or reload fails, the table stays empty. To retry selected-package actions,
+the user must mark them again and review a new preview. Upgrade All is available again after recovery, even
+if the table is empty.
+
+Failed offline preparation keeps pending marks because it does not run an RPM transaction.
 
 dnf5daemon loads the normal DNF configuration and then its own `/etc/dnf/dnf5daemon-server.conf` file.
 Package downloads during Apply are done by dnf5daemon, so they may use the daemon cache instead of the cache used by
