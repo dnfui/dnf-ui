@@ -255,11 +255,14 @@ create_empty_package_view(PackageTableEmptyState state)
   gtk_widget_set_vexpand(outer, TRUE);
   gtk_widget_add_css_class(outer, "package-empty-state");
 
+  GtkWidget *header = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+  gtk_widget_set_halign(header, GTK_ALIGN_START);
+
   GtkWidget *icon = gtk_image_new_from_icon_name("system-search-symbolic");
-  gtk_image_set_pixel_size(GTK_IMAGE(icon), 36);
-  gtk_widget_set_halign(icon, GTK_ALIGN_START);
+  gtk_image_set_pixel_size(GTK_IMAGE(icon), 20);
+  gtk_widget_set_valign(icon, GTK_ALIGN_CENTER);
   gtk_widget_add_css_class(icon, "package-empty-icon");
-  gtk_box_append(GTK_BOX(outer), icon);
+  gtk_box_append(GTK_BOX(header), icon);
 
   const char *title_text = _("Find packages");
   const char *message_text = _("Search for packages, or choose a list option to browse packages.");
@@ -274,7 +277,8 @@ create_empty_package_view(PackageTableEmptyState state)
   g_free(title_markup);
   gtk_label_set_xalign(GTK_LABEL(title), 0.0f);
   gtk_widget_add_css_class(title, "package-empty-title");
-  gtk_box_append(GTK_BOX(outer), title);
+  gtk_box_append(GTK_BOX(header), title);
+  gtk_box_append(GTK_BOX(outer), header);
 
   GtkWidget *message = gtk_label_new(message_text);
   gtk_label_set_xalign(GTK_LABEL(message), 0.0f);
