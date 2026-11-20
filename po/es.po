@@ -1074,20 +1074,47 @@ msgstr "No se encontraron paquetes"
 msgid "Try a different search or refresh repositories."
 msgstr "Pruebe otra búsqueda o actualice los repositorios."
 
-msgid ""
-"Shortcuts\n"
-"Ctrl+F: Focus search\n"
-"Ctrl+L: Clear package list\n"
-"Ctrl+A: Mark all (Upgradable or Unneeded list)\n"
-"Ctrl+E: Export package list\n"
-"Ctrl+Enter: Apply pending changes\n"
-"F5: Refresh repositories\n"
-"Ctrl+H: Toggle history panel\n"
-"Ctrl+I: Toggle package info panel\n"
-"Ctrl+Shift+H: Open transaction history\n"
-"Ctrl+Shift+R: Open repositories\n"
-"Ctrl+Q or Ctrl+W: Quit"
-msgstr "Atajos de teclado\nCtrl+F: Enfocar la búsqueda\nCtrl+L: Vaciar la lista de paquetes\nCtrl+A: Marcar todos (lista de actualizables o innecesarios)\nCtrl+E: Exportar la lista de paquetes\nCtrl+Enter: Aplicar los cambios pendientes\nF5: Actualizar repositorios\nCtrl+H: Mostrar u ocultar el panel del historial\nCtrl+I: Mostrar u ocultar el panel de información del paquete\nCtrl+Shift+H: Abrir el historial de transacciones\nCtrl+Shift+R: Abrir los repositorios\nCtrl+Q o Ctrl+W: Salir"
+msgid "Shortcuts"
+msgstr "Atajos de teclado"
+
+msgid "Focus search"
+msgstr "Enfocar la búsqueda"
+
+msgid "Clear package list"
+msgstr "Vaciar la lista de paquetes"
+
+msgid "Mark all (Upgradable or Unneeded list)"
+msgstr "Marcar todos (lista de actualizables o innecesarios)"
+
+msgid "Export package list"
+msgstr "Exportar la lista de paquetes"
+
+msgid "Apply pending changes"
+msgstr "Aplicar los cambios pendientes"
+
+msgid "Refresh repositories"
+msgstr "Actualizar repositorios"
+
+msgid "Toggle history panel"
+msgstr "Mostrar u ocultar el panel del historial"
+
+msgid "Toggle package info panel"
+msgstr "Mostrar u ocultar el panel de información del paquete"
+
+msgid "Open transaction history"
+msgstr "Abrir el historial de transacciones"
+
+msgid "Open repositories"
+msgstr "Abrir los repositorios"
+
+msgid "or"
+msgstr "o"
+
+msgid "Ctrl+Shift+H"
+msgstr "Ctrl+Shift+H"
+
+msgid "Ctrl+Shift+R"
+msgstr "Ctrl+Shift+R"
 
 #. Update count label
 #, c-format

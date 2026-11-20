@@ -1112,32 +1112,47 @@ msgstr "Inga paket hittades"
 msgid "Try a different search or refresh repositories."
 msgstr "Prova en annan sökning eller uppdatera förråden."
 
-msgid ""
-"Shortcuts\n"
-"Ctrl+F: Focus search\n"
-"Ctrl+L: Clear package list\n"
-"Ctrl+A: Mark all (Upgradable or Unneeded list)\n"
-"Ctrl+E: Export package list\n"
-"Ctrl+Enter: Apply pending changes\n"
-"F5: Refresh repositories\n"
-"Ctrl+H: Toggle history panel\n"
-"Ctrl+I: Toggle package info panel\n"
-"Ctrl+Shift+H: Open transaction history\n"
-"Ctrl+Shift+R: Open repositories\n"
-"Ctrl+Q or Ctrl+W: Quit"
-msgstr ""
-"Snabbtangenter\n"
-"Ctrl+F: Fokusera sökfält\n"
-"Ctrl+L: Rensa paketlista\n"
-"Ctrl+A: Markera alla (uppgraderbara eller överflödiga paket)\n"
-"Ctrl+E: Exportera paketlista\n"
-"Ctrl+Enter: Verkställ väntande ändringar\n"
-"F5: Uppdatera förråd\n"
-"Ctrl+H: Växla historikpanel\n"
-"Ctrl+I: Växla paketinfopanel\n"
-"Ctrl+Skift+H: Öppna transaktionshistorik\n"
-"Ctrl+Skift+R: Öppna förråd\n"
-"Ctrl+Q eller Ctrl+W: Avsluta"
+msgid "Shortcuts"
+msgstr "Snabbtangenter"
+
+msgid "Focus search"
+msgstr "Fokusera sökfält"
+
+msgid "Clear package list"
+msgstr "Rensa paketlista"
+
+msgid "Mark all (Upgradable or Unneeded list)"
+msgstr "Markera alla (uppgraderbara eller överflödiga paket)"
+
+msgid "Export package list"
+msgstr "Exportera paketlista"
+
+msgid "Apply pending changes"
+msgstr "Verkställ väntande ändringar"
+
+msgid "Refresh repositories"
+msgstr "Uppdatera förråd"
+
+msgid "Toggle history panel"
+msgstr "Växla historikpanel"
+
+msgid "Toggle package info panel"
+msgstr "Växla paketinfopanel"
+
+msgid "Open transaction history"
+msgstr "Öppna transaktionshistorik"
+
+msgid "Open repositories"
+msgstr "Öppna förråd"
+
+msgid "or"
+msgstr "eller"
+
+msgid "Ctrl+Shift+H"
+msgstr "Ctrl+Skift+H"
+
+msgid "Ctrl+Shift+R"
+msgstr "Ctrl+Skift+R"
 
 #. Update count label
 #, c-format

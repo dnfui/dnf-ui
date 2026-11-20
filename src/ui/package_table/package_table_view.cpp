@@ -216,6 +216,33 @@ refresh_visible_status_labels(GtkWidget *widget, MainWindowUiState *widgets)
 }
 
 // -----------------------------------------------------------------------------
+// Create a neutral chip for a keyboard shortcut.
+// -----------------------------------------------------------------------------
+static GtkWidget *
+create_shortcut_chip(const char *shortcut)
+{
+  GtkWidget *label = gtk_label_new(shortcut);
+  gtk_widget_set_halign(label, GTK_ALIGN_START);
+  gtk_widget_add_css_class(label, "package-shortcut-chip");
+  return label;
+}
+
+// -----------------------------------------------------------------------------
+// Add a shortcut and its description to the legend.
+// -----------------------------------------------------------------------------
+static void
+append_shortcut_row(GtkGrid *grid, int row, GtkWidget *shortcut, const char *description)
+{
+  gtk_grid_attach(grid, shortcut, 0, row, 1, 1);
+
+  GtkWidget *label = gtk_label_new(description);
+  gtk_label_set_xalign(GTK_LABEL(label), 0.0f);
+  gtk_label_set_selectable(GTK_LABEL(label), TRUE);
+  gtk_widget_add_css_class(label, "package-shortcut-text");
+  gtk_grid_attach(grid, label, 1, row, 1, 1);
+}
+
+// -----------------------------------------------------------------------------
 // Build the message shown when the package table has no rows.
 // -----------------------------------------------------------------------------
 static GtkWidget *
@@ -255,21 +282,48 @@ create_empty_package_view(PackageTableEmptyState state)
   gtk_widget_add_css_class(message, "package-empty-message");
   gtk_box_append(GTK_BOX(outer), message);
 
-  GtkWidget *shortcuts = gtk_label_new(_("Shortcuts\n"
-                                         "Ctrl+F: Focus search\n"
-                                         "Ctrl+L: Clear package list\n"
-                                         "Ctrl+A: Mark all (Upgradable or Unneeded list)\n"
-                                         "Ctrl+E: Export package list\n"
-                                         "Ctrl+Enter: Apply pending changes\n"
-                                         "F5: Refresh repositories\n"
-                                         "Ctrl+H: Toggle history panel\n"
-                                         "Ctrl+I: Toggle package info panel\n"
-                                         "Ctrl+Shift+H: Open transaction history\n"
-                                         "Ctrl+Shift+R: Open repositories\n"
-                                         "Ctrl+Q or Ctrl+W: Quit"));
-  gtk_label_set_xalign(GTK_LABEL(shortcuts), 0.0f);
-  gtk_label_set_selectable(GTK_LABEL(shortcuts), TRUE);
+  GtkWidget *shortcuts = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
+  gtk_widget_set_halign(shortcuts, GTK_ALIGN_START);
   gtk_widget_add_css_class(shortcuts, "package-empty-shortcuts");
+
+  GtkWidget *shortcuts_heading = gtk_label_new(_("Shortcuts"));
+  gtk_widget_set_halign(shortcuts_heading, GTK_ALIGN_START);
+  gtk_widget_add_css_class(shortcuts_heading, "package-shortcut-text");
+  gtk_box_append(GTK_BOX(shortcuts), shortcuts_heading);
+
+  GtkWidget *shortcut_grid = gtk_grid_new();
+  gtk_grid_set_row_spacing(GTK_GRID(shortcut_grid), 6);
+  gtk_grid_set_column_spacing(GTK_GRID(shortcut_grid), 14);
+  gtk_box_append(GTK_BOX(shortcuts), shortcut_grid);
+
+  append_shortcut_row(GTK_GRID(shortcut_grid), 0, create_shortcut_chip("Ctrl+F"), _("Focus search"));
+  append_shortcut_row(GTK_GRID(shortcut_grid), 1, create_shortcut_chip("Ctrl+L"), _("Clear package list"));
+  append_shortcut_row(GTK_GRID(shortcut_grid),
+                      2,
+                      create_shortcut_chip("Ctrl+A"),
+                      _("Mark all (Upgradable or Unneeded list)"));
+  append_shortcut_row(GTK_GRID(shortcut_grid), 3, create_shortcut_chip("Ctrl+E"), _("Export package list"));
+  append_shortcut_row(GTK_GRID(shortcut_grid), 4, create_shortcut_chip("Ctrl+Enter"), _("Apply pending changes"));
+  append_shortcut_row(GTK_GRID(shortcut_grid), 5, create_shortcut_chip("F5"), _("Refresh repositories"));
+  append_shortcut_row(GTK_GRID(shortcut_grid), 6, create_shortcut_chip("Ctrl+H"), _("Toggle history panel"));
+  append_shortcut_row(GTK_GRID(shortcut_grid), 7, create_shortcut_chip("Ctrl+I"), _("Toggle package info panel"));
+  append_shortcut_row(GTK_GRID(shortcut_grid),
+                      8,
+                      create_shortcut_chip(_("Ctrl+Shift+H")),
+                      _("Open transaction history"));
+  append_shortcut_row(GTK_GRID(shortcut_grid),
+                      9,
+                      create_shortcut_chip(_("Ctrl+Shift+R")),
+                      _("Open repositories"));
+
+  GtkWidget *quit_keys = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
+  gtk_box_append(GTK_BOX(quit_keys), create_shortcut_chip("Ctrl+Q"));
+  GtkWidget *or_label = gtk_label_new(_("or"));
+  gtk_widget_add_css_class(or_label, "package-shortcut-text");
+  gtk_box_append(GTK_BOX(quit_keys), or_label);
+  gtk_box_append(GTK_BOX(quit_keys), create_shortcut_chip("Ctrl+W"));
+  append_shortcut_row(GTK_GRID(shortcut_grid), 10, quit_keys, _("Quit"));
+
   gtk_box_append(GTK_BOX(outer), shortcuts);
 
   return outer;
