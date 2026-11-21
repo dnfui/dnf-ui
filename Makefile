@@ -168,7 +168,7 @@ run: dnfui
 .PHONY: test
 test: dnfui-tests
 	@echo "*** Running test suite ***"
-	@./$(TEST_BIN_NAME)
+	@$(MESON) test -C "$(MESON_BUILD_DIR)" --print-errorlogs
 
 # Install Fedora packages needed for native development:
 .PHONY: fedora-deps
