@@ -359,6 +359,26 @@ on_requirement_released(GtkGestureClick *, gint n_press, gdouble x, gdouble y, g
 }
 
 // -----------------------------------------------------------------------------
+// Copy selected dependencies as plain text to avoid copying large numbers of text tags.
+// -----------------------------------------------------------------------------
+static void
+on_dependencies_copy_clipboard(GtkTextView *view, gpointer)
+{
+  g_signal_stop_emission_by_name(view, "copy-clipboard");
+
+  GtkTextBuffer *buffer = gtk_text_view_get_buffer(view);
+  GtkTextIter start;
+  GtkTextIter end;
+  if (!gtk_text_buffer_get_selection_bounds(buffer, &start, &end)) {
+    return;
+  }
+
+  char *text = gtk_text_buffer_get_text(buffer, &start, &end, TRUE);
+  gdk_clipboard_set_text(gtk_widget_get_clipboard(GTK_WIDGET(view)), text);
+  g_free(text);
+}
+
+// -----------------------------------------------------------------------------
 // Connect provider links in the Dependencies tab.
 // -----------------------------------------------------------------------------
 void
@@ -376,6 +396,7 @@ package_details_connect_requirement_links(MainWindowUiState *widgets)
   g_signal_connect(motion, "leave", G_CALLBACK(on_requirement_motion_left), widgets);
   gtk_widget_add_controller(GTK_WIDGET(widgets->results.deps_view), motion);
   g_signal_connect(widgets->results.deps_buffer, "changed", G_CALLBACK(on_dependencies_changed), widgets);
+  g_signal_connect(widgets->results.deps_view, "copy-clipboard", G_CALLBACK(on_dependencies_copy_clipboard), nullptr);
 }
 
 // -----------------------------------------------------------------------------
