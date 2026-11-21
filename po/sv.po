@@ -1851,3 +1851,81 @@ msgstr "Installerade paket kan ha ändrats. Väntande åtgärder har rensats. Ko
 msgid "Additional removals"
 msgstr "Ytterligare borttagningar"
 
+msgid "Resource Monitor..."
+msgstr "Resursövervakare..."
+
+msgid "Resource Monitor"
+msgstr "Resursövervakare"
+
+
+msgid "Memory"
+msgstr "Minne"
+
+msgid "Resident memory (RSS)"
+msgstr "Resident minne (RSS)"
+
+msgid "Memory scale"
+msgstr "Minneskala"
+
+msgid "Peak RSS"
+msgstr "Högsta RSS"
+
+msgid "Anonymous memory"
+msgstr "Anonymt minne"
+
+msgid "File-backed memory"
+msgstr "Filbaserat minne"
+
+msgid "CPU"
+msgstr "CPU"
+
+msgid "Process CPU"
+msgstr "Processens CPU-användning"
+
+msgid "Percentage of total logical CPU capacity."
+msgstr "Andel av den totala kapaciteten hos alla logiska processorer."
+
+msgid "Unavailable"
+msgstr "Inte tillgänglig"
+
+msgid "Measuring..."
+msgstr "Mäter..."
+
+msgid "Shared memory"
+msgstr "Delat minne"
+
+msgid "Copy Snapshot"
+msgstr "Kopiera mätvärden"
+
+msgid "System Information"
+msgstr "Systeminformation"
+
+msgid "OS version"
+msgstr "Operativsystemets version"
+
+msgid "Total RAM"
+msgstr "Totalt RAM-minne"
+
+msgid "CPU model"
+msgstr "Processormodell"
+
+msgid "Logical processors"
+msgstr "Logiska processorer"
+
+msgid "Memory (DNF UI only)"
+msgstr "Minne (endast DNF UI)"
+
+msgid "DNF UI version"
+msgstr "DNF UI-version"
+
+msgid "Snapshot time"
+msgstr "Mättidpunkt"
+
+msgid "PID"
+msgstr "PID"
+
+msgid "Kernel version"
+msgstr "Kärnversion"
+
+msgid "Architecture"
+msgstr "Arkitektur"

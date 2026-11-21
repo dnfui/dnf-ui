@@ -11,6 +11,8 @@ dnfui_tests = executable(
     'unit/test_package_details.cpp',
     'unit/test_package_queries.cpp',
     'unit/test_config.cpp',
+    'unit/test_process_resources.cpp',
+    'unit/test_system_info.cpp',
     'unit/test_dnf5daemon_client.cpp',
     'unit/test_offline.cpp',
     'unit/test_offline_transaction.cpp',
@@ -34,6 +36,8 @@ dnfui_tests = executable(
   ) + backend_sources + files(
     '../src/i18n.cpp',
     '../src/config.cpp',
+    '../src/ui/diagnostics/process_resources.cpp',
+    '../src/ui/diagnostics/system_info.cpp',
     '../src/dnf5daemon_client/transaction_service_client_dbus.cpp',
     '../src/dnf5daemon_client/transaction_service_client_offline.cpp',
     '../src/dnf5daemon_client/transaction_service_client_parser.cpp',
