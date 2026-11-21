@@ -1794,3 +1794,81 @@ msgstr "Les paquets installés ont peut-être changé. Les actions en attente on
 msgid "Additional removals"
 msgstr "Suppressions supplémentaires"
 
+msgid "Resource Monitor..."
+msgstr "Moniteur de ressources..."
+
+msgid "Resource Monitor"
+msgstr "Moniteur de ressources"
+
+
+msgid "Memory"
+msgstr "Mémoire"
+
+msgid "Resident memory (RSS)"
+msgstr "Mémoire résidente (RSS)"
+
+msgid "Memory scale"
+msgstr "Échelle de mémoire"
+
+msgid "Peak RSS"
+msgstr "Pic de RSS"
+
+msgid "Anonymous memory"
+msgstr "Mémoire anonyme"
+
+msgid "File-backed memory"
+msgstr "Mémoire adossée aux fichiers"
+
+msgid "CPU"
+msgstr "CPU"
+
+msgid "Process CPU"
+msgstr "CPU du processus"
+
+msgid "Percentage of total logical CPU capacity."
+msgstr "Pourcentage de la capacité totale des processeurs logiques."
+
+msgid "Unavailable"
+msgstr "Indisponible"
+
+msgid "Measuring..."
+msgstr "Mesure en cours..."
+
+msgid "Shared memory"
+msgstr "Mémoire partagée"
+
+msgid "Copy Snapshot"
+msgstr "Copier les mesures"
+
+msgid "System Information"
+msgstr "Informations système"
+
+msgid "OS version"
+msgstr "Version du système d'exploitation"
+
+msgid "Total RAM"
+msgstr "Mémoire vive totale"
+
+msgid "CPU model"
+msgstr "Modèle du processeur"
+
+msgid "Logical processors"
+msgstr "Processeurs logiques"
+
+msgid "Memory (DNF UI only)"
+msgstr "Mémoire (DNF UI uniquement)"
+
+msgid "DNF UI version"
+msgstr "Version de DNF UI"
+
+msgid "Snapshot time"
+msgstr "Heure de la mesure"
+
+msgid "PID"
+msgstr "PID"
+
+msgid "Kernel version"
+msgstr "Version du noyau"
+
+msgid "Architecture"
+msgstr "Architecture"

@@ -7,6 +7,7 @@
 
 #include "i18n.hpp"
 #include "ui/history/transaction_history_view.hpp"
+#include "ui/diagnostics/resource_monitor.hpp"
 #include "ui/package_query/package_query_controller.hpp"
 #include "ui/package_table/package_table_columns.hpp"
 #include "ui/package_table/package_table_export.hpp"
@@ -204,6 +205,20 @@ on_menu_transaction_history(GSimpleAction *, GVariant *, gpointer user_data)
 }
 
 // -----------------------------------------------------------------------------
+// Show the read-only resource monitor.
+// -----------------------------------------------------------------------------
+static void
+on_menu_resource_monitor(GSimpleAction *, GVariant *, gpointer user_data)
+{
+  MainMenuActionData *data = static_cast<MainMenuActionData *>(user_data);
+  if (!data || !data->window) {
+    return;
+  }
+
+  resource_monitor_show_window(GTK_WINDOW(data->window));
+}
+
+// -----------------------------------------------------------------------------
 // Show the repository list window.
 // -----------------------------------------------------------------------------
 static void
@@ -358,6 +373,7 @@ main_menu_create()
   g_menu_append(view_menu, _("History Panel"), "win.show-history");
   g_menu_append(view_menu, _("Package Info Panel"), "win.show-info");
   g_menu_append(view_menu, _("Repositories..."), "win.repositories");
+  g_menu_append(view_menu, _("Resource Monitor..."), "win.resource-monitor");
   GMenu *columns_menu = g_menu_new();
   for (const auto &column : package_table_column_definitions()) {
     std::string detailed_action = "win.";
@@ -407,7 +423,7 @@ main_menu_connect_actions(const MainMenuWidgets &menu_widgets, MainWindowUiState
         delete static_cast<MainMenuActionData *>(p);
       });
 
-  GActionEntry entries[14] = {};
+  GActionEntry entries[15] = {};
   entries[0].name = "quit";
   entries[0].activate = on_menu_quit;
   entries[1].name = "clear-list";
@@ -443,6 +459,8 @@ main_menu_connect_actions(const MainMenuWidgets &menu_widgets, MainWindowUiState
   entries[12].activate = on_menu_list_unneeded;
   entries[13].name = "clear-search-history";
   entries[13].activate = on_menu_clear_search_history;
+  entries[14].name = "resource-monitor";
+  entries[14].activate = on_menu_resource_monitor;
 
   GSimpleActionGroup *actions = g_simple_action_group_new();
   g_action_map_add_action_entries(G_ACTION_MAP(actions), entries, G_N_ELEMENTS(entries), data);
