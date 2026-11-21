@@ -1,5 +1,5 @@
 Name:           dnf-ui
-Version:        0.8.5
+Version:        0.8.6
 Release:        1%{?dist}
 Summary:        GTK interface for DNF5
 
@@ -56,6 +56,13 @@ appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/io.github.dnfui.
 %{_datadir}/metainfo/io.github.dnfui.dnfui.metainfo.xml
 
 %changelog
+* Sat Nov 21 2026 ErikMN <dnfui@proton.me> - 0.8.6-1
+- Add a Resource Monitor to inspect DNF UI memory and CPU usage
+- Show package status with icons and colored badges in the Description tab
+- Improve the keyboard shortcut legend with clearer styling
+- Highlight additional package removals in the transaction preview
+- Clear pending actions and reload package information after failed transactions
+
 * Thu Nov 19 2026 ErikMN <dnfui@proton.me> - 0.8.5-1
 - Make transaction history package searches much faster
 - Add Exact match to transaction history to find changes for one package name
