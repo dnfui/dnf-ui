@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include "test_gtk_utils.hpp"
 #include "dnf5daemon_client/transaction_service_client.hpp"
 #include "transaction/transaction_preview.hpp"
 #include "ui/common/ui_helpers.hpp"
@@ -12,11 +13,7 @@
 static bool
 transaction_dialog_display_available()
 {
-  static const bool available = gtk_init_check();
-  if (!available) {
-    REQUIRE(g_getenv("DNFUI_TEST_REQUIRE_DISPLAY") == nullptr);
-  }
-  return available;
+  return test_gtk_display_available();
 }
 
 static GtkWindow *

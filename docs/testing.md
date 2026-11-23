@@ -39,6 +39,9 @@ The `dnfui-tests` executable covers:
 - offline transaction mode, status, and cleanup through a private D-Bus fixture without changing system
   packages
 
+The tests also cover GTask completion and task lifetime after window destruction.
+The window-destruction test requires a GTK display.
+
 The separate `dnfui-color-scheme-tests` executable checks theme behavior.
 
 Signing-key dialog tests cover key details without a GTK display and rejection when the task was already
