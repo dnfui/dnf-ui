@@ -125,6 +125,63 @@ TEST_CASE("BaseManager rebuild can be cancelled while waiting for the Base lock"
 }
 
 // -----------------------------------------------------------------------------
+// A cancelled search must finish while another operation still holds the Base lock.
+// -----------------------------------------------------------------------------
+TEST_CASE_METHOD(ProviderRepositoryFixture, "Cancelled searches finish before the Base lock is released")
+{
+  auto &manager = BaseManager::instance();
+  const uint64_t original_generation = manager.current_generation();
+  DnfBackendSearchOptions options = backend_search_options(false, false);
+  std::string term;
+
+  SECTION("Package search")
+  {
+    term = "dnfui-filelists-fixture";
+  }
+
+  SECTION("File search")
+  {
+    options.mode = DnfBackendSearchMode::FILES;
+    term = "file-2";
+  }
+
+  auto cancellable = std::unique_ptr<GCancellable, decltype(&g_object_unref)>(g_cancellable_new(), g_object_unref);
+  GCancellable *cancel = cancellable.get();
+  std::promise<void> worker_started;
+  auto started = worker_started.get_future();
+  std::future<std::vector<PackageRow>> result;
+  std::future_status start_status;
+  std::future_status blocked_status;
+  std::future_status cancelled_status;
+
+  {
+    auto read = manager.acquire_read();
+    result = std::async(std::launch::async, [&worker_started, &term, &options, cancel]() {
+      worker_started.set_value();
+      return dnf_backend_search_package_rows_interruptible(term, options, cancel);
+    });
+
+    start_status = started.wait_for(std::chrono::seconds(2));
+    blocked_status = result.wait_for(std::chrono::milliseconds(50));
+    g_cancellable_cancel(cancel);
+    cancelled_status = result.wait_for(std::chrono::seconds(2));
+  }
+
+  const auto rows = result.get();
+
+  REQUIRE(start_status == std::future_status::ready);
+  REQUIRE(blocked_status == std::future_status::timeout);
+  REQUIRE(cancelled_status == std::future_status::ready);
+  REQUIRE(rows.empty());
+  REQUIRE(dnf_backend_installed_snapshot_size_for_tests() == 0);
+  REQUIRE(manager.current_generation() == original_generation);
+
+  // A cancelled query must not prevent the next query from completing.
+  const auto retry_rows = dnf_backend_search_package_rows_interruptible(term, options, nullptr);
+  REQUIRE_FALSE(retry_rows.empty());
+}
+
+// -----------------------------------------------------------------------------
 // Verify that unloadable plugins cannot break local package data after an upgrade.
 // -----------------------------------------------------------------------------
 TEST_CASE("BaseManager reads package data without loading libdnf5 plugins")
