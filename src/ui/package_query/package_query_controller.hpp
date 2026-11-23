@@ -40,7 +40,7 @@ void package_query_on_search_mode_changed(GObject *, GParamSpec *, gpointer user
 // -----------------------------------------------------------------------------
 // Restore and run a search from a selected history row.
 // -----------------------------------------------------------------------------
-void package_query_on_history_row_selected(GtkListBox *, GtkListBoxRow *row, gpointer user_data);
+void package_query_on_history_row_activated(GtkListBox *, GtkListBoxRow *row, gpointer user_data);
 // -----------------------------------------------------------------------------
 // Clear the search history list.
 // -----------------------------------------------------------------------------

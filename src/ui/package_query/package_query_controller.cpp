@@ -288,7 +288,7 @@ package_query_on_search_button_clicked(GtkButton *, gpointer user_data)
 // Handle selecting a search term from the history list.
 // -----------------------------------------------------------------------------
 void
-package_query_on_history_row_selected(GtkListBox *, GtkListBoxRow *row, gpointer user_data)
+package_query_on_history_row_activated(GtkListBox *, GtkListBoxRow *row, gpointer user_data)
 {
   if (!row) {
     return;

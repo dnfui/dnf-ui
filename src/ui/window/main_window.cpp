@@ -771,7 +771,7 @@ connect_signals(const AppWidgets *ui, MainWindowUiState *widgets)
                    "notify::search-mode-enabled",
                    G_CALLBACK(package_table_on_quick_filter_mode_changed),
                    widgets);
-  g_signal_connect(ui->history_list, "row-selected", G_CALLBACK(package_query_on_history_row_selected), widgets);
+  g_signal_connect(ui->history_list, "row-activated", G_CALLBACK(package_query_on_history_row_activated), widgets);
 
   g_signal_connect(ui->apply_button, "clicked", G_CALLBACK(pending_transaction_on_apply_button_clicked), widgets);
   g_signal_connect(
