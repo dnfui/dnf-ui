@@ -48,7 +48,7 @@ const PackageTableColumnDefinition *package_table_column_definition_by_id(const 
 std::set<std::string> package_table_load_visible_column_ids();
 // Save visible package table columns to the user config.
 // -----------------------------------------------------------------------------
-void package_table_save_visible_column_ids(const std::set<std::string> &visible);
+bool package_table_save_visible_column_ids(const std::set<std::string> &visible);
 // -----------------------------------------------------------------------------
 // Change one visible column set without allowing the last column to be hidden.
 // -----------------------------------------------------------------------------
@@ -57,7 +57,7 @@ package_table_update_visible_column_ids(std::set<std::string> &visible_columns, 
 // -----------------------------------------------------------------------------
 // Reset visible package table columns to the default set.
 // -----------------------------------------------------------------------------
-void package_table_reset_visible_column_ids();
+bool package_table_reset_visible_column_ids();
 
 // -----------------------------------------------------------------------------
 // EOF

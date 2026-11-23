@@ -1533,6 +1533,9 @@ msgstr "Unterstützung"
 msgid "At least one package table column must remain visible."
 msgstr "Mindestens eine Spalte der Pakettabelle muss sichtbar bleiben."
 
+msgid "Could not save package table columns."
+msgstr "Die Spalten der Pakettabelle konnten nicht gespeichert werden."
+
 msgid "Package table columns restored to defaults."
 msgstr "Die Pakettabellenspalten wurden auf die Standardeinstellungen zurückgesetzt."
 

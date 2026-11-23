@@ -996,19 +996,21 @@ package_table_column_is_visible(MainWindowUiState *widgets, PackageColumnKind ki
 // -----------------------------------------------------------------------------
 // Change one package table column setting and update the current table if shown.
 // -----------------------------------------------------------------------------
-bool
+PackageTableColumnChangeResult
 package_table_set_column_visible(MainWindowUiState *widgets, const char *column_id, bool visible)
 {
   if (!package_table_column_definition_by_id(column_id)) {
-    return false;
+    return PackageTableColumnChangeResult::UNKNOWN_COLUMN;
   }
 
   std::set<std::string> visible_columns = package_table_load_visible_column_ids();
   if (!package_table_update_visible_column_ids(visible_columns, column_id, visible)) {
-    return false;
+    return PackageTableColumnChangeResult::LAST_VISIBLE_COLUMN;
   }
 
-  package_table_save_visible_column_ids(visible_columns);
+  if (!package_table_save_visible_column_ids(visible_columns)) {
+    return PackageTableColumnChangeResult::SAVE_FAILED;
+  }
 
   if (widgets && widgets->results.list_scroller) {
     GtkWidget *child = gtk_scrolled_window_get_child(widgets->results.list_scroller);
@@ -1018,16 +1020,18 @@ package_table_set_column_visible(MainWindowUiState *widgets, const char *column_
   }
   package_details_refresh_selected_package_actions(widgets);
 
-  return true;
+  return PackageTableColumnChangeResult::SAVED;
 }
 
 // -----------------------------------------------------------------------------
 // Reset package table columns to their default visibility and update the table.
 // -----------------------------------------------------------------------------
-void
+bool
 package_table_reset_columns_to_default(MainWindowUiState *widgets)
 {
-  package_table_reset_visible_column_ids();
+  if (!package_table_reset_visible_column_ids()) {
+    return false;
+  }
 
   if (widgets && widgets->results.list_scroller) {
     GtkWidget *child = gtk_scrolled_window_get_child(widgets->results.list_scroller);
@@ -1036,6 +1040,7 @@ package_table_reset_columns_to_default(MainWindowUiState *widgets)
     }
   }
   package_details_refresh_selected_package_actions(widgets);
+  return true;
 }
 
 static void

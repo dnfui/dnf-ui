@@ -329,11 +329,19 @@ on_menu_column_visibility_changed(GSimpleAction *action, GVariant *value, gpoint
   }
 
   gboolean visible = g_variant_get_boolean(value);
-  if (package_table_set_column_visible(data->widgets, column_id.c_str(), visible)) {
+  switch (package_table_set_column_visible(data->widgets, column_id.c_str(), visible)) {
+  case PackageTableColumnChangeResult::SAVED:
     g_simple_action_set_state(action, value);
-  } else {
+    break;
+  case PackageTableColumnChangeResult::LAST_VISIBLE_COLUMN:
     ui_helpers_set_status(
         data->widgets->query.status_label, _("At least one package table column must remain visible."), "blue");
+    break;
+  case PackageTableColumnChangeResult::SAVE_FAILED:
+    ui_helpers_set_status(data->widgets->query.status_label, _("Could not save package table columns."), "red");
+    break;
+  case PackageTableColumnChangeResult::UNKNOWN_COLUMN:
+    break;
   }
 }
 
@@ -348,7 +356,10 @@ on_menu_restore_default_columns(GSimpleAction *, GVariant *, gpointer user_data)
     return;
   }
 
-  package_table_reset_columns_to_default(data->widgets);
+  if (!package_table_reset_columns_to_default(data->widgets)) {
+    ui_helpers_set_status(data->widgets->query.status_label, _("Could not save package table columns."), "red");
+    return;
+  }
   GSimpleActionGroup *actions =
       static_cast<GSimpleActionGroup *>(g_object_get_data(G_OBJECT(data->window), "dnfui-menu-action-group"));
   sync_column_action_states(actions);

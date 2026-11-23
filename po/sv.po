@@ -1587,6 +1587,9 @@ msgstr "Support"
 msgid "At least one package table column must remain visible."
 msgstr "Minst en paketkolumn måste vara synlig."
 
+msgid "Could not save package table columns."
+msgstr "Kunde inte spara kolumninställningarna för pakettabellen."
+
 msgid "Package table columns restored to defaults."
 msgstr "Paketkolumner återställda till standard."
 

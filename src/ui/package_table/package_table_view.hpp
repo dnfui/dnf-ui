@@ -83,14 +83,23 @@ void package_table_refresh_statuses(MainWindowUiState *widgets);
 // Return true when one package table column is visible in the current GTK view.
 // -----------------------------------------------------------------------------
 bool package_table_column_is_visible(MainWindowUiState *widgets, PackageColumnKind kind);
+
+enum class PackageTableColumnChangeResult {
+  SAVED,
+  UNKNOWN_COLUMN,
+  LAST_VISIBLE_COLUMN,
+  SAVE_FAILED,
+};
+
 // -----------------------------------------------------------------------------
 // Change one package table column setting and update the current table if shown.
 // -----------------------------------------------------------------------------
-bool package_table_set_column_visible(MainWindowUiState *widgets, const char *column_id, bool visible);
+PackageTableColumnChangeResult
+package_table_set_column_visible(MainWindowUiState *widgets, const char *column_id, bool visible);
 // -----------------------------------------------------------------------------
 // Reset package table columns to their default visibility and update the table.
 // -----------------------------------------------------------------------------
-void package_table_reset_columns_to_default(MainWindowUiState *widgets);
+bool package_table_reset_columns_to_default(MainWindowUiState *widgets);
 
 // -----------------------------------------------------------------------------
 // EOF

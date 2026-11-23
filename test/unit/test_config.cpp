@@ -249,7 +249,7 @@ TEST_CASE("Package table columns save visible ids as hidden settings")
 {
   reset_test_config_file();
 
-  package_table_save_visible_column_ids({ "package", "version" });
+  REQUIRE(package_table_save_visible_column_ids({ "package", "version" }));
 
   std::set<std::string> visible = package_table_load_visible_column_ids();
   std::map<std::string, std::string> config = config_load_map();
@@ -308,10 +308,34 @@ TEST_CASE("Package table columns reset to defaults")
 {
   reset_test_config_file();
 
-  package_table_save_visible_column_ids({ "package" });
-  package_table_reset_visible_column_ids();
+  REQUIRE(package_table_save_visible_column_ids({ "package" }));
+  REQUIRE(package_table_reset_visible_column_ids());
 
   REQUIRE(package_table_load_visible_column_ids() == default_visible_package_table_columns());
+}
+
+// -----------------------------------------------------------------------------
+// Verify that column save failures preserve the previous visibility settings.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package table columns report a failed save")
+{
+  reset_test_config_file();
+
+  const std::set<std::string> saved = { "package" };
+  REQUIRE(package_table_save_visible_column_ids(saved));
+  REQUIRE(std::filesystem::create_directory(test_config_file().string() + ".tmp"));
+
+  SECTION("Change visible columns")
+  {
+    REQUIRE_FALSE(package_table_save_visible_column_ids({ "package", "version" }));
+  }
+
+  SECTION("Restore default columns")
+  {
+    REQUIRE_FALSE(package_table_reset_visible_column_ids());
+  }
+
+  REQUIRE(package_table_load_visible_column_ids() == saved);
 }
 
 // -----------------------------------------------------------------------------

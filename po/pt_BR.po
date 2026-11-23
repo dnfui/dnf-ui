@@ -1533,6 +1533,9 @@ msgstr "Suporte"
 msgid "At least one package table column must remain visible."
 msgstr "Pelo menos uma coluna da tabela de pacotes deve permanecer visível."
 
+msgid "Could not save package table columns."
+msgstr "Não foi possível salvar as colunas da tabela de pacotes."
+
 msgid "Package table columns restored to defaults."
 msgstr "Colunas da tabela de pacotes restauradas para o padrão."
 

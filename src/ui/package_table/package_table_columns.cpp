@@ -116,7 +116,7 @@ package_table_parse_column_ids(const std::string &value)
 // -----------------------------------------------------------------------------
 // Store hidden column ids so future default-visible columns appear by default.
 // -----------------------------------------------------------------------------
-static void
+static bool
 package_table_save_hidden_column_ids(const std::set<std::string> &hidden)
 {
   auto config = config_load_map();
@@ -133,7 +133,7 @@ package_table_save_hidden_column_ids(const std::set<std::string> &hidden)
 
   config[kPackageTableHiddenColumnsConfigKey] = value;
   config.erase(kPackageTableLegacyColumnsConfigKey);
-  config_save_map(config);
+  return config_save_map(config);
 }
 
 // -----------------------------------------------------------------------------
@@ -184,7 +184,7 @@ package_table_load_visible_column_ids()
 // -----------------------------------------------------------------------------
 // Save visible package table columns to the user config.
 // -----------------------------------------------------------------------------
-void
+bool
 package_table_save_visible_column_ids(const std::set<std::string> &visible)
 {
   std::set<std::string> hidden;
@@ -194,7 +194,7 @@ package_table_save_visible_column_ids(const std::set<std::string> &visible)
     }
   }
 
-  package_table_save_hidden_column_ids(hidden);
+  return package_table_save_hidden_column_ids(hidden);
 }
 
 // -----------------------------------------------------------------------------
@@ -223,10 +223,10 @@ package_table_update_visible_column_ids(std::set<std::string> &visible_columns, 
 // -----------------------------------------------------------------------------
 // Reset visible package table columns to the default set.
 // -----------------------------------------------------------------------------
-void
+bool
 package_table_reset_visible_column_ids()
 {
-  package_table_save_visible_column_ids(package_table_default_visible_column_ids());
+  return package_table_save_visible_column_ids(package_table_default_visible_column_ids());
 }
 
 // -----------------------------------------------------------------------------
