@@ -366,7 +366,7 @@ package_query_reload_current_view(MainWindowUiState *widgets)
   case DisplayedPackageQueryKind::SEARCH: {
     if (view_state.search_term.empty()) {
       widgets->query_state.reload_selected_nevra.clear();
-      BaseManager::instance().drop_cached_base();
+      package_query_drop_cached_base_async();
       return;
     }
 
@@ -406,7 +406,7 @@ package_query_reload_current_view(MainWindowUiState *widgets)
   // refresh the selected NEVRA directly so removed rows disappear without extra global view state.
   if (widgets->results.selected_nevra.empty()) {
     widgets->query_state.reload_selected_nevra.clear();
-    BaseManager::instance().drop_cached_base();
+    package_query_drop_cached_base_async();
     return;
   }
 

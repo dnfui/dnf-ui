@@ -156,6 +156,31 @@ struct QueryBackendBaseDropGuard {
 };
 
 // -----------------------------------------------------------------------------
+// Release cached backend metadata when no package list worker is needed.
+// -----------------------------------------------------------------------------
+void
+package_query_drop_cached_base_async()
+{
+  GApplication *app = g_application_get_default();
+  if (!app) {
+    return;
+  }
+
+  // Keep the backend alive until the worker finishes, even after the last window closes.
+  g_application_hold(app);
+  GTask *task = g_task_new(
+      app,
+      nullptr,
+      [](GObject *source, GAsyncResult *, gpointer) { g_application_release(G_APPLICATION(source)); },
+      nullptr);
+  g_task_run_in_thread(task, [](GTask *task, gpointer, gpointer, GCancellable *) {
+    BaseManager::instance().drop_cached_base();
+    g_task_return_boolean(task, TRUE);
+  });
+  g_object_unref(task);
+}
+
+// -----------------------------------------------------------------------------
 // Query installed packages on a worker thread.
 // -----------------------------------------------------------------------------
 static void

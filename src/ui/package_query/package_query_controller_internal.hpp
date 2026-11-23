@@ -112,6 +112,10 @@ void package_query_start_search_task(MainWindowUiState *widgets,
 // Start one exact selected-package reload worker.
 // -----------------------------------------------------------------------------
 void package_query_start_exact_package_reload_task(MainWindowUiState *widgets, const std::string &nevra);
+// -----------------------------------------------------------------------------
+// Release cached backend metadata without waiting on the GTK thread.
+// -----------------------------------------------------------------------------
+void package_query_drop_cached_base_async();
 
 // -----------------------------------------------------------------------------
 // EOF
