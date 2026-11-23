@@ -945,9 +945,10 @@ get_installed_package_rows_interruptible(GCancellable *cancellable, bool unneede
     return {};
   }
 
+  std::vector<PackageRow> visible_rows = unneeded_only ? std::move(unneeded_rows) : std::move(installed.rows);
   // Publish the complete installed snapshot even when only unneeded rows are displayed.
-  publish_installed_snapshot(installed, protected_names);
-  return unneeded_only ? unneeded_rows : installed.rows;
+  publish_installed_snapshot(std::move(installed), std::move(protected_names));
+  return visible_rows;
 }
 
 // -----------------------------------------------------------------------------

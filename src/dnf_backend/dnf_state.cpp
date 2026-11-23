@@ -15,6 +15,7 @@
 #include <mutex>
 #include <set>
 #include <string>
+#include <utility>
 
 #ifdef DNFUI_BUILD_TESTS
 #include <glib.h>
@@ -310,7 +311,7 @@ refresh_installed_snapshot(bool drop_cached_base)
     protected_names = collect_self_protected_package_names(base);
   } // Base read lock released before acquiring g_installed_mutex
 
-  return publish_local_installed_snapshot(installed, protected_names);
+  return publish_local_installed_snapshot(std::move(installed), std::move(protected_names));
 }
 
 } // namespace dnf_backend_internal
