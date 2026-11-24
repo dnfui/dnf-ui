@@ -144,13 +144,6 @@ resolve_installed_package_locked(const PackageRow &row)
 void
 preserve_local_refresh_reinstall_availability_locked(dnf_backend_internal::InstalledQueryResult &installed)
 {
-  for (auto &row : installed.rows) {
-    auto old_it = g_installed_state.rows_by_name_arch.find(row.name_arch_key());
-    if (old_it != g_installed_state.rows_by_name_arch.end() && old_it->second.nevra == row.nevra) {
-      row.repo_candidate_exact_available = old_it->second.repo_candidate_exact_available;
-    }
-  }
-
   for (auto &[key, row] : installed.rows_by_name_arch) {
     auto old_it = g_installed_state.rows_by_name_arch.find(key);
     if (old_it != g_installed_state.rows_by_name_arch.end() && old_it->second.nevra == row.nevra) {
