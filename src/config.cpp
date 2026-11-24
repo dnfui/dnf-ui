@@ -124,7 +124,6 @@ config_save_map(const std::map<std::string, std::string> &config)
 
   std::ofstream file(tmp_path, std::ios::trunc);
   if (!file.good()) {
-    std::filesystem::remove(tmp_path, error);
     return false;
   }
 

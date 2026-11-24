@@ -130,8 +130,11 @@ TEST_CASE("Config save keeps previous file when temporary write fails")
   reset_test_config_file();
 
   REQUIRE(config_save_map({ { "window_width", "1280" } }));
-  REQUIRE(std::filesystem::create_directory(test_config_file().string() + ".tmp"));
+  std::filesystem::path blocker = test_config_file().string() + ".tmp";
+  REQUIRE(std::filesystem::create_directory(blocker));
 
+  REQUIRE_FALSE(config_save_map({ { "window_width", "1600" } }));
+  REQUIRE(std::filesystem::is_directory(blocker));
   REQUIRE_FALSE(config_save_map({ { "window_width", "1600" } }));
 
   std::map<std::string, std::string> loaded = config_load_map();
