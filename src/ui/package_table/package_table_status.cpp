@@ -254,7 +254,7 @@ status_icon_name(PackageInstallState state)
   case PackageInstallState::INSTALLED_NEWER_THAN_REPO:
     return "drive-harddisk-system-symbolic";
   case PackageInstallState::UPGRADEABLE:
-    return "view-refresh-symbolic";
+    return "go-up-symbolic";
   case PackageInstallState::DOWNGRADEABLE:
     return "view-refresh-symbolic";
   case PackageInstallState::AVAILABLE:
@@ -275,6 +275,7 @@ status_icon_fallback_name(PackageInstallState state)
   case PackageInstallState::INSTALLED_NEWER_THAN_REPO:
     return "object-select-symbolic";
   case PackageInstallState::UPGRADEABLE:
+    return "view-refresh-symbolic";
   case PackageInstallState::DOWNGRADEABLE:
   case PackageInstallState::AVAILABLE:
   default:
