@@ -205,6 +205,7 @@ repository_refresh_on_rebuild_task(GTask *task, gpointer, gpointer, GCancellable
     g_task_return_pointer(
         task, new BaseRepoState(refresh_state), [](gpointer p) { delete static_cast<BaseRepoState *>(p); });
   } catch (const std::exception &e) {
+    BaseManager::instance().drop_cached_base();
     g_task_return_error(task, g_error_new_literal(G_IO_ERROR, G_IO_ERROR_FAILED, e.what()));
   }
 }

@@ -331,7 +331,6 @@ repository_view_refresh_main_after_apply(const std::shared_ptr<MainWindowUiState
   package_query_refresh_upgrade_indicator(widgets.get());
 
   if (result.backend_sync_result == RepositoryBackendSyncResult::FAILED) {
-    BaseManager::instance().drop_cached_base();
     package_query_on_clear_button_clicked(nullptr, widgets.get());
     ui_helpers_set_status(widgets->query.status_label, repository_view_main_status_for_result(result), "red");
     return;
@@ -945,6 +944,9 @@ on_repository_apply_task(GTask *task, gpointer, gpointer, GCancellable *)
   const std::vector<std::string> desired_disable_ids = task_data ? task_data->disable_ids : std::vector<std::string> {};
 
   auto *apply_result = new RepositoryApplyResult(repository_apply_run(desired_enable_ids, desired_disable_ids));
+  if (apply_result->sync_needed && apply_result->backend_sync_result == RepositoryBackendSyncResult::FAILED) {
+    BaseManager::instance().drop_cached_base();
+  }
   g_task_return_pointer(task, apply_result, [](gpointer p) { delete static_cast<RepositoryApplyResult *>(p); });
 }
 

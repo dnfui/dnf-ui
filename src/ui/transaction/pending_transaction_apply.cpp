@@ -169,7 +169,6 @@ clear_package_view_after_apply_refresh_failure(MainWindowUiState *widgets, const
     return;
   }
 
-  BaseManager::instance().drop_cached_base();
   package_query_clear_search_cache();
   package_query_clear_duration_label(widgets);
   widgets->query_state.reload_selected_nevra.clear();
