@@ -11,6 +11,7 @@
 
 #include <exception>
 #include <set>
+#include <utility>
 
 namespace {
 
@@ -46,25 +47,16 @@ pending_action_is_installed_side(PendingAction::Type type)
 // -----------------------------------------------------------------------------
 static bool
 build_pending_transaction_specs(const std::vector<PendingAction> &actions,
-                                std::vector<std::string> &install,
-                                std::vector<std::string> &upgrade,
-                                std::vector<std::string> &downgrade,
-                                std::vector<std::string> &remove,
-                                std::vector<std::string> &reinstall,
+                                TransactionRequest &request,
                                 std::string &error_out)
 {
-  install.clear();
-  upgrade.clear();
-  downgrade.clear();
-  remove.clear();
-  reinstall.clear();
   error_out.clear();
 
-  install.reserve(actions.size());
-  upgrade.reserve(actions.size());
-  downgrade.reserve(actions.size());
-  remove.reserve(actions.size());
-  reinstall.reserve(actions.size());
+  request.install.reserve(actions.size());
+  request.upgrade.reserve(actions.size());
+  request.downgrade.reserve(actions.size());
+  request.remove.reserve(actions.size());
+  request.reinstall.reserve(actions.size());
 
   std::set<std::string> install_side_keys;
   std::set<std::string> installonly_install_keys;
@@ -72,31 +64,16 @@ build_pending_transaction_specs(const std::vector<PendingAction> &actions,
 
   for (const auto &action : actions) {
     if (!pending_action_is_install_side(action.type) && !pending_action_is_installed_side(action.type)) {
-      install.clear();
-      upgrade.clear();
-      downgrade.clear();
-      remove.clear();
-      reinstall.clear();
       error_out = _("Unknown pending package action.");
       return false;
     }
 
     if (action.transaction_spec.empty()) {
-      install.clear();
-      upgrade.clear();
-      downgrade.clear();
-      remove.clear();
-      reinstall.clear();
       error_out = _("Pending package action is missing its transaction spec.");
       return false;
     }
 
     if (action.package_key.empty()) {
-      install.clear();
-      upgrade.clear();
-      downgrade.clear();
-      remove.clear();
-      reinstall.clear();
       error_out = _("Pending package action is missing its package identity.");
       return false;
     }
@@ -109,11 +86,6 @@ build_pending_transaction_specs(const std::vector<PendingAction> &actions,
           (!installonly_install &&
            (installonly_install_keys.count(action.package_key) > 0 ||
             !install_side_keys.insert(action.package_key).second))) {
-        install.clear();
-        upgrade.clear();
-        downgrade.clear();
-        remove.clear();
-        reinstall.clear();
         error_out = _("Pending package actions contain conflicting package identities.");
         return false;
       }
@@ -122,11 +94,6 @@ build_pending_transaction_specs(const std::vector<PendingAction> &actions,
       }
     } else if (pending_action_is_installed_side(action.type)) {
       if (install_side_keys.count(action.package_key) > 0 || installonly_install_keys.count(action.package_key) > 0) {
-        install.clear();
-        upgrade.clear();
-        downgrade.clear();
-        remove.clear();
-        reinstall.clear();
         error_out = _("Pending package actions contain conflicting package identities.");
         return false;
       }
@@ -135,19 +102,19 @@ build_pending_transaction_specs(const std::vector<PendingAction> &actions,
 
     switch (action.type) {
     case PendingAction::INSTALL:
-      install.push_back(action.transaction_spec);
+      request.install.push_back(action.transaction_spec);
       break;
     case PendingAction::UPGRADE:
-      upgrade.push_back(action.transaction_spec);
+      request.upgrade.push_back(action.transaction_spec);
       break;
     case PendingAction::DOWNGRADE:
-      downgrade.push_back(action.transaction_spec);
+      request.downgrade.push_back(action.transaction_spec);
       break;
     case PendingAction::REMOVE:
-      remove.push_back(action.transaction_spec);
+      request.remove.push_back(action.transaction_spec);
       break;
     case PendingAction::REINSTALL:
-      reinstall.push_back(action.transaction_spec);
+      request.reinstall.push_back(action.transaction_spec);
       break;
     default:
       return false;
@@ -165,9 +132,15 @@ pending_transaction_build_request(const std::vector<PendingAction> &actions,
                                   TransactionRequest &request,
                                   std::string &error_out)
 {
-  request.upgrade_all = false;
-  return build_pending_transaction_specs(
-      actions, request.install, request.upgrade, request.downgrade, request.remove, request.reinstall, error_out);
+  request = {};
+
+  TransactionRequest built_request;
+  if (!build_pending_transaction_specs(actions, built_request, error_out)) {
+    return false;
+  }
+
+  request = std::move(built_request);
+  return true;
 }
 
 // -----------------------------------------------------------------------------

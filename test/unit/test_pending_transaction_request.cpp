@@ -190,12 +190,13 @@ TEST_CASE("Pending transaction request builder rejects package identity conflict
     };
 
     TransactionRequest request;
+    request.upgrade_all = true;
+    request.install.push_back("old-install");
     std::string error;
 
     REQUIRE_FALSE(pending_transaction_build_request(actions, request, error));
     REQUIRE_FALSE(error.empty());
-    REQUIRE(request.downgrade.empty());
-    REQUIRE(request.remove.empty());
+    REQUIRE(request.empty());
   }
 
   {
