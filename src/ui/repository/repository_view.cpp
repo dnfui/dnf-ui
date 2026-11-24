@@ -997,11 +997,11 @@ on_repository_apply_finished(GObject *, GAsyncResult *result, gpointer)
     repository_view_refresh_main_after_apply(main_widgets, *apply_result);
   }
 
-  if (apply_result->clear_pending && apply_result->repository_state_loaded) {
+  if (apply_result->sync_needed && apply_result->repository_state_loaded) {
     state->pending_enabled.clear();
     state->needs_reload = false;
     repository_view_render_repositories(state, apply_result->repositories);
-  } else if (apply_result->clear_pending && repository_view_write_was_attempted(apply_result->write_outcome)) {
+  } else if (apply_result->sync_needed && repository_view_write_was_attempted(apply_result->write_outcome)) {
     state->pending_enabled.clear();
     repository_view_refresh_visible_pending_css(state);
     state->needs_reload = true;

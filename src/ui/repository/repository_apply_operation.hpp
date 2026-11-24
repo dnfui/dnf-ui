@@ -13,7 +13,6 @@
 struct RepositoryApplyResult {
   bool sync_needed = false;
   bool no_write_needed = false;
-  bool clear_pending = false;
   RepositoryWriteOutcome write_outcome = RepositoryWriteOutcome::NOT_ATTEMPTED;
   RepositoryVerificationOutcome verification_outcome = RepositoryVerificationOutcome::NOT_RUN;
   RepositoryBackendSyncResult backend_sync_result = RepositoryBackendSyncResult::FAILED;

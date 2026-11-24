@@ -68,7 +68,6 @@ repository_apply_run(const std::vector<std::string> &desired_enable_ids,
   if (!plan.valid) {
     result.error = plan.error;
     result.sync_needed = true;
-    result.clear_pending = true;
     rebuild_backend(result, dependencies);
     return result;
   }
@@ -76,7 +75,6 @@ repository_apply_run(const std::vector<std::string> &desired_enable_ids,
   if (plan.enable_ids.empty() && plan.disable_ids.empty()) {
     result.sync_needed = true;
     result.no_write_needed = true;
-    result.clear_pending = true;
     rebuild_backend(result, dependencies);
     return result;
   }
@@ -92,7 +90,6 @@ repository_apply_run(const std::vector<std::string> &desired_enable_ids,
   }
 
   if (result.sync_needed) {
-    result.clear_pending = true;
     rebuild_backend(result, dependencies);
 
     std::vector<RepositoryInfo> repositories;

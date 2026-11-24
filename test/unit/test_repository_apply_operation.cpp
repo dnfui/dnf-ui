@@ -105,7 +105,6 @@ TEST_CASE("Repository Apply stops when the initial state cannot be loaded", "[re
   REQUIRE(result.verification_outcome == RepositoryVerificationOutcome::NOT_RUN);
   REQUIRE_FALSE(result.repository_state_loaded);
   REQUIRE_FALSE(result.sync_needed);
-  REQUIRE_FALSE(result.clear_pending);
   REQUIRE_FALSE(result.error.empty());
   if (!fixture.list_error.empty()) {
     REQUIRE(result.error == fixture.list_error);
@@ -129,7 +128,6 @@ TEST_CASE("Repository Apply rejects disappeared repositories before writing", "[
   REQUIRE(result.repository_state_loaded);
   REQUIRE(result.repositories.size() == 2);
   REQUIRE(result.sync_needed);
-  REQUIRE(result.clear_pending);
   REQUIRE_FALSE(result.no_write_needed);
   REQUIRE_FALSE(result.error.empty());
 }
@@ -156,7 +154,6 @@ TEST_CASE("Repository Apply refreshes package data when no write is needed", "[r
   REQUIRE(fixture.calls == std::vector<std::string> { "list", "rebuild" });
   REQUIRE(result.no_write_needed);
   REQUIRE(result.sync_needed);
-  REQUIRE(result.clear_pending);
   REQUIRE(result.repository_state_loaded);
   REQUIRE(result.write_outcome == RepositoryWriteOutcome::NOT_ATTEMPTED);
   REQUIRE(result.verification_outcome == RepositoryVerificationOutcome::NOT_RUN);
@@ -188,7 +185,6 @@ TEST_CASE("Repository Apply writes needed changes and confirms the final state",
   REQUIRE(result.repositories.at(1).enabled);
   REQUIRE_FALSE(result.repositories.at(2).enabled);
   REQUIRE(result.sync_needed);
-  REQUIRE(result.clear_pending);
   REQUIRE_FALSE(result.no_write_needed);
   REQUIRE(result.error.empty());
 }
@@ -208,7 +204,6 @@ TEST_CASE("Repository Apply preserves pending changes when no write was attempte
   REQUIRE(result.verification_outcome == RepositoryVerificationOutcome::NOT_RUN);
   REQUIRE(result.repository_state_loaded);
   REQUIRE_FALSE(result.sync_needed);
-  REQUIRE_FALSE(result.clear_pending);
   REQUIRE_FALSE(result.no_write_needed);
 }
 
@@ -230,7 +225,6 @@ TEST_CASE("Repository Apply reports errors before a write was attempted", "[repo
   REQUIRE(result.verification_outcome == RepositoryVerificationOutcome::NOT_RUN);
   REQUIRE(result.repository_state_loaded);
   REQUIRE_FALSE(result.sync_needed);
-  REQUIRE_FALSE(result.clear_pending);
   REQUIRE(result.error == fixture.write_result.error);
 }
 
@@ -261,7 +255,6 @@ TEST_CASE("Repository Apply keeps write failures distinct from verification", "[
   REQUIRE(result.verification_outcome == RepositoryVerificationOutcome::CONFIRMED);
   REQUIRE(result.error == fixture.write_result.error);
   REQUIRE(result.sync_needed);
-  REQUIRE(result.clear_pending);
 }
 
 // -----------------------------------------------------------------------------
@@ -299,7 +292,6 @@ TEST_CASE("Repository Apply verifies writes even when the backend rebuild fails"
   REQUIRE(result.repository_state_loaded);
   REQUIRE(result.error == fixture.rebuild_error);
   REQUIRE(result.sync_needed);
-  REQUIRE(result.clear_pending);
 }
 
 // -----------------------------------------------------------------------------
@@ -327,7 +319,6 @@ TEST_CASE("Repository Apply reports unavailable verification after a write", "[r
   REQUIRE(result.verification_outcome == RepositoryVerificationOutcome::UNAVAILABLE);
   REQUIRE_FALSE(result.repository_state_loaded);
   REQUIRE(result.sync_needed);
-  REQUIRE(result.clear_pending);
   REQUIRE_FALSE(result.error.empty());
   if (!fixture.list_error.empty()) {
     REQUIRE(result.write_outcome == RepositoryWriteOutcome::PARTIAL);
