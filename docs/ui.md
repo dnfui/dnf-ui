@@ -48,6 +48,11 @@ The main window file is responsible for:
 - saving window size and pane positions
 
 The top menu actions live in [main_menu.cpp](../src/ui/window/main_menu.cpp).
+Help > DNF5 Command Reference opens a read-only application window like History and Repositories.
+Commands can be selected and copied, but the reference never runs them. The window can be maximized
+using the normal window controls.
+The distribution release-upgrade section lists DNF5 commands. Their availability and suitability depend on
+the installed distribution, so users should follow its release-upgrade instructions.
 
 It should not contain package query logic or transaction apply logic.
 Those belong in the controller files.

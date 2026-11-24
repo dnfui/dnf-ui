@@ -50,6 +50,7 @@ src/ui/transaction/transaction_dialogs.cpp
 src/ui/transaction/transaction_key_dialog.cpp
 src/ui/transaction/transaction_progress.cpp
 src/ui/window/main_menu.cpp
+src/ui/window/dnf_command_reference.cpp
 src/ui/window/main_window.cpp
 src/ui/window/main_window_layout.cpp
 src/upgrade/daemon_upgrade_state.cpp

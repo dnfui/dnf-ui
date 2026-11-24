@@ -1875,3 +1875,99 @@ msgstr "Version du noyau"
 
 msgid "Architecture"
 msgstr "Architecture"
+
+msgid "DNF5 Command Reference"
+msgstr "Référence des commandes DNF5"
+
+msgid "DNF5 Command Reference..."
+msgstr "Référence des commandes DNF5..."
+
+msgid "Inspect packages"
+msgstr "Consulter les paquets"
+
+msgid "Search packages by name or summary."
+msgstr "Rechercher des paquets par nom ou résumé."
+
+msgid "Show package information."
+msgstr "Afficher les informations d'un paquet."
+
+msgid "Find packages providing a file or capability."
+msgstr "Rechercher les paquets qui fournissent un fichier ou une capacité."
+
+msgid "List installed packages."
+msgstr "Lister les paquets installés."
+
+msgid "List installed dependencies no longer needed."
+msgstr "Lister les dépendances installées qui ne sont plus nécessaires."
+
+msgid "Check for available package upgrades."
+msgstr "Vérifier les mises à jour de paquets disponibles."
+
+msgid "List configured repositories."
+msgstr "Lister les dépôts configurés."
+
+msgid "Manage packages"
+msgstr "Gérer les paquets"
+
+msgid "Install a package and its dependencies."
+msgstr "Installer un paquet et ses dépendances."
+
+msgid "Remove a package. Review all proposed package removals."
+msgstr "Supprimer un paquet. Examinez toutes les suppressions de paquets proposées."
+
+msgid "Upgrade installed packages."
+msgstr "Mettre à jour les paquets installés."
+
+msgid "Reinstall an installed package."
+msgstr "Réinstaller un paquet installé."
+
+msgid "Downgrade when an older version is available."
+msgstr "Revenir à une version antérieure lorsqu'elle est disponible."
+
+msgid "Remove unneeded dependencies. Review the proposed removals."
+msgstr "Supprimer les dépendances inutiles. Examinez les suppressions proposées."
+
+msgid "Upgrade to a new distribution release"
+msgstr "Passer à une nouvelle version de la distribution"
+
+msgid "Update packages in the current release. Back up important data before a release upgrade."
+msgstr "Mettre à jour les paquets de la version actuelle. Sauvegardez les données importantes avant de changer de version."
+
+msgid "Replace NN with the target release number. Use system-upgrade only if your distribution supports it."
+msgstr "Remplacez NN par le numéro de la version cible. Utilisez system-upgrade uniquement si votre distribution le prend en charge."
+
+msgid "Reboot to install the downloaded release upgrade in the offline environment."
+msgstr "Redémarrer pour installer la mise à niveau téléchargée dans l'environnement hors ligne."
+
+msgid "Transaction history"
+msgstr "Historique des transactions"
+
+msgid "List recorded transactions."
+msgstr "Lister les transactions enregistrées."
+
+msgid "Show details of transaction 123."
+msgstr "Afficher les détails de la transaction 123."
+
+msgid "Attempt to reverse one transaction. Required versions may be unavailable."
+msgstr "Essayer d'annuler une transaction. Les versions de paquets nécessaires peuvent être indisponibles."
+
+msgid "Attempt to reverse all transactions after 123. This is not a system restore."
+msgstr "Essayer d'annuler toutes les transactions après la transaction 123. Ce n'est pas une restauration du système."
+
+msgid "Advanced CLI operations"
+msgstr "Opérations avancées en ligne de commande"
+
+msgid "Find packages that require a capability."
+msgstr "Rechercher les paquets nécessitant une capacité."
+
+msgid "Align installed versions with repositories. This may downgrade packages."
+msgstr "Aligner les versions installées sur celles des dépôts. Cela peut rétrograder des paquets."
+
+msgid "Mark an installed package as explicitly installed by the user."
+msgstr "Marquer un paquet installé comme explicitement installé par l'utilisateur."
+
+msgid "Mark an installed package as a dependency. It may become eligible for automatic removal."
+msgstr "Marquer un paquet installé comme dépendance. Il peut alors devenir éligible à une suppression automatique."
+
+msgid "Remove cached DNF data. Future operations may need to download it again."
+msgstr "Supprimer les données DNF en cache. Des opérations ultérieures pourront nécessiter de les télécharger à nouveau."

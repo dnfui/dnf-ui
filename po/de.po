@@ -1875,3 +1875,99 @@ msgstr "Kernelversion"
 
 msgid "Architecture"
 msgstr "Architektur"
+
+msgid "DNF5 Command Reference"
+msgstr "DNF5-Befehlsübersicht"
+
+msgid "DNF5 Command Reference..."
+msgstr "DNF5-Befehlsübersicht..."
+
+msgid "Inspect packages"
+msgstr "Pakete prüfen"
+
+msgid "Search packages by name or summary."
+msgstr "Pakete nach Name oder Kurzbeschreibung suchen."
+
+msgid "Show package information."
+msgstr "Paketinformationen anzeigen."
+
+msgid "Find packages providing a file or capability."
+msgstr "Pakete finden, die eine Datei oder eine Fähigkeit bereitstellen."
+
+msgid "List installed packages."
+msgstr "Installierte Pakete auflisten."
+
+msgid "List installed dependencies no longer needed."
+msgstr "Nicht mehr benötigte installierte Abhängigkeiten auflisten."
+
+msgid "Check for available package upgrades."
+msgstr "Nach verfügbaren Paketaktualisierungen suchen."
+
+msgid "List configured repositories."
+msgstr "Eingerichtete Paketquellen auflisten."
+
+msgid "Manage packages"
+msgstr "Pakete verwalten"
+
+msgid "Install a package and its dependencies."
+msgstr "Ein Paket und seine Abhängigkeiten installieren."
+
+msgid "Remove a package. Review all proposed package removals."
+msgstr "Ein Paket entfernen. Prüfen Sie alle vorgeschlagenen Paketentfernungen."
+
+msgid "Upgrade installed packages."
+msgstr "Installierte Pakete aktualisieren."
+
+msgid "Reinstall an installed package."
+msgstr "Ein installiertes Paket erneut installieren."
+
+msgid "Downgrade when an older version is available."
+msgstr "Auf eine ältere Version zurückgehen, falls diese verfügbar ist."
+
+msgid "Remove unneeded dependencies. Review the proposed removals."
+msgstr "Nicht mehr benötigte Abhängigkeiten entfernen. Prüfen Sie die vorgeschlagenen Entfernungen."
+
+msgid "Upgrade to a new distribution release"
+msgstr "Auf eine neue Distributionsversion aktualisieren"
+
+msgid "Update packages in the current release. Back up important data before a release upgrade."
+msgstr "Pakete der aktuellen Version aktualisieren. Sichern Sie wichtige Daten vor einem Versionswechsel."
+
+msgid "Replace NN with the target release number. Use system-upgrade only if your distribution supports it."
+msgstr "Ersetzen Sie NN durch die Nummer der Zielversion. Verwenden Sie system-upgrade nur, wenn Ihre Distribution es unterstützt."
+
+msgid "Reboot to install the downloaded release upgrade in the offline environment."
+msgstr "Neu starten, um die heruntergeladene Versionsaktualisierung in der Offline-Umgebung zu installieren."
+
+msgid "Transaction history"
+msgstr "Transaktionsverlauf"
+
+msgid "List recorded transactions."
+msgstr "Aufgezeichnete Transaktionen auflisten."
+
+msgid "Show details of transaction 123."
+msgstr "Details zu Transaktion 123 anzeigen."
+
+msgid "Attempt to reverse one transaction. Required versions may be unavailable."
+msgstr "Versuchen, eine Transaktion rückgängig zu machen. Benötigte Paketversionen sind möglicherweise nicht verfügbar."
+
+msgid "Attempt to reverse all transactions after 123. This is not a system restore."
+msgstr "Versuchen, alle Transaktionen nach 123 rückgängig zu machen. Dies ist keine Systemwiederherstellung."
+
+msgid "Advanced CLI operations"
+msgstr "Erweiterte Kommandozeilenfunktionen"
+
+msgid "Find packages that require a capability."
+msgstr "Pakete finden, die eine bestimmte Fähigkeit benötigen."
+
+msgid "Align installed versions with repositories. This may downgrade packages."
+msgstr "Installierte Versionen mit den Paketquellen abgleichen. Dabei können Pakete auf ältere Versionen zurückgesetzt werden."
+
+msgid "Mark an installed package as explicitly installed by the user."
+msgstr "Ein installiertes Paket als ausdrücklich vom Benutzer installiert markieren."
+
+msgid "Mark an installed package as a dependency. It may become eligible for automatic removal."
+msgstr "Ein installiertes Paket als Abhängigkeit markieren. Es kann dadurch für die automatische Entfernung infrage kommen."
+
+msgid "Remove cached DNF data. Future operations may need to download it again."
+msgstr "Zwischengespeicherte DNF-Daten entfernen. Spätere Vorgänge müssen diese möglicherweise erneut herunterladen."

@@ -9,6 +9,7 @@
 #include "i18n.hpp"
 #include "ui/history/transaction_history_view.hpp"
 #include "ui/diagnostics/resource_monitor.hpp"
+#include "ui/window/dnf_command_reference.hpp"
 #include "ui/window/main_menu.hpp"
 #include "ui/window/main_window_layout.hpp"
 #include "ui/details/package_details_controller.hpp"
@@ -955,6 +956,7 @@ connect_cleanup(GtkWidget *window, std::shared_ptr<MainWindowUiState> widgets, G
                      transaction_history_close_window();
                      repository_view_close_window();
                      resource_monitor_close_window();
+                     dnf_command_reference_close_window();
                      if (widgets->window_state.backend_warmup_cancellable) {
                        g_cancellable_cancel(widgets->window_state.backend_warmup_cancellable);
                        g_object_unref(widgets->window_state.backend_warmup_cancellable);

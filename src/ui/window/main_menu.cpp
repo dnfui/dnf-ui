@@ -4,6 +4,7 @@
 // Keeps secondary application actions in the top menu instead of crowding the main package workflow toolbar.
 // -----------------------------------------------------------------------------
 #include "ui/window/main_menu.hpp"
+#include "ui/window/dnf_command_reference.hpp"
 
 #include "i18n.hpp"
 #include "ui/history/transaction_history_view.hpp"
@@ -233,6 +234,18 @@ on_menu_repositories(GSimpleAction *, GVariant *, gpointer user_data)
 }
 
 // -----------------------------------------------------------------------------
+// Show the read-only DNF5 command reference.
+// -----------------------------------------------------------------------------
+static void
+on_menu_dnf5_command_reference(GSimpleAction *, GVariant *, gpointer user_data)
+{
+  MainMenuActionData *data = static_cast<MainMenuActionData *>(user_data);
+  if (data && data->window) {
+    dnf_command_reference_show(GTK_WINDOW(data->window));
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Show the application About dialog.
 // -----------------------------------------------------------------------------
 static void
@@ -408,6 +421,7 @@ main_menu_create()
   g_object_unref(package_menu);
 
   GMenu *help_menu = g_menu_new();
+  g_menu_append(help_menu, _("DNF5 Command Reference..."), "win.dnf5-command-reference");
   g_menu_append(help_menu, _("About DNF UI"), "win.about");
   g_menu_append_submenu(menu_bar, _("Help"), G_MENU_MODEL(help_menu));
   g_object_unref(help_menu);
@@ -434,7 +448,7 @@ main_menu_connect_actions(const MainMenuWidgets &menu_widgets, MainWindowUiState
         delete static_cast<MainMenuActionData *>(p);
       });
 
-  GActionEntry entries[15] = {};
+  GActionEntry entries[16] = {};
   entries[0].name = "quit";
   entries[0].activate = on_menu_quit;
   entries[1].name = "clear-list";
@@ -472,6 +486,8 @@ main_menu_connect_actions(const MainMenuWidgets &menu_widgets, MainWindowUiState
   entries[13].activate = on_menu_clear_search_history;
   entries[14].name = "resource-monitor";
   entries[14].activate = on_menu_resource_monitor;
+  entries[15].name = "dnf5-command-reference";
+  entries[15].activate = on_menu_dnf5_command_reference;
 
   GSimpleActionGroup *actions = g_simple_action_group_new();
   g_action_map_add_action_entries(G_ACTION_MAP(actions), entries, G_N_ELEMENTS(entries), data);

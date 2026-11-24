@@ -1875,3 +1875,99 @@ msgstr "Versão do kernel"
 
 msgid "Architecture"
 msgstr "Arquitetura"
+
+msgid "DNF5 Command Reference"
+msgstr "Referência de comandos do DNF5"
+
+msgid "DNF5 Command Reference..."
+msgstr "Referência de comandos do DNF5..."
+
+msgid "Inspect packages"
+msgstr "Consultar pacotes"
+
+msgid "Search packages by name or summary."
+msgstr "Pesquisar pacotes por nome ou resumo."
+
+msgid "Show package information."
+msgstr "Exibir informações do pacote."
+
+msgid "Find packages providing a file or capability."
+msgstr "Encontrar pacotes que fornecem um arquivo ou uma funcionalidade."
+
+msgid "List installed packages."
+msgstr "Listar pacotes instalados."
+
+msgid "List installed dependencies no longer needed."
+msgstr "Listar dependências instaladas que não são mais necessárias."
+
+msgid "Check for available package upgrades."
+msgstr "Verificar se há atualizações de pacotes disponíveis."
+
+msgid "List configured repositories."
+msgstr "Listar repositórios configurados."
+
+msgid "Manage packages"
+msgstr "Gerenciar pacotes"
+
+msgid "Install a package and its dependencies."
+msgstr "Instalar um pacote e suas dependências."
+
+msgid "Remove a package. Review all proposed package removals."
+msgstr "Remover um pacote. Revise todas as remoções de pacotes propostas."
+
+msgid "Upgrade installed packages."
+msgstr "Atualizar os pacotes instalados."
+
+msgid "Reinstall an installed package."
+msgstr "Reinstalar um pacote instalado."
+
+msgid "Downgrade when an older version is available."
+msgstr "Voltar para uma versão anterior quando estiver disponível."
+
+msgid "Remove unneeded dependencies. Review the proposed removals."
+msgstr "Remover dependências desnecessárias. Revise as remoções propostas."
+
+msgid "Upgrade to a new distribution release"
+msgstr "Atualizar para uma nova versão da distribuição"
+
+msgid "Update packages in the current release. Back up important data before a release upgrade."
+msgstr "Atualizar os pacotes da versão atual. Faça backup dos dados importantes antes de mudar de versão."
+
+msgid "Replace NN with the target release number. Use system-upgrade only if your distribution supports it."
+msgstr "Substitua NN pelo número da versão de destino. Use system-upgrade somente se sua distribuição oferecer suporte."
+
+msgid "Reboot to install the downloaded release upgrade in the offline environment."
+msgstr "Reiniciar para instalar a atualização de versão baixada no ambiente offline."
+
+msgid "Transaction history"
+msgstr "Histórico de transações"
+
+msgid "List recorded transactions."
+msgstr "Listar transações registradas."
+
+msgid "Show details of transaction 123."
+msgstr "Exibir detalhes da transação 123."
+
+msgid "Attempt to reverse one transaction. Required versions may be unavailable."
+msgstr "Tentar desfazer uma transação. As versões necessárias dos pacotes podem não estar disponíveis."
+
+msgid "Attempt to reverse all transactions after 123. This is not a system restore."
+msgstr "Tentar desfazer todas as transações posteriores à 123. Isso não restaura o sistema."
+
+msgid "Advanced CLI operations"
+msgstr "Operações avançadas de linha de comando"
+
+msgid "Find packages that require a capability."
+msgstr "Encontrar pacotes que exigem uma funcionalidade."
+
+msgid "Align installed versions with repositories. This may downgrade packages."
+msgstr "Alinhar as versões instaladas às dos repositórios. Isso pode rebaixar versões de pacotes."
+
+msgid "Mark an installed package as explicitly installed by the user."
+msgstr "Marcar um pacote instalado como explicitamente instalado pelo usuário."
+
+msgid "Mark an installed package as a dependency. It may become eligible for automatic removal."
+msgstr "Marcar um pacote instalado como dependência. Ele poderá ser removido automaticamente."
+
+msgid "Remove cached DNF data. Future operations may need to download it again."
+msgstr "Remover dados do cache do DNF. Operações futuras podem precisar baixá-los novamente."
