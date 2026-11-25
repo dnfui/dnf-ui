@@ -745,19 +745,19 @@ visible_rows_from_maps(std::map<std::string, PackageRow> available_rows,
 
     auto visible_it = available_rows.find(key);
     if (visible_it == available_rows.end()) {
-      available_rows.emplace(key, installed_row);
+      available_rows.emplace(key, std::move(installed_row));
       continue;
     }
 
     if (libdnf5::rpm::evrcmp(installed_row, visible_it->second) > 0) {
-      visible_it->second = installed_row;
+      visible_it->second = std::move(installed_row);
     }
   }
 
   std::vector<PackageRow> rows;
   rows.reserve(available_rows.size());
   for (auto &[key, row] : available_rows) {
-    rows.push_back(row);
+    rows.push_back(std::move(row));
   }
   return rows;
 }
