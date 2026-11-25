@@ -16,17 +16,6 @@
 
 struct MainWindowUiState;
 
-struct PackageTableDisplayValues {
-  std::string version;
-  std::string update_version;
-  std::optional<std::uint64_t> install_size;
-  std::string release;
-  std::string update_release;
-  std::string repo;
-};
-
-using PackageTableDisplayValuesPtr = std::shared_ptr<const PackageTableDisplayValues>;
-
 struct PackageTableSortEvr {
   bool present = false;
   std::string epoch;
@@ -34,13 +23,24 @@ struct PackageTableSortEvr {
   std::string release;
 };
 
+struct PackageTableDisplayValues {
+  std::string epoch;
+  std::string version;
+  std::string update_version;
+  std::optional<std::uint64_t> install_size;
+  std::string release;
+  std::string update_release;
+  std::string repo;
+  PackageTableSortEvr update_evr;
+};
+
+using PackageTableDisplayValuesPtr = std::shared_ptr<const PackageTableDisplayValues>;
+
 // Package row wrapper used by the sortable GTK model.
 struct PackageItem {
   PackageRow row;
   DaemonUpgradeRowContextPtr daemon_upgrade;
   PackageTableDisplayValuesPtr display_values;
-  PackageTableSortEvr current_evr;
-  PackageTableSortEvr update_evr;
   std::string status_text;
   int status_rank = 0;
 

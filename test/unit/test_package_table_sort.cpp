@@ -853,6 +853,54 @@ TEST_CASE("Package table sorter uses exact installed row EVR")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that compact update rows sort by the installed epoch and release.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package table compact row sorter uses the projected installed EVR")
+{
+  reset_backend_globals();
+
+  MainWindowUiState widgets;
+  widgets.query_state.displayed_query.kind = DisplayedPackageQueryKind::LIST_PACKAGES;
+  widgets.query_state.displayed_query.latest_only = true;
+
+  PackageRow installed = make_table_test_row("demo-99.0-2.x86_64", "demo", "99.0", "2", "x86_64", "0");
+  dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
+
+  PackageRow update = make_table_test_row("demo-1.0-20.x86_64", "demo", "1.0", "20", "x86_64", "2");
+  update.is_newest_available = true;
+  PackageRow comparison = make_table_test_row("other-1.0-10.x86_64", "other", "1.0", "10", "x86_64", "1");
+
+  REQUIRE(compare_table_test_rows(widgets, update, comparison, PackageColumnKind::VERSION) < 0);
+  REQUIRE(compare_table_test_rows(widgets, update, comparison, PackageColumnKind::RELEASE) < 0);
+}
+
+// -----------------------------------------------------------------------------
+// Verify that daemon rows without an installed version sort before known versions.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package table daemon row sorter keeps absent installed EVRs first")
+{
+  reset_backend_globals();
+  MainWindowUiState widgets;
+  PackageTableRow daemon_row {
+    .row = make_table_test_row("zulu-2.0-2.x86_64", "zulu", "2.0", "2", "x86_64", "1"),
+    .daemon_upgrade = std::make_shared<DaemonUpgradeRowContext>(),
+  };
+  PackageRow ordinary = make_table_test_row("alpha-1.0-1.x86_64", "alpha", "1.0", "1", "x86_64");
+
+  GObject *daemon_object = make_package_object(&widgets, daemon_row);
+  GObject *ordinary_object = make_package_object(&widgets, ordinary);
+  int version_result = package_table_column_sorter_compare(
+      daemon_object, ordinary_object, GINT_TO_POINTER(static_cast<int>(PackageColumnKind::VERSION) + 1));
+  int release_result = package_table_column_sorter_compare(
+      daemon_object, ordinary_object, GINT_TO_POINTER(static_cast<int>(PackageColumnKind::RELEASE) + 1));
+  g_object_unref(daemon_object);
+  g_object_unref(ordinary_object);
+
+  REQUIRE(version_result < 0);
+  REQUIRE(release_result < 0);
+}
+
+// -----------------------------------------------------------------------------
 // Verify that replacing installed state does not change existing item comparisons.
 // -----------------------------------------------------------------------------
 TEST_CASE("Package table sorter keeps existing item values after installed snapshot changes")

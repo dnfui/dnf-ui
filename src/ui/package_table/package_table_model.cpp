@@ -127,33 +127,33 @@ package_table_fill_item_display_values(PackageItem &item,
                                        bool compact_view)
 {
   PackageTableDisplayValues values {
+    .epoch = item.row.epoch,
     .version = item.row.version,
     .update_version = {},
     .install_size = item.row.install_size,
     .release = item.row.release,
     .update_release = {},
     .repo = item.row.repo,
+    .update_evr = {},
   };
-  item.current_evr = sort_evr_from_row(item.row);
-  item.update_evr = {};
 
   if (const DaemonUpgradeTarget *upgrade_target = item.upgrade_target()) {
     if (resolution.has_installed_row) {
       values.version = resolution.installed_row.version;
       values.release = resolution.installed_row.release;
       values.install_size = resolution.installed_row.install_size;
-      item.current_evr = sort_evr_from_row(resolution.installed_row);
+      values.epoch = resolution.installed_row.epoch;
     } else {
       values.version.clear();
       values.release.clear();
       values.install_size.reset();
-      item.current_evr = {};
+      values.epoch.clear();
     }
 
     values.update_version = upgrade_target->version;
     values.update_release = upgrade_target->release;
     values.repo = upgrade_target->repo_id;
-    item.update_evr = sort_evr_from_daemon_target(*upgrade_target);
+    values.update_evr = sort_evr_from_daemon_target(*upgrade_target);
     item.display_values = std::make_shared<PackageTableDisplayValues>(std::move(values));
     return;
   }
@@ -170,7 +170,7 @@ package_table_fill_item_display_values(PackageItem &item,
     values.release = resolution.installed_row.release;
     values.install_size = resolution.installed_row.install_size;
     values.repo = resolution.installed_row.repo;
-    item.current_evr = sort_evr_from_row(resolution.installed_row);
+    values.epoch = resolution.installed_row.epoch;
   }
 
   if (resolution.state == PackageInstallState::UPGRADEABLE &&
@@ -187,16 +187,17 @@ package_table_fill_item_display_values(PackageItem &item,
     }
 
     if (item.row.repo_candidate_version.empty() && item.row.repo_candidate_release.empty()) {
-      item.update_evr = sort_evr_from_row(item.row);
+      values.update_evr = sort_evr_from_row(item.row);
     } else {
-      item.update_evr = sort_evr_from_values(
+      values.update_evr = sort_evr_from_values(
           item.row.repo_candidate_epoch, item.row.repo_candidate_version, item.row.repo_candidate_release);
     }
   }
 
-  const bool display_values_differ = values.version != item.row.version || !values.update_version.empty() ||
-      values.install_size != item.row.install_size || values.release != item.row.release ||
-      !values.update_release.empty() || values.repo != item.row.repo;
+  const bool display_values_differ = values.epoch != item.row.epoch || values.version != item.row.version ||
+      !values.update_version.empty() || values.install_size != item.row.install_size ||
+      values.release != item.row.release || !values.update_release.empty() || values.repo != item.row.repo ||
+      values.update_evr.present;
   if (display_values_differ) {
     item.display_values = std::make_shared<PackageTableDisplayValues>(std::move(values));
   } else {

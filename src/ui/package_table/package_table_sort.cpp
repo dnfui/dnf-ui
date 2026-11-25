@@ -76,11 +76,44 @@ compare_text(const std::string &lhs, const std::string &rhs)
   return result;
 }
 
+struct PackageTableSortEvrView {
+  bool present;
+  const std::string &epoch;
+  const std::string &version;
+  const std::string &release;
+};
+
+// -----------------------------------------------------------------------------
+// Read the current EVR from the displayed version or the original package row.
+// -----------------------------------------------------------------------------
+static PackageTableSortEvrView
+current_sort_evr(const PackageItem &item)
+{
+  if (const auto *display = item.display_values.get()) {
+    return {
+      !display->version.empty() || !display->release.empty(), display->epoch, display->version, display->release
+    };
+  }
+
+  return { !item.row.version.empty() || !item.row.release.empty(), item.row.epoch, item.row.version, item.row.release };
+}
+
+// -----------------------------------------------------------------------------
+// Read the update EVR stored with the display values, if any.
+// -----------------------------------------------------------------------------
+static PackageTableSortEvrView
+update_sort_evr(const PackageItem &item)
+{
+  static const PackageTableSortEvr empty;
+  const auto &evr = item.display_values ? item.display_values->update_evr : empty;
+  return { evr.present, evr.epoch, evr.version, evr.release };
+}
+
 // -----------------------------------------------------------------------------
 // Compare stored package values used by Version and Update Version.
 // -----------------------------------------------------------------------------
 static int
-compare_sort_epoch_version(const PackageTableSortEvr &lhs, const PackageTableSortEvr &rhs)
+compare_sort_epoch_version(const PackageTableSortEvrView &lhs, const PackageTableSortEvrView &rhs)
 {
   if (!lhs.present || !rhs.present) {
     if (!lhs.present && !rhs.present) {
@@ -96,7 +129,7 @@ compare_sort_epoch_version(const PackageTableSortEvr &lhs, const PackageTableSor
 // Compare stored package values used by Release and Update Release.
 // -----------------------------------------------------------------------------
 static int
-compare_sort_release(const PackageTableSortEvr &lhs, const PackageTableSortEvr &rhs)
+compare_sort_release(const PackageTableSortEvrView &lhs, const PackageTableSortEvrView &rhs)
 {
   if (!lhs.present || !rhs.present) {
     if (!lhs.present && !rhs.present) {
@@ -146,16 +179,16 @@ compare_package_items(const PackageItem &lhs, const PackageItem &rhs, PackageCol
     result = compare_text(lhs.row.name, rhs.row.name);
     break;
   case PackageColumnKind::VERSION:
-    result = compare_sort_epoch_version(lhs.current_evr, rhs.current_evr);
+    result = compare_sort_epoch_version(current_sort_evr(lhs), current_sort_evr(rhs));
     break;
   case PackageColumnKind::UPDATE_VERSION:
-    result = compare_sort_epoch_version(lhs.update_evr, rhs.update_evr);
+    result = compare_sort_epoch_version(update_sort_evr(lhs), update_sort_evr(rhs));
     break;
   case PackageColumnKind::RELEASE:
-    result = compare_sort_release(lhs.current_evr, rhs.current_evr);
+    result = compare_sort_release(current_sort_evr(lhs), current_sort_evr(rhs));
     break;
   case PackageColumnKind::UPDATE_RELEASE:
-    result = compare_sort_release(lhs.update_evr, rhs.update_evr);
+    result = compare_sort_release(update_sort_evr(lhs), update_sort_evr(rhs));
     break;
   case PackageColumnKind::ARCH:
     result = compare_text(lhs.row.arch, rhs.row.arch);
