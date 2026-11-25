@@ -40,7 +40,7 @@ struct InstalledQueryResult {
 struct AvailableViewRows {
   std::vector<PackageRow> rows;
   std::map<std::string, PackageRow> newest_visible_by_name_arch;
-  std::map<std::string, PackageRow> newest_available_by_name_arch;
+  std::map<std::string, std::string> newest_available_nevras_by_name_arch;
   std::map<std::string, size_t> row_index_by_nevra;
 };
 

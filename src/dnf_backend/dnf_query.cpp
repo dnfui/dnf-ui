@@ -359,9 +359,9 @@ add_available_view_row(AvailableViewRows &rows, PackageRow row)
     return;
   }
 
-  auto newest_it = rows.newest_available_by_name_arch.find(row.name_arch_key());
+  auto newest_it = rows.newest_available_nevras_by_name_arch.find(row.name_arch_key());
   row.is_newest_available =
-      newest_it != rows.newest_available_by_name_arch.end() && newest_it->second.nevra == row.nevra;
+      newest_it != rows.newest_available_nevras_by_name_arch.end() && newest_it->second == row.nevra;
 
   remember_newest_row(rows.newest_visible_by_name_arch, row);
   const size_t row_index = rows.rows.size();
@@ -374,11 +374,9 @@ add_available_view_row(AvailableViewRows &rows, PackageRow row)
 // This is calculated before search filtering so an older matching version cannot
 // become the actionable upgrade target merely because the newest version did not match the search text.
 // -----------------------------------------------------------------------------
-static std::map<std::string, PackageRow>
-collect_newest_available_rows_by_name_arch(libdnf5::Base &base, GCancellable *cancellable)
+static std::map<std::string, std::string>
+collect_newest_available_nevras_by_name_arch(libdnf5::Base &base, GCancellable *cancellable)
 {
-  std::map<std::string, PackageRow> rows_by_name_arch;
-  const std::set<std::string> installonly_nevras = collect_installonly_nevras(base, cancellable);
   if (package_query_cancelled(cancellable)) {
     return {};
   }
@@ -387,18 +385,18 @@ collect_newest_available_rows_by_name_arch(libdnf5::Base &base, GCancellable *ca
   query.filter_available();
   query.filter_latest_evr();
 
+  std::map<std::string, std::string> nevras_by_name_arch;
   for (auto pkg : query) {
     if (package_query_cancelled(cancellable)) {
-      rows_by_name_arch.clear();
-      return rows_by_name_arch;
+      return {};
     }
 
-    PackageRow row = make_package_row_with_installonly(pkg, PackageRepoCandidateRelation::UNKNOWN, installonly_nevras);
-    row.is_newest_available = true;
-    remember_newest_row(rows_by_name_arch, row);
+    // The query already selects the latest EVR for each name and architecture.
+    // Keep the first repository match, as with the full row lookup.
+    nevras_by_name_arch.try_emplace(pkg.get_name() + "\n" + pkg.get_arch(), pkg.get_nevra());
   }
 
-  return rows_by_name_arch;
+  return nevras_by_name_arch;
 }
 
 // -----------------------------------------------------------------------------
@@ -414,7 +412,7 @@ collect_available_view_rows(libdnf5::Base &base,
                             size_t installed_count)
 {
   AvailableViewRows result;
-  result.newest_available_by_name_arch = collect_newest_available_rows_by_name_arch(base, cancellable);
+  result.newest_available_nevras_by_name_arch = collect_newest_available_nevras_by_name_arch(base, cancellable);
   if (package_query_cancelled(cancellable)) {
     result = AvailableViewRows {};
     return result;
@@ -1187,12 +1185,10 @@ dnf_backend_get_available_package_rows_by_nevra(const std::string &pkg_nevra)
     }
   }
 
-  visible_rows.newest_available_by_name_arch =
-      collect_newest_available_rows_for_package_names(base, nullptr, visible_rows.rows);
+  const auto newest_available_rows = collect_newest_available_rows_for_package_names(base, nullptr, visible_rows.rows);
   for (auto &row : visible_rows.rows) {
-    auto newest_it = visible_rows.newest_available_by_name_arch.find(row.name_arch_key());
-    row.is_newest_available =
-        newest_it != visible_rows.newest_available_by_name_arch.end() && newest_it->second.nevra == row.nevra;
+    auto newest_it = newest_available_rows.find(row.name_arch_key());
+    row.is_newest_available = newest_it != newest_available_rows.end() && newest_it->second.nevra == row.nevra;
   }
 
   return visible_rows.rows;

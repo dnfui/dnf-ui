@@ -414,6 +414,35 @@ TEST_CASE("All-version browse results keep one row per exact NEVRA")
 }
 
 // -----------------------------------------------------------------------------
+// Verify that the compact newest-NEVRA lookup selects the same candidates as the full row lookup.
+// -----------------------------------------------------------------------------
+TEST_CASE("All-version browse marks the same newest available candidates as the full row lookup")
+{
+  reset_backend_globals();
+
+  auto results =
+      dnf_backend_get_browse_package_rows_interruptible(backend_search_options(false, false, false), nullptr);
+  REQUIRE(!results.empty());
+
+  std::map<std::string, PackageRow> newest_rows;
+  {
+    auto read = BaseManager::instance().acquire_read();
+    newest_rows = dnf_backend_internal::collect_available_rows_by_name_arch(
+        read.base, nullptr, backend_search_options(false, false));
+  }
+
+  for (const auto &row : results) {
+    if (row.repo == "@System") {
+      continue;
+    }
+    INFO(row.nevra);
+    auto newest_it = newest_rows.find(row.name_arch_key());
+    REQUIRE(newest_it != newest_rows.end());
+    REQUIRE(row.is_newest_available == (row.nevra == newest_it->second.nevra));
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Verify that all-version browse keeps installed packages visible by exact package ID.
 // -----------------------------------------------------------------------------
 TEST_CASE("All-version browse results include every installed NEVRA")
@@ -462,7 +491,7 @@ TEST_CASE("All-version merge keeps distinct available package versions")
   newer.summary = "Summary for the newer package version";
 
   dnf_backend_internal::AvailableViewRows available;
-  available.newest_available_by_name_arch.emplace(newer.name_arch_key(), newer);
+  available.newest_available_nevras_by_name_arch.emplace(newer.name_arch_key(), newer.nevra);
   dnf_backend_internal::add_available_view_row(available, older);
   dnf_backend_internal::add_available_view_row(available, newer);
 
@@ -491,7 +520,7 @@ TEST_CASE("All-version merge hides duplicate available repository copies")
   PackageRow second_repo = make_backend_test_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64", "updates");
 
   dnf_backend_internal::AvailableViewRows available;
-  available.newest_available_by_name_arch.emplace(first_repo.name_arch_key(), first_repo);
+  available.newest_available_nevras_by_name_arch.emplace(first_repo.name_arch_key(), first_repo.nevra);
   dnf_backend_internal::add_available_view_row(available, first_repo);
   dnf_backend_internal::add_available_view_row(available, second_repo);
 
@@ -514,7 +543,7 @@ TEST_CASE("All-version merge annotates installed rows also present in repositori
   PackageRow update_row = make_backend_test_row("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64", "updates");
 
   dnf_backend_internal::AvailableViewRows available;
-  available.newest_available_by_name_arch.emplace(update_row.name_arch_key(), update_row);
+  available.newest_available_nevras_by_name_arch.emplace(update_row.name_arch_key(), update_row.nevra);
   dnf_backend_internal::add_available_view_row(available, current_repo_row);
   dnf_backend_internal::add_available_view_row(available, update_row);
 
@@ -557,7 +586,7 @@ TEST_CASE("All-version merge ignores hidden newest candidates for installed row 
   PackageRow hidden_newest_row = make_backend_test_row("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64", "updates");
 
   dnf_backend_internal::AvailableViewRows available;
-  available.newest_available_by_name_arch.emplace(hidden_newest_row.name_arch_key(), hidden_newest_row);
+  available.newest_available_nevras_by_name_arch.emplace(hidden_newest_row.name_arch_key(), hidden_newest_row.nevra);
   dnf_backend_internal::add_available_view_row(available, visible_repo_row);
 
   dnf_backend_internal::InstalledQueryResult installed;
@@ -611,7 +640,7 @@ TEST_CASE("All-version merge keeps exact reinstall availability for hidden insta
   visible_update.is_newest_available = true;
 
   dnf_backend_internal::AvailableViewRows available;
-  available.newest_available_by_name_arch.emplace(visible_update.name_arch_key(), visible_update);
+  available.newest_available_nevras_by_name_arch.emplace(visible_update.name_arch_key(), visible_update.nevra);
   dnf_backend_internal::add_available_view_row(available, visible_update);
 
   dnf_backend_internal::InstalledQueryResult installed;
