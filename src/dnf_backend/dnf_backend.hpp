@@ -16,6 +16,7 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <gio/gio.h>
@@ -60,6 +61,17 @@ enum class PackageInstallReason {
   EXTERNAL,
 };
 
+struct PackageRepoCandidate {
+  // These fields are set only when an installed row has a visible repository candidate.
+  std::string nevra {};
+  std::string epoch {};
+  std::string version {};
+  std::string release {};
+  std::string repo {};
+  // True when the installed row candidate is also the newest available repo row.
+  bool is_newest_available = false;
+};
+
 struct PackageRow {
   std::string nevra;
   std::string name;
@@ -73,20 +85,18 @@ struct PackageRow {
   std::optional<std::uint64_t> install_size;
   PackageInstallReason install_reason = PackageInstallReason::UNKNOWN;
   PackageRepoCandidateRelation repo_candidate_relation = PackageRepoCandidateRelation::UNKNOWN;
-  // These fields are set only when an installed row has a visible repository candidate.
-  std::string repo_candidate_nevra;
-  std::string repo_candidate_epoch;
-  std::string repo_candidate_version;
-  std::string repo_candidate_release;
-  std::string repo_candidate_repo;
-  // True when the installed row candidate is also the newest available repo row.
-  bool repo_candidate_is_newest_available = false;
+  std::shared_ptr<const PackageRepoCandidate> repo_candidate {};
   // True when the exact installed NEVRA represented by this row is available from an enabled repository.
   bool repo_candidate_exact_available = false;
   // True only for the newest available repo row for this package name and architecture.
   bool is_newest_available = false;
   // True for packages matching DNF's installonly configuration.
   bool installonly = false;
+
+  void set_repo_candidate(PackageRepoCandidate candidate)
+  {
+    repo_candidate = std::make_shared<const PackageRepoCandidate>(std::move(candidate));
+  }
 
   // libdnf EVR comparison adapter.
   const std::string &get_epoch() const

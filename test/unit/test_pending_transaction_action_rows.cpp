@@ -273,8 +273,7 @@ TEST_CASE("Pending transaction pending exact installonly action remains install 
   PackageRow newer = make_test_package_row("installonly-demo-2.0-1.x86_64", "installonly-demo", "2.0", "1", "x86_64");
   installed.installonly = true;
   installed.repo_candidate_relation = PackageRepoCandidateRelation::NEWER;
-  installed.repo_candidate_nevra = newer.nevra;
-  installed.repo_candidate_is_newest_available = true;
+  installed.set_repo_candidate({ .nevra = newer.nevra, .is_newest_available = true });
   newer.installonly = true;
   newer.is_newest_available = true;
 
@@ -316,8 +315,7 @@ TEST_CASE("Pending transaction pending installonly upgrade remains upgrade in al
   PackageRow newer = make_test_package_row("installonly-demo-2.0-1.x86_64", "installonly-demo", "2.0", "1", "x86_64");
   installed.installonly = true;
   installed.repo_candidate_relation = PackageRepoCandidateRelation::NEWER;
-  installed.repo_candidate_nevra = newer.nevra;
-  installed.repo_candidate_is_newest_available = true;
+  installed.set_repo_candidate({ .nevra = newer.nevra, .is_newest_available = true });
   newer.installonly = true;
   newer.is_newest_available = true;
 
@@ -361,8 +359,7 @@ TEST_CASE("Pending transaction pending installonly upgrade stays off exact insta
   PackageRow newer = make_test_package_row("installonly-demo-2.0-1.x86_64", "installonly-demo", "2.0", "1", "x86_64");
   installed.installonly = true;
   installed.repo_candidate_relation = PackageRepoCandidateRelation::NEWER;
-  installed.repo_candidate_nevra = newer.nevra;
-  installed.repo_candidate_is_newest_available = true;
+  installed.set_repo_candidate({ .nevra = newer.nevra, .is_newest_available = true });
   newer.installonly = true;
   newer.is_newest_available = true;
 
@@ -425,8 +422,7 @@ TEST_CASE("Pending transaction all-version installed installonly row does not st
       make_test_package_row("installonly-demo-1.0-1.x86_64", "installonly-demo", "1.0", "1", "x86_64");
   installed.installonly = true;
   installed.repo_candidate_relation = PackageRepoCandidateRelation::NEWER;
-  installed.repo_candidate_nevra = "installonly-demo-2.0-1.x86_64";
-  installed.repo_candidate_is_newest_available = true;
+  installed.set_repo_candidate({ .nevra = "installonly-demo-2.0-1.x86_64", .is_newest_available = true });
 
   dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
 
@@ -518,8 +514,7 @@ TEST_CASE("Pending transaction action rows resolve upgrade from installed packag
 
   PackageRow installed = make_test_package_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
   installed.repo_candidate_relation = PackageRepoCandidateRelation::NEWER;
-  installed.repo_candidate_nevra = "demo-2.0-1.x86_64";
-  installed.repo_candidate_is_newest_available = true;
+  installed.set_repo_candidate({ .nevra = "demo-2.0-1.x86_64", .is_newest_available = true });
 
   dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
 
@@ -528,7 +523,7 @@ TEST_CASE("Pending transaction action rows resolve upgrade from installed packag
   REQUIRE(rows.state == PackageInstallState::UPGRADEABLE);
   REQUIRE(rows.install_is_upgrade);
   REQUIRE(rows.has_install_row);
-  REQUIRE(rows.install_row.nevra == installed.repo_candidate_nevra);
+  REQUIRE(rows.install_row.nevra == installed.repo_candidate->nevra);
   REQUIRE(rows.upgrade_spec == "demo.x86_64");
   REQUIRE(rows.has_installed_row);
   REQUIRE(rows.installed_row.nevra == installed.nevra);
@@ -541,7 +536,7 @@ TEST_CASE("Pending transaction action rows resolve upgrade from installed packag
 
   REQUIRE(actions.size() == 1);
   REQUIRE(actions[0].type == PendingAction::UPGRADE);
-  REQUIRE(actions[0].nevra == installed.repo_candidate_nevra);
+  REQUIRE(actions[0].nevra == installed.repo_candidate->nevra);
   REQUIRE(actions[0].transaction_spec == "demo.x86_64");
 }
 
@@ -554,8 +549,7 @@ TEST_CASE("Pending transaction action rows reject installed row with non-newest 
 
   PackageRow installed = make_test_package_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
   installed.repo_candidate_relation = PackageRepoCandidateRelation::NEWER;
-  installed.repo_candidate_nevra = "demo-1.5-1.x86_64";
-  installed.repo_candidate_is_newest_available = false;
+  installed.set_repo_candidate({ .nevra = "demo-1.5-1.x86_64", .is_newest_available = false });
 
   dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
 
@@ -1229,8 +1223,7 @@ TEST_CASE("Pending transaction bulk upgrade marking deduplicates package identit
 
   PackageRow installed = make_test_package_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
   installed.repo_candidate_relation = PackageRepoCandidateRelation::NEWER;
-  installed.repo_candidate_nevra = "demo-2.0-1.x86_64";
-  installed.repo_candidate_is_newest_available = true;
+  installed.set_repo_candidate({ .nevra = "demo-2.0-1.x86_64", .is_newest_available = true });
 
   PackageRow update = make_test_package_row("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64");
   update.is_newest_available = true;
@@ -1270,8 +1263,7 @@ TEST_CASE("Pending transaction all-version bulk upgrade marking uses exact row")
 
   PackageRow installed = make_test_package_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
   installed.repo_candidate_relation = PackageRepoCandidateRelation::NEWER;
-  installed.repo_candidate_nevra = "demo-2.0-1.x86_64";
-  installed.repo_candidate_is_newest_available = true;
+  installed.set_repo_candidate({ .nevra = "demo-2.0-1.x86_64", .is_newest_available = true });
 
   PackageRow update = make_test_package_row("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64");
   update.is_newest_available = true;
@@ -1310,8 +1302,7 @@ TEST_CASE("Pending transaction all-version bulk marking keeps pending upgrade on
 
   PackageRow installed = make_test_package_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
   installed.repo_candidate_relation = PackageRepoCandidateRelation::NEWER;
-  installed.repo_candidate_nevra = "demo-2.0-1.x86_64";
-  installed.repo_candidate_is_newest_available = true;
+  installed.set_repo_candidate({ .nevra = "demo-2.0-1.x86_64", .is_newest_available = true });
 
   PackageRow update = make_test_package_row("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64");
   update.is_newest_available = true;
@@ -1360,8 +1351,7 @@ TEST_CASE("Pending transaction all-version bulk marking uses exact installonly u
       make_test_package_row("installonly-demo-1.0-1.x86_64", "installonly-demo", "1.0", "1", "x86_64");
   installed.installonly = true;
   installed.repo_candidate_relation = PackageRepoCandidateRelation::NEWER;
-  installed.repo_candidate_nevra = "installonly-demo-2.0-1.x86_64";
-  installed.repo_candidate_is_newest_available = true;
+  installed.set_repo_candidate({ .nevra = "installonly-demo-2.0-1.x86_64", .is_newest_available = true });
 
   PackageRow older = make_test_package_row("installonly-demo-0.9-1.x86_64", "installonly-demo", "0.9", "1", "x86_64");
   PackageRow update = make_test_package_row("installonly-demo-2.0-1.x86_64", "installonly-demo", "2.0", "1", "x86_64");
@@ -1408,8 +1398,7 @@ TEST_CASE("Pending transaction list installed bulk upgrade marking uses installe
 
   PackageRow installed = make_test_package_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
   installed.repo_candidate_relation = PackageRepoCandidateRelation::NEWER;
-  installed.repo_candidate_nevra = "demo-2.0-1.x86_64";
-  installed.repo_candidate_is_newest_available = true;
+  installed.set_repo_candidate({ .nevra = "demo-2.0-1.x86_64", .is_newest_available = true });
 
   dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
 
@@ -1422,7 +1411,7 @@ TEST_CASE("Pending transaction list installed bulk upgrade marking uses installe
 
   REQUIRE(actions.size() == 1);
   REQUIRE(actions[0].type == PendingAction::UPGRADE);
-  REQUIRE(actions[0].nevra == installed.repo_candidate_nevra);
+  REQUIRE(actions[0].nevra == installed.repo_candidate->nevra);
   REQUIRE(actions[0].transaction_spec == "demo.x86_64");
   REQUIRE(actions[0].package_key == installed.name_arch_key());
 }
@@ -1553,7 +1542,7 @@ TEST_CASE("Pending transaction action rows allow reinstall for exact available i
 
   PackageRow installed = make_test_package_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
   installed.repo_candidate_relation = PackageRepoCandidateRelation::SAME;
-  installed.repo_candidate_nevra = installed.nevra;
+  installed.set_repo_candidate({ .nevra = installed.nevra });
   installed.repo_candidate_exact_available = true;
 
   dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
@@ -1575,7 +1564,7 @@ TEST_CASE("Pending transaction action rows allow reinstall from exact repository
 
   PackageRow installed = make_test_package_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
   installed.repo_candidate_relation = PackageRepoCandidateRelation::SAME;
-  installed.repo_candidate_nevra = installed.nevra;
+  installed.set_repo_candidate({ .nevra = installed.nevra });
   installed.repo_candidate_exact_available = true;
 
   PackageRow repo_row = installed;
@@ -1602,8 +1591,7 @@ TEST_CASE("Pending transaction action rows reject reinstall without exact availa
 
   PackageRow installed = make_test_package_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
   installed.repo_candidate_relation = PackageRepoCandidateRelation::NEWER;
-  installed.repo_candidate_nevra = "demo-2.0-1.x86_64";
-  installed.repo_candidate_is_newest_available = true;
+  installed.set_repo_candidate({ .nevra = "demo-2.0-1.x86_64", .is_newest_available = true });
 
   dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
 
@@ -1624,12 +1612,11 @@ TEST_CASE("Pending transaction action rows isolate reinstall availability betwee
 
   PackageRow older = make_test_package_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
   older.repo_candidate_relation = PackageRepoCandidateRelation::NEWER;
-  older.repo_candidate_nevra = "demo-2.0-1.x86_64";
-  older.repo_candidate_is_newest_available = true;
+  older.set_repo_candidate({ .nevra = "demo-2.0-1.x86_64", .is_newest_available = true });
 
   PackageRow newer = make_test_package_row("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64");
   newer.repo_candidate_relation = PackageRepoCandidateRelation::SAME;
-  newer.repo_candidate_nevra = newer.nevra;
+  newer.set_repo_candidate({ .nevra = newer.nevra });
   newer.repo_candidate_exact_available = true;
 
   dnf_backend_testonly_replace_installed_snapshot_rows({ older, newer });
@@ -1657,13 +1644,12 @@ TEST_CASE("Pending transaction action rows allow reinstall for older exact avail
 
   PackageRow older = make_test_package_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
   older.repo_candidate_relation = PackageRepoCandidateRelation::NEWER;
-  older.repo_candidate_nevra = "demo-2.0-1.x86_64";
-  older.repo_candidate_is_newest_available = true;
+  older.set_repo_candidate({ .nevra = "demo-2.0-1.x86_64", .is_newest_available = true });
   older.repo_candidate_exact_available = true;
 
   PackageRow newer = make_test_package_row("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64");
   newer.repo_candidate_relation = PackageRepoCandidateRelation::SAME;
-  newer.repo_candidate_nevra = newer.nevra;
+  newer.set_repo_candidate({ .nevra = newer.nevra });
   newer.repo_candidate_exact_available = true;
 
   dnf_backend_testonly_replace_installed_snapshot_rows({ older, newer });

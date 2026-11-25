@@ -192,8 +192,7 @@ TEST_CASE("Package table compact installonly row preserves pending exact install
   PackageRow update = make_status_test_row("installonly-demo-2.0-1.x86_64", "installonly-demo", "2.0", "1", "x86_64");
   installed.installonly = true;
   installed.repo_candidate_relation = PackageRepoCandidateRelation::NEWER;
-  installed.repo_candidate_nevra = update.nevra;
-  installed.repo_candidate_is_newest_available = true;
+  installed.set_repo_candidate({ .nevra = update.nevra, .is_newest_available = true });
   update.installonly = true;
   update.is_newest_available = true;
   dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
@@ -227,8 +226,7 @@ TEST_CASE("Package table exact installonly row preserves pending upgrade status"
   PackageRow update = make_status_test_row("installonly-demo-2.0-1.x86_64", "installonly-demo", "2.0", "1", "x86_64");
   installed.installonly = true;
   installed.repo_candidate_relation = PackageRepoCandidateRelation::NEWER;
-  installed.repo_candidate_nevra = update.nevra;
-  installed.repo_candidate_is_newest_available = true;
+  installed.set_repo_candidate({ .nevra = update.nevra, .is_newest_available = true });
   update.installonly = true;
   update.is_newest_available = true;
   dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
@@ -282,14 +280,13 @@ TEST_CASE("Package table pending upgrade status uses resolved install row")
 
   PackageRow installed = make_status_test_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
   installed.repo_candidate_relation = PackageRepoCandidateRelation::NEWER;
-  installed.repo_candidate_nevra = "demo-2.0-1.x86_64";
-  installed.repo_candidate_is_newest_available = true;
+  installed.set_repo_candidate({ .nevra = "demo-2.0-1.x86_64", .is_newest_available = true });
   dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
 
   MainWindowUiState widgets;
   set_compact_package_view(widgets);
   widgets.transaction_state.actions = {
-    { PendingAction::UPGRADE, installed.repo_candidate_nevra, "demo.x86_64" },
+    { PendingAction::UPGRADE, installed.repo_candidate->nevra, "demo.x86_64" },
   };
 
   PackageItem item;
@@ -307,8 +304,7 @@ TEST_CASE("Package table all-version pending upgrade status uses exact row")
 
   PackageRow installed = make_status_test_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
   installed.repo_candidate_relation = PackageRepoCandidateRelation::NEWER;
-  installed.repo_candidate_nevra = "demo-2.0-1.x86_64";
-  installed.repo_candidate_is_newest_available = true;
+  installed.set_repo_candidate({ .nevra = "demo-2.0-1.x86_64", .is_newest_available = true });
 
   PackageRow update = make_status_test_row("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64");
   update.is_newest_available = true;
@@ -386,8 +382,7 @@ TEST_CASE("Package table all-version upgrade status separates installed and avai
 
   PackageRow installed = make_status_test_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
   installed.repo_candidate_relation = PackageRepoCandidateRelation::NEWER;
-  installed.repo_candidate_nevra = "demo-2.0-1.x86_64";
-  installed.repo_candidate_is_newest_available = true;
+  installed.set_repo_candidate({ .nevra = "demo-2.0-1.x86_64", .is_newest_available = true });
 
   PackageRow update = make_status_test_row("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64");
   update.is_newest_available = true;
@@ -418,8 +413,7 @@ TEST_CASE("Package table compact upgrade status keeps stream label")
 
   PackageRow installed = make_status_test_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
   installed.repo_candidate_relation = PackageRepoCandidateRelation::NEWER;
-  installed.repo_candidate_nevra = "demo-2.0-1.x86_64";
-  installed.repo_candidate_is_newest_available = true;
+  installed.set_repo_candidate({ .nevra = "demo-2.0-1.x86_64", .is_newest_available = true });
 
   dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
 
@@ -442,8 +436,7 @@ TEST_CASE("Package table list installed upgrade status uses installed row")
 
   PackageRow installed = make_status_test_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
   installed.repo_candidate_relation = PackageRepoCandidateRelation::NEWER;
-  installed.repo_candidate_nevra = "demo-2.0-1.x86_64";
-  installed.repo_candidate_is_newest_available = true;
+  installed.set_repo_candidate({ .nevra = "demo-2.0-1.x86_64", .is_newest_available = true });
 
   dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
 
@@ -456,7 +449,7 @@ TEST_CASE("Package table list installed upgrade status uses installed row")
   REQUIRE(item.status_text == "Newer in repository");
 
   widgets.transaction_state.actions = {
-    { PendingAction::UPGRADE, installed.repo_candidate_nevra, "demo.x86_64", installed.name_arch_key() },
+    { PendingAction::UPGRADE, installed.repo_candidate->nevra, "demo.x86_64", installed.name_arch_key() },
   };
 
   require_stored_status_matches_pending_action(widgets, item, "Pending Upgrade");

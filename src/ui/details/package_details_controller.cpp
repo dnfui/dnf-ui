@@ -468,23 +468,24 @@ package_details_upgrade_override_for_selection(const PackageTableRow &selected,
     return selected.row;
   }
 
+  const auto *candidate = selected.row.repo_candidate.get();
   if (!resolution.exact_installed || selected.row.repo_candidate_relation != PackageRepoCandidateRelation::NEWER ||
-      selected.row.repo_candidate_nevra.empty()) {
+      !candidate || candidate->nevra.empty()) {
     return std::nullopt;
   }
 
-  if (selected.row.repo_candidate_is_newest_available) {
+  if (candidate->is_newest_available) {
     return std::nullopt;
   }
 
   PackageRow update_row;
-  update_row.nevra = selected.row.repo_candidate_nevra;
+  update_row.nevra = candidate->nevra;
   update_row.name = selected.row.name;
-  update_row.epoch = selected.row.repo_candidate_epoch;
-  update_row.version = selected.row.repo_candidate_version;
-  update_row.release = selected.row.repo_candidate_release;
+  update_row.epoch = candidate->epoch;
+  update_row.version = candidate->version;
+  update_row.release = candidate->release;
   update_row.arch = selected.row.arch;
-  update_row.repo = selected.row.repo_candidate_repo;
+  update_row.repo = candidate->repo;
   return update_row;
 }
 

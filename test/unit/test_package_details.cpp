@@ -22,12 +22,12 @@ find_update_pair_from_installed_annotation(PackageRow &installed_out, PackageRow
 {
   auto installed_rows = dnf_backend_get_installed_package_rows_interruptible(nullptr);
   for (const auto &installed_row : installed_rows) {
-    if (installed_row.repo_candidate_relation != PackageRepoCandidateRelation::NEWER ||
-        installed_row.repo_candidate_nevra.empty()) {
+    if (installed_row.repo_candidate_relation != PackageRepoCandidateRelation::NEWER || !installed_row.repo_candidate ||
+        installed_row.repo_candidate->nevra.empty()) {
       continue;
     }
 
-    auto candidates = dnf_backend_get_available_package_rows_by_nevra(installed_row.repo_candidate_nevra);
+    auto candidates = dnf_backend_get_available_package_rows_by_nevra(installed_row.repo_candidate->nevra);
     if (candidates.empty()) {
       continue;
     }

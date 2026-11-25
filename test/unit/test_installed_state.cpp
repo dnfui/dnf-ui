@@ -271,19 +271,18 @@ TEST_CASE("Older parallel installed rows do not expose already-installed updates
   older_row.release = "1";
   older_row.arch = "x86_64";
   older_row.repo_candidate_relation = PackageRepoCandidateRelation::NEWER;
-  older_row.repo_candidate_nevra = "demo-2.0-1.x86_64";
-  older_row.repo_candidate_version = "2.0";
-  older_row.repo_candidate_release = "1";
-  older_row.repo_candidate_is_newest_available = true;
+  older_row.set_repo_candidate({
+      .nevra = "demo-2.0-1.x86_64",
+      .version = "2.0",
+      .release = "1",
+      .is_newest_available = true,
+  });
 
   PackageRow newest_row = older_row;
   newest_row.nevra = "demo-2.0-1.x86_64";
   newest_row.version = "2.0";
   newest_row.repo_candidate_relation = PackageRepoCandidateRelation::SAME;
-  newest_row.repo_candidate_nevra.clear();
-  newest_row.repo_candidate_version.clear();
-  newest_row.repo_candidate_release.clear();
-  newest_row.repo_candidate_is_newest_available = false;
+  newest_row.repo_candidate.reset();
 
   dnf_backend_testonly_replace_installed_snapshot_rows({ older_row, newest_row });
 
@@ -311,10 +310,12 @@ TEST_CASE("Only newest parallel installed row exposes repository update")
   older_row.release = "1";
   older_row.arch = "x86_64";
   older_row.repo_candidate_relation = PackageRepoCandidateRelation::NEWER;
-  older_row.repo_candidate_nevra = "demo-3.0-1.x86_64";
-  older_row.repo_candidate_version = "3.0";
-  older_row.repo_candidate_release = "1";
-  older_row.repo_candidate_is_newest_available = true;
+  older_row.set_repo_candidate({
+      .nevra = "demo-3.0-1.x86_64",
+      .version = "3.0",
+      .release = "1",
+      .is_newest_available = true,
+  });
 
   PackageRow newest_row = older_row;
   newest_row.nevra = "demo-2.0-1.x86_64";
@@ -538,7 +539,8 @@ TEST_CASE("Installed row annotation records exact available package")
       installed_row, { { installed_row.name_arch_key(), available_row } });
 
   REQUIRE(installed_row.repo_candidate_relation == PackageRepoCandidateRelation::SAME);
-  REQUIRE(installed_row.repo_candidate_nevra == installed_row.nevra);
+  REQUIRE(installed_row.repo_candidate);
+  REQUIRE(installed_row.repo_candidate->nevra == installed_row.nevra);
   REQUIRE(installed_row.repo_candidate_exact_available);
 }
 
@@ -565,7 +567,8 @@ TEST_CASE("Installed row annotation rejects newer candidate as exact available p
       installed_row, { { installed_row.name_arch_key(), available_row } });
 
   REQUIRE(installed_row.repo_candidate_relation == PackageRepoCandidateRelation::NEWER);
-  REQUIRE(installed_row.repo_candidate_nevra == available_row.nevra);
+  REQUIRE(installed_row.repo_candidate);
+  REQUIRE(installed_row.repo_candidate->nevra == available_row.nevra);
   REQUIRE_FALSE(installed_row.repo_candidate_exact_available);
 }
 
@@ -593,7 +596,8 @@ TEST_CASE("Installed row annotation preserves exact availability with newer cand
       installed_row, { { installed_row.name_arch_key(), available_row } });
 
   REQUIRE(installed_row.repo_candidate_relation == PackageRepoCandidateRelation::NEWER);
-  REQUIRE(installed_row.repo_candidate_nevra == available_row.nevra);
+  REQUIRE(installed_row.repo_candidate);
+  REQUIRE(installed_row.repo_candidate->nevra == available_row.nevra);
   REQUIRE(installed_row.repo_candidate_exact_available);
 }
 
@@ -615,7 +619,7 @@ TEST_CASE("Installed row annotation preserves exact availability without visible
   dnf_backend_internal::annotate_installed_row_with_repo_candidate(installed_row, {});
 
   REQUIRE(installed_row.repo_candidate_relation == PackageRepoCandidateRelation::NONE);
-  REQUIRE(installed_row.repo_candidate_nevra.empty());
+  REQUIRE(!installed_row.repo_candidate);
   REQUIRE(installed_row.repo_candidate_exact_available);
 }
 

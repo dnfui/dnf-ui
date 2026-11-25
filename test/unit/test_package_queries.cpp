@@ -561,10 +561,11 @@ TEST_CASE("All-version merge annotates installed rows also present in repositori
   REQUIRE(current_result != nullptr);
   REQUIRE(update_result != nullptr);
   REQUIRE(current_result->repo_candidate_relation == PackageRepoCandidateRelation::NEWER);
-  REQUIRE(current_result->repo_candidate_nevra == update_row.nevra);
-  REQUIRE(current_result->repo_candidate_version == update_row.version);
-  REQUIRE(current_result->repo_candidate_release == update_row.release);
-  REQUIRE(current_result->repo_candidate_repo == update_row.repo);
+  REQUIRE(current_result->repo_candidate);
+  REQUIRE(current_result->repo_candidate->nevra == update_row.nevra);
+  REQUIRE(current_result->repo_candidate->version == update_row.version);
+  REQUIRE(current_result->repo_candidate->release == update_row.release);
+  REQUIRE(current_result->repo_candidate->repo == update_row.repo);
   REQUIRE(update_result->is_newest_available);
 
   reset_backend_globals();
@@ -598,11 +599,12 @@ TEST_CASE("All-version merge preserves the newest visible candidate across insta
   REQUIRE(rows.size() == 3);
   for (const auto &row : rows) {
     INFO(row.nevra);
-    REQUIRE(row.repo_candidate_nevra == newest.nevra);
-    REQUIRE(row.repo_candidate_version == newest.version);
-    REQUIRE(row.repo_candidate_release == newest.release);
-    REQUIRE(row.repo_candidate_repo == newest.repo);
-    REQUIRE(row.repo_candidate_is_newest_available);
+    REQUIRE(row.repo_candidate);
+    REQUIRE(row.repo_candidate->nevra == newest.nevra);
+    REQUIRE(row.repo_candidate->version == newest.version);
+    REQUIRE(row.repo_candidate->release == newest.release);
+    REQUIRE(row.repo_candidate->repo == newest.repo);
+    REQUIRE(row.repo_candidate->is_newest_available);
     REQUIRE(row.repo_candidate_relation ==
             (row.nevra == newest.nevra ? PackageRepoCandidateRelation::SAME : PackageRepoCandidateRelation::NEWER));
     REQUIRE(row.repo_candidate_exact_available == (row.nevra != missing.nevra));
@@ -632,9 +634,10 @@ TEST_CASE("All-version merge ignores hidden newest candidates for installed row 
 
   REQUIRE(installed_result != nullptr);
   REQUIRE(installed_result->repo_candidate_relation == PackageRepoCandidateRelation::NEWER);
-  REQUIRE(installed_result->repo_candidate_nevra == visible_repo_row.nevra);
-  REQUIRE(installed_result->repo_candidate_nevra != hidden_newest_row.nevra);
-  REQUIRE_FALSE(installed_result->repo_candidate_is_newest_available);
+  REQUIRE(installed_result->repo_candidate);
+  REQUIRE(installed_result->repo_candidate->nevra == visible_repo_row.nevra);
+  REQUIRE(installed_result->repo_candidate->nevra != hidden_newest_row.nevra);
+  REQUIRE_FALSE(installed_result->repo_candidate->is_newest_available);
 }
 
 // -----------------------------------------------------------------------------

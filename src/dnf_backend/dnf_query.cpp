@@ -638,21 +638,18 @@ annotate_installed_row_with_repo_candidate(PackageRow &installed_row, const Pack
 {
   if (!candidate) {
     installed_row.repo_candidate_relation = PackageRepoCandidateRelation::NONE;
-    installed_row.repo_candidate_nevra.clear();
-    installed_row.repo_candidate_epoch.clear();
-    installed_row.repo_candidate_version.clear();
-    installed_row.repo_candidate_release.clear();
-    installed_row.repo_candidate_repo.clear();
-    installed_row.repo_candidate_is_newest_available = false;
+    installed_row.repo_candidate.reset();
     return;
   }
 
-  installed_row.repo_candidate_nevra = candidate->nevra;
-  installed_row.repo_candidate_epoch = candidate->epoch;
-  installed_row.repo_candidate_version = candidate->version;
-  installed_row.repo_candidate_release = candidate->release;
-  installed_row.repo_candidate_repo = candidate->repo;
-  installed_row.repo_candidate_is_newest_available = candidate->is_newest_available;
+  installed_row.set_repo_candidate({
+    .nevra = candidate->nevra,
+    .epoch = candidate->epoch,
+    .version = candidate->version,
+    .release = candidate->release,
+    .repo = candidate->repo,
+    .is_newest_available = candidate->is_newest_available,
+  });
   if (candidate->nevra == installed_row.nevra) {
     installed_row.repo_candidate_exact_available = true;
   }

@@ -309,8 +309,9 @@ pending_transaction_action_rows_for_resolved_selection(const PackageRow &selecte
 
     if (installed_resolution.exact_installed) {
       // Installed-list rows store the matching available upgrade package ID when the backend annotates them.
-      rows.has_install_row = !selected.repo_candidate_nevra.empty() && selected.repo_candidate_is_newest_available;
-      rows.install_row.nevra = selected.repo_candidate_nevra;
+      const auto *candidate = selected.repo_candidate.get();
+      rows.has_install_row = candidate && !candidate->nevra.empty() && candidate->is_newest_available;
+      rows.install_row.nevra = candidate ? candidate->nevra : std::string();
     } else {
       // Available update rows are already repository package rows.
       // Only the newest available row can use the upgrade action.

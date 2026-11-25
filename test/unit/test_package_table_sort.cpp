@@ -261,11 +261,13 @@ TEST_CASE("Package table all-version installed row displays update candidate")
   PackageRow installed = make_table_test_row("demo-1.2.3-4.fc44.x86_64", "demo", "1.2.3", "4.fc44", "x86_64");
   installed.repo = "@System";
   installed.repo_candidate_relation = PackageRepoCandidateRelation::NEWER;
-  installed.repo_candidate_nevra = "demo-1.2.4-1.fc44.x86_64";
-  installed.repo_candidate_version = "1.2.4";
-  installed.repo_candidate_release = "1.fc44";
-  installed.repo_candidate_repo = "updates";
-  installed.repo_candidate_is_newest_available = true;
+  installed.set_repo_candidate({
+      .nevra = "demo-1.2.4-1.fc44.x86_64",
+      .version = "1.2.4",
+      .release = "1.fc44",
+      .repo = "updates",
+      .is_newest_available = true,
+  });
 
   PackageRow update = make_table_test_row("demo-1.2.4-1.fc44.x86_64", "demo", "1.2.4", "1.fc44", "x86_64");
   update.repo = "updates";
@@ -384,11 +386,13 @@ TEST_CASE("Package table release columns handle installed rows with update candi
 
   PackageRow installed = make_table_test_row("demo-1.2.3-4.fc44.x86_64", "demo", "1.2.3", "4.fc44", "x86_64");
   installed.repo_candidate_relation = PackageRepoCandidateRelation::NEWER;
-  installed.repo_candidate_nevra = "demo-1.2.4-1.fc44.x86_64";
-  installed.repo_candidate_version = "1.2.4";
-  installed.repo_candidate_release = "1.fc44";
-  installed.repo_candidate_repo = "updates";
-  installed.repo_candidate_is_newest_available = true;
+  installed.set_repo_candidate({
+      .nevra = "demo-1.2.4-1.fc44.x86_64",
+      .version = "1.2.4",
+      .release = "1.fc44",
+      .repo = "updates",
+      .is_newest_available = true,
+  });
 
   dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
 
@@ -410,11 +414,13 @@ TEST_CASE("Package table Repo column uses candidate repo for installed update ro
   PackageRow installed = make_table_test_row("demo-1.2.3-4.fc44.x86_64", "demo", "1.2.3", "4.fc44", "x86_64");
   installed.repo = "@System";
   installed.repo_candidate_relation = PackageRepoCandidateRelation::NEWER;
-  installed.repo_candidate_nevra = "demo-1.2.4-1.fc44.x86_64";
-  installed.repo_candidate_version = "1.2.4";
-  installed.repo_candidate_release = "1.fc44";
-  installed.repo_candidate_repo = "updates";
-  installed.repo_candidate_is_newest_available = true;
+  installed.set_repo_candidate({
+      .nevra = "demo-1.2.4-1.fc44.x86_64",
+      .version = "1.2.4",
+      .release = "1.fc44",
+      .repo = "updates",
+      .is_newest_available = true,
+  });
 
   dnf_backend_testonly_replace_installed_snapshot_rows({ installed });
 
@@ -650,17 +656,11 @@ TEST_CASE("Package table Update Version sorter uses candidate epoch")
   MainWindowUiState widgets;
   PackageRow left = make_table_test_row("left-1.0-1.x86_64", "left", "1.0", "1", "x86_64");
   left.repo_candidate_relation = PackageRepoCandidateRelation::NEWER;
-  left.repo_candidate_epoch = "0";
-  left.repo_candidate_version = "99.0";
-  left.repo_candidate_release = "1";
-  left.repo_candidate_is_newest_available = true;
+  left.set_repo_candidate({ .epoch = "0", .version = "99.0", .release = "1", .is_newest_available = true });
 
   PackageRow right = make_table_test_row("right-1.0-1.x86_64", "right", "1.0", "1", "x86_64");
   right.repo_candidate_relation = PackageRepoCandidateRelation::NEWER;
-  right.repo_candidate_epoch = "1";
-  right.repo_candidate_version = "1.0";
-  right.repo_candidate_release = "1";
-  right.repo_candidate_is_newest_available = true;
+  right.set_repo_candidate({ .epoch = "1", .version = "1.0", .release = "1", .is_newest_available = true });
 
   dnf_backend_testonly_replace_installed_snapshot_rows({ left, right });
 

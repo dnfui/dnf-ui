@@ -175,22 +175,18 @@ package_table_fill_item_display_values(PackageItem &item,
 
   if (resolution.state == PackageInstallState::UPGRADEABLE &&
       (resolution.exact_installed || project_available_upgrade)) {
-    values.update_version =
-        item.row.repo_candidate_version.empty() ? item.row.version : item.row.repo_candidate_version;
-    values.update_release =
-        item.row.repo_candidate_release.empty() ? item.row.release : item.row.repo_candidate_release;
+    const auto *candidate = item.row.repo_candidate.get();
+    const bool has_candidate_version = candidate && !candidate->version.empty();
+    const bool has_candidate_release = candidate && !candidate->release.empty();
+    values.update_version = has_candidate_version ? candidate->version : item.row.version;
+    values.update_release = has_candidate_release ? candidate->release : item.row.release;
 
-    if (!item.row.repo_candidate_repo.empty()) {
-      values.repo = item.row.repo_candidate_repo;
+    values.repo = candidate && !candidate->repo.empty() ? candidate->repo : item.row.repo;
+
+    if (has_candidate_version || has_candidate_release) {
+      values.update_evr = sort_evr_from_values(candidate->epoch, candidate->version, candidate->release);
     } else {
-      values.repo = item.row.repo;
-    }
-
-    if (item.row.repo_candidate_version.empty() && item.row.repo_candidate_release.empty()) {
       values.update_evr = sort_evr_from_row(item.row);
-    } else {
-      values.update_evr = sort_evr_from_values(
-          item.row.repo_candidate_epoch, item.row.repo_candidate_version, item.row.repo_candidate_release);
     }
   }
 
