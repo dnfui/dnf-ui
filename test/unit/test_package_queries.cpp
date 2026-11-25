@@ -577,6 +577,39 @@ TEST_CASE("All-version merge annotates installed rows also present in repositori
 }
 
 // -----------------------------------------------------------------------------
+// Verify that candidate indices survive vector growth and annotation of the candidate itself.
+// -----------------------------------------------------------------------------
+TEST_CASE("All-version merge preserves the newest visible candidate across installed rows")
+{
+  PackageRow newest = make_backend_test_row("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64", "updates");
+  PackageRow older = make_backend_test_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64", "fedora");
+  PackageRow missing = make_backend_test_row("demo-0.9-1.x86_64", "demo", "0.9", "1", "x86_64", "@System");
+
+  dnf_backend_internal::AvailableViewRows available;
+  available.newest_available_nevras_by_name_arch.emplace(newest.name_arch_key(), newest.nevra);
+  dnf_backend_internal::add_available_view_row(available, newest);
+  dnf_backend_internal::add_available_view_row(available, older);
+  available.rows.reserve(available.rows.capacity() + 1);
+
+  dnf_backend_internal::InstalledQueryResult installed;
+  installed.rows = { missing, newest, older };
+  auto rows = dnf_backend_internal::visible_rows_from_available_view(std::move(available), installed, true);
+
+  REQUIRE(rows.size() == 3);
+  for (const auto &row : rows) {
+    INFO(row.nevra);
+    REQUIRE(row.repo_candidate_nevra == newest.nevra);
+    REQUIRE(row.repo_candidate_version == newest.version);
+    REQUIRE(row.repo_candidate_release == newest.release);
+    REQUIRE(row.repo_candidate_repo == newest.repo);
+    REQUIRE(row.repo_candidate_is_newest_available);
+    REQUIRE(row.repo_candidate_relation ==
+            (row.nevra == newest.nevra ? PackageRepoCandidateRelation::SAME : PackageRepoCandidateRelation::NEWER));
+    REQUIRE(row.repo_candidate_exact_available == (row.nevra != missing.nevra));
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Verify that an installed row is compared against the newest visible candidate.
 // -----------------------------------------------------------------------------
 TEST_CASE("All-version merge ignores hidden newest candidates for installed row annotation")

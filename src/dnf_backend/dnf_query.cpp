@@ -359,12 +359,16 @@ add_available_view_row(AvailableViewRows &rows, PackageRow row)
     return;
   }
 
-  auto newest_it = rows.newest_available_nevras_by_name_arch.find(row.name_arch_key());
+  std::string key = row.name_arch_key();
+  auto newest_it = rows.newest_available_nevras_by_name_arch.find(key);
   row.is_newest_available =
       newest_it != rows.newest_available_nevras_by_name_arch.end() && newest_it->second == row.nevra;
 
-  remember_newest_row(rows.newest_visible_by_name_arch, row);
   const size_t row_index = rows.rows.size();
+  auto [visible_it, inserted] = rows.newest_visible_index_by_name_arch.try_emplace(std::move(key), row_index);
+  if (!inserted && libdnf5::rpm::evrcmp(row, rows.rows[visible_it->second]) > 0) {
+    visible_it->second = row_index;
+  }
   rows.rows.push_back(std::move(row));
   rows.row_index_by_nevra.emplace(rows.rows[row_index].nevra, row_index);
 }
@@ -629,12 +633,10 @@ annotate_installed_result_with_exact_available_nevras_best_effort(libdnf5::Base 
 // Compare one installed row against the newest visible repo candidate for the same name and architecture tuple.
 // Store the resolved relation on the installed row.
 // -----------------------------------------------------------------------------
-void
-annotate_installed_row_with_repo_candidate(PackageRow &installed_row,
-                                           const std::map<std::string, PackageRow> &available_rows)
+static void
+annotate_installed_row_with_repo_candidate(PackageRow &installed_row, const PackageRow *candidate)
 {
-  auto it = available_rows.find(installed_row.name_arch_key());
-  if (it == available_rows.end()) {
+  if (!candidate) {
     installed_row.repo_candidate_relation = PackageRepoCandidateRelation::NONE;
     installed_row.repo_candidate_nevra.clear();
     installed_row.repo_candidate_epoch.clear();
@@ -645,16 +647,16 @@ annotate_installed_row_with_repo_candidate(PackageRow &installed_row,
     return;
   }
 
-  installed_row.repo_candidate_nevra = it->second.nevra;
-  installed_row.repo_candidate_epoch = it->second.epoch;
-  installed_row.repo_candidate_version = it->second.version;
-  installed_row.repo_candidate_release = it->second.release;
-  installed_row.repo_candidate_repo = it->second.repo;
-  installed_row.repo_candidate_is_newest_available = it->second.is_newest_available;
-  if (it->second.nevra == installed_row.nevra) {
+  installed_row.repo_candidate_nevra = candidate->nevra;
+  installed_row.repo_candidate_epoch = candidate->epoch;
+  installed_row.repo_candidate_version = candidate->version;
+  installed_row.repo_candidate_release = candidate->release;
+  installed_row.repo_candidate_repo = candidate->repo;
+  installed_row.repo_candidate_is_newest_available = candidate->is_newest_available;
+  if (candidate->nevra == installed_row.nevra) {
     installed_row.repo_candidate_exact_available = true;
   }
-  int cmp = libdnf5::rpm::evrcmp(it->second, installed_row);
+  int cmp = libdnf5::rpm::evrcmp(*candidate, installed_row);
   if (cmp > 0) {
     installed_row.repo_candidate_relation = PackageRepoCandidateRelation::NEWER;
   } else if (cmp < 0) {
@@ -662,6 +664,25 @@ annotate_installed_row_with_repo_candidate(PackageRow &installed_row,
   } else {
     installed_row.repo_candidate_relation = PackageRepoCandidateRelation::SAME;
   }
+}
+
+void
+annotate_installed_row_with_repo_candidate(PackageRow &installed_row,
+                                           const std::map<std::string, PackageRow> &available_rows)
+{
+  auto it = available_rows.find(installed_row.name_arch_key());
+  annotate_installed_row_with_repo_candidate(installed_row, it == available_rows.end() ? nullptr : &it->second);
+}
+
+static void
+annotate_installed_row_with_repo_candidate(PackageRow &installed_row, const AvailableViewRows &available_rows)
+{
+  auto it = available_rows.newest_visible_index_by_name_arch.find(installed_row.name_arch_key());
+  const PackageRow *candidate = nullptr;
+  if (it != available_rows.newest_visible_index_by_name_arch.end()) {
+    candidate = &available_rows.rows[it->second];
+  }
+  annotate_installed_row_with_repo_candidate(installed_row, candidate);
 }
 
 // -----------------------------------------------------------------------------
@@ -755,7 +776,7 @@ visible_rows_from_available_view(AvailableViewRows available_rows,
     if (visible_it != available_rows.row_index_by_nevra.end()) {
       PackageRow &visible_row = available_rows.rows[visible_it->second];
       if (repo_metadata_available) {
-        annotate_installed_row_with_repo_candidate(visible_row, available_rows.newest_visible_by_name_arch);
+        annotate_installed_row_with_repo_candidate(visible_row, available_rows);
       }
       visible_row.repo_candidate_exact_available = true;
       continue;
@@ -763,7 +784,7 @@ visible_rows_from_available_view(AvailableViewRows available_rows,
 
     PackageRow installed_row = stored_installed_row;
     if (repo_metadata_available) {
-      annotate_installed_row_with_repo_candidate(installed_row, available_rows.newest_visible_by_name_arch);
+      annotate_installed_row_with_repo_candidate(installed_row, available_rows);
     }
     const size_t row_index = available_rows.rows.size();
     available_rows.rows.push_back(std::move(installed_row));
