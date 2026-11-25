@@ -458,6 +458,8 @@ TEST_CASE("All-version merge keeps distinct available package versions")
 {
   PackageRow older = make_backend_test_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64", "fedora");
   PackageRow newer = make_backend_test_row("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64", "updates");
+  older.summary = "Summary for the older package version";
+  newer.summary = "Summary for the newer package version";
 
   dnf_backend_internal::AvailableViewRows available;
   available.newest_available_by_name_arch.emplace(newer.name_arch_key(), newer);
@@ -474,6 +476,10 @@ TEST_CASE("All-version merge keeps distinct available package versions")
   REQUIRE(newer_result != nullptr);
   REQUIRE_FALSE(older_result->is_newest_available);
   REQUIRE(newer_result->is_newest_available);
+  REQUIRE(older_result->summary == older.summary);
+  REQUIRE(newer_result->summary == newer.summary);
+  REQUIRE(older_result->repo == older.repo);
+  REQUIRE(newer_result->repo == newer.repo);
 }
 
 // -----------------------------------------------------------------------------
