@@ -18,6 +18,7 @@
 
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 static void update_pending_action_css_for_cell(GtkWidget *cell,
@@ -1201,7 +1202,7 @@ finish_package_table_view(MainWindowUiState *widgets,
 // -----------------------------------------------------------------------------
 template <typename Row>
 static void
-fill_package_view(MainWindowUiState *widgets, const std::vector<Row> &items, PackageTableEmptyState empty_state)
+fill_package_view(MainWindowUiState *widgets, std::vector<Row> items, PackageTableEmptyState empty_state)
 {
   reset_quick_filter(widgets);
   if (items.empty()) {
@@ -1220,8 +1221,8 @@ fill_package_view(MainWindowUiState *widgets, const std::vector<Row> &items, Pac
   gtk_scrolled_window_set_child(widgets->results.list_scroller, nullptr);
 
   GListStore *store = g_list_store_new(G_TYPE_OBJECT);
-  for (const auto &row : items) {
-    GObject *obj = make_package_object(widgets, row);
+  for (auto &row : items) {
+    GObject *obj = make_package_object(widgets, std::move(row));
     g_list_store_append(store, obj);
     g_object_unref(obj);
   }
@@ -1231,10 +1232,10 @@ fill_package_view(MainWindowUiState *widgets, const std::vector<Row> &items, Pac
 
 void
 package_table_fill_package_view(MainWindowUiState *widgets,
-                                const std::vector<PackageRow> &items,
+                                std::vector<PackageRow> items,
                                 PackageTableEmptyState empty_state)
 {
-  fill_package_view(widgets, items, empty_state);
+  fill_package_view(widgets, std::move(items), empty_state);
 }
 
 // -----------------------------------------------------------------------------
@@ -1244,12 +1245,12 @@ package_table_fill_package_view(MainWindowUiState *widgets,
 // -----------------------------------------------------------------------------
 void
 package_table_fill_package_view(MainWindowUiState *widgets,
-                                const std::vector<PackageTableRow> &items,
+                                std::vector<PackageTableRow> items,
                                 PackageTableEmptyState empty_state)
 {
   // Release the old table before allocating the new row model.
   // Large package lists otherwise keep the old and new row objects alive at the same time.
-  fill_package_view(widgets, items, empty_state);
+  fill_package_view(widgets, std::move(items), empty_state);
 }
 
 // -----------------------------------------------------------------------------

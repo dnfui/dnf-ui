@@ -50,8 +50,8 @@ struct PackageItem {
   }
 };
 
-GObject *make_package_object(MainWindowUiState *widgets, const PackageRow &row);
-GObject *make_package_object(MainWindowUiState *widgets, const PackageTableRow &row);
+GObject *make_package_object(MainWindowUiState *widgets, PackageRow row);
+GObject *make_package_object(MainWindowUiState *widgets, PackageTableRow row);
 const PackageItem *package_item_from_object(GObject *obj);
 bool package_table_quick_filter_matches(const PackageRow &row, const char *folded_text);
 PackageItem *mutable_package_item_from_object(GObject *obj);

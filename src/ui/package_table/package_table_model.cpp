@@ -209,11 +209,11 @@ package_table_fill_item_display_values(PackageItem &item,
 // Wrap one package row in a GObject so GTK list models can sort and select it.
 // -----------------------------------------------------------------------------
 GObject *
-make_package_object(MainWindowUiState *widgets, const PackageRow &row)
+make_package_object(MainWindowUiState *widgets, PackageRow row)
 {
   GObject *obj = G_OBJECT(g_object_new(G_TYPE_OBJECT, nullptr));
   auto *item = new PackageItem;
-  item->row = row;
+  item->row = std::move(row);
   InstalledPackageResolution resolution = dnf_backend_resolve_installed_package(item->row);
   package_table_fill_item_display_values(*item, resolution, package_table_uses_compact_rows(widgets));
   package_table_fill_item_status(widgets, *item, resolution);
@@ -226,12 +226,12 @@ make_package_object(MainWindowUiState *widgets, const PackageRow &row)
 // Wrap one package row in a GObject so the ColumnView can sort and select rows without owning backend data directly.
 // -----------------------------------------------------------------------------
 GObject *
-make_package_object(MainWindowUiState *widgets, const PackageTableRow &row)
+make_package_object(MainWindowUiState *widgets, PackageTableRow row)
 {
   GObject *obj = G_OBJECT(g_object_new(G_TYPE_OBJECT, nullptr));
   auto *item = new PackageItem;
-  item->row = row.row;
-  item->daemon_upgrade = row.daemon_upgrade;
+  item->row = std::move(row.row);
+  item->daemon_upgrade = std::move(row.daemon_upgrade);
   InstalledPackageResolution resolution = dnf_backend_resolve_installed_package(item->row);
   package_table_fill_item_display_values(*item, resolution, package_table_uses_compact_rows(widgets));
   package_table_fill_item_status(widgets, *item, resolution);

@@ -6,6 +6,7 @@
 #include "ui/package_table/package_table_view_internal.hpp"
 
 #include <memory>
+#include <utility>
 
 static PackageRow
 make_table_test_row(const std::string &nevra,
@@ -50,6 +51,34 @@ compare_table_test_rows(MainWindowUiState &widgets,
   g_object_unref(left_object);
   g_object_unref(right_object);
   return result;
+}
+
+// -----------------------------------------------------------------------------
+// Verify that package objects own their metadata whether rows are copied or moved.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package table objects preserve copied and moved package rows")
+{
+  reset_backend_globals();
+  MainWindowUiState widgets;
+  PackageRow row = make_table_test_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
+  row.summary = "A package summary long enough to require allocated string storage";
+  row.install_size = 4096;
+
+  GObject *copied = make_package_object(&widgets, row);
+  REQUIRE(row.summary == "A package summary long enough to require allocated string storage");
+  GObject *moved = make_package_object(&widgets, std::move(row));
+  const PackageRow *copied_row = package_row_from_object(copied);
+  const PackageRow *moved_row = package_row_from_object(moved);
+
+  REQUIRE(copied_row);
+  REQUIRE(moved_row);
+  REQUIRE(moved_row->nevra == copied_row->nevra);
+  REQUIRE(moved_row->summary == copied_row->summary);
+  REQUIRE(moved_row->install_size == copied_row->install_size);
+  REQUIRE(moved_row->repo == copied_row->repo);
+
+  g_object_unref(copied);
+  g_object_unref(moved);
 }
 
 // -----------------------------------------------------------------------------

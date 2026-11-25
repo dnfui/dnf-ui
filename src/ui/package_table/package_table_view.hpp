@@ -58,13 +58,13 @@ std::vector<PackageTableRow> package_table_get_displayed_packages(MainWindowUiSt
 // Replace the package table contents with the provided rows.
 // -----------------------------------------------------------------------------
 void package_table_fill_package_view(MainWindowUiState *widgets,
-                                     const std::vector<PackageRow> &items,
+                                     std::vector<PackageRow> items,
                                      PackageTableEmptyState empty_state = PackageTableEmptyState::READY);
 // -----------------------------------------------------------------------------
 // Replace the package table contents with rows that may include daemon upgrade targets.
 // -----------------------------------------------------------------------------
 void package_table_fill_package_view(MainWindowUiState *widgets,
-                                     const std::vector<PackageTableRow> &items,
+                                     std::vector<PackageTableRow> items,
                                      PackageTableEmptyState empty_state = PackageTableEmptyState::READY);
 // -----------------------------------------------------------------------------
 // Update the local package filter when its text or visibility changes.

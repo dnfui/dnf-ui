@@ -21,6 +21,7 @@
 #include "upgrade/daemon_upgrade_state.hpp"
 
 #include <string>
+#include <utility>
 #include <vector>
 
 // -----------------------------------------------------------------------------
@@ -124,13 +125,12 @@ perform_search(MainWindowUiState *widgets, const std::string &term, const DnfBac
                                              search_options.latest_only,
                                              search_options.mode);
 
+    const size_t count = cached_packages.size();
     package_table_fill_package_view(widgets,
-                                    cached_packages,
-                                    cached_packages.empty() ? PackageTableEmptyState::NO_RESULTS
-                                                            : PackageTableEmptyState::READY);
+                                    std::move(cached_packages),
+                                    count == 0 ? PackageTableEmptyState::NO_RESULTS : PackageTableEmptyState::READY);
 
-    std::string msg =
-        dnfui_i18n_format_count(cached_packages.size(), "Loaded %zu cached result.", "Loaded %zu cached results.");
+    std::string msg = dnfui_i18n_format_count(count, "Loaded %zu cached result.", "Loaded %zu cached results.");
     if (cached_metadata) {
       msg += " ";
       msg += _("Using cached repository data. Results may differ from an online search.");
