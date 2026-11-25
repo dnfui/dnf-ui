@@ -7,7 +7,9 @@
 // -----------------------------------------------------------------------------
 TEST_CASE("Package table CSV export writes headers and rows")
 {
-  std::string csv = package_table_export_csv_text({ "Name", "Version" }, { { "bash", "5.3.9" } });
+  std::string csv;
+  package_table_export_csv_append_row(csv, { "Name", "Version" });
+  package_table_export_csv_append_row(csv, { "bash", "5.3.9" });
 
   REQUIRE(csv == "Name,Version\nbash,5.3.9\n");
 }
@@ -17,8 +19,9 @@ TEST_CASE("Package table CSV export writes headers and rows")
 // -----------------------------------------------------------------------------
 TEST_CASE("Package table CSV export escapes quoted fields")
 {
-  std::string csv = package_table_export_csv_text({ "Name", "Summary" },
-                                                  { { "demo", "Contains comma, quote \" and newline\ntext" } });
+  std::string csv;
+  package_table_export_csv_append_row(csv, { "Name", "Summary" });
+  package_table_export_csv_append_row(csv, { "demo", "Contains comma, quote \" and newline\ntext" });
 
   REQUIRE(csv == "Name,Summary\ndemo,\"Contains comma, quote \"\" and newline\ntext\"\n");
 }
@@ -28,8 +31,12 @@ TEST_CASE("Package table CSV export escapes quoted fields")
 // -----------------------------------------------------------------------------
 TEST_CASE("Package table CSV export protects spreadsheet formula fields")
 {
-  std::string csv =
-      package_table_export_csv_text({ "Summary" }, { { "=SUM(1,1)" }, { "+cmd" }, { "-cmd" }, { "@formula" } });
+  std::string csv;
+  package_table_export_csv_append_row(csv, { "Summary" });
+  package_table_export_csv_append_row(csv, { "=SUM(1,1)" });
+  package_table_export_csv_append_row(csv, { "+cmd" });
+  package_table_export_csv_append_row(csv, { "-cmd" });
+  package_table_export_csv_append_row(csv, { "@formula" });
 
   REQUIRE(csv == "Summary\n\"'=SUM(1,1)\"\n'+cmd\n'-cmd\n'@formula\n");
 }
@@ -39,7 +46,9 @@ TEST_CASE("Package table CSV export protects spreadsheet formula fields")
 // -----------------------------------------------------------------------------
 TEST_CASE("Package table CSV export protects formula fields after whitespace")
 {
-  std::string csv = package_table_export_csv_text({ "Summary" }, { { "  =SUM(1,1)" } });
+  std::string csv;
+  package_table_export_csv_append_row(csv, { "Summary" });
+  package_table_export_csv_append_row(csv, { "  =SUM(1,1)" });
 
   REQUIRE(csv == "Summary\n\"'  =SUM(1,1)\"\n");
 }

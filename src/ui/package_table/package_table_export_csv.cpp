@@ -70,29 +70,18 @@ csv_escape(const std::string &text)
 }
 
 // -----------------------------------------------------------------------------
-// Build CSV text from already formatted headers and rows.
+// Append one already formatted header or data row to the CSV.
 // -----------------------------------------------------------------------------
-std::string
-package_table_export_csv_text(const std::vector<std::string> &headers,
-                              const std::vector<std::vector<std::string>> &rows)
+void
+package_table_export_csv_append_row(std::string &csv, const std::vector<std::string> &fields)
 {
-  std::string csv;
-  auto append_line = [&csv](const std::vector<std::string> &fields) {
-    for (size_t i = 0; i < fields.size(); ++i) {
-      if (i > 0) {
-        csv += ",";
-      }
-      csv += csv_escape(fields[i]);
+  for (size_t i = 0; i < fields.size(); ++i) {
+    if (i > 0) {
+      csv += ",";
     }
-    csv += "\n";
-  };
-
-  append_line(headers);
-  for (const auto &row : rows) {
-    append_line(row);
+    csv += csv_escape(fields[i]);
   }
-
-  return csv;
+  csv += "\n";
 }
 
 // -----------------------------------------------------------------------------

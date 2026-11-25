@@ -87,14 +87,14 @@ build_visible_table_csv(MainWindowUiState *widgets, std::string &csv_out)
     return false;
   }
 
-  std::vector<std::string> headers;
-  headers.reserve(columns.size());
+  std::vector<std::string> fields;
+  fields.reserve(columns.size());
   for (const auto *column : columns) {
-    headers.push_back(_(column->title));
+    fields.push_back(_(column->title));
   }
+  package_table_export_csv_append_row(csv_out, fields);
 
-  std::vector<std::vector<std::string>> rows;
-  rows.reserve(count);
+  bool wrote_row = false;
   for (guint i = 0; i < count; ++i) {
     GObject *obj = G_OBJECT(g_list_model_get_item(model, i));
     const PackageItem *item = package_item_from_object(obj);
@@ -103,21 +103,19 @@ build_visible_table_csv(MainWindowUiState *widgets, std::string &csv_out)
       continue;
     }
 
-    std::vector<std::string> row;
-    row.reserve(columns.size());
+    fields.clear();
     for (const auto *column : columns) {
-      row.push_back(package_table_column_text(*item, column->kind));
+      fields.push_back(package_table_column_text(*item, column->kind));
     }
-    rows.push_back(std::move(row));
+    package_table_export_csv_append_row(csv_out, fields);
+    wrote_row = true;
     g_object_unref(obj);
   }
 
-  if (rows.empty()) {
-    return false;
+  if (!wrote_row) {
+    csv_out.clear();
   }
-
-  csv_out = package_table_export_csv_text(headers, rows);
-  return true;
+  return wrote_row;
 }
 
 // -----------------------------------------------------------------------------
