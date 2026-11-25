@@ -353,7 +353,7 @@ collect_available_rows_by_name_arch(libdnf5::Base &base,
 // Add one available row to an exact-version package view.
 // -----------------------------------------------------------------------------
 void
-add_available_view_row(AvailableViewRows &rows, PackageRow row)
+add_available_view_row(AvailableViewRows &rows, PackageRow row, const InstalledQueryResult *installed)
 {
   if (rows.row_index_by_nevra.count(row.nevra) > 0) {
     return;
@@ -365,9 +365,11 @@ add_available_view_row(AvailableViewRows &rows, PackageRow row)
       newest_it != rows.newest_available_nevras_by_name_arch.end() && newest_it->second == row.nevra;
 
   const size_t row_index = rows.rows.size();
-  auto [visible_it, inserted] = rows.newest_visible_index_by_name_arch.try_emplace(std::move(key), row_index);
-  if (!inserted && libdnf5::rpm::evrcmp(row, rows.rows[visible_it->second]) > 0) {
-    visible_it->second = row_index;
+  if (installed && installed->rows_by_name_arch.contains(key)) {
+    auto [visible_it, inserted] = rows.newest_visible_index_by_name_arch.try_emplace(std::move(key), row_index);
+    if (!inserted && libdnf5::rpm::evrcmp(row, rows.rows[visible_it->second]) > 0) {
+      visible_it->second = row_index;
+    }
   }
   rows.rows.push_back(std::move(row));
   rows.row_index_by_nevra.emplace(rows.rows[row_index].nevra, row_index);
@@ -413,7 +415,7 @@ collect_available_view_rows(libdnf5::Base &base,
                             const DnfBackendSearchOptions &search_options,
                             const std::string *pattern,
                             const std::set<std::string> *matching_nevras,
-                            size_t installed_count)
+                            const InstalledQueryResult &installed)
 {
   AvailableViewRows result;
   result.newest_available_nevras_by_name_arch = collect_newest_available_nevras_by_name_arch(base, cancellable);
@@ -438,7 +440,7 @@ collect_available_view_rows(libdnf5::Base &base,
   // Reserve the upper bound for a full list, including installed rows added during the merge.
   // Filtered searches may match very few packages, so let their result vector grow as needed.
   if (!pattern) {
-    result.rows.reserve(query.size() + installed_count);
+    result.rows.reserve(query.size() + installed.rows.size());
   }
 
   for (auto pkg : query) {
@@ -452,7 +454,9 @@ collect_available_view_rows(libdnf5::Base &base,
     }
 
     add_available_view_row(
-        result, make_package_row_with_installonly(pkg, PackageRepoCandidateRelation::UNKNOWN, installonly_nevras));
+        result,
+        make_package_row_with_installonly(pkg, PackageRepoCandidateRelation::UNKNOWN, installonly_nevras),
+        &installed);
   }
 
   return result;
@@ -643,12 +647,12 @@ annotate_installed_row_with_repo_candidate(PackageRow &installed_row, const Pack
   }
 
   installed_row.set_repo_candidate({
-    .nevra = candidate->nevra,
-    .epoch = candidate->epoch,
-    .version = candidate->version,
-    .release = candidate->release,
-    .repo = candidate->repo,
-    .is_newest_available = candidate->is_newest_available,
+      .nevra = candidate->nevra,
+      .epoch = candidate->epoch,
+      .version = candidate->version,
+      .release = candidate->release,
+      .repo = candidate->repo,
+      .is_newest_available = candidate->is_newest_available,
   });
   if (candidate->nevra == installed_row.nevra) {
     installed_row.repo_candidate_exact_available = true;
@@ -866,8 +870,8 @@ dnf_backend_search_package_rows_interruptible(const std::string &pattern,
         rows = visible_rows_from_maps(
             std::move(available_rows), filtered_installed.rows_by_name_arch, repo_metadata_available);
       } else {
-        AvailableViewRows available_rows =
-            collect_available_view_rows(base, cancellable, search_options, &pattern, matching_nevras, 0);
+        AvailableViewRows available_rows = collect_available_view_rows(
+            base, cancellable, search_options, &pattern, matching_nevras, installed_snapshot);
         if (package_query_cancelled(cancellable)) {
           return {};
         }
@@ -1035,7 +1039,7 @@ dnf_backend_get_browse_package_rows_interruptible(const DnfBackendSearchOptions 
         rows = visible_rows_from_maps(std::move(available_rows), installed.rows_by_name_arch, repo_metadata_available);
       } else {
         AvailableViewRows available_rows =
-            collect_available_view_rows(base, cancellable, search_options, nullptr, nullptr, installed.rows.size());
+            collect_available_view_rows(base, cancellable, search_options, nullptr, nullptr, installed);
         if (package_query_cancelled(cancellable)) {
           return {};
         }

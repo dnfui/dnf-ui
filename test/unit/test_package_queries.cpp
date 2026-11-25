@@ -490,12 +490,13 @@ TEST_CASE("All-version merge keeps distinct available package versions")
   older.summary = "Summary for the older package version";
   newer.summary = "Summary for the newer package version";
 
+  dnf_backend_internal::InstalledQueryResult installed;
   dnf_backend_internal::AvailableViewRows available;
   available.newest_available_nevras_by_name_arch.emplace(newer.name_arch_key(), newer.nevra);
-  dnf_backend_internal::add_available_view_row(available, older);
-  dnf_backend_internal::add_available_view_row(available, newer);
+  dnf_backend_internal::add_available_view_row(available, older, &installed);
+  dnf_backend_internal::add_available_view_row(available, newer, &installed);
+  REQUIRE(available.newest_visible_index_by_name_arch.empty());
 
-  dnf_backend_internal::InstalledQueryResult installed;
   auto rows = dnf_backend_internal::visible_rows_from_available_view(std::move(available), installed, true);
 
   const PackageRow *older_result = find_backend_test_row_by_nevra(rows, older.nevra);
@@ -542,15 +543,15 @@ TEST_CASE("All-version merge annotates installed rows also present in repositori
   PackageRow current_repo_row = make_backend_test_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64", "fedora");
   PackageRow update_row = make_backend_test_row("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64", "updates");
 
-  dnf_backend_internal::AvailableViewRows available;
-  available.newest_available_nevras_by_name_arch.emplace(update_row.name_arch_key(), update_row.nevra);
-  dnf_backend_internal::add_available_view_row(available, current_repo_row);
-  dnf_backend_internal::add_available_view_row(available, update_row);
-
   dnf_backend_internal::InstalledQueryResult installed;
   installed.rows = { installed_row };
   installed.nevras = { installed_row.nevra };
   installed.rows_by_name_arch.emplace(installed_row.name_arch_key(), installed_row);
+
+  dnf_backend_internal::AvailableViewRows available;
+  available.newest_available_nevras_by_name_arch.emplace(update_row.name_arch_key(), update_row.nevra);
+  dnf_backend_internal::add_available_view_row(available, current_repo_row, &installed);
+  dnf_backend_internal::add_available_view_row(available, update_row, &installed);
 
   auto rows = dnf_backend_internal::visible_rows_from_available_view(std::move(available), installed, true);
 
@@ -586,14 +587,16 @@ TEST_CASE("All-version merge preserves the newest visible candidate across insta
   PackageRow older = make_backend_test_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64", "fedora");
   PackageRow missing = make_backend_test_row("demo-0.9-1.x86_64", "demo", "0.9", "1", "x86_64", "@System");
 
-  dnf_backend_internal::AvailableViewRows available;
-  available.newest_available_nevras_by_name_arch.emplace(newest.name_arch_key(), newest.nevra);
-  dnf_backend_internal::add_available_view_row(available, newest);
-  dnf_backend_internal::add_available_view_row(available, older);
-  available.rows.reserve(available.rows.capacity() + 1);
-
   dnf_backend_internal::InstalledQueryResult installed;
   installed.rows = { missing, newest, older };
+  installed.rows_by_name_arch.emplace(newest.name_arch_key(), newest);
+
+  dnf_backend_internal::AvailableViewRows available;
+  available.newest_available_nevras_by_name_arch.emplace(newest.name_arch_key(), newest.nevra);
+  dnf_backend_internal::add_available_view_row(available, newest, &installed);
+  dnf_backend_internal::add_available_view_row(available, older, &installed);
+  available.rows.reserve(available.rows.capacity() + 1);
+
   auto rows = dnf_backend_internal::visible_rows_from_available_view(std::move(available), installed, true);
 
   REQUIRE(rows.size() == 3);
@@ -620,14 +623,14 @@ TEST_CASE("All-version merge ignores hidden newest candidates for installed row 
   PackageRow visible_repo_row = make_backend_test_row("demo-1.5-1.x86_64", "demo", "1.5", "1", "x86_64", "fedora");
   PackageRow hidden_newest_row = make_backend_test_row("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64", "updates");
 
-  dnf_backend_internal::AvailableViewRows available;
-  available.newest_available_nevras_by_name_arch.emplace(hidden_newest_row.name_arch_key(), hidden_newest_row.nevra);
-  dnf_backend_internal::add_available_view_row(available, visible_repo_row);
-
   dnf_backend_internal::InstalledQueryResult installed;
   installed.rows = { installed_row };
   installed.nevras = { installed_row.nevra };
   installed.rows_by_name_arch.emplace(installed_row.name_arch_key(), installed_row);
+
+  dnf_backend_internal::AvailableViewRows available;
+  available.newest_available_nevras_by_name_arch.emplace(hidden_newest_row.name_arch_key(), hidden_newest_row.nevra);
+  dnf_backend_internal::add_available_view_row(available, visible_repo_row, &installed);
 
   auto rows = dnf_backend_internal::visible_rows_from_available_view(std::move(available), installed, true);
   const PackageRow *installed_result = find_backend_test_row_by_nevra(rows, installed_row.nevra);
@@ -675,14 +678,14 @@ TEST_CASE("All-version merge keeps exact reinstall availability for hidden insta
   PackageRow visible_update = make_backend_test_row("demo-2.0-1.x86_64", "demo", "2.0", "1", "x86_64", "updates");
   visible_update.is_newest_available = true;
 
-  dnf_backend_internal::AvailableViewRows available;
-  available.newest_available_nevras_by_name_arch.emplace(visible_update.name_arch_key(), visible_update.nevra);
-  dnf_backend_internal::add_available_view_row(available, visible_update);
-
   dnf_backend_internal::InstalledQueryResult installed;
   installed.rows = { older_installed, newer_installed };
   installed.nevras = { older_installed.nevra, newer_installed.nevra };
   installed.rows_by_name_arch.emplace(newer_installed.name_arch_key(), newer_installed);
+
+  dnf_backend_internal::AvailableViewRows available;
+  available.newest_available_nevras_by_name_arch.emplace(visible_update.name_arch_key(), visible_update.nevra);
+  dnf_backend_internal::add_available_view_row(available, visible_update, &installed);
 
   auto rows = dnf_backend_internal::visible_rows_from_available_view(std::move(available), installed, true);
   const PackageRow *older_result = find_backend_test_row_by_nevra(rows, older_installed.nevra);

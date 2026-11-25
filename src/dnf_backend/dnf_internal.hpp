@@ -90,7 +90,7 @@ void annotate_installed_rows_with_repo_candidates_best_effort(std::vector<Packag
 // -----------------------------------------------------------------------------
 // Add one available row to an exact-version package view.
 // -----------------------------------------------------------------------------
-void add_available_view_row(AvailableViewRows &rows, PackageRow row);
+void add_available_view_row(AvailableViewRows &rows, PackageRow row, const InstalledQueryResult *installed = nullptr);
 // -----------------------------------------------------------------------------
 // Merge exact-version available rows with missing exact installed rows.
 // -----------------------------------------------------------------------------
