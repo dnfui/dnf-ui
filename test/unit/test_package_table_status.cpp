@@ -84,6 +84,55 @@ set_installed_package_view(MainWindowUiState &widgets)
 }
 
 // -----------------------------------------------------------------------------
+// Verify that ordinary rows without pending actions keep their resolved Status text and sort rank.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package table non-pending status matches resolved action rows")
+{
+  reset_backend_globals();
+
+  MainWindowUiState widgets;
+  set_all_version_package_view(widgets);
+
+  PackageItem item;
+  item.row = make_status_test_row("demo-1.0-1.x86_64", "demo", "1.0", "1", "x86_64");
+  PackageTableRow table_row {
+    .row = item.row,
+    .daemon_upgrade = {},
+  };
+
+  for (PackageInstallState state : { PackageInstallState::AVAILABLE,
+                                     PackageInstallState::INSTALLED,
+                                     PackageInstallState::LOCAL_ONLY,
+                                     PackageInstallState::INSTALLED_NEWER_THAN_REPO,
+                                     PackageInstallState::DOWNGRADEABLE }) {
+    InstalledPackageResolution resolution;
+    resolution.state = state;
+    PendingTransactionActionRows action_rows =
+        pending_transaction_action_rows_for_resolved_selection(item.row, nullptr, 0, resolution, false);
+
+    package_table_fill_item_status(&widgets, item, resolution);
+
+    REQUIRE(item.status_text == package_table_status_text_for_resolved_row(table_row, action_rows, true));
+    REQUIRE(item.status_rank == dnf_backend_get_install_state_sort_rank(state));
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Verify that status calculation also works without a window state.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package table non-pending status works without window state")
+{
+  PackageItem item;
+  InstalledPackageResolution resolution;
+  resolution.state = PackageInstallState::AVAILABLE;
+
+  package_table_fill_item_status(nullptr, item, resolution);
+
+  REQUIRE(item.status_text == "Available");
+  REQUIRE(item.status_rank == dnf_backend_get_install_state_sort_rank(PackageInstallState::AVAILABLE));
+}
+
+// -----------------------------------------------------------------------------
 // Verify that pending installs use the same Status text in stored and visible paths.
 // -----------------------------------------------------------------------------
 TEST_CASE("Package table pending install status is shared")

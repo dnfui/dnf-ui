@@ -91,15 +91,22 @@ package_table_fill_item_status(MainWindowUiState *widgets,
   PackageInstallState install_state = item.upgrade_target() ? PackageInstallState::UPGRADEABLE : resolution.state;
   item.status_rank = dnf_backend_get_install_state_sort_rank(install_state);
 
+  const bool exact_available_rows = package_table_uses_exact_available_rows(widgets);
+  const bool has_pending_actions = widgets && !widgets->transaction_state.actions.empty();
+
+  // Only exact upgrade rows and pending actions need resolved transaction rows.
+  if (!has_pending_actions && (!exact_available_rows || install_state != PackageInstallState::UPGRADEABLE)) {
+    item.status_text = package_table_status_text(install_state);
+    return;
+  }
+
   PackageTableRow table_row {
     .row = item.row,
     .daemon_upgrade = item.daemon_upgrade,
   };
-  const bool exact_available_rows = package_table_uses_exact_available_rows(widgets);
   const bool exact_installonly_actions =
       widgets && displayed_package_query_uses_exact_installonly_actions(widgets->query_state.displayed_query);
-  const std::vector<PendingAction> empty_actions;
-  const std::vector<PendingAction> &actions = widgets ? widgets->transaction_state.actions : empty_actions;
+  const std::vector<PendingAction> &actions = widgets->transaction_state.actions;
   PendingTransactionActionRows action_rows = pending_transaction_action_rows_for_resolved_selection_with_pending(
       item.row, item.upgrade_target(), table_row.upgrade_generation(), resolution, exact_installonly_actions, actions);
   PendingAction::Type action_type;
