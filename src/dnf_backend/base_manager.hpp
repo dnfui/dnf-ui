@@ -155,8 +155,9 @@ class BaseManager {
                         BaseProgressCallback progress_callback = {});
   // -----------------------------------------------------------------------------
   // Drop the cached Base so the next backend operation rebuilds it on demand.
+  // Explicit list clearing may also trim free heap memory when no Base remains.
   // -----------------------------------------------------------------------------
-  void drop_cached_base();
+  void drop_cached_base(std::shared_ptr<std::atomic<bool>> cancel_requested = {}, bool trim_when_empty = false);
 
 #ifdef DNFUI_BUILD_TESTS
   // -----------------------------------------------------------------------------

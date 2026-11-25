@@ -11,7 +11,9 @@
 #include "dnf_backend/dnf_backend.hpp"
 #include "ui/package_query/package_query_state.hpp"
 
+#include <atomic>
 #include <cstdint>
+#include <memory>
 #include <string>
 
 #include <gio/gio.h>
@@ -115,7 +117,12 @@ void package_query_start_exact_package_reload_task(MainWindowUiState *widgets, c
 // -----------------------------------------------------------------------------
 // Release cached backend metadata without waiting on the GTK thread.
 // -----------------------------------------------------------------------------
-void package_query_drop_cached_base_async();
+void package_query_drop_cached_base_async(std::shared_ptr<std::atomic<bool>> cancel_requested = {},
+                                          bool trim_when_empty = false);
+// -----------------------------------------------------------------------------
+// Release metadata after Clear List when all package workers have finished.
+// -----------------------------------------------------------------------------
+void package_query_maybe_release_base_after_clear(MainWindowUiState *widgets);
 
 // -----------------------------------------------------------------------------
 // EOF

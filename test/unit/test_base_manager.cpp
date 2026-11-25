@@ -249,6 +249,57 @@ TEST_CASE("BaseManager cache drop keeps generation stable")
 }
 
 // -----------------------------------------------------------------------------
+// A superseded release must not discard the Base used by a newer request.
+// -----------------------------------------------------------------------------
+TEST_CASE("BaseManager cache drop respects cancellation while waiting for the Base lock")
+{
+  auto &manager = BaseManager::instance();
+  manager.reset_for_tests();
+  manager.initialize_system_only_base_for_tests();
+  const auto generation = manager.current_generation();
+  auto cancel = std::make_shared<std::atomic<bool>>(false);
+
+  std::promise<void> worker_started;
+  auto started = worker_started.get_future();
+  std::future<void> release;
+  std::future_status start_status;
+  std::future_status blocked_status;
+  std::future_status cancelled_status;
+
+  {
+    auto read = manager.acquire_read();
+    release = std::async(std::launch::async, [&manager, &worker_started, cancel]() {
+      worker_started.set_value();
+      manager.drop_cached_base(cancel, true);
+    });
+
+    start_status = started.wait_for(std::chrono::seconds(2));
+    blocked_status = release.wait_for(std::chrono::milliseconds(50));
+    cancel->store(true, std::memory_order_relaxed);
+    cancelled_status = release.wait_for(std::chrono::seconds(2));
+  }
+
+  release.get();
+  REQUIRE(start_status == std::future_status::ready);
+  REQUIRE(blocked_status == std::future_status::timeout);
+  REQUIRE(cancelled_status == std::future_status::ready);
+  REQUIRE(manager.has_cached_base_for_tests());
+  REQUIRE(manager.current_generation() == generation);
+
+  // Also check cancellation before the worker starts and normal uncancelled release.
+  manager.drop_cached_base(cancel, true);
+  REQUIRE(manager.has_cached_base_for_tests());
+  manager.drop_cached_base(std::make_shared<std::atomic<bool>>(false), true);
+  REQUIRE_FALSE(manager.has_cached_base_for_tests());
+  REQUIRE(manager.current_generation() == generation);
+
+  // Clear List can request trimming after an earlier query already dropped the Base.
+  manager.drop_cached_base(std::make_shared<std::atomic<bool>>(false), true);
+  REQUIRE_FALSE(manager.has_cached_base_for_tests());
+  REQUIRE(manager.current_generation() == generation);
+}
+
+// -----------------------------------------------------------------------------
 // Verify that installed-state refresh reads cannot race with cached Base recreation.
 // -----------------------------------------------------------------------------
 TEST_CASE("BaseManager system-only refresh read drops cached Base before holding the lock")

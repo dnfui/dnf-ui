@@ -91,6 +91,7 @@ perform_search(MainWindowUiState *widgets, const std::string &term, const DnfBac
     return;
   }
 
+  widgets->query_state.cancel_clear_base_release();
   gtk_editable_set_text(GTK_EDITABLE(widgets->query.entry), term.c_str());
   std::string searching_message;
   if (search_options.mode == DnfBackendSearchMode::PROVIDES) {
@@ -338,12 +339,16 @@ package_query_on_clear_button_clicked(GtkButton *, gpointer user_data)
   widgets->query_state.reload_selected_nevra.clear();
   widgets->results.selected_nevra.clear();
   package_table_fill_package_view(widgets, std::vector<PackageRow> {});
+  package_details_cancel_active_load(widgets);
   package_query_clear_duration_label(widgets);
 
   // Reset status labels and package actions.
   ui_helpers_set_status(widgets->query.status_label, _("Ready."), "gray");
   package_details_reset_details_view(widgets);
   pending_transaction_update_action_button_labels_for_selection(widgets, "", "", "", false);
+
+  widgets->query_state.request_clear_base_release();
+  package_query_maybe_release_base_after_clear(widgets);
 }
 
 // -----------------------------------------------------------------------------

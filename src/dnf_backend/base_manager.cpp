@@ -819,11 +819,27 @@ BaseManager::rebuild(BaseRefreshMode refresh_mode,
 // Drop the cached Base so memory-heavy metadata does not stay resident after short-lived backend work.
 // -----------------------------------------------------------------------------
 void
-BaseManager::drop_cached_base()
+BaseManager::drop_cached_base(std::shared_ptr<std::atomic<bool>> cancel_requested, bool trim_when_empty)
 {
   {
-    std::unique_lock<std::mutex> lock(base_mutex);
-    if (!base_ptr) {
+    std::unique_lock<std::mutex> lock(base_mutex, std::defer_lock);
+    if (cancel_requested) {
+      while (!lock.try_lock()) {
+        if (cancel_requested->load(std::memory_order_relaxed)) {
+          return;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+      }
+
+      // A new query may have started while the release was waiting for the lock.
+      if (cancel_requested->load(std::memory_order_relaxed)) {
+        return;
+      }
+    } else {
+      lock.lock();
+    }
+
+    if (!base_ptr && !trim_when_empty) {
       return;
     }
     base_ptr.reset();

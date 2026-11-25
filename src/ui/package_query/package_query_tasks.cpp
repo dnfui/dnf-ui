@@ -159,7 +159,7 @@ struct QueryBackendBaseDropGuard {
 // Release cached backend metadata when no package list worker is needed.
 // -----------------------------------------------------------------------------
 void
-package_query_drop_cached_base_async()
+package_query_drop_cached_base_async(std::shared_ptr<std::atomic<bool>> cancel_requested, bool trim_when_empty)
 {
   GApplication *app = g_application_get_default();
   if (!app) {
@@ -173,8 +173,17 @@ package_query_drop_cached_base_async()
       nullptr,
       [](GObject *source, GAsyncResult *, gpointer) { g_application_release(G_APPLICATION(source)); },
       nullptr);
-  g_task_run_in_thread(task, [](GTask *task, gpointer, gpointer, GCancellable *) {
-    BaseManager::instance().drop_cached_base();
+  struct BaseDropTaskData {
+    std::shared_ptr<std::atomic<bool>> cancel_requested;
+    bool trim_when_empty;
+  };
+
+  g_task_set_task_data(task, new BaseDropTaskData { std::move(cancel_requested), trim_when_empty }, [](gpointer p) {
+    delete static_cast<BaseDropTaskData *>(p);
+  });
+  g_task_run_in_thread(task, [](GTask *task, gpointer, gpointer task_data, GCancellable *) {
+    const auto *td = static_cast<const BaseDropTaskData *>(task_data);
+    BaseManager::instance().drop_cached_base(td->cancel_requested, td->trim_when_empty);
     g_task_return_boolean(task, TRUE);
   });
   g_object_unref(task);

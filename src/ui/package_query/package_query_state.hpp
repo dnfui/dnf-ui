@@ -9,7 +9,9 @@
 
 #include "dnf_backend/dnf_backend.hpp"
 
+#include <atomic>
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -147,6 +149,10 @@ displayed_package_query_uses_exact_installonly_actions(const DisplayedPackageQue
 // -----------------------------------------------------------------------------
 struct PackageQueryState {
   ActivePackageListRequest active_request;
+  // Count detail workers until completion, including cancelled requests.
+  unsigned int active_details_requests = 0;
+  bool clear_base_release_pending = false;
+  std::shared_ptr<std::atomic<bool>> clear_base_release_cancel;
   // Next package-list request id used to distinguish overlapping background tasks.
   uint64_t next_package_list_request_id = 1;
   // Remembers the last query-backed result view.
@@ -158,6 +164,35 @@ struct PackageQueryState {
   // True when a quiet List Upgradable count check should run after current work is idle.
   bool upgrade_indicator_refresh_pending = false;
   std::vector<std::string> history;
+
+  // Cancel a pending or scheduled release when the user starts another query.
+  void cancel_clear_base_release()
+  {
+    clear_base_release_pending = false;
+    if (clear_base_release_cancel) {
+      clear_base_release_cancel->store(true, std::memory_order_relaxed);
+      clear_base_release_cancel.reset();
+    }
+  }
+
+  void request_clear_base_release()
+  {
+    cancel_clear_base_release();
+    clear_base_release_cancel = std::make_shared<std::atomic<bool>>(false);
+    clear_base_release_pending = true;
+  }
+
+  // Schedule the release only after all package workers finish.
+  // Retain the cancellation token until another query starts.
+  std::shared_ptr<std::atomic<bool>> take_clear_base_release_request()
+  {
+    if (!clear_base_release_pending || active_request.cancellable || active_details_requests != 0) {
+      return {};
+    }
+
+    clear_base_release_pending = false;
+    return clear_base_release_cancel;
+  }
 };
 
 // -----------------------------------------------------------------------------

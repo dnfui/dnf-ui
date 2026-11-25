@@ -135,6 +135,71 @@ TEST_CASE("Background task completion keeps window state alive")
 }
 
 // -----------------------------------------------------------------------------
+// Clear List must wait for cancelled list and detail workers before releasing metadata.
+// -----------------------------------------------------------------------------
+TEST_CASE("Clear List defers Base release until package workers finish")
+{
+  PackageQueryState state;
+  GCancellable *cancellable = g_cancellable_new();
+  state.active_request.cancellable = cancellable;
+  state.active_details_requests = 2;
+  state.request_clear_base_release();
+
+  g_cancellable_cancel(cancellable);
+  REQUIRE_FALSE(state.take_clear_base_release_request());
+
+  state.active_request = {};
+  g_object_unref(cancellable);
+  REQUIRE_FALSE(state.take_clear_base_release_request());
+
+  --state.active_details_requests;
+  REQUIRE_FALSE(state.take_clear_base_release_request());
+
+  --state.active_details_requests;
+  auto cancel = state.take_clear_base_release_request();
+  REQUIRE(cancel);
+  REQUIRE_FALSE(cancel->load(std::memory_order_relaxed));
+  REQUIRE_FALSE(state.take_clear_base_release_request());
+}
+
+// -----------------------------------------------------------------------------
+// A new query supersedes a pending release requested by Clear List.
+// -----------------------------------------------------------------------------
+TEST_CASE("New package query supersedes deferred Base release")
+{
+  PackageQueryState state;
+  state.active_details_requests = 1;
+  state.request_clear_base_release();
+  REQUIRE_FALSE(state.take_clear_base_release_request());
+
+  state.cancel_clear_base_release();
+  --state.active_details_requests;
+  REQUIRE_FALSE(state.take_clear_base_release_request());
+}
+
+// -----------------------------------------------------------------------------
+// A scheduled release must remain cancellable, even after leaving the pending state.
+// -----------------------------------------------------------------------------
+TEST_CASE("New package query cancels a scheduled Base release")
+{
+  PackageQueryState state;
+  state.request_clear_base_release();
+  auto cancel = state.take_clear_base_release_request();
+  REQUIRE(cancel);
+  REQUIRE_FALSE(cancel->load(std::memory_order_relaxed));
+
+  state.cancel_clear_base_release();
+  REQUIRE(cancel->load(std::memory_order_relaxed));
+  REQUIRE_FALSE(state.take_clear_base_release_request());
+
+  state.request_clear_base_release();
+  auto next = state.take_clear_base_release_request();
+  REQUIRE(next);
+  REQUIRE_FALSE(next->load(std::memory_order_relaxed));
+  REQUIRE(cancel->load(std::memory_order_relaxed));
+}
+
+// -----------------------------------------------------------------------------
 // A completed task must skip cancelled UI updates after its widget is destroyed.
 // -----------------------------------------------------------------------------
 TEST_CASE("Window destruction cancels task completion", "[gtk]")

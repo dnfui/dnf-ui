@@ -305,6 +305,7 @@ package_query_begin_package_list_request(MainWindowUiState *widgets,
     g_object_unref(widgets->query_state.active_request.cancellable);
   }
 
+  widgets->query_state.cancel_clear_base_release();
   widgets->query_state.active_request.cancellable = G_CANCELLABLE(g_object_ref(c));
   widgets->query_state.active_request.id = request_id;
   widgets->query_state.active_request.kind = kind;
@@ -379,6 +380,23 @@ package_query_end_package_list_request(MainWindowUiState *widgets, uint64_t requ
 
   pending_transaction_on_package_query_finished(widgets);
   package_query_maybe_start_upgrade_indicator_refresh(widgets);
+  package_query_maybe_release_base_after_clear(widgets);
+}
+
+// -----------------------------------------------------------------------------
+// Release metadata only when cancelled workers can no longer rebuild the Base.
+// -----------------------------------------------------------------------------
+void
+package_query_maybe_release_base_after_clear(MainWindowUiState *widgets)
+{
+  if (!widgets || widgets->window_state.destroyed) {
+    return;
+  }
+
+  if (auto cancel = widgets->query_state.take_clear_base_release_request()) {
+    // The list worker may already have released the Base before GTK built the table.
+    package_query_drop_cached_base_async(cancel, true);
+  }
 }
 
 // -----------------------------------------------------------------------------

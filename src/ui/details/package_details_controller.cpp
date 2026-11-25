@@ -14,6 +14,7 @@
 #include "ui/common/widgets.hpp"
 #include "ui/common/widgets_internal.hpp"
 #include "ui/package_query/package_query_controller.hpp"
+#include "ui/package_query/package_query_controller_internal.hpp"
 #include "ui/package_query/package_query_state.hpp"
 #include "ui/package_table/package_table_view.hpp"
 #include "ui/package_table/package_table_status.hpp"
@@ -691,6 +692,10 @@ on_package_details_task_finished(GObject *, GAsyncResult *res, gpointer user_dat
 {
   GTask *task = G_TASK(res);
   MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
+  if (widgets) {
+    --widgets->query_state.active_details_requests;
+    package_query_maybe_release_base_after_clear(widgets);
+  }
   if (widgets_task_should_skip_completion(task, widgets)) {
     return;
   }
@@ -803,6 +808,10 @@ on_deferred_details_task_finished(GObject *, GAsyncResult *res, gpointer user_da
 {
   GTask *task = G_TASK(res);
   MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
+  if (widgets) {
+    --widgets->query_state.active_details_requests;
+    package_query_maybe_release_base_after_clear(widgets);
+  }
   if (widgets_task_should_skip_completion(task, widgets)) {
     return;
   }
@@ -936,6 +945,8 @@ load_selected_package_details_page(MainWindowUiState *widgets, DeferredDetailsPa
   td->page = page;
   g_task_set_task_data(task, td, deferred_details_task_data_free);
 
+  widgets->query_state.cancel_clear_base_release();
+  ++widgets->query_state.active_details_requests;
   g_task_run_in_thread(task, on_deferred_details_task);
 
   g_object_unref(task);
@@ -1019,6 +1030,8 @@ package_details_load_selected_package_info(MainWindowUiState *widgets, const Pac
   g_task_set_task_data(task, td, info_task_data_free);
 
   // Run background task to fetch metadata using dnf_backend
+  widgets->query_state.cancel_clear_base_release();
+  ++widgets->query_state.active_details_requests;
   g_task_run_in_thread(task, on_package_details_task);
 
   g_object_unref(task);
