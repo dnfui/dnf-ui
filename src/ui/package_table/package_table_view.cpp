@@ -1227,7 +1227,11 @@ fill_package_view(MainWindowUiState *widgets, std::vector<Row> items, PackageTab
     g_object_unref(obj);
   }
 
-  finish_package_table_view(widgets, store, items.size(), sort_kind, sort_order, have_sort_state);
+  const size_t item_count = items.size();
+  // The row data now belongs to the store. Release the vector storage before building the view.
+  items = std::vector<Row>();
+
+  finish_package_table_view(widgets, store, item_count, sort_kind, sort_order, have_sort_state);
 }
 
 void
