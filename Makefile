@@ -98,6 +98,7 @@ help:
 	@printf '%-36s %s\n' 'dockerlogin' 'Open a shell in the Docker development container.'
 	@printf '%-36s %s\n' 'dockercli' 'Open a Docker shell with the backend CLI probe ready.'
 	@printf '%-36s %s\n' 'dockerrun' 'Run the desktop app in Docker.'
+	@printf '%-36s %s\n' 'dockerheaptrack' 'Profile desktop app heap allocations in Docker.'
 	@printf '%-36s %s\n' 'dockertest' 'Run the backend test suite in Docker.'
 	@printf '%-36s %s\n' 'dockerrunoffline' 'Run the desktop app in Docker without networking.'
 	@printf '%-36s %s\n' 'dockerruncoldoffline' 'Run the desktop app in Docker without networking or repo cache.'
@@ -109,6 +110,7 @@ help:
 	@printf '%-36s %s\n' 'dockerrpm' 'Build binary and source RPMs in Docker.'
 	@printf '\n%s\n' 'Developer utilities'
 	@printf '%s\n' '----------------------------------------'
+	@printf '%-36s %s\n' 'heaptrack' 'Profile desktop app heap allocations locally.'
 	@printf '%-36s %s\n' 'memcheck' 'Run the default Valgrind Memcheck smoke test.'
 	@printf '%-36s %s\n' 'memcheck-smoke' 'Run a quick automated Valgrind Memcheck smoke test.'
 	@printf '%-36s %s\n' 'memcheck-tests' 'Run the automated test binary under Valgrind Memcheck.'
@@ -231,6 +233,11 @@ dockercli:
 dockerrun:
 	@THEME="$(THEME)" DEBUG_TRACE="$(DEBUG_TRACE)" ./docker/docker_build.sh
 
+# Profile heap allocations in Docker:
+.PHONY: dockerheaptrack
+dockerheaptrack:
+	@HEAPTRACK=y FINAL= ASAN= THEME="$(THEME)" ./docker/docker_build.sh
+
 # Run the backend test suite in Docker:
 .PHONY: dockertest
 dockertest:
@@ -289,6 +296,13 @@ dockerrpm:
 # -----------------------------------------------------------------------------
 # Developer utility targets
 # -----------------------------------------------------------------------------
+
+# Profile heap allocations locally:
+.PHONY: heaptrack
+heaptrack:
+	$(call require_non_root,native Heaptrack)
+	@$(MAKE) FINAL= ASAN= DEBUG_TRACE= dnfui
+	@bash ./utils/run_heaptrack.sh "$(CURDIR)/build/debug/src/$(APP_BIN_NAME)"
 
 # Run a quick automated smoke test under Valgrind Memcheck:
 .PHONY: memcheck

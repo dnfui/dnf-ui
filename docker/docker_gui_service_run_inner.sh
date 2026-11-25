@@ -54,5 +54,9 @@ trap stop_system_bus EXIT
 echo "*** Checking dnf5daemon D-Bus activation ***"
 gdbus introspect --system --dest org.rpm.dnf.v0 --object-path /org/rpm/dnf/v0 >/dev/null
 
-echo "*** Starting DNF UI ***"
-"$APP_BIN"
+if [ -n "${HEAPTRACK_OUTPUT_DIR:-}" ]; then
+  bash "$PROJECT_ROOT/utils/run_heaptrack.sh" "$APP_BIN" "$HEAPTRACK_OUTPUT_DIR"
+else
+  echo "*** Starting DNF UI ***"
+  "$APP_BIN"
+fi

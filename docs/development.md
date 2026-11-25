@@ -151,6 +151,32 @@ Run the application in Docker with networking disabled and an empty repo cache:
 make dockerruncoldoffline
 ```
 
+## Heaptrack
+
+On Fedora, install Heaptrack and record heap allocations locally as a regular user:
+
+```sh
+sudo dnf install heaptrack
+make heaptrack
+```
+
+To record using the development container:
+
+```sh
+make dockersetup
+make dockerheaptrack
+```
+
+Both targets use a debug build with AddressSanitizer disabled. Docker uses the normal GUI and dnf5daemon setup.
+Native profiling uses the host repositories and system daemon.
+Reproduce the workload, then close the application normally to finish the recording.
+
+Each run writes a compressed Heaptrack recording and `report.txt` under `build/heaptrack/run.*`.
+The report includes peak allocations, allocation counts, temporary allocations, and allocations still live at exit.
+For a graphical analysis, open the compressed recording in `heaptrack_gui` on the host.
+
+Heaptrack adds runtime overhead, so measure normal query timings and RSS separately with `make run` or `make dockerrun`.
+
 ## RPM packaging
 
 Fedora RPM packaging is included for this application.

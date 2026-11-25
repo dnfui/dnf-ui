@@ -107,6 +107,15 @@ case "$CACHE_MODE" in
   ;;
 esac
 
+# Keep each Heaptrack recording in the host workspace:
+HEAPTRACK_OPTS=()
+if [ "${HEAPTRACK:-}" = "y" ]; then
+  mkdir -p "$HOST_DIR/build/heaptrack"
+  PROFILE_DIR="$(mktemp -d "$HOST_DIR/build/heaptrack/run.XXXXXXXX")"
+  color_print "$FMT_BLUE" "*** Heaptrack output: $PROFILE_DIR ***"
+  HEAPTRACK_OPTS=(-e "HEAPTRACK_OUTPUT_DIR=/workspace/build/heaptrack/$(basename "$PROFILE_DIR")")
+fi
+
 # Run the build inside the container:
 color_print "$FMT_GREEN" "*** Running build inside container... ***"
 "$CONTAINER_RUNTIME" run --rm -it \
@@ -117,6 +126,7 @@ color_print "$FMT_GREEN" "*** Running build inside container... ***"
   "${DISPLAY_OPTS[@]}" \
   "${THEME_OPTS[@]}" \
   "${LOCALE_OPTS[@]}" \
+  "${HEAPTRACK_OPTS[@]}" \
   --device /dev/dri \
   -e GSETTINGS_BACKEND=memory \
   -e FINAL \
