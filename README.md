@@ -44,6 +44,7 @@ If the `copr` command is unavailable, install it with `sudo dnf install dnf5-plu
 
 - User experience first!
 - Reliable and fast
+- Memory efficient
 - Strong focus on quality and maintainability
 - Secure (uses the official `dnf5daemon` for privileged operations)
 - No unnecessary complexity or bloat
@@ -64,6 +65,7 @@ Applications such as [GNOME Software](https://apps.gnome.org/Software/) cover th
 - Find and browse packages
 - Inspect package information
 - Install, uninstall, reinstall, downgrade or upgrade packages
+- Mark package changes and review transactions before applying
 - Enable or disable repositories
 - Browse transaction history
 - Export to CSV
@@ -85,6 +87,9 @@ Other good graphical package managers targeting DNF5 include:
 - [yumex-ng](https://github.com/timlau/yumex-ng)
 
 ## Contributing
+
+Contributions are welcome, particularly testing, bug fixes,
+translations, code reviews, and documentation improvements.
 
 See [docs/contributing.md](docs/contributing.md).
 
