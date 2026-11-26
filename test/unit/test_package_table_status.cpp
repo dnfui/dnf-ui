@@ -6,6 +6,7 @@
 #include "ui/package_table/package_table_view_internal.hpp"
 
 #include <memory>
+#include <string>
 
 static PackageRow
 make_status_test_row(const std::string &nevra,
@@ -49,7 +50,7 @@ require_stored_status_matches_pending_action(MainWindowUiState &widgets, Package
   REQUIRE(std::string(package_table_pending_action_status_text(action_type, install_state)) == expected_text);
 
   package_table_fill_item_status(&widgets, item, resolution);
-  REQUIRE(item.status_text == expected_text);
+  REQUIRE(std::string(item.status_text) == expected_text);
   REQUIRE(package_table_column_text(item, PackageColumnKind::STATUS) == expected_text);
 }
 
@@ -112,7 +113,7 @@ TEST_CASE("Package table non-pending status matches resolved action rows")
 
     package_table_fill_item_status(&widgets, item, resolution);
 
-    REQUIRE(item.status_text == package_table_status_text_for_resolved_row(table_row, action_rows, true));
+    REQUIRE(std::string(item.status_text) == package_table_status_text_for_resolved_row(table_row, action_rows, true));
     REQUIRE(item.status_rank == dnf_backend_get_install_state_sort_rank(state));
   }
 }
@@ -128,7 +129,7 @@ TEST_CASE("Package table non-pending status works without window state")
 
   package_table_fill_item_status(nullptr, item, resolution);
 
-  REQUIRE(item.status_text == "Available");
+  REQUIRE(std::string(item.status_text) == "Available");
   REQUIRE(item.status_rank == dnf_backend_get_install_state_sort_rank(PackageInstallState::AVAILABLE));
 }
 
@@ -176,7 +177,7 @@ TEST_CASE("Package table installonly update action shows pending install status"
   REQUIRE(resolution.state == PackageInstallState::UPGRADEABLE);
 
   package_table_fill_item_status(&widgets, item, resolution);
-  REQUIRE(item.status_text == "Pending Install");
+  REQUIRE(std::string(item.status_text) == "Pending Install");
   REQUIRE(package_table_column_text(item, PackageColumnKind::STATUS) == "Pending Install");
 }
 
@@ -210,7 +211,7 @@ TEST_CASE("Package table compact installonly row preserves pending exact install
   InstalledPackageResolution resolution = dnf_backend_resolve_installed_package(item.row);
   package_table_fill_item_status(&widgets, item, resolution);
 
-  REQUIRE(item.status_text == "Pending Install");
+  REQUIRE(std::string(item.status_text) == "Pending Install");
   REQUIRE(package_table_column_text(item, PackageColumnKind::STATUS) == "Pending Install");
 }
 
@@ -245,7 +246,7 @@ TEST_CASE("Package table exact installonly row preserves pending upgrade status"
   InstalledPackageResolution resolution = dnf_backend_resolve_installed_package(item.row);
   package_table_fill_item_status(&widgets, item, resolution);
 
-  REQUIRE(item.status_text == "Pending Upgrade");
+  REQUIRE(std::string(item.status_text) == "Pending Upgrade");
   REQUIRE(package_table_column_text(item, PackageColumnKind::STATUS) == "Pending Upgrade");
 }
 
@@ -267,7 +268,7 @@ TEST_CASE("Package table downgradeable status is shared")
   InstalledPackageResolution resolution = dnf_backend_resolve_installed_package(item.row);
   package_table_fill_item_status(&widgets, item, resolution);
 
-  REQUIRE(item.status_text == "Older in repository");
+  REQUIRE(std::string(item.status_text) == "Older in repository");
   REQUIRE(package_table_column_text(item, PackageColumnKind::STATUS) == "Older in repository");
 }
 
@@ -335,7 +336,7 @@ TEST_CASE("Package table all-version pending upgrade status uses exact row")
   PackageItem installed_item;
   installed_item.row = installed;
   package_table_fill_item_status(&widgets, installed_item, dnf_backend_resolve_installed_package(installed));
-  REQUIRE(installed_item.status_text == "Installed, update available");
+  REQUIRE(std::string(installed_item.status_text) == "Installed, update available");
 
   PackageItem update_item;
   update_item.row = update;
@@ -400,8 +401,8 @@ TEST_CASE("Package table all-version upgrade status separates installed and avai
   update_item.row = update;
   package_table_fill_item_status(&widgets, update_item, dnf_backend_resolve_installed_package(update));
 
-  REQUIRE(installed_item.status_text == "Installed, update available");
-  REQUIRE(update_item.status_text == "Available update");
+  REQUIRE(std::string(installed_item.status_text) == "Installed, update available");
+  REQUIRE(std::string(update_item.status_text) == "Available update");
 }
 
 // -----------------------------------------------------------------------------
@@ -424,7 +425,7 @@ TEST_CASE("Package table compact upgrade status keeps stream label")
   item.row = installed;
   package_table_fill_item_status(&widgets, item, dnf_backend_resolve_installed_package(installed));
 
-  REQUIRE(item.status_text == "Newer in repository");
+  REQUIRE(std::string(item.status_text) == "Newer in repository");
 }
 
 // -----------------------------------------------------------------------------
@@ -446,7 +447,7 @@ TEST_CASE("Package table list installed upgrade status uses installed row")
   PackageItem item;
   item.row = installed;
   package_table_fill_item_status(&widgets, item, dnf_backend_resolve_installed_package(installed));
-  REQUIRE(item.status_text == "Newer in repository");
+  REQUIRE(std::string(item.status_text) == "Newer in repository");
 
   widgets.transaction_state.actions = {
     { PendingAction::UPGRADE, installed.repo_candidate->nevra, "demo.x86_64", installed.name_arch_key() },

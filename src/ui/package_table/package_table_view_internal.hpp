@@ -41,7 +41,8 @@ struct PackageItem {
   PackageRow row;
   DaemonUpgradeRowContextPtr daemon_upgrade;
   PackageTableDisplayValuesPtr display_values;
-  std::string status_text;
+  // Borrowed from the translated status labels.
+  const char *status_text = "";
   int status_rank = 0;
 
   const DaemonUpgradeTarget *upgrade_target() const
