@@ -80,7 +80,6 @@ struct PackageRow {
   std::string release;
   std::string arch;
   std::string repo;
-  std::string installed_from_repo;
   std::string summary;
   std::optional<std::uint64_t> install_size;
   PackageInstallReason install_reason = PackageInstallReason::UNKNOWN;

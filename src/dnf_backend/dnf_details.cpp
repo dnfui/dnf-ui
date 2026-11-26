@@ -104,6 +104,7 @@ dnf_backend_get_package_info_presentation(const std::string &pkg_nevra,
   bool have_installed_counterpart = false;
   unsigned long long installed_install_size = 0;
   std::string installed_summary, installed_description;
+  std::string installed_from_repo;
 
   PackageRow upgrade_row;
   PackageRow upgrade_baseline_row;
@@ -145,6 +146,7 @@ dnf_backend_get_package_info_presentation(const std::string &pkg_nevra,
       installed_install_size = selected_install_size;
       installed_summary = selected_summary;
       installed_description = selected_description;
+      installed_from_repo = pkg.get_from_repo_id();
       have_installed_counterpart = true;
 
       libdnf5::rpm::PackageQuery installed_by_name(base);
@@ -179,6 +181,7 @@ dnf_backend_get_package_info_presentation(const std::string &pkg_nevra,
           installed_install_size = static_cast<unsigned long long>(installed_pkg.get_install_size());
           installed_summary = installed_pkg.get_summary();
           installed_description = installed_pkg.get_description();
+          installed_from_repo = installed_pkg.get_from_repo_id();
           have_installed_counterpart = true;
           upgrade_baseline_row = row;
           have_upgrade_baseline = true;
@@ -232,7 +235,7 @@ dnf_backend_get_package_info_presentation(const std::string &pkg_nevra,
            << _("Repo") << ": " << display_row.repo << "\n";
 
   if (show_installed_context) {
-    metadata << _("Installed From") << ": " << installed_row.installed_from_repo << "\n";
+    metadata << _("Installed From") << ": " << installed_from_repo << "\n";
   }
 
   metadata << _("Install Size") << ": " << format_package_size(display_install_size) << "\n";

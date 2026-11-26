@@ -63,7 +63,7 @@ TEST_CASE("Installed snapshot publish ignores metadata-only row changes")
   first.name = "demo";
   first.arch = "x86_64";
   first.repo = "@System";
-  first.installed_from_repo = "fedora";
+  first.summary = "Original summary";
 
   dnf_backend_internal::InstalledQueryResult first_result;
   first_result.rows = { first };
@@ -73,7 +73,7 @@ TEST_CASE("Installed snapshot publish ignores metadata-only row changes")
   REQUIRE(dnf_backend_internal::publish_installed_snapshot(std::move(first_result), {}));
 
   PackageRow second = first;
-  second.installed_from_repo = "updates";
+  second.summary = "Updated summary";
 
   dnf_backend_internal::InstalledQueryResult second_result;
   second_result.rows = { second };
@@ -84,7 +84,7 @@ TEST_CASE("Installed snapshot publish ignores metadata-only row changes")
 
   InstalledPackageResolution resolution = dnf_backend_resolve_installed_package(second);
   REQUIRE(resolution.has_installed_row);
-  REQUIRE(resolution.installed_row.installed_from_repo == "updates");
+  REQUIRE(resolution.installed_row.summary == "Updated summary");
 }
 
 // -----------------------------------------------------------------------------

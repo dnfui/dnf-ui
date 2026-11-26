@@ -8,6 +8,8 @@
 #include "ui/package_query/package_query_state.hpp"
 #include "test_utils.hpp"
 
+#include <libdnf5/rpm/package_query.hpp>
+
 #include <optional>
 #include <string>
 #include <vector>
@@ -108,6 +110,16 @@ TEST_CASE("Package info formatting contains expected fields")
   auto results = dnf_backend_get_installed_package_rows_interruptible(nullptr);
   REQUIRE(!results.empty());
 
+  std::string installed_from_repo;
+  {
+    auto read = BaseManager::instance().acquire_read();
+    libdnf5::rpm::PackageQuery installed(read.base);
+    installed.filter_installed();
+    installed.filter_nevra(results.front().nevra);
+    REQUIRE(!installed.empty());
+    installed_from_repo = (*installed.begin()).get_from_repo_id();
+  }
+
   auto info = dnf_backend_get_package_info(results.front().nevra);
 
   REQUIRE(info.find("Name: ") != std::string::npos);
@@ -115,7 +127,7 @@ TEST_CASE("Package info formatting contains expected fields")
   REQUIRE(info.find("Version: ") != std::string::npos);
   REQUIRE(info.find("Release: ") != std::string::npos);
   REQUIRE(info.find("Arch: ") != std::string::npos);
-  REQUIRE(info.find("Installed From: ") != std::string::npos);
+  REQUIRE(info.find("Installed From: " + installed_from_repo + "\n") != std::string::npos);
   REQUIRE(info.find("Install Size: ") != std::string::npos);
   REQUIRE(info.find("Install Reason: ") != std::string::npos);
   REQUIRE(info.find("Summary:") != std::string::npos);
