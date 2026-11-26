@@ -333,6 +333,14 @@ package_query_on_clear_button_clicked(GtkButton *, gpointer user_data)
 {
   MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
 
+  // Keep focus in the results area when clearing a focused table.
+  GtkWidget *scroller = GTK_WIDGET(widgets->results.list_scroller);
+  GtkRoot *root = gtk_widget_get_root(scroller);
+  GtkWidget *focus = root ? gtk_root_get_focus(root) : nullptr;
+  if (focus && gtk_widget_is_ancestor(focus, scroller)) {
+    gtk_widget_grab_focus(scroller);
+  }
+
   package_query_cancel_active_package_list_request(widgets);
 
   widgets->query_state.displayed_query = DisplayedPackageQueryState();
