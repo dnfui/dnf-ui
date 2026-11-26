@@ -158,6 +158,7 @@ dnf_command_reference_show(GtkWindow *parent)
                    dialog);
   gtk_box_append(GTK_BOX(outer), close);
 
+  gtk_window_set_focus(dialog, scroller);
   gtk_window_present(dialog);
 }
 
