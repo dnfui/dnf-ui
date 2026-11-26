@@ -219,8 +219,9 @@ that could be read as spreadsheet formulas are prefixed before normal CSV escapi
 [src/ui/package_table/package_table_columns.cpp](../src/ui/package_table/package_table_columns.cpp) owns the
 package table column definitions, stable column ids, saved visibility settings, and config migration.
 
-[src/ui/package_table/package_table_model.cpp](../src/ui/package_table/package_table_model.cpp) contains the
-GTK object wrapper used to store package rows and their table display values.
+[src/ui/package_table/package_table_model.cpp](../src/ui/package_table/package_table_model.cpp) stores package rows
+and their display values in a fixed-size list model. GTK objects are created on demand and share the model's row
+storage. The existing GTK filter, sorter, and selection models remain in use.
 
 [src/ui/package_table/package_table_upgrade_rows.cpp](../src/ui/package_table/package_table_upgrade_rows.cpp)
 builds plain List Upgradable rows from a daemon snapshot and optional metadata matched by exact NEVRA.

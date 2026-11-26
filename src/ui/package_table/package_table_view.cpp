@@ -1046,7 +1046,7 @@ package_table_reset_columns_to_default(MainWindowUiState *widgets)
 
 static void
 finish_package_table_view(MainWindowUiState *widgets,
-                          GListStore *store,
+                          GListModel *model,
                           size_t item_count,
                           PackageColumnKind sort_kind,
                           GtkSortType sort_order,
@@ -1067,11 +1067,11 @@ finish_package_table_view(MainWindowUiState *widgets,
 
   // Filter loaded packages before applying the existing column sorting.
   GtkFilterListModel *filtered_model = gtk_filter_list_model_new(nullptr, nullptr);
-  gtk_filter_list_model_set_model(filtered_model, G_LIST_MODEL(store));
+  gtk_filter_list_model_set_model(filtered_model, model);
   gtk_filter_list_model_set_incremental(filtered_model, TRUE);
   g_signal_connect(filtered_model, "items-changed", G_CALLBACK(on_quick_filter_items_changed), widgets);
   g_signal_connect(filtered_model, "notify::pending", G_CALLBACK(on_quick_filter_pending_changed), widgets);
-  g_object_unref(store);
+  g_object_unref(model);
 
   GtkSortListModel *sort_model = gtk_sort_list_model_new(nullptr, nullptr);
   gtk_sort_list_model_set_model(sort_model, G_LIST_MODEL(filtered_model));
@@ -1220,18 +1220,10 @@ fill_package_view(MainWindowUiState *widgets, std::vector<Row> items, PackageTab
   // Large package lists otherwise keep the old and new row objects alive at the same time.
   gtk_scrolled_window_set_child(widgets->results.list_scroller, nullptr);
 
-  GListStore *store = g_list_store_new(G_TYPE_OBJECT);
-  for (auto &row : items) {
-    GObject *obj = make_package_object(widgets, std::move(row));
-    g_list_store_append(store, obj);
-    g_object_unref(obj);
-  }
-
   const size_t item_count = items.size();
-  // The row data now belongs to the store. Release the vector storage before building the view.
-  items = std::vector<Row>();
+  GListModel *model = make_package_model(widgets, std::move(items));
 
-  finish_package_table_view(widgets, store, item_count, sort_kind, sort_order, have_sort_state);
+  finish_package_table_view(widgets, model, item_count, sort_kind, sort_order, have_sort_state);
 }
 
 void

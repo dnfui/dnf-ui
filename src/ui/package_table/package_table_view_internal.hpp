@@ -13,6 +13,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 struct MainWindowUiState;
 
@@ -51,8 +52,8 @@ struct PackageItem {
   }
 };
 
-GObject *make_package_object(MainWindowUiState *widgets, PackageRow row);
-GObject *make_package_object(MainWindowUiState *widgets, PackageTableRow row);
+GListModel *make_package_model(MainWindowUiState *widgets, std::vector<PackageRow> rows);
+GListModel *make_package_model(MainWindowUiState *widgets, std::vector<PackageTableRow> rows);
 const PackageItem *package_item_from_object(GObject *obj);
 bool package_table_quick_filter_matches(const PackageRow &row, const char *folded_text);
 PackageItem *mutable_package_item_from_object(GObject *obj);

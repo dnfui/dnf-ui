@@ -1,7 +1,7 @@
 // -----------------------------------------------------------------------------
 // package_table_model.cpp
 // Package row storage for the GTK package table.
-// Wraps PackageRow values in GObjects so the ColumnView can sort and select rows without owning backend data directly.
+// Stores package rows together and creates GTK list items on demand.
 // -----------------------------------------------------------------------------
 #include "ui/package_table/package_table_view_internal.hpp"
 
@@ -9,6 +9,7 @@
 #include "ui/common/widgets.hpp"
 
 #include <utility>
+#include <vector>
 
 // -----------------------------------------------------------------------------
 // Return the private key used to store package rows on GTK objects.
@@ -202,38 +203,197 @@ package_table_fill_item_display_values(PackageItem &item,
 }
 
 // -----------------------------------------------------------------------------
-// Wrap one package row in a GObject so GTK list models can sort and select it.
+// Prepare the display and status values once for each row.
 // -----------------------------------------------------------------------------
-GObject *
-make_package_object(MainWindowUiState *widgets, PackageRow row)
+static PackageItem
+make_package_item(MainWindowUiState *widgets, PackageTableRow row)
 {
-  GObject *obj = G_OBJECT(g_object_new(G_TYPE_OBJECT, nullptr));
-  auto *item = new PackageItem;
-  item->row = std::move(row);
-  InstalledPackageResolution resolution = dnf_backend_resolve_installed_package(item->row);
-  package_table_fill_item_display_values(*item, resolution, package_table_uses_compact_rows(widgets));
-  package_table_fill_item_status(widgets, *item, resolution);
-  g_object_set_qdata_full(obj, package_row_quark(), item, +[](gpointer p) { delete static_cast<PackageItem *>(p); });
+  PackageItem item;
+  item.row = std::move(row.row);
+  item.daemon_upgrade = std::move(row.daemon_upgrade);
+  InstalledPackageResolution resolution = dnf_backend_resolve_installed_package(item.row);
+  package_table_fill_item_display_values(item, resolution, package_table_uses_compact_rows(widgets));
+  package_table_fill_item_status(widgets, item, resolution);
+  return item;
+}
 
-  return obj;
+static PackageItem
+make_package_item(MainWindowUiState *widgets, PackageRow row)
+{
+  return make_package_item(widgets, PackageTableRow { .row = std::move(row), .daemon_upgrade = {} });
+}
+
+// The vector is never resized after construction, so item addresses remain valid.
+// Weak references preserve object identity without keeping unused wrappers alive.
+struct PackageListStorage {
+  explicit PackageListStorage(std::vector<PackageItem> rows)
+      : items(std::move(rows)), objects(items.size())
+  {
+    for (auto &object : objects) {
+      g_weak_ref_init(&object, nullptr);
+    }
+  }
+
+  ~PackageListStorage()
+  {
+    for (auto &object : objects) {
+      g_weak_ref_clear(&object);
+    }
+  }
+
+  PackageListStorage(const PackageListStorage &) = delete;
+  PackageListStorage &operator=(const PackageListStorage &) = delete;
+
+  std::vector<PackageItem> items;
+  std::vector<GWeakRef> objects;
+};
+
+// A wrapper may outlive the model. Keep its row storage alive until it is released.
+struct PackageObjectData {
+  std::shared_ptr<PackageListStorage> storage;
+  PackageItem *item;
+};
+
+struct PackageListModel {
+  GObject parent_instance;
+  std::shared_ptr<PackageListStorage> *storage;
+};
+
+struct PackageListModelClass {
+  GObjectClass parent_class;
+};
+
+static void package_list_model_list_model_init(GListModelInterface *iface);
+
+G_DEFINE_TYPE_WITH_CODE(PackageListModel,
+                        package_list_model,
+                        G_TYPE_OBJECT,
+                        G_IMPLEMENT_INTERFACE(G_TYPE_LIST_MODEL, package_list_model_list_model_init))
+
+static GType
+package_list_model_get_item_type(GListModel *)
+{
+  return G_TYPE_OBJECT;
+}
+
+static guint
+package_list_model_get_n_items(GListModel *model)
+{
+  auto *self = reinterpret_cast<PackageListModel *>(model);
+  return self->storage ? static_cast<guint>((*self->storage)->items.size()) : 0;
+}
+
+static gpointer
+package_list_model_get_item(GListModel *model, guint position)
+{
+  auto *self = reinterpret_cast<PackageListModel *>(model);
+  if (position >= package_list_model_get_n_items(model)) {
+    return nullptr;
+  }
+
+  const auto &storage = *self->storage;
+  GWeakRef &weak = storage->objects[position];
+  if (auto *object = g_weak_ref_get(&weak)) {
+    return object;
+  }
+
+  GObject *object = G_OBJECT(g_object_new(G_TYPE_OBJECT, nullptr));
+  auto *data = new PackageObjectData { storage, &storage->items[position] };
+  g_object_set_qdata_full(object, package_row_quark(), data, +[](gpointer p) {
+    delete static_cast<PackageObjectData *>(p);
+  });
+  g_weak_ref_set(&weak, object);
+  return object;
+}
+
+static void
+package_list_model_list_model_init(GListModelInterface *iface)
+{
+  iface->get_item_type = package_list_model_get_item_type;
+  iface->get_n_items = package_list_model_get_n_items;
+  iface->get_item = package_list_model_get_item;
+}
+
+static void
+package_list_model_finalize(GObject *object)
+{
+  auto *self = reinterpret_cast<PackageListModel *>(object);
+  delete self->storage;
+  G_OBJECT_CLASS(package_list_model_parent_class)->finalize(object);
+}
+
+enum {
+  PROP_0,
+  PROP_ITEM_TYPE,
+  PROP_N_ITEMS,
+};
+
+static void
+package_list_model_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
+{
+  switch (property_id) {
+  case PROP_ITEM_TYPE:
+    g_value_set_gtype(value, G_TYPE_OBJECT);
+    break;
+  case PROP_N_ITEMS:
+    g_value_set_uint(value, package_list_model_get_n_items(G_LIST_MODEL(object)));
+    break;
+  default:
+    G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+    break;
+  }
+}
+
+static void
+package_list_model_class_init(PackageListModelClass *klass)
+{
+  GObjectClass *object_class = G_OBJECT_CLASS(klass);
+  object_class->finalize = package_list_model_finalize;
+  object_class->get_property = package_list_model_get_property;
+  const auto flags = static_cast<GParamFlags>(G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  g_object_class_install_property(
+      object_class, PROP_ITEM_TYPE, g_param_spec_gtype("item-type", "Item type", "List item type", G_TYPE_OBJECT, flags));
+  g_object_class_install_property(
+      object_class, PROP_N_ITEMS, g_param_spec_uint("n-items", "Item count", "Number of list items", 0, G_MAXUINT, 0, flags));
+}
+
+static void
+package_list_model_init(PackageListModel *self)
+{
+  self->storage = nullptr;
 }
 
 // -----------------------------------------------------------------------------
-// Wrap one package row in a GObject so the ColumnView can sort and select rows without owning backend data directly.
+// Build a fixed-size model from the query result before attaching it to the view.
 // -----------------------------------------------------------------------------
-GObject *
-make_package_object(MainWindowUiState *widgets, PackageTableRow row)
+template <typename Row>
+static GListModel *
+make_package_list_model(MainWindowUiState *widgets, std::vector<Row> rows)
 {
-  GObject *obj = G_OBJECT(g_object_new(G_TYPE_OBJECT, nullptr));
-  auto *item = new PackageItem;
-  item->row = std::move(row.row);
-  item->daemon_upgrade = std::move(row.daemon_upgrade);
-  InstalledPackageResolution resolution = dnf_backend_resolve_installed_package(item->row);
-  package_table_fill_item_display_values(*item, resolution, package_table_uses_compact_rows(widgets));
-  package_table_fill_item_status(widgets, *item, resolution);
-  g_object_set_qdata_full(obj, package_row_quark(), item, +[](gpointer p) { delete static_cast<PackageItem *>(p); });
+  std::vector<PackageItem> items;
+  items.reserve(rows.size());
+  for (auto &row : rows) {
+    items.push_back(make_package_item(widgets, std::move(row)));
+  }
 
-  return obj;
+  // GObject allocates instance memory without running C++ constructors.
+  auto storage = std::make_unique<std::shared_ptr<PackageListStorage>>(
+      std::make_shared<PackageListStorage>(std::move(items)));
+  auto *model = static_cast<PackageListModel *>(g_object_new(package_list_model_get_type(), nullptr));
+  model->storage = storage.release();
+  return G_LIST_MODEL(model);
+}
+
+GListModel *
+make_package_model(MainWindowUiState *widgets, std::vector<PackageRow> rows)
+{
+  return make_package_list_model(widgets, std::move(rows));
+}
+
+GListModel *
+make_package_model(MainWindowUiState *widgets, std::vector<PackageTableRow> rows)
+{
+  return make_package_list_model(widgets, std::move(rows));
 }
 
 // -----------------------------------------------------------------------------
@@ -265,11 +425,7 @@ package_table_quick_filter_matches(const PackageRow &row, const char *folded_tex
 const PackageItem *
 package_item_from_object(GObject *obj)
 {
-  if (!obj) {
-    return nullptr;
-  }
-
-  return static_cast<const PackageItem *>(g_object_get_qdata(obj, package_row_quark()));
+  return mutable_package_item_from_object(obj);
 }
 
 // -----------------------------------------------------------------------------
@@ -282,7 +438,8 @@ mutable_package_item_from_object(GObject *obj)
     return nullptr;
   }
 
-  return static_cast<PackageItem *>(g_object_get_qdata(obj, package_row_quark()));
+  auto *data = static_cast<PackageObjectData *>(g_object_get_qdata(obj, package_row_quark()));
+  return data ? data->item : nullptr;
 }
 
 // -----------------------------------------------------------------------------

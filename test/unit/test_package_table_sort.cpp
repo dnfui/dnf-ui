@@ -2,11 +2,13 @@
 
 #include "dnf_backend/dnf_backend.hpp"
 #include "test_utils.hpp"
+#include "test_gtk_utils.hpp"
 #include "ui/common/widgets.hpp"
 #include "ui/package_table/package_table_view_internal.hpp"
 
 #include <memory>
 #include <utility>
+#include <vector>
 
 static PackageRow
 make_table_test_row(const std::string &nevra,
@@ -36,6 +38,18 @@ make_table_test_item(const PackageRow &row, bool compact_view = true)
   InstalledPackageResolution resolution = dnf_backend_resolve_installed_package(item.row);
   package_table_fill_item_display_values(item, resolution, compact_view);
   return item;
+}
+
+template <typename Row>
+static GObject *
+make_package_object(MainWindowUiState *widgets, Row row)
+{
+  std::vector<Row> rows;
+  rows.push_back(std::move(row));
+  GListModel *model = make_package_model(widgets, std::move(rows));
+  GObject *object = G_OBJECT(g_list_model_get_item(model, 0));
+  g_object_unref(model);
+  return object;
 }
 
 static int
@@ -79,6 +93,116 @@ TEST_CASE("Package table objects preserve copied and moved package rows")
 
   g_object_unref(copied);
   g_object_unref(moved);
+}
+
+// -----------------------------------------------------------------------------
+// Verify object identity, wrapper release and persistent row state.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package model creates wrappers on demand and preserves row state")
+{
+  reset_backend_globals();
+  MainWindowUiState widgets;
+  PackageRow first = make_table_test_row("first-1-1.x86_64", "first", "1", "1", "x86_64");
+  PackageRow second = make_table_test_row("second-1-1.x86_64", "second", "1", "1", "x86_64");
+  GListModel *model = make_package_model(&widgets, std::vector<PackageRow> { first, second });
+
+  REQUIRE(g_list_model_get_item_type(model) == G_TYPE_OBJECT);
+  REQUIRE(g_list_model_get_n_items(model) == 2);
+  REQUIRE(g_list_model_get_item(model, 2) == nullptr);
+  guint count = 0;
+  GType item_type = G_TYPE_INVALID;
+  g_object_get(model, "n-items", &count, "item-type", &item_type, nullptr);
+  REQUIRE(count == 2);
+  REQUIRE(item_type == G_TYPE_OBJECT);
+
+  GObject *object = G_OBJECT(g_list_model_get_item(model, 0));
+  GObject *same = G_OBJECT(g_list_model_get_item(model, 0));
+  REQUIRE(object == same);
+  g_object_unref(same);
+
+  PackageItem *item = mutable_package_item_from_object(object);
+  REQUIRE(item);
+  item->status_rank = 123;
+  GWeakRef weak;
+  g_weak_ref_init(&weak, object);
+  g_object_unref(object);
+  REQUIRE(g_weak_ref_get(&weak) == nullptr);
+  g_weak_ref_clear(&weak);
+
+  object = G_OBJECT(g_list_model_get_item(model, 0));
+  GObject *other = G_OBJECT(g_list_model_get_item(model, 1));
+  REQUIRE(object != other);
+  REQUIRE(package_item_from_object(object)->status_rank == 123);
+  REQUIRE(package_row_from_object(other)->nevra == second.nevra);
+
+  g_object_unref(model);
+  REQUIRE(package_row_from_object(object)->nevra == first.nevra);
+  REQUIRE(package_row_from_object(other)->nevra == second.nevra);
+  g_object_unref(object);
+  g_object_unref(other);
+}
+
+// -----------------------------------------------------------------------------
+// Verify that daemon upgrade rows retain their context in the model.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package model preserves daemon upgrade row context")
+{
+  reset_backend_globals();
+  MainWindowUiState widgets;
+  PackageTableRow row {
+    .row = make_table_test_row("demo-2-1.x86_64", "demo", "2", "1", "x86_64"),
+    .daemon_upgrade = std::make_shared<DaemonUpgradeRowContext>(),
+  };
+  const auto context = row.daemon_upgrade;
+  GListModel *model = make_package_model(&widgets, std::vector<PackageTableRow> { row });
+  GObject *object = G_OBJECT(g_list_model_get_item(model, 0));
+  REQUIRE(package_item_from_object(object)->daemon_upgrade == context);
+  g_object_unref(model);
+  REQUIRE(package_item_from_object(object)->daemon_upgrade == context);
+  g_object_unref(object);
+}
+
+// -----------------------------------------------------------------------------
+// Verify that GTK filtering and sorting preserve the selected package identity.
+// -----------------------------------------------------------------------------
+TEST_CASE("Package model works with GTK filtering sorting and selection", "[gtk]")
+{
+  if (!test_gtk_display_available()) {
+    SKIP("A GTK display is required for package model tests.");
+  }
+  reset_backend_globals();
+  MainWindowUiState widgets;
+  PackageRow zulu = make_table_test_row("zulu-1-1.x86_64", "zulu", "1", "1", "x86_64");
+  PackageRow alpha = make_table_test_row("alpha-1-1.x86_64", "alpha", "1", "1", "x86_64");
+  GListModel *model = make_package_model(&widgets, std::vector<PackageRow> { zulu, alpha });
+  GObject *alpha_object = G_OBJECT(g_list_model_get_item(model, 1));
+
+  GtkFilterListModel *filtered = gtk_filter_list_model_new(G_LIST_MODEL(g_object_ref(model)), nullptr);
+  GtkCustomSorter *sorter = gtk_custom_sorter_new(
+      package_table_column_sorter_compare, GINT_TO_POINTER(static_cast<int>(PackageColumnKind::PACKAGE) + 1), nullptr);
+  GtkSortListModel *sorted = gtk_sort_list_model_new(G_LIST_MODEL(filtered), GTK_SORTER(sorter));
+  GtkSingleSelection *selection = gtk_single_selection_new(G_LIST_MODEL(sorted));
+  gtk_single_selection_set_autoselect(selection, FALSE);
+  gtk_single_selection_set_can_unselect(selection, TRUE);
+  gtk_single_selection_set_selected(selection, 0);
+  REQUIRE(gtk_single_selection_get_selected_item(selection) == alpha_object);
+
+  GtkCustomFilter *filter = gtk_custom_filter_new(+[](gpointer object, gpointer) -> gboolean {
+    const PackageRow *row = package_row_from_object(G_OBJECT(object));
+    return row && row->name == "alpha";
+  }, nullptr, nullptr);
+  gtk_filter_list_model_set_filter(filtered, GTK_FILTER(filter));
+  g_object_unref(filter);
+  REQUIRE(g_list_model_get_n_items(G_LIST_MODEL(selection)) == 1);
+  REQUIRE(gtk_single_selection_get_selected_item(selection) == alpha_object);
+
+  gtk_filter_list_model_set_filter(filtered, nullptr);
+  REQUIRE(g_list_model_get_n_items(G_LIST_MODEL(selection)) == 2);
+  REQUIRE(gtk_single_selection_get_selected_item(selection) == alpha_object);
+
+  g_object_unref(selection);
+  g_object_unref(alpha_object);
+  g_object_unref(model);
 }
 
 // -----------------------------------------------------------------------------
