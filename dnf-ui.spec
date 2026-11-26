@@ -1,5 +1,5 @@
 Name:           dnf-ui
-Version:        0.8.7
+Version:        0.8.8
 Release:        1%{?dist}
 Summary:        GTK interface for DNF5
 
@@ -56,6 +56,11 @@ appstreamcli validate --no-net %{buildroot}%{_datadir}/metainfo/io.github.dnfui.
 %{_datadir}/metainfo/io.github.dnfui.dnfui.metainfo.xml
 
 %changelog
+* Thu Nov 26 2026 ErikMN <dnfui@proton.me> - 0.8.8-1
+- Use less memory when loading and displaying large package lists
+- Release cached repository data after using Clear List
+- Use less memory when exporting package lists to CSV
+
 * Tue Nov 24 2026 ErikMN <dnfui@proton.me> - 0.8.7-1
 - Add a read-only DNF5 command reference to the Help menu
 - Improve UI responsiveness during repository refresh and transaction recovery
