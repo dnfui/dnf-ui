@@ -769,7 +769,6 @@ start_preview_request(MainWindowUiState *widgets, TransactionRequest request)
 {
   package_details_cancel_active_load(widgets);
   pending_transaction_invalidate_service_preview(widgets);
-  widgets->transaction_state.preview_upgrade_all = request.upgrade_all;
   DNFUI_TRACE("Transaction preview request start upgrade_all=%d install=%zu upgrade=%zu downgrade=%zu remove=%zu "
               "reinstall=%zu",
               request.upgrade_all ? 1 : 0,
@@ -807,7 +806,6 @@ start_preview_request(MainWindowUiState *widgets, TransactionRequest request)
           const char *status_message =
               error && error->message ? error->message : _("Unable to prepare transaction preview.");
           DNFUI_TRACE("Transaction preview request failed error=%s", status_message);
-          widgets->transaction_state.preview_upgrade_all = false;
           // A preview can fail because another process prepared an offline
           // transaction while this window was open. Refresh the persistent cue.
           pending_transaction_refresh_prepared_updates_indicator(widgets);
@@ -842,7 +840,6 @@ start_preview_request(MainWindowUiState *widgets, TransactionRequest request)
             td->transaction_path.clear();
           }
           widgets->transaction_state.preview_transaction_path.clear();
-          widgets->transaction_state.preview_upgrade_all = false;
           const char *status_message = empty_preview_status_message(td->request);
           const char *status_color = "green";
           if (!td->preview.resolve_warnings.empty()) {
