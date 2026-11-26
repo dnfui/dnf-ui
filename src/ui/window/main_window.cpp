@@ -16,9 +16,9 @@
 #include "ui/package_query/package_query_controller.hpp"
 #include "ui/package_table/package_table_view.hpp"
 #include "ui/repository/repository_view.hpp"
+#include "ui/transaction/pending_transaction_apply.hpp"
 #include "ui/transaction/pending_transaction_controller.hpp"
 #include "ui/refresh/repository_refresh_controller.hpp"
-#include "dnf5daemon_client/transaction_service_client.hpp"
 #include "ui/common/ui_helpers.hpp"
 #include "ui/common/widgets.hpp"
 
@@ -969,11 +969,7 @@ connect_cleanup(GtkWidget *window, std::shared_ptr<MainWindowUiState> widgets, G
                      }
                      repository_refresh_cancel_active();
                      package_details_cancel_active_load(widgets);
-                     if (!widgets->transaction_state.preview_transaction_path.empty()) {
-                       transaction_service_client_release_request_async(
-                           widgets->transaction_state.preview_transaction_path);
-                       widgets->transaction_state.preview_transaction_path.clear();
-                     }
+                     pending_transaction_invalidate_service_preview(widgets);
                      delete cleanup_data;
                    }),
                    cleanup_data);
