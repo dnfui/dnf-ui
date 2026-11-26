@@ -270,21 +270,34 @@ pending_transaction_on_reinstall_button_clicked(GtkButton *, gpointer user_data)
 }
 
 // -----------------------------------------------------------------------------
+// Check whether actions can be marked for the displayed package list.
+// -----------------------------------------------------------------------------
+static bool
+pending_transaction_can_mark_listed_packages(MainWindowUiState *widgets)
+{
+  if (pending_transaction_action_is_busy(widgets)) {
+    return false;
+  }
+  if (package_query_has_active_package_list_request(widgets)) {
+    ui_helpers_set_status(widgets->query.status_label, _("Wait for the current package query to finish."), "blue");
+    return false;
+  }
+  if (package_table_quick_filter_is_pending(widgets)) {
+    ui_helpers_set_status(widgets->query.status_label, _("Wait for package filtering to finish."), "blue");
+    return false;
+  }
+
+  return true;
+}
+
+// -----------------------------------------------------------------------------
 // Mark all listed upgrade candidates as pending upgrades.
 // -----------------------------------------------------------------------------
 void
 pending_transaction_on_mark_listed_upgrades_button_clicked(GtkButton *, gpointer user_data)
 {
   MainWindowUiState *widgets = static_cast<MainWindowUiState *>(user_data);
-  if (pending_transaction_action_is_busy(widgets)) {
-    return;
-  }
-  if (package_query_has_active_package_list_request(widgets)) {
-    ui_helpers_set_status(widgets->query.status_label, _("Wait for the current package query to finish."), "blue");
-    return;
-  }
-  if (package_table_quick_filter_is_pending(widgets)) {
-    ui_helpers_set_status(widgets->query.status_label, _("Wait for package filtering to finish."), "blue");
+  if (!pending_transaction_can_mark_listed_packages(widgets)) {
     return;
   }
 
@@ -328,15 +341,7 @@ pending_transaction_on_mark_listed_upgrades_button_clicked(GtkButton *, gpointer
 void
 pending_transaction_mark_listed_unneeded(MainWindowUiState *widgets)
 {
-  if (pending_transaction_action_is_busy(widgets)) {
-    return;
-  }
-  if (package_query_has_active_package_list_request(widgets)) {
-    ui_helpers_set_status(widgets->query.status_label, _("Wait for the current package query to finish."), "blue");
-    return;
-  }
-  if (package_table_quick_filter_is_pending(widgets)) {
-    ui_helpers_set_status(widgets->query.status_label, _("Wait for package filtering to finish."), "blue");
+  if (!pending_transaction_can_mark_listed_packages(widgets)) {
     return;
   }
 
