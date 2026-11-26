@@ -49,7 +49,6 @@ struct PreviewTaskData {
   TransactionRequest request;
   TransactionPreview preview;
   std::string transaction_path;
-  bool transaction_path_transferred = false;
 };
 
 #ifdef DNFUI_DEBUG_TRACE
@@ -105,7 +104,7 @@ static void
 preview_task_data_free(gpointer p)
 {
   PreviewTaskData *d = static_cast<PreviewTaskData *>(p);
-  if (d && !d->transaction_path.empty() && !d->transaction_path_transferred) {
+  if (d && !d->transaction_path.empty()) {
     transaction_service_client_release_request_async(d->transaction_path);
   }
   delete d;
@@ -860,10 +859,10 @@ start_preview_request(MainWindowUiState *widgets, TransactionRequest request)
           return;
         }
 
-        widgets->transaction_state.preview_transaction_path = td->transaction_path;
+        widgets->transaction_state.preview_transaction_path = std::move(td->transaction_path);
+        td->transaction_path.clear();
         widgets->transaction_state.preview_upgrade_all = td->request.upgrade_all;
         widgets->transaction_state.preview_requires_offline = td->preview.requires_offline;
-        td->transaction_path_transferred = true;
         DNFUI_TRACE("Transaction preview request ready upgrade_all=%d path=%s",
                     td->request.upgrade_all ? 1 : 0,
                     widgets->transaction_state.preview_transaction_path.c_str());
