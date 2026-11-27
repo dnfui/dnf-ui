@@ -115,9 +115,13 @@ make dockertui
 The container builds under `/tmp/dnfui-build`. It does not mount the host package database or start dnf5daemon.
 If your terminal type is unavailable in the image, use `TERM=xterm-256color make dockertui`.
 
-Use `/` to search, `i` to list installed packages, `r` to refresh repository metadata and reload the current view,
-the arrow and page keys to navigate, Enter to open details, Escape to return, and `q` to quit. The terminal must be at least 50 columns wide and 8 rows high.
+Use `/` to search, `i` to list installed packages, `a` to list all packages, and `u` to list unneeded packages.
+Press `r` to refresh repository metadata and reload the current view. Use the arrow and page keys to navigate,
+Enter to open details, Escape to return, and `q` to quit. The terminal must be at least 50 columns wide and 8 rows high.
 The selected package summary is shown when the terminal has at least 12 rows. Enter opens the full details.
+The All view uses the same compact package listing as **DNF UI** (latest candidate per name and architecture).
+The Unneeded view lists packages identified by libdnf5 as unneeded; it does not remove any packages.
+It reloads DNF system state each time, following normal repository metadata expiration rules.
 Package transactions and repository changes are not part of this proof of concept.
 
 The Status column reports whether the exact package version is installed. It does not report resolved upgrades.
@@ -125,9 +129,16 @@ Backend warnings are printed after the terminal closes. To see them while the ap
 Quitting cancels package queries where supported and waits for any non-cancellable backend work to finish.
 
 For a manual smoke test, search for `bash` twice, refresh the current search with `r`, and inspect installed package details.
+Switch between all four views, refresh each view and check the selected package summary and details.
 Resize the terminal, quit during a repository query and verify the shell is restored. Repeat in Docker.
 Run with repositories unavailable to check the fallback notice and saved warnings. Run with redirected stdin or stdout
 to verify that it rejects non-interactive use.
+
+On a disposable Fedora system, open the Unneeded view and choose a listed dependency. In another terminal, run
+`sudo dnf5 mark user PACKAGE`, replacing `PACKAGE` with its name. Press `u` again without using `r` and verify that
+it is no longer listed. Restore its original dependency reason with `sudo dnf5 mark dependency PACKAGE` if it was
+originally marked as a dependency, then reopen the view and check that it returns. Do not run this check on the host
+unless changing installation reasons there is intended.
 
 ## Native transaction testing
 

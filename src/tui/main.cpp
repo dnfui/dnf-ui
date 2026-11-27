@@ -5,12 +5,11 @@
 #include "dnf_backend/base_manager.hpp"
 #include "dnf_backend/dnf_backend.hpp"
 #include "i18n.hpp"
+#include "terminal.hpp"
 
 #include <algorithm>
 #include <atomic>
 #include <chrono>
-#include <cerrno>
-#include <cstdio>
 #include <cwchar>
 #include <exception>
 #include <future>
@@ -18,241 +17,27 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
-#include <system_error>
 #include <utility>
 #include <vector>
 
-#include <fcntl.h>
-#include <poll.h>
 #include <unistd.h>
-
-#define NCURSES_NOMACROS
-#include <ncurses.h>
 
 namespace {
 
-constexpr short HEADING_COLOR = 1;
-constexpr short INSTALLED_COLOR = 2;
+using tui::draw_bar;
+using tui::draw_text;
+using tui::HEADING_COLOR;
+using tui::INSTALLED_COLOR;
+using tui::terminal_input_closed;
+using tui::wide_text;
+using tui::wrap_text;
+
 constexpr int MIN_HEIGHT = 8;
 constexpr int MIN_WIDTH = 50;
 constexpr int SUMMARY_MIN_HEIGHT = 12;
 constexpr int SUMMARY_HEIGHT = 3;
 constexpr int TABLE_FIRST_ROW = 4;
 constexpr int FOOTER_HEIGHT = 2;
-
-// Keep backend warnings off the ncurses screen and replay them after shutdown.
-// Leave stderr alone when the caller has already redirected it.
-class BackendDiagnostics {
-  public:
-  BackendDiagnostics()
-  {
-    if (!isatty(STDERR_FILENO)) {
-      return;
-    }
-
-    log.reset(std::tmpfile());
-    if (!log) {
-      throw std::system_error(errno, std::generic_category(), "Could not open backend diagnostic file");
-    }
-
-    std::fflush(stderr);
-    saved_fd = fcntl(STDERR_FILENO, F_DUPFD_CLOEXEC, 0);
-    if (saved_fd == -1) {
-      throw std::system_error(errno, std::generic_category(), "Could not save stderr");
-    }
-    if (dup2(fileno(log.get()), STDERR_FILENO) == -1) {
-      const int error = errno;
-      close(saved_fd);
-      throw std::system_error(error, std::generic_category(), "Could not redirect stderr");
-    }
-  }
-
-  ~BackendDiagnostics()
-  {
-    if (saved_fd == -1) {
-      return;
-    }
-
-    std::fflush(stderr);
-    int result;
-    do {
-      result = dup2(saved_fd, STDERR_FILENO);
-    } while (result == -1 && errno == EINTR);
-
-    // Write to the saved descriptor even if restoring stderr failed.
-    std::rewind(log.get());
-    char buffer[4096];
-    size_t count;
-    while ((count = std::fread(buffer, 1, sizeof(buffer), log.get())) > 0) {
-      size_t offset = 0;
-      while (offset < count) {
-        const ssize_t written = write(saved_fd, buffer + offset, count - offset);
-        if (written == -1 && errno == EINTR) {
-          continue;
-        }
-        if (written <= 0) {
-          close(saved_fd);
-          return;
-        }
-        offset += static_cast<size_t>(written);
-      }
-    }
-    close(saved_fd);
-  }
-
-  BackendDiagnostics(const BackendDiagnostics &) = delete;
-  BackendDiagnostics &operator=(const BackendDiagnostics &) = delete;
-
-  private:
-  struct FileCloser {
-    void operator()(FILE *file) const noexcept
-    {
-      std::fclose(file);
-    }
-  };
-
-  std::unique_ptr<FILE, FileCloser> log;
-  int saved_fd = -1;
-};
-
-class Terminal {
-  public:
-  Terminal()
-      : screen(newterm(nullptr, stdout, stdin))
-  {
-    if (screen) {
-      if (raw() == ERR || noecho() == ERR || keypad(stdscr, true) == ERR) {
-        endwin();
-        delscreen(screen);
-        screen = nullptr;
-        return;
-      }
-      wtimeout(stdscr, 100);
-      curs_set(0);
-      if (has_colors() && start_color() == OK && use_default_colors() == OK && COLOR_PAIRS > INSTALLED_COLOR) {
-        colors = init_pair(HEADING_COLOR, COLOR_CYAN, -1) == OK && init_pair(INSTALLED_COLOR, COLOR_GREEN, -1) == OK;
-      }
-    }
-  }
-
-  ~Terminal()
-  {
-    if (screen) {
-      endwin();
-      delscreen(screen);
-    }
-  }
-
-  Terminal(const Terminal &) = delete;
-  Terminal &operator=(const Terminal &) = delete;
-
-  bool valid() const
-  {
-    return screen != nullptr;
-  }
-
-  bool colors_enabled() const
-  {
-    return colors;
-  }
-
-  private:
-  SCREEN *screen;
-  bool colors = false;
-};
-
-// ERR can mean a normal input timeout or a disconnected terminal.
-bool
-terminal_input_closed()
-{
-  if (std::feof(stdin) || std::ferror(stdin)) {
-    return true;
-  }
-
-  pollfd input { STDIN_FILENO, POLLIN, 0 };
-  const int result = poll(&input, 1, 0);
-  if (result < 0 && errno != EINTR) {
-    throw std::system_error(errno, std::generic_category(), "Could not check terminal input");
-  }
-  return result > 0 && (input.revents & (POLLHUP | POLLERR | POLLNVAL)) != 0;
-}
-
-std::wstring
-wide_text(const std::string &text)
-{
-  std::wstring result;
-  char *valid = g_utf8_make_valid(text.c_str(), text.size());
-  for (const char *p = valid; *p; p = g_utf8_next_char(p)) {
-    const gunichar ch = g_utf8_get_char(p);
-    if (ch == '\n' || ch == '\t' || wcwidth(static_cast<wchar_t>(ch)) >= 0) {
-      result.push_back(static_cast<wchar_t>(ch));
-    } else {
-      result.push_back(L'?');
-    }
-  }
-  g_free(valid);
-  return result;
-}
-
-// Write only complete characters that fit in the available terminal columns.
-void
-draw_text(int y, int x, int width, const std::wstring &text)
-{
-  if (width <= 0) {
-    return;
-  }
-
-  std::wstring visible;
-  for (wchar_t ch : text) {
-    if (ch == L'\n' || ch == L'\t') {
-      ch = L' ';
-    }
-    const int cells = wcwidth(ch);
-    if (cells < 0 || cells > width) {
-      break;
-    }
-    visible.push_back(ch);
-    width -= cells;
-  }
-  if (!visible.empty()) {
-    mvaddnwstr(y, x, visible.c_str(), static_cast<int>(visible.size()));
-  }
-}
-
-void
-draw_text(int y, int x, int width, const std::string &text)
-{
-  draw_text(y, x, width, wide_text(text));
-}
-
-std::vector<std::wstring>
-wrap_text(const std::string &text, int width)
-{
-  std::vector<std::wstring> lines;
-  std::wstring line;
-  int used = 0;
-  for (wchar_t ch : wide_text(text)) {
-    if (ch == L'\n') {
-      lines.push_back(line);
-      line.clear();
-      used = 0;
-      continue;
-    }
-    if (ch == L'\t') {
-      ch = L' ';
-    }
-    const int cells = wcwidth(ch);
-    if (used + cells > width) {
-      lines.push_back(line);
-      line.clear();
-      used = 0;
-    }
-    line.push_back(ch);
-    used += cells;
-  }
-  lines.push_back(line);
-  return lines;
-}
 
 // Reserve room for the summary only when there is enough space for the table.
 int
@@ -262,13 +47,27 @@ list_page_rows(int height)
   return std::max(1, height - TABLE_FIRST_ROW - FOOTER_HEIGHT - summary);
 }
 
-void
-draw_bar(int y, int width, const std::string &text)
+enum class PackageView {
+  INSTALLED,
+  ALL,
+  UNNEEDED,
+  SEARCH,
+};
+
+const char *
+view_name(PackageView view)
 {
-  attron(A_REVERSE);
-  mvhline(y, 0, ' ', width);
-  draw_text(y, 0, width - 1, text);
-  attroff(A_REVERSE);
+  switch (view) {
+  case PackageView::INSTALLED:
+    return "Installed packages";
+  case PackageView::ALL:
+    return "All packages";
+  case PackageView::UNNEEDED:
+    return "Unneeded packages";
+  case PackageView::SEARCH:
+    return "Search results";
+  }
+  return "Unknown";
 }
 
 struct DisplayRow {
@@ -298,16 +97,16 @@ class PackageBrowser {
     g_cancellable_cancel(cancellable.get());
   }
 
-  void query(bool installed, const std::string &term = {}, bool refresh_metadata = false)
+  void query(PackageView view, const std::string &term = {}, bool refresh_metadata = false)
   {
-    installed_view = installed;
-    active_search = installed ? "" : term;
+    active_view = view;
+    active_search = view == PackageView::SEARCH ? term : "";
     rows.clear();
     selected = 0;
     first = 0;
     details.clear();
     showing_details = false;
-    notice = installed ? "Loading installed packages..." : "Searching packages...";
+    notice = view == PackageView::SEARCH ? "Searching packages..." : "Loading packages...";
     list_notice.clear();
     loading_details = false;
     if (refresh_metadata) {
@@ -316,68 +115,81 @@ class PackageBrowser {
 
     const bool refresh_snapshot = has_queried;
     has_queried = true;
-    worker = std::async(std::launch::async,
-                        [installed,
-                         term,
-                         refresh_snapshot,
-                         refresh_metadata,
-                         cancel = cancellable.get(),
-                         cancel_flag = cancel_requested] {
-                          QueryResult result;
-                          if (g_cancellable_is_cancelled(cancel)) {
-                            return result;
-                          }
+    worker = std::async(
+        std::launch::async,
+        [view, term, refresh_snapshot, refresh_metadata, cancel = cancellable.get(), cancel_flag = cancel_requested] {
+          QueryResult result;
+          if (g_cancellable_is_cancelled(cancel)) {
+            return result;
+          }
 
-                          // A new Base already reads the rpmdb. On later queries, check for
-                          // external changes without discarding usable repository metadata.
-                          auto &manager = BaseManager::instance();
-                          if (refresh_metadata) {
-                            manager.rebuild(BaseRefreshMode::FORCE_METADATA_CHECK, cancel_flag);
-                          } else if (refresh_snapshot) {
-                            const bool changed = dnf_backend_refresh_installed_snapshot_preserving_cached_base();
-                            if (g_cancellable_is_cancelled(cancel)) {
-                              return result;
-                            }
-                            if (changed || manager.current_repo_state() != BaseRepoState::LIVE_METADATA) {
-                              manager.drop_cached_base();
-                            }
-                          }
+          // A new Base already reads the rpmdb. On later queries, check for
+          // external changes without discarding usable repository metadata.
+          auto &manager = BaseManager::instance();
+          if (refresh_metadata) {
+            manager.rebuild(BaseRefreshMode::FORCE_METADATA_CHECK, cancel_flag);
+          } else if (view == PackageView::UNNEEDED) {
+            // Installation reasons can change without changing installed NEVRAs.
+            // Reload system state using normal repository expiration rules.
+            manager.rebuild(BaseRefreshMode::NORMAL, cancel_flag);
+          } else if (refresh_snapshot) {
+            const bool changed = dnf_backend_refresh_installed_snapshot_preserving_cached_base();
+            if (g_cancellable_is_cancelled(cancel)) {
+              return result;
+            }
+            if (changed || manager.current_repo_state() != BaseRepoState::LIVE_METADATA) {
+              manager.drop_cached_base();
+            }
+          }
 
-                          if (g_cancellable_is_cancelled(cancel)) {
-                            return result;
-                          }
-                          auto packages = installed ? dnf_backend_get_installed_package_rows_interruptible(cancel)
-                                                    : dnf_backend_search_package_rows_interruptible(term, {}, cancel);
-                          if (g_cancellable_is_cancelled(cancel)) {
-                            return result;
-                          }
-                          const BaseRepoState repo_state = manager.current_repo_state();
-                          std::sort(packages.begin(), packages.end(), [](const PackageRow &a, const PackageRow &b) {
-                            return a.nevra < b.nevra;
-                          });
+          if (g_cancellable_is_cancelled(cancel)) {
+            return result;
+          }
+          std::vector<PackageRow> packages;
+          switch (view) {
+          case PackageView::INSTALLED:
+            packages = dnf_backend_get_installed_package_rows_interruptible(cancel);
+            break;
+          case PackageView::ALL:
+            packages = dnf_backend_get_browse_package_rows_interruptible({}, cancel);
+            break;
+          case PackageView::UNNEEDED:
+            packages = dnf_backend_get_unneeded_package_rows_interruptible(cancel);
+            break;
+          case PackageView::SEARCH:
+            packages = dnf_backend_search_package_rows_interruptible(term, {}, cancel);
+            break;
+          }
+          if (g_cancellable_is_cancelled(cancel)) {
+            return result;
+          }
+          const BaseRepoState repo_state = manager.current_repo_state();
+          std::sort(packages.begin(), packages.end(), [](const PackageRow &a, const PackageRow &b) {
+            return a.nevra < b.nevra;
+          });
 
-                          result.rows.reserve(packages.size());
-                          for (auto &package : packages) {
-                            if (g_cancellable_is_cancelled(cancel)) {
-                              return result;
-                            }
-                            const bool exact_installed = dnf_backend_resolve_installed_package(package).exact_installed;
-                            result.rows.push_back({ std::move(package), exact_installed });
-                          }
-                          result.notice = std::to_string(result.rows.size()) + " packages";
-                          if (repo_state == BaseRepoState::INSTALLED_ONLY) {
-                            result.notice += " (repository metadata unavailable)";
-                          } else if (repo_state == BaseRepoState::CACHED_METADATA) {
-                            result.notice += " (cached repository metadata)";
-                          }
-                          return result;
-                        });
+          result.rows.reserve(packages.size());
+          for (auto &package : packages) {
+            if (g_cancellable_is_cancelled(cancel)) {
+              return result;
+            }
+            const bool exact_installed = dnf_backend_resolve_installed_package(package).exact_installed;
+            result.rows.push_back({ std::move(package), exact_installed });
+          }
+          result.notice = std::to_string(result.rows.size()) + " packages";
+          if (repo_state == BaseRepoState::INSTALLED_ONLY) {
+            result.notice += " (repository metadata unavailable)";
+          } else if (repo_state == BaseRepoState::CACHED_METADATA) {
+            result.notice += " (cached repository metadata)";
+          }
+          return result;
+        });
   }
 
   void run(bool colors_enabled)
   {
     colors = colors_enabled;
-    query(true);
+    query(PackageView::INSTALLED);
     bool redraw = true;
     while (true) {
       if (collect_result()) {
@@ -440,7 +252,7 @@ class PackageBrowser {
   std::string list_notice;
   std::string term;
   std::string active_search;
-  bool installed_view = true;
+  PackageView active_view = PackageView::INSTALLED;
   bool colors = false;
   bool has_queried = false;
   bool editing = false;
@@ -502,7 +314,7 @@ class PackageBrowser {
     } else if ((kind == OK && (key == L'\n' || key == L'\r')) || (kind == KEY_CODE_YES && key == KEY_ENTER)) {
       if (!term.empty()) {
         editing = false;
-        query(false, term);
+        query(PackageView::SEARCH, term);
       }
     } else if ((kind == KEY_CODE_YES && key == KEY_BACKSPACE) || (kind == OK && (key == 127 || key == 8))) {
       if (!term.empty()) {
@@ -524,9 +336,13 @@ class PackageBrowser {
       term.clear();
       editing = true;
     } else if (kind == OK && key == L'i') {
-      query(true);
+      query(PackageView::INSTALLED);
+    } else if (kind == OK && key == L'a') {
+      query(PackageView::ALL);
+    } else if (kind == OK && key == L'u') {
+      query(PackageView::UNNEEDED);
     } else if (kind == OK && key == L'r') {
-      query(installed_view, active_search, true);
+      query(active_view, active_search, true);
     } else if (!rows.empty()) {
       const size_t page = static_cast<size_t>(list_page_rows(getmaxy(stdscr)));
       if (kind == KEY_CODE_YES && key == KEY_UP && selected > 0) {
@@ -666,7 +482,7 @@ class PackageBrowser {
     if (colors) {
       attron(COLOR_PAIR(HEADING_COLOR));
     }
-    draw_text(2, 0, width, installed_view ? "View: Installed packages" : "View: Search results");
+    draw_text(2, 0, width, std::string("View: ") + view_name(active_view));
     if (colors) {
       attroff(COLOR_PAIR(HEADING_COLOR));
     }
@@ -713,7 +529,12 @@ class PackageBrowser {
     } else if (worker.valid()) {
       draw_bar(height - 1, width, " q: Quit");
     } else {
-      draw_bar(height - 1, width, "/:Search i:Installed r:Refresh Enter:Info q:Quit");
+      const std::string shortcuts = "/: Search  i: Installed  a: All  u: Unneeded  r: Refresh  Enter: Info  q: Quit";
+      if (shortcuts.size() < static_cast<size_t>(width)) {
+        draw_bar(height - 1, width, shortcuts);
+      } else {
+        draw_bar(height - 1, width, "/:Find i:Inst a:All u:Unneed r:Ref Enter q:Quit");
+      }
     }
 
     // Draw the search last to leave the cursor at the input while editing.
@@ -733,10 +554,10 @@ main()
 
   dnfui_i18n_init();
   try {
-    BackendDiagnostics diagnostics;
+    tui::BackendDiagnostics diagnostics;
     // Restore the terminal before waiting for any outstanding backend work.
     PackageBrowser browser;
-    Terminal terminal;
+    tui::Terminal terminal;
     if (!terminal.valid()) {
       std::cerr << "Could not initialize the terminal.\n";
       return 1;
