@@ -167,7 +167,9 @@ Compare the Upgradable targets with `dnfui-backend-cli list-upgrades` on the sam
 When dnf5daemon is unavailable, check that local refresh still works with a warning and Upgradable reports an error.
 `make dockerdnf5daemontest` covers marking, previewing, dismissing and applying a known TUI upgrade target,
 including a failed submission, offline preparation and an unavailable daemon.
-Resize the terminal, quit during a repository query and verify the shell is restored. Repeat in Docker.
+Resize the terminal below 50 columns or 8 rows and check that package and transaction shortcuts do nothing.
+Restore its size and verify that the current screen and pending marks are unchanged.
+Quit during a repository query and verify the shell is restored. Repeat in Docker.
 Run with repositories unavailable to check the fallback notice and saved warnings. Run with redirected stdin or stdout
 to verify that it rejects non-interactive use.
 

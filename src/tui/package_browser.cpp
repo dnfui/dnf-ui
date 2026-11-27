@@ -121,7 +121,8 @@ PackageBrowser::run(bool colors_enabled, const tui::ShutdownSignals &shutdown)
       redraw = true;
       continue;
     }
-    if (screen == Screen::SEARCH) {
+    const bool terminal_too_small = getmaxy(stdscr) < MIN_HEIGHT || getmaxx(stdscr) < MIN_WIDTH;
+    if (screen == Screen::SEARCH && !terminal_too_small) {
       handle_search_key(kind, key);
       redraw = true;
       continue;
@@ -132,7 +133,7 @@ PackageBrowser::run(bool colors_enabled, const tui::ShutdownSignals &shutdown)
       }
       return;
     }
-    if (worker.valid()) {
+    if (terminal_too_small || worker.valid()) {
       continue;
     }
     redraw = true;
@@ -472,8 +473,8 @@ PackageBrowser::handle_pending_key(int kind, wint_t key)
                        result.offline_state = tui::query_offline_state(cancel);
                        if (!result.error.empty() && result.offline_state == tui::OfflineState::PREPARED) {
                          std::cerr << "Transaction preview failed: " << result.error << '\n';
-                         result.error =
-                             std::string("Updates are already prepared for reboot.\n\n") + tui::offline_recovery_hint();
+                         result.error += std::string("\n\nUpdates are already prepared for reboot.\n\n") +
+                             tui::offline_recovery_hint();
                        }
                      }
                      return result;
