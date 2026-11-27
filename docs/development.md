@@ -117,6 +117,7 @@ If your terminal type is unavailable in the image, use `TERM=xterm-256color make
 
 Use `/` to search, `i` to list installed packages, `r` to refresh repository metadata and reload the current view,
 the arrow and page keys to navigate, Enter to open details, Escape to return, and `q` to quit. The terminal must be at least 50 columns wide and 8 rows high.
+The selected package summary is shown when the terminal has at least 12 rows. Enter opens the full details.
 Package transactions and repository changes are not part of this proof of concept.
 
 The Status column reports whether the exact package version is installed. It does not report resolved upgrades.

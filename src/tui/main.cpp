@@ -31,6 +31,15 @@
 
 namespace {
 
+constexpr short HEADING_COLOR = 1;
+constexpr short INSTALLED_COLOR = 2;
+constexpr int MIN_HEIGHT = 8;
+constexpr int MIN_WIDTH = 50;
+constexpr int SUMMARY_MIN_HEIGHT = 12;
+constexpr int SUMMARY_HEIGHT = 3;
+constexpr int TABLE_FIRST_ROW = 4;
+constexpr int FOOTER_HEIGHT = 2;
+
 // Keep backend warnings off the ncurses screen and replay them after shutdown.
 // Leave stderr alone when the caller has already redirected it.
 class BackendDiagnostics {
@@ -120,6 +129,9 @@ class Terminal {
       }
       wtimeout(stdscr, 100);
       curs_set(0);
+      if (has_colors() && start_color() == OK && use_default_colors() == OK && COLOR_PAIRS > INSTALLED_COLOR) {
+        colors = init_pair(HEADING_COLOR, COLOR_CYAN, -1) == OK && init_pair(INSTALLED_COLOR, COLOR_GREEN, -1) == OK;
+      }
     }
   }
 
@@ -139,8 +151,14 @@ class Terminal {
     return screen != nullptr;
   }
 
+  bool colors_enabled() const
+  {
+    return colors;
+  }
+
   private:
   SCREEN *screen;
+  bool colors = false;
 };
 
 // ERR can mean a normal input timeout or a disconnected terminal.
@@ -234,6 +252,23 @@ wrap_text(const std::string &text, int width)
   }
   lines.push_back(line);
   return lines;
+}
+
+// Reserve room for the summary only when there is enough space for the table.
+int
+list_page_rows(int height)
+{
+  const int summary = height >= SUMMARY_MIN_HEIGHT ? SUMMARY_HEIGHT : 0;
+  return std::max(1, height - TABLE_FIRST_ROW - FOOTER_HEIGHT - summary);
+}
+
+void
+draw_bar(int y, int width, const std::string &text)
+{
+  attron(A_REVERSE);
+  mvhline(y, 0, ' ', width);
+  draw_text(y, 0, width - 1, text);
+  attroff(A_REVERSE);
 }
 
 struct DisplayRow {
@@ -330,11 +365,6 @@ class PackageBrowser {
                             result.rows.push_back({ std::move(package), exact_installed });
                           }
                           result.notice = std::to_string(result.rows.size()) + " packages";
-                          if (installed) {
-                            result.notice += " installed";
-                          } else {
-                            result.notice += " matching " + term;
-                          }
                           if (repo_state == BaseRepoState::INSTALLED_ONLY) {
                             result.notice += " (repository metadata unavailable)";
                           } else if (repo_state == BaseRepoState::CACHED_METADATA) {
@@ -344,8 +374,9 @@ class PackageBrowser {
                         });
   }
 
-  void run()
+  void run(bool colors_enabled)
   {
+    colors = colors_enabled;
     query(true);
     bool redraw = true;
     while (true) {
@@ -410,6 +441,7 @@ class PackageBrowser {
   std::string term;
   std::string active_search;
   bool installed_view = true;
+  bool colors = false;
   bool has_queried = false;
   bool editing = false;
   bool loading_details = false;
@@ -496,7 +528,7 @@ class PackageBrowser {
     } else if (kind == OK && key == L'r') {
       query(installed_view, active_search, true);
     } else if (!rows.empty()) {
-      const size_t page = static_cast<size_t>(std::max(1, getmaxy(stdscr) - 5));
+      const size_t page = static_cast<size_t>(list_page_rows(getmaxy(stdscr)));
       if (kind == KEY_CODE_YES && key == KEY_UP && selected > 0) {
         --selected;
       } else if (kind == KEY_CODE_YES && key == KEY_DOWN && selected + 1 < rows.size()) {
@@ -537,16 +569,14 @@ class PackageBrowser {
     const int height = getmaxy(stdscr);
     const int width = getmaxx(stdscr);
     erase();
-    if (height < 8 || width < 50) {
+    if (height < MIN_HEIGHT || width < MIN_WIDTH) {
       draw_text(0, 0, width - 1, "Terminal too small (50 x 8 required)");
       curs_set(0);
       refresh();
       return;
     }
 
-    attron(A_BOLD);
-    draw_text(0, 0, width, "DNF UI - Terminal (read-only)");
-    attroff(A_BOLD);
+    draw_bar(0, width, " DNF UI - Terminal (read-only)");
 
     if (showing_details) {
       const auto lines = wrap_text(details, width);
@@ -556,7 +586,7 @@ class PackageBrowser {
       for (size_t i = 0; i < page && details_first + i < lines.size(); ++i) {
         draw_text(static_cast<int>(i) + 2, 0, width, lines[details_first + i]);
       }
-      draw_text(height - 1, 0, width - 1, "Up/Down: Scroll  Esc: Back  q: Quit");
+      draw_bar(height - 1, width, " Up/Down: Scroll  Esc: Back  q: Quit");
     } else {
       draw_list(height, width);
     }
@@ -568,64 +598,126 @@ class PackageBrowser {
     refresh();
   }
 
+  // Show the applied search separately from the editable input so cancelling
+  // an edit does not change the query displayed above the package table.
+  void draw_search(int width)
+  {
+    attron(A_BOLD);
+    draw_text(1, 0, width, "Search: ");
+    attroff(A_BOLD);
+
+    if (!editing) {
+      draw_text(1, 8, width - 8, active_search.empty() ? "(press / to search)" : active_search);
+      return;
+    }
+
+    const auto input = wide_text(term);
+    int cells = 0;
+    size_t start = input.size();
+    while (start > 0) {
+      const int next = wcwidth(input[start - 1]);
+      if (cells + next > width - 9) {
+        break;
+      }
+      cells += next;
+      --start;
+    }
+    attron(A_UNDERLINE);
+    draw_text(1, 8, width - 8, input.substr(start));
+    attroff(A_UNDERLINE);
+    wmove(stdscr, 1, 8 + cells);
+  }
+
+  void draw_summary(int y, int width)
+  {
+    mvhline(y, 0, ACS_HLINE, width);
+    if (rows.empty()) {
+      draw_text(y + 1, 0, width, "No package selected");
+      return;
+    }
+
+    const auto &package = rows[selected].package;
+    attron(A_BOLD);
+    draw_text(y + 1, 0, width, package.nevra);
+    attroff(A_BOLD);
+    draw_text(y + 2, 0, width, package.summary);
+  }
+
   void draw_list(int height, int width)
   {
-    const int name_width = width / 3;
-    const int version_width = width - name_width - 23;
-    const int arch_x = name_width + version_width;
-    const int state_x = arch_x + 10;
-    const size_t page = static_cast<size_t>(height - 5);
+    const int status_width = 11;
+    const int arch_width = 10;
+    const int name_width = (width - status_width - arch_width) / 2;
+    const int name_x = status_width;
+    const int version_x = name_x + name_width;
+    const int arch_x = width - arch_width;
+    const int version_width = arch_x - version_x;
+    const size_t page = static_cast<size_t>(list_page_rows(height));
 
     if (selected < first) {
       first = selected;
     } else if (selected - first >= page) {
       first = selected - page + 1;
     }
+    const size_t last_first = rows.size() > page ? rows.size() - page : 0;
+    first = std::min(first, last_first);
 
     attron(A_BOLD);
-    draw_text(2, 0, name_width - 1, "Package");
-    draw_text(2, name_width, version_width - 1, "Version");
-    draw_text(2, arch_x, 9, "Arch");
-    draw_text(2, state_x, width - state_x, "Status");
+    if (colors) {
+      attron(COLOR_PAIR(HEADING_COLOR));
+    }
+    draw_text(2, 0, width, installed_view ? "View: Installed packages" : "View: Search results");
+    if (colors) {
+      attroff(COLOR_PAIR(HEADING_COLOR));
+    }
     attroff(A_BOLD);
+
+    attron(A_REVERSE);
+    mvhline(3, 0, ' ', width);
+    draw_text(3, 0, status_width - 1, "Status");
+    draw_text(3, name_x, name_width - 1, "Package");
+    draw_text(3, version_x, version_width - 1, "Version");
+    draw_text(3, arch_x, arch_width - 1, "Arch");
+    attroff(A_REVERSE);
 
     for (size_t i = 0; i < page && first + i < rows.size(); ++i) {
       const auto &row = rows[first + i];
-      const int y = static_cast<int>(i) + 3;
+      const int y = static_cast<int>(i) + TABLE_FIRST_ROW;
       const bool active = first + i == selected;
       if (active) {
         attron(A_REVERSE);
         mvhline(y, 0, ' ', width);
       }
-      draw_text(y, 0, name_width - 1, row.package.name);
-      draw_text(y, name_width, version_width - 1, row.package.display_version());
-      draw_text(y, arch_x, 9, row.package.arch);
-      draw_text(y, state_x, width - state_x, row.installed ? "Installed" : "Available");
+      if (row.installed && !active && colors) {
+        attron(COLOR_PAIR(INSTALLED_COLOR));
+      }
+      draw_text(y, 0, status_width - 1, row.installed ? "Installed" : "Available");
+      if (row.installed && !active && colors) {
+        attroff(COLOR_PAIR(INSTALLED_COLOR));
+      }
+      draw_text(y, name_x, name_width - 1, row.package.name);
+      draw_text(y, version_x, version_width - 1, row.package.display_version());
+      draw_text(y, arch_x, arch_width - 1, row.package.arch);
       if (active) {
         attroff(A_REVERSE);
       }
     }
 
-    if (editing) {
-      draw_text(height - 2, 0, width, "Search: ");
-      auto input = wide_text(term);
-      int cells = 0;
-      size_t start = input.size();
-      while (start > 0) {
-        const int next = wcwidth(input[start - 1]);
-        if (cells + next > width - 9) {
-          break;
-        }
-        cells += next;
-        --start;
-      }
-      draw_text(height - 2, 8, width - 8, input.substr(start));
-      draw_text(height - 1, 0, width - 1, "Enter: Search  Esc: Cancel");
-      wmove(stdscr, height - 2, 8 + cells);
-    } else {
-      draw_text(height - 2, 0, width, notice);
-      draw_text(height - 1, 0, width - 1, "/:Search i:Installed r:Refresh Enter:Info q:Quit");
+    if (height >= SUMMARY_MIN_HEIGHT) {
+      draw_summary(height - FOOTER_HEIGHT - SUMMARY_HEIGHT, width);
     }
+
+    draw_text(height - 2, 0, width, notice);
+    if (editing) {
+      draw_bar(height - 1, width, " Enter: Search  Esc: Cancel");
+    } else if (worker.valid()) {
+      draw_bar(height - 1, width, " q: Quit");
+    } else {
+      draw_bar(height - 1, width, "/:Search i:Installed r:Refresh Enter:Info q:Quit");
+    }
+
+    // Draw the search last to leave the cursor at the input while editing.
+    draw_search(width);
   }
 };
 
@@ -649,7 +741,7 @@ main()
       std::cerr << "Could not initialize the terminal.\n";
       return 1;
     }
-    browser.run();
+    browser.run(terminal.colors_enabled());
     browser.cancel();
   } catch (const std::exception &error) {
     std::cerr << error.what() << '\n';
