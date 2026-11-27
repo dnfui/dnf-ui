@@ -7,6 +7,7 @@
 #include "i18n.hpp"
 #include "terminal.hpp"
 #include "pending_actions.hpp"
+#include "transaction_preview.hpp"
 #include "upgrade_query.hpp"
 
 #include <algorithm>
@@ -58,6 +59,7 @@ enum class Screen {
   ACTION_MENU,
   PENDING,
   PENDING_DETAILS,
+  PREVIEW,
 };
 
 enum class WorkerOperation {
@@ -65,6 +67,7 @@ enum class WorkerOperation {
   PACKAGE_QUERY,
   PACKAGE_DETAILS,
   PENDING_CHECK,
+  PREVIEW,
 };
 
 enum class PackageView {
@@ -270,6 +273,7 @@ class PackageBrowser {
       switch (screen) {
       case Screen::PACKAGE_DETAILS:
       case Screen::PENDING_DETAILS:
+      case Screen::PREVIEW:
         handle_details_key(kind, key);
         break;
       case Screen::ACTION_MENU:
@@ -313,6 +317,19 @@ class PackageBrowser {
   size_t pending_selected = 0;
   size_t pending_first = 0;
 
+  void update_pending_issues(std::vector<std::string> issues)
+  {
+    if (issues.size() == pending.size()) {
+      for (size_t i = 0; i < pending.size(); ++i) {
+        pending[i].issue = std::move(issues[i]);
+      }
+    } else {
+      for (auto &mark : pending) {
+        mark.issue = "Unchecked: validation did not finish.";
+      }
+    }
+  }
+
   bool collect_result()
   {
     if (!worker.valid() || worker.wait_for(std::chrono::seconds(0)) != std::future_status::ready) {
@@ -322,16 +339,14 @@ class PackageBrowser {
     operation = WorkerOperation::NONE;
     try {
       auto result = worker.get();
-      if (completed == WorkerOperation::PENDING_CHECK) {
-        if (result.pending_issues.size() == pending.size()) {
-          for (size_t i = 0; i < pending.size(); ++i) {
-            pending[i].issue = std::move(result.pending_issues[i]);
-          }
-        } else {
-          for (auto &mark : pending) {
-            mark.issue = "Unchecked: validation did not finish.";
-          }
-        }
+      if (completed == WorkerOperation::PREVIEW) {
+        update_pending_issues(std::move(result.pending_issues));
+        details = std::move(result.details);
+        details_first = 0;
+        notice = std::move(result.notice);
+        screen = Screen::PREVIEW;
+      } else if (completed == WorkerOperation::PENDING_CHECK) {
+        update_pending_issues(std::move(result.pending_issues));
         screen = Screen::PENDING;
       } else if (completed == WorkerOperation::PACKAGE_DETAILS) {
         details = std::move(result.details);
@@ -354,7 +369,16 @@ class PackageBrowser {
         }
       }
     } catch (const std::exception &error) {
-      if (completed == WorkerOperation::PENDING_CHECK) {
+      if (completed == WorkerOperation::PREVIEW) {
+        for (auto &mark : pending) {
+          mark.issue = "Unchecked: preview failed.";
+        }
+        details = error.what();
+        details_first = 0;
+        notice = "Transaction preview failed";
+        screen = Screen::PREVIEW;
+        return true;
+      } else if (completed == WorkerOperation::PENDING_CHECK) {
         screen = Screen::PENDING;
         for (auto &mark : pending) {
           mark.issue = "Unchecked: validation failed.";
@@ -543,7 +567,25 @@ class PackageBrowser {
       return;
     }
 
-    if (kind == OK && key == L'x') {
+    if (kind == OK && key == L'v') {
+      operation = WorkerOperation::PREVIEW;
+      reload_after_pending = true;
+      notice = "Preparing transaction preview...";
+      worker =
+          std::async(std::launch::async, [marks = pending, cancel = cancellable.get(), cancel_flag = cancel_requested] {
+            QueryResult result;
+            auto preview = tui::preview_pending_marks(marks, cancel, cancel_flag);
+            result.pending_issues = std::move(preview.pending_issues);
+            if (preview.error.empty()) {
+              result.notice = "Transaction preview";
+              result.details = tui::format_preview(preview.preview);
+            } else {
+              result.notice = "Transaction preview failed";
+              result.details = std::move(preview.error);
+            }
+            return result;
+          });
+    } else if (kind == OK && key == L'x') {
       pending.erase(pending.begin() + pending_selected);
       if (pending_selected >= pending.size() && pending_selected > 0) {
         --pending_selected;
@@ -569,10 +611,10 @@ class PackageBrowser {
       details_first = 0;
       screen = Screen::PENDING_DETAILS;
     } else if (kind == KEY_CODE_YES && key == KEY_PPAGE) {
-      const size_t page = static_cast<size_t>(std::max(1, getmaxy(stdscr) - 4));
+      const size_t page = static_cast<size_t>(std::max(1, getmaxy(stdscr) - 5));
       pending_selected = pending_selected > page ? pending_selected - page : 0;
     } else if (kind == KEY_CODE_YES && key == KEY_NPAGE) {
-      const size_t page = static_cast<size_t>(std::max(1, getmaxy(stdscr) - 4));
+      const size_t page = static_cast<size_t>(std::max(1, getmaxy(stdscr) - 5));
       pending_selected = std::min(pending_selected + page, pending.size() - 1);
     }
   }
@@ -580,7 +622,7 @@ class PackageBrowser {
   void handle_details_key(int kind, wint_t key)
   {
     if (kind == OK && key == 27) {
-      screen = screen == Screen::PENDING_DETAILS ? Screen::PENDING : Screen::PACKAGES;
+      screen = screen == Screen::PENDING_DETAILS || screen == Screen::PREVIEW ? Screen::PENDING : Screen::PACKAGES;
       notice = list_notice;
     } else if (kind == KEY_CODE_YES && key == KEY_UP && details_first > 0) {
       --details_first;
@@ -608,7 +650,10 @@ class PackageBrowser {
 
     draw_bar(0, width, " DNF UI - Terminal | Pending: " + std::to_string(pending.size()));
 
-    if (screen == Screen::PACKAGE_DETAILS || screen == Screen::PENDING_DETAILS) {
+    if (screen == Screen::PACKAGE_DETAILS || screen == Screen::PENDING_DETAILS || screen == Screen::PREVIEW) {
+      if (screen == Screen::PREVIEW) {
+        draw_text(1, 0, width, notice);
+      }
       const auto lines = wrap_text(details, width);
       const size_t page = static_cast<size_t>(height - 4);
       const size_t last = lines.size() > page ? lines.size() - page : 0;
@@ -664,7 +709,7 @@ class PackageBrowser {
   void draw_pending(int height, int width)
   {
     const int action_width = 12;
-    const size_t page = static_cast<size_t>(height - 4);
+    const size_t page = static_cast<size_t>(height - 5);
     if (pending_selected < pending_first) {
       pending_first = pending_selected;
     } else if (pending_selected - pending_first >= page) {
@@ -699,7 +744,12 @@ class PackageBrowser {
         attroff(A_REVERSE);
       }
     }
-    draw_bar(height - 1, width, " x:Unmark c:Clear Enter:Info Esc:Back q:Quit");
+    if (worker.valid()) {
+      draw_text(height - 2, 0, width, notice);
+      draw_bar(height - 1, width, " q: Quit");
+    } else {
+      draw_bar(height - 1, width, "v:Preview x:Unmark c:Clear Enter:Info Esc:Back q");
+    }
   }
 
   // Show the applied search separately from the editable input so cancelling

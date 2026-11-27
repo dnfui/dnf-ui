@@ -130,7 +130,10 @@ Marks are kept in memory across views and are discarded on exit. The pending lis
 and exact repository availability when opened. An exclamation mark indicates an invalid or unchecked action; Enter explains why. The original
 mark is retained. Returning from validation reloads the package view. Mark upgrades in the Upgradable view;
 removal and reinstall require an exact installed row.
-Transaction preview and execution are not implemented.
+Press `v` in the pending view to validate the marks again and resolve a transaction preview through dnf5daemon.
+The preview includes dependency changes, additional removals, warnings, disk space and offline requirements.
+If a marked action is missing from the resolved transaction, the mark is retained and flagged.
+The daemon session is released after resolution. Key import and transaction execution are not implemented.
 
 The Upgradable view requires dnf5daemon and uses its upgrade target list, not local version comparisons.
 Its details show the reported target and summary, not a transaction preview.
@@ -142,7 +145,8 @@ Quitting cancels package queries where supported and waits for any non-cancellab
 For a manual smoke test, search for `bash` twice, refresh the current search with `r`, and inspect installed package details.
 Switch between all five views, refresh each view and check the selected package summary and details.
 Mark packages, replace an action, switch views, review the pending list, unmark one and clear the queue.
-Verify that no package is changed by marking or quitting.
+Preview marked changes, return to the pending list and verify that the marks are retained.
+Verify that no package is changed by marking, previewing or quitting.
 Compare the Upgradable targets with `dnfui-backend-cli list-upgrades` on the same system.
 When dnf5daemon is unavailable, check that local refresh still works with a warning and Upgradable reports an error.
 `make dockerdnf5daemontest` covers marking and rechecking a known TUI upgrade target and an unavailable daemon.

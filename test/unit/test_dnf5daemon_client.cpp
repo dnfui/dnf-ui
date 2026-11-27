@@ -13,6 +13,7 @@
 #include "dnf5daemon_client/transaction_service_client_parser.hpp"
 #include "tui/upgrade_query.hpp"
 #include "tui/pending_actions.hpp"
+#include "tui/transaction_preview.hpp"
 
 #include <glib.h>
 #include <libdnf5/transaction/offline.hpp>
@@ -832,6 +833,30 @@ TEST_CASE("TUI lists current daemon upgrade targets after refresh", "[dnf5daemon
   REQUIRE(state.snapshot().generation > snapshot.generation);
   REQUIRE(marks.front().source.upgrade->generation == snapshot.generation);
   REQUIRE(marks.front().action.nevra == expected_nevra);
+
+  const auto installed_before = package_row_nevras(dnf_backend_get_installed_package_rows_interruptible(nullptr));
+  const auto preview = tui::preview_pending_marks(marks, nullptr, cancel_flag);
+  INFO(preview.error);
+  REQUIRE(preview.error.empty());
+  REQUIRE(preview_section_contains_label(preview.preview.upgrade, expected_nevra));
+  REQUIRE_FALSE(preview.released_session_path.empty());
+  REQUIRE_FALSE(transaction_service_client_session_exists_for_tests(preview.released_session_path));
+
+  // Resolve the real upgrade but compare it with a deliberately different marked target.
+  TransactionRequest request;
+  request.upgrade.push_back(marks.front().action.transaction_spec);
+  auto mismatched_marks = marks;
+  mismatched_marks.front().action.nevra = "dnfui-nonexistent-version-0-1.noarch";
+  const auto rejected = tui::resolve_preview_for_tests(request, mismatched_marks);
+  REQUIRE_FALSE(rejected.error.empty());
+  REQUIRE(rejected.preview.empty());
+  REQUIRE(rejected.pending_issues.size() == 1);
+  REQUIRE_FALSE(rejected.pending_issues.front().empty());
+  REQUIRE_FALSE(rejected.released_session_path.empty());
+  REQUIRE_FALSE(transaction_service_client_session_exists_for_tests(rejected.released_session_path));
+
+  BaseManager::instance().drop_cached_base();
+  REQUIRE(package_row_nevras(dnf_backend_get_installed_package_rows_interruptible(nullptr)) == installed_before);
 
   state.reset_for_tests();
   transaction_service_client_reset_for_tests();
