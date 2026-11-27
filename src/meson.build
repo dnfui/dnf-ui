@@ -105,6 +105,9 @@ if get_option('build_tui')
     'dnfui-tui',
     backend_sources + daemon_client_sources + files(
       'tui/main.cpp',
+      'tui/package_browser.cpp',
+      'tui/package_browser_render.cpp',
+      'tui/package_query.cpp',
       'tui/terminal.cpp',
       'tui/shutdown.cpp',
       'tui/upgrade_query.cpp',
