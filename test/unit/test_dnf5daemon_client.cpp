@@ -963,7 +963,7 @@ TEST_CASE("TUI cancels a delayed offline status session", "[dnf5daemon]")
           nullptr,
           &error),
       g_object_unref);
-  INFO(error ? error->message : "");
+  INFO((error ? error->message : ""));
   g_clear_error(&error);
   REQUIRE(service != nullptr);
 
@@ -980,7 +980,7 @@ TEST_CASE("TUI cancels a delayed offline status session", "[dnf5daemon]")
                                   nullptr,
                                   &error),
       g_variant_unref);
-  INFO(error ? error->message : "");
+  INFO((error ? error->message : ""));
   g_clear_error(&error);
   REQUIRE(name_reply != nullptr);
   guint32 name_result = 0;
