@@ -96,3 +96,16 @@ dnfui_backend_cli = executable(
   build_by_default: false,
   install: false,
 )
+
+if get_option('build_tui')
+  ncursesw_dep = dependency('ncursesw')
+  threads_dep = dependency('threads')
+
+  executable(
+    'dnfui-tui',
+    backend_sources + files('tui/main.cpp', 'i18n.cpp'),
+    include_directories: src_inc,
+    dependencies: [libdnf5_dep, gio_dep, ncursesw_dep, threads_dep],
+    install: false,
+  )
+endif

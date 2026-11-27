@@ -18,3 +18,10 @@ option(
   value: false,
   description: 'Enable the stricter warning set used by FINAL=y builds',
 )
+
+option(
+  'build_tui',
+  type: 'boolean',
+  value: false,
+  description: 'Build the experimental terminal frontend',
+)
