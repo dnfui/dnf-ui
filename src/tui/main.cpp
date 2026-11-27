@@ -1,11 +1,12 @@
 // -----------------------------------------------------------------------------
 // src/tui/main.cpp
-// Read-only terminal frontend for the DNF backend
+// Terminal frontend for the DNF backend
 // -----------------------------------------------------------------------------
 #include "dnf_backend/base_manager.hpp"
 #include "dnf_backend/dnf_backend.hpp"
 #include "i18n.hpp"
 #include "terminal.hpp"
+#include "pending_actions.hpp"
 #include "upgrade_query.hpp"
 
 #include <algorithm>
@@ -252,6 +253,10 @@ class PackageBrowser {
       redraw = true;
       if (showing_details) {
         handle_details_key(kind, key);
+      } else if (choosing_action) {
+        handle_action_key(kind, key);
+      } else if (showing_pending) {
+        handle_pending_key(kind, key);
       } else {
         handle_list_key(kind, key);
       }
@@ -259,7 +264,7 @@ class PackageBrowser {
   }
 
   private:
-  // The worker owns all backend calls. Only the terminal thread reads UI state
+  // The worker owns package queries. Only the terminal thread reads UI state
   // and draws to ncurses.
   std::unique_ptr<GCancellable, decltype(&g_object_unref)> cancellable { g_cancellable_new(), g_object_unref };
   // BaseManager rebuilds use an atomic cancellation flag rather than GCancellable.
@@ -280,6 +285,13 @@ class PackageBrowser {
   bool editing = false;
   bool loading_details = false;
   bool showing_details = false;
+  std::vector<tui::PendingMark> pending;
+  bool checking_pending = false;
+  bool reload_after_pending = false;
+  size_t pending_selected = 0;
+  size_t pending_first = 0;
+  bool showing_pending = false;
+  bool choosing_action = false;
 
   bool collect_result()
   {
@@ -288,7 +300,19 @@ class PackageBrowser {
     }
     try {
       auto result = worker.get();
-      if (loading_details) {
+      if (checking_pending) {
+        checking_pending = false;
+        if (result.pending_issues.size() == pending.size()) {
+          for (size_t i = 0; i < pending.size(); ++i) {
+            pending[i].issue = std::move(result.pending_issues[i]);
+          }
+        } else {
+          for (auto &mark : pending) {
+            mark.issue = "Unchecked: validation did not finish.";
+          }
+        }
+        showing_pending = true;
+      } else if (loading_details) {
         details = std::move(result.details);
         details_first = 0;
         showing_details = true;
@@ -297,8 +321,30 @@ class PackageBrowser {
         rows = std::move(result.rows);
         list_notice = std::move(result.notice);
         notice = list_notice;
+        if (!pending.empty()) {
+          const auto snapshot = DaemonUpgradeState::instance().snapshot();
+          for (auto &mark : pending) {
+            const std::string issue = tui::pending_snapshot_issue(mark, snapshot);
+            if (!issue.empty() || mark.action.type == PendingAction::REMOVE ||
+                (mark.action.type == PendingAction::UPGRADE && snapshot.status == DaemonUpgradeSnapshotStatus::READY)) {
+              mark.issue = issue;
+            }
+          }
+        }
       }
     } catch (const std::exception &error) {
+      if (checking_pending) {
+        checking_pending = false;
+        showing_pending = true;
+        for (auto &mark : pending) {
+          mark.issue = "Unchecked: validation failed.";
+        }
+        std::cerr << "Pending validation failed: " << error.what() << '\n';
+      } else if (!loading_details) {
+        for (auto &mark : pending) {
+          mark.issue = "Unchecked: package query failed.";
+        }
+      }
       notice = error.what();
     }
     return true;
@@ -377,7 +423,27 @@ class PackageBrowser {
       query(PackageView::UPGRADABLE);
     } else if (kind == OK && key == L'r') {
       query(active_view, active_search, true);
+    } else if (kind == OK && key == L'p') {
+      pending_selected = 0;
+      pending_first = 0;
+      reload_after_pending = !pending.empty();
+      if (pending.empty()) {
+        showing_pending = true;
+      } else {
+        checking_pending = true;
+        notice = "Checking pending actions...";
+        worker = std::async(std::launch::async,
+                            [marks = pending, cancel = cancellable.get(), cancel_flag = cancel_requested] {
+                              QueryResult result;
+                              result.pending_issues = tui::validate_pending_marks(marks, cancel, cancel_flag);
+                              return result;
+                            });
+      }
     } else if (!rows.empty()) {
+      if (kind == OK && key == L'm') {
+        choosing_action = true;
+        return;
+      }
       const size_t page = static_cast<size_t>(list_page_rows(getmaxy(stdscr)));
       if (kind == KEY_CODE_YES && key == KEY_UP && selected > 0) {
         --selected;
@@ -394,6 +460,101 @@ class PackageBrowser {
       } else if ((kind == OK && (key == L'\n' || key == L'\r')) || (kind == KEY_CODE_YES && key == KEY_ENTER)) {
         load_details();
       }
+    }
+  }
+
+  void handle_action_key(int kind, wint_t key)
+  {
+    if (kind != OK) {
+      return;
+    }
+    if (key == 27) {
+      choosing_action = false;
+      return;
+    }
+
+    const auto &row = rows[selected];
+    if (key == L'x') {
+      const auto action = std::find_if(pending.begin(), pending.end(), [&](const tui::PendingMark &item) {
+        return item.action.nevra == row.package.nevra;
+      });
+      if (action != pending.end()) {
+        pending.erase(action);
+        notice = "Unmarked: " + row.package.name;
+        choosing_action = false;
+      }
+      return;
+    }
+
+    const auto choices = tui::pending_choices(row);
+    PendingAction::Type type;
+    if (key == L'1' && choices.can_install) {
+      type = tui::install_side_type(choices.rows);
+    } else if (key == L'2' && choices.can_remove) {
+      type = PendingAction::REMOVE;
+    } else if (key == L'3' && choices.can_reinstall) {
+      type = PendingAction::REINSTALL;
+    } else {
+      return;
+    }
+
+    if (tui::mark_pending_action(pending, row, type)) {
+      notice = std::string("Marked for ") + tui::pending_action_name(type) + ": " + row.package.name;
+    } else {
+      notice = "Package action is no longer available.";
+    }
+    choosing_action = false;
+  }
+
+  void handle_pending_key(int kind, wint_t key)
+  {
+    if (kind == OK && (key == 27 || key == L'p')) {
+      showing_pending = false;
+      if (reload_after_pending) {
+        reload_after_pending = false;
+        // Validation may have replaced the installed or daemon snapshot.
+        // Reload the package list before accepting any new marks.
+        query(active_view, active_search);
+      } else {
+        notice = list_notice;
+      }
+      return;
+    }
+    if (pending.empty()) {
+      return;
+    }
+
+    if (kind == OK && key == L'x') {
+      pending.erase(pending.begin() + pending_selected);
+      if (pending_selected >= pending.size() && pending_selected > 0) {
+        --pending_selected;
+      }
+    } else if (kind == OK && key == L'c') {
+      pending.clear();
+      pending_selected = 0;
+      pending_first = 0;
+    } else if (kind == KEY_CODE_YES && key == KEY_UP && pending_selected > 0) {
+      --pending_selected;
+    } else if (kind == KEY_CODE_YES && key == KEY_DOWN && pending_selected + 1 < pending.size()) {
+      ++pending_selected;
+    } else if (kind == KEY_CODE_YES && key == KEY_HOME) {
+      pending_selected = 0;
+    } else if (kind == KEY_CODE_YES && key == KEY_END) {
+      pending_selected = pending.size() - 1;
+    } else if ((kind == OK && (key == L'\n' || key == L'\r')) || (kind == KEY_CODE_YES && key == KEY_ENTER)) {
+      const auto &mark = pending[pending_selected];
+      const auto &action = mark.action;
+      details = std::string("Pending action: ") + tui::pending_action_name(action.type) +
+          "\n\nPackage: " + action.nevra + "\n\nRequest spec: " + action.transaction_spec +
+          "\n\nCheck: " + (mark.issue.empty() ? "No known issue" : mark.issue);
+      details_first = 0;
+      showing_details = true;
+    } else if (kind == KEY_CODE_YES && key == KEY_PPAGE) {
+      const size_t page = static_cast<size_t>(std::max(1, getmaxy(stdscr) - 4));
+      pending_selected = pending_selected > page ? pending_selected - page : 0;
+    } else if (kind == KEY_CODE_YES && key == KEY_NPAGE) {
+      const size_t page = static_cast<size_t>(std::max(1, getmaxy(stdscr) - 4));
+      pending_selected = std::min(pending_selected + page, pending.size() - 1);
     }
   }
 
@@ -426,7 +587,7 @@ class PackageBrowser {
       return;
     }
 
-    draw_bar(0, width, " DNF UI - Terminal (read-only)");
+    draw_bar(0, width, " DNF UI - Terminal | Pending: " + std::to_string(pending.size()));
 
     if (showing_details) {
       const auto lines = wrap_text(details, width);
@@ -437,6 +598,10 @@ class PackageBrowser {
         draw_text(static_cast<int>(i) + 2, 0, width, lines[details_first + i]);
       }
       draw_bar(height - 1, width, " Up/Down: Scroll  Esc: Back  q: Quit");
+    } else if (choosing_action) {
+      draw_action_menu(height, width);
+    } else if (showing_pending) {
+      draw_pending(height, width);
     } else {
       draw_list(height, width);
     }
@@ -446,6 +611,76 @@ class PackageBrowser {
       curs_set(0);
     }
     refresh();
+  }
+
+  void draw_action_menu(int height, int width)
+  {
+    const auto &row = rows[selected];
+    const auto choices = tui::pending_choices(row);
+    draw_text(1, 0, width, row.package.nevra);
+    if (choices.can_install) {
+      draw_text(
+          2, 0, width, std::string("1: Mark for ") + tui::pending_action_name(tui::install_side_type(choices.rows)));
+    } else if (choices.rows.install_is_upgrade && !row.upgrade) {
+      draw_text(2, 0, width, "Use the Upgradable view to mark upgrades.");
+    }
+    if (choices.can_remove) {
+      draw_text(3, 0, width, "2: Mark for removal");
+    }
+    if (choices.can_reinstall) {
+      draw_text(4, 0, width, "3: Mark for reinstall");
+    }
+    const auto action = std::find_if(pending.begin(), pending.end(), [&](const tui::PendingMark &item) {
+      return item.action.nevra == row.package.nevra;
+    });
+    if (action != pending.end()) {
+      draw_text(5, 0, width, "x: Unmark");
+    } else if (!choices.can_install && !choices.can_remove && !choices.can_reinstall &&
+               !(choices.rows.install_is_upgrade && !row.upgrade)) {
+      draw_text(5, 0, width, "No actions available for this package.");
+    }
+    draw_bar(height - 1, width, " Esc: Back  q: Quit");
+  }
+
+  void draw_pending(int height, int width)
+  {
+    const int action_width = 12;
+    const size_t page = static_cast<size_t>(height - 4);
+    if (pending_selected < pending_first) {
+      pending_first = pending_selected;
+    } else if (pending_selected - pending_first >= page) {
+      pending_first = pending_selected - page + 1;
+    }
+    const size_t last_first = pending.size() > page ? pending.size() - page : 0;
+    pending_first = std::min(pending_first, last_first);
+
+    draw_text(1, 0, width, "Pending actions (!: check required; Enter: info)");
+    attron(A_REVERSE);
+    mvhline(2, 0, ' ', width);
+    draw_text(2, 0, action_width - 1, "Action");
+    draw_text(2, action_width, width - action_width, "Package");
+    attroff(A_REVERSE);
+
+    if (pending.empty()) {
+      draw_text(3, 0, width, "No pending actions");
+    }
+    for (size_t i = 0; i < page && pending_first + i < pending.size(); ++i) {
+      const auto &mark = pending[pending_first + i];
+      const auto &action = mark.action;
+      const int y = static_cast<int>(i) + 3;
+      const bool active = pending_first + i == pending_selected;
+      if (active) {
+        attron(A_REVERSE);
+        mvhline(y, 0, ' ', width);
+      }
+      const std::string label = (mark.issue.empty() ? "" : "!") + std::string(tui::pending_action_name(action.type));
+      draw_text(y, 0, action_width - 1, label);
+      draw_text(y, action_width, width - action_width, action.nevra);
+      if (active) {
+        attroff(A_REVERSE);
+      }
+    }
+    draw_bar(height - 1, width, " x:Unmark c:Clear Enter:Info Esc:Back q:Quit");
   }
 
   // Show the applied search separately from the editable input so cancelling
@@ -521,6 +756,10 @@ class PackageBrowser {
       attroff(COLOR_PAIR(HEADING_COLOR));
     }
     attroff(A_BOLD);
+    if (!worker.valid() && !editing) {
+      const std::string actions = "m:Mark p:Pending";
+      draw_text(2, width - static_cast<int>(actions.size()) - 1, static_cast<int>(actions.size()), actions);
+    }
 
     attron(A_REVERSE);
     mvhline(3, 0, ' ', width);
@@ -541,7 +780,17 @@ class PackageBrowser {
       if (row.installed && !active && colors) {
         attron(COLOR_PAIR(INSTALLED_COLOR));
       }
-      draw_text(y, 0, status_width - 1, row_status(row));
+      const auto action = std::find_if(pending.begin(), pending.end(), [&](const tui::PendingMark &item) {
+        return item.action.nevra == row.package.nevra;
+      });
+      if (action != pending.end()) {
+        draw_text(y,
+                  0,
+                  status_width - 1,
+                  std::string(action->issue.empty() ? "*" : "!") + tui::pending_action_name(action->action.type));
+      } else {
+        draw_text(y, 0, status_width - 1, row_status(row));
+      }
       if (row.installed && !active && colors) {
         attroff(COLOR_PAIR(INSTALLED_COLOR));
       }

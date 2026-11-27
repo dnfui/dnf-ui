@@ -98,7 +98,7 @@ DNF UI from removing or replacing itself.
 
 ## Experimental terminal frontend
 
-The read-only terminal frontend uses the same package backend as **DNF UI**, but is built as a separate executable.
+The experimental terminal frontend uses the same package backend as **DNF UI**, but is built as a separate executable.
 It is not installed by the RPM. Install `ncurses-devel` if your native development dependencies predate this target.
 
 ```sh
@@ -124,7 +124,13 @@ The selected package summary is shown when the terminal has at least 12 rows. En
 The All view uses the same compact package listing as **DNF UI** (latest candidate per name and architecture).
 The Unneeded view lists packages identified by libdnf5 as unneeded; it does not remove any packages.
 It reloads DNF system state each time, following normal repository metadata expiration rules.
-Package transactions and repository changes are not part of this proof of concept.
+Press `m` on a package to choose an available action. Press `p` to review pending actions, `x` to unmark the
+selected action, or `c` to clear the queue. Marked rows show an asterisk or exclamation mark and the action name.
+Marks are kept in memory across views and are discarded on exit. The pending list checks installed state, daemon targets
+and exact repository availability when opened. An exclamation mark indicates an invalid or unchecked action; Enter explains why. The original
+mark is retained. Returning from validation reloads the package view. Mark upgrades in the Upgradable view;
+removal and reinstall require an exact installed row.
+Transaction preview and execution are not implemented.
 
 The Upgradable view requires dnf5daemon and uses its upgrade target list, not local version comparisons.
 Its details show the reported target and summary, not a transaction preview.
@@ -135,9 +141,11 @@ Quitting cancels package queries where supported and waits for any non-cancellab
 
 For a manual smoke test, search for `bash` twice, refresh the current search with `r`, and inspect installed package details.
 Switch between all five views, refresh each view and check the selected package summary and details.
+Mark packages, replace an action, switch views, review the pending list, unmark one and clear the queue.
+Verify that no package is changed by marking or quitting.
 Compare the Upgradable targets with `dnfui-backend-cli list-upgrades` on the same system.
 When dnf5daemon is unavailable, check that local refresh still works with a warning and Upgradable reports an error.
-`make dockerdnf5daemontest` covers a known TUI upgrade target after refresh and an unavailable daemon.
+`make dockerdnf5daemontest` covers marking and rechecking a known TUI upgrade target and an unavailable daemon.
 Resize the terminal, quit during a repository query and verify the shell is restored. Repeat in Docker.
 Run with repositories unavailable to check the fallback notice and saved warnings. Run with redirected stdin or stdout
 to verify that it rejects non-interactive use.

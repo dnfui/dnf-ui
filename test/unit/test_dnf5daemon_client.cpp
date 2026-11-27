@@ -12,6 +12,7 @@
 #include "dnf5daemon_client/transaction_service_client.hpp"
 #include "dnf5daemon_client/transaction_service_client_parser.hpp"
 #include "tui/upgrade_query.hpp"
+#include "tui/pending_actions.hpp"
 
 #include <glib.h>
 #include <libdnf5/transaction/offline.hpp>
@@ -813,17 +814,24 @@ TEST_CASE("TUI lists current daemon upgrade targets after refresh", "[dnf5daemon
   REQUIRE(BaseManager::instance().current_generation() > generation_before);
   REQUIRE(snapshot.status == DaemonUpgradeSnapshotStatus::READY);
   REQUIRE(result.rows.size() == snapshot.targets_by_name_arch.size());
-  bool found_expected = false;
+  std::vector<tui::PendingMark> marks;
   for (const auto &row : result.rows) {
     REQUIRE(row.upgrade != nullptr);
     REQUIRE_FALSE(row.installed);
     REQUIRE(state.is_current_target(row.upgrade->target, row.upgrade->generation));
     REQUIRE(row.package.nevra == row.upgrade->target.nevra);
     if (row.package.nevra == expected_nevra) {
-      found_expected = true;
+      REQUIRE(tui::mark_pending_action(marks, row, PendingAction::UPGRADE));
     }
   }
-  REQUIRE(found_expected);
+  REQUIRE(marks.size() == 1);
+  const auto issues = tui::validate_pending_marks(marks, nullptr, cancel_flag);
+  REQUIRE(issues.size() == marks.size());
+  INFO(issues.front());
+  REQUIRE(issues.front().empty());
+  REQUIRE(state.snapshot().generation > snapshot.generation);
+  REQUIRE(marks.front().source.upgrade->generation == snapshot.generation);
+  REQUIRE(marks.front().action.nevra == expected_nevra);
 
   state.reset_for_tests();
   transaction_service_client_reset_for_tests();

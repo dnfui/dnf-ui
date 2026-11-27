@@ -107,6 +107,8 @@ if get_option('build_tui')
       'tui/main.cpp',
       'tui/terminal.cpp',
       'tui/upgrade_query.cpp',
+      'tui/pending_actions.cpp',
+      'ui/transaction/pending_transaction_action_rows.cpp',
       'upgrade/daemon_upgrade_state.cpp',
       'i18n.cpp',
     ),

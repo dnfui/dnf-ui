@@ -28,6 +28,7 @@ struct QueryResult {
   std::vector<DisplayRow> rows;
   std::string details;
   std::string notice;
+  std::vector<std::string> pending_issues;
 };
 
 // Refresh daemon metadata and return an error message on failure.
