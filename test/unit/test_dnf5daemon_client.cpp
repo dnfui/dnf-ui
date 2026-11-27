@@ -20,6 +20,8 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
+#include <future>
 #include <memory>
 #include <stdexcept>
 #include <filesystem>
@@ -939,6 +941,82 @@ TEST_CASE("TUI skips cancelled daemon upgrade queries")
 
   REQUIRE(result.rows.empty());
   REQUIRE(state.snapshot().status == DaemonUpgradeSnapshotStatus::NOT_LOADED);
+}
+
+// -----------------------------------------------------------------------------
+// Verify that cancelling a passive status check does not wait for the daemon reply.
+// -----------------------------------------------------------------------------
+TEST_CASE("TUI cancels a delayed offline status session", "[dnf5daemon]")
+{
+  require_dnf5daemon_test_enabled();
+  std::unique_ptr<GTestDBus, decltype(&g_object_unref)> bus(g_test_dbus_new(G_TEST_DBUS_NONE), g_object_unref);
+  g_test_dbus_up(bus.get());
+  ScopedEnvVar system_bus("DBUS_SYSTEM_BUS_ADDRESS", g_test_dbus_get_bus_address(bus.get()));
+
+  GError *error = nullptr;
+  std::unique_ptr<GDBusConnection, decltype(&g_object_unref)> service(
+      g_dbus_connection_new_for_address_sync(
+          g_test_dbus_get_bus_address(bus.get()),
+          static_cast<GDBusConnectionFlags>(G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT |
+                                            G_DBUS_CONNECTION_FLAGS_MESSAGE_BUS_CONNECTION),
+          nullptr,
+          nullptr,
+          &error),
+      g_object_unref);
+  INFO(error ? error->message : "");
+  g_clear_error(&error);
+  REQUIRE(service != nullptr);
+
+  std::unique_ptr<GVariant, decltype(&g_variant_unref)> name_reply(
+      g_dbus_connection_call_sync(service.get(),
+                                  "org.freedesktop.DBus",
+                                  "/org/freedesktop/DBus",
+                                  "org.freedesktop.DBus",
+                                  "RequestName",
+                                  g_variant_new("(su)", "org.rpm.dnf.v0", 0U),
+                                  G_VARIANT_TYPE("(u)"),
+                                  G_DBUS_CALL_FLAGS_NONE,
+                                  -1,
+                                  nullptr,
+                                  &error),
+      g_variant_unref);
+  INFO(error ? error->message : "");
+  g_clear_error(&error);
+  REQUIRE(name_reply != nullptr);
+  guint32 name_result = 0;
+  g_variant_get(name_reply.get(), "(u)", &name_result);
+  REQUIRE(name_result == 1U);
+
+  // Drop the open_session call without replying so the client must cancel it.
+  auto received = std::make_unique<std::promise<void>>();
+  auto request = received->get_future();
+  const guint filter = g_dbus_connection_add_filter(
+      service.get(),
+      [](GDBusConnection *, GDBusMessage *message, gboolean incoming, gpointer data) -> GDBusMessage * {
+        if (incoming && g_dbus_message_get_message_type(message) == G_DBUS_MESSAGE_TYPE_METHOD_CALL &&
+            g_strcmp0(g_dbus_message_get_interface(message), "org.rpm.dnf.v0.SessionManager") == 0 &&
+            g_strcmp0(g_dbus_message_get_member(message), "open_session") == 0) {
+          static_cast<std::promise<void> *>(data)->set_value();
+          g_object_unref(message);
+          return nullptr;
+        }
+        return message;
+      },
+      received.release(),
+      [](gpointer data) { delete static_cast<std::promise<void> *>(data); });
+
+  std::unique_ptr<GCancellable, decltype(&g_object_unref)> cancel(g_cancellable_new(), g_object_unref);
+  auto status = std::async(std::launch::async, [token = cancel.get()]() { return tui::query_offline_state(token); });
+  const auto request_state = request.wait_for(std::chrono::seconds(5));
+  g_cancellable_cancel(cancel.get());
+  const auto cancel_state = status.wait_for(std::chrono::seconds(2));
+  const auto result = status.get();
+
+  g_dbus_connection_remove_filter(service.get(), filter);
+  g_dbus_connection_close_sync(service.get(), nullptr, nullptr);
+  REQUIRE(request_state == std::future_status::ready);
+  REQUIRE(cancel_state == std::future_status::ready);
+  REQUIRE(result == tui::OfflineState::UNKNOWN);
 }
 
 // -----------------------------------------------------------------------------

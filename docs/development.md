@@ -142,8 +142,9 @@ Escape from the result reloads the active package view. Offline changes are prep
 Use `dnf5 offline status` to inspect prepared changes and `sudo dnf5 offline clean` to discard them if needed.
 Native execution requires a working Polkit authentication agent. Key imports are declined; no automatic approval is used.
 The title bar shows when updates are prepared for reboot. Status is checked at startup, on explicit refresh,
-and during the preview and apply workflow. Ordinary package queries keep the last known status.
-If the daemon status cannot be read, the title bar reports that it is unknown.
+and during the preview and apply workflow. The passive check runs independently of package queries and can be cancelled
+when quitting. Ordinary package queries keep the last known status. If the daemon status cannot be read, the title bar
+reports that it is unknown.
 
 The Upgradable view requires dnf5daemon and uses its upgrade target list, not local version comparisons.
 Its details show the reported target and summary, not a transaction preview.
@@ -165,6 +166,7 @@ On a disposable system, send SIGTERM during Apply and verify that the process wa
 Prepare offline updates, restart the TUI, and check the reboot indication. Discard them externally and refresh with `r`.
 Compare the Upgradable targets with `dnfui-backend-cli list-upgrades` on the same system.
 When dnf5daemon is unavailable, check that local refresh still works with a warning and Upgradable reports an error.
+With a daemon that delays its status session reply, check that the installed list loads and quitting does not wait for it.
 `make dockerdnf5daemontest` covers marking, previewing, dismissing and applying a known TUI upgrade target,
 including a failed submission, offline preparation and an unavailable daemon.
 Resize the terminal below 50 columns or 8 rows and check that package and transaction shortcuts do nothing.

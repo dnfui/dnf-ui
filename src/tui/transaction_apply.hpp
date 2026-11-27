@@ -49,6 +49,7 @@ enum class OfflineState {
   PREPARED,
 };
 
+// Read status on a private, cancellable connection without opening a transaction session on the shared client.
 OfflineState query_offline_state(GCancellable *cancel);
 const char *offline_recovery_hint();
 

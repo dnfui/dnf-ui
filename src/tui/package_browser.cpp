@@ -17,8 +17,9 @@ namespace tui {
 
 PackageBrowser::~PackageBrowser()
 {
+  cancel();
+  stop_offline_check();
   if (worker.valid()) {
-    cancel();
     worker.wait();
   }
 }
@@ -26,6 +27,7 @@ PackageBrowser::~PackageBrowser()
 void
 PackageBrowser::cancel()
 {
+  g_cancellable_cancel(offline_cancel.get());
   if (operation == WorkerOperation::APPLY) {
     return;
   }
@@ -53,25 +55,51 @@ PackageBrowser::query(PackageView view, const std::string &term, bool refresh_me
   }
 
   const bool refresh_snapshot = has_queried;
-  const bool check_offline = !has_queried || refresh_metadata;
-  has_queried = true;
-  if (check_offline) {
-    offline_state = tui::OfflineState::UNKNOWN;
+  if (!has_queried || refresh_metadata) {
+    start_offline_check();
   }
-  worker = std::async(std::launch::async,
-                      [view,
-                       term,
-                       refresh_snapshot,
-                       refresh_metadata,
-                       check_offline,
-                       previous_offline = offline_state,
-                       cancel = cancellable.get(),
-                       cancel_flag = cancel_requested]() -> WorkerResult {
-                        const auto offline = check_offline ? tui::query_offline_state(cancel) : previous_offline;
-                        return PackageQueryResult {
-                          query_packages(view, term, refresh_snapshot, refresh_metadata, cancel, cancel_flag), offline
-                        };
-                      });
+  has_queried = true;
+  worker = std::async(
+      std::launch::async,
+      [view, term, refresh_snapshot, refresh_metadata, cancel = cancellable.get(), cancel_flag = cancel_requested]()
+          -> WorkerResult {
+        return query_packages(view, term, refresh_snapshot, refresh_metadata, cancel, cancel_flag);
+      });
+}
+
+void
+PackageBrowser::start_offline_check()
+{
+  stop_offline_check();
+  offline_state = tui::OfflineState::UNKNOWN;
+  g_cancellable_reset(offline_cancel.get());
+  offline_worker =
+      std::async(std::launch::async, [cancel = offline_cancel.get()]() { return tui::query_offline_state(cancel); });
+}
+
+void
+PackageBrowser::stop_offline_check()
+{
+  if (offline_worker.valid()) {
+    g_cancellable_cancel(offline_cancel.get());
+    offline_worker.wait();
+    offline_worker = {};
+  }
+}
+
+bool
+PackageBrowser::collect_offline_state()
+{
+  if (!offline_worker.valid() || offline_worker.wait_for(std::chrono::seconds(0)) != std::future_status::ready) {
+    return false;
+  }
+  try {
+    offline_state = offline_worker.get();
+  } catch (const std::exception &error) {
+    offline_state = tui::OfflineState::UNKNOWN;
+    std::cerr << "Could not check prepared offline updates: " << error.what() << '\n';
+  }
+  return true;
 }
 
 void
@@ -84,6 +112,9 @@ PackageBrowser::run(bool colors_enabled, const tui::ShutdownSignals &shutdown)
   query(PackageView::INSTALLED);
   bool redraw = true;
   while (!shutdown.requested()) {
+    if (collect_offline_state()) {
+      redraw = true;
+    }
     if (collect_result()) {
       redraw = true;
     }
@@ -215,11 +246,7 @@ PackageBrowser::collect_result()
       notice.clear();
       return true;
     }
-    if (completed == WorkerOperation::PACKAGE_QUERY) {
-      offline_state = std::get<PackageQueryResult>(value).offline_state;
-    }
-    auto &result = completed == WorkerOperation::PACKAGE_QUERY ? std::get<PackageQueryResult>(value).query
-                                                               : std::get<QueryResult>(value);
+    auto &result = std::get<QueryResult>(value);
     if (completed == WorkerOperation::PENDING_CHECK) {
       update_pending_issues(std::move(result.pending_issues));
       screen = Screen::PENDING;
@@ -459,6 +486,8 @@ PackageBrowser::handle_pending_key(int kind, wint_t key)
   }
 
   if (kind == OK && key == L'v') {
+    // A passive result must not overwrite the status from preview or apply.
+    stop_offline_check();
     operation = WorkerOperation::PREVIEW;
     reload_after_pending = true;
     notice = "Preparing transaction preview...";

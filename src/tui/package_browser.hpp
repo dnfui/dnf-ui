@@ -54,12 +54,7 @@ class PackageBrowser {
     APPLY,
   };
 
-  struct PackageQueryResult {
-    QueryResult query;
-    tui::OfflineState offline_state;
-  };
-
-  using WorkerResult = std::variant<QueryResult, PackageQueryResult, tui::PreviewResult, tui::ApplyResult>;
+  using WorkerResult = std::variant<QueryResult, tui::PreviewResult, tui::ApplyResult>;
 
   // The worker owns package queries. Only the terminal thread reads UI state
   // and draws to ncurses.
@@ -67,6 +62,9 @@ class PackageBrowser {
   // BaseManager rebuilds use an atomic cancellation flag rather than GCancellable.
   std::shared_ptr<std::atomic<bool>> cancel_requested = std::make_shared<std::atomic<bool>>(false);
   std::future<WorkerResult> worker;
+  // Passive offline status checks do not block package browsing.
+  std::unique_ptr<GCancellable, decltype(&g_object_unref)> offline_cancel { g_cancellable_new(), g_object_unref };
+  std::future<tui::OfflineState> offline_worker;
   std::vector<DisplayRow> rows;
   size_t selected = 0;
   size_t first = 0;
@@ -92,6 +90,9 @@ class PackageBrowser {
   void query(PackageView view, const std::string &term = {}, bool refresh_metadata = false);
   void update_pending_issues(std::vector<std::string> issues);
   bool collect_result();
+  void start_offline_check();
+  void stop_offline_check();
+  bool collect_offline_state();
   void load_details();
   void handle_search_key(int kind, wint_t key);
   void handle_list_key(int kind, wint_t key);
