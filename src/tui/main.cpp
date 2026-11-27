@@ -236,29 +236,8 @@ wrap_text(const std::string &text, int width)
   return lines;
 }
 
-const char *
-state_text(PackageInstallState state)
-{
-  switch (state) {
-  case PackageInstallState::INSTALLED:
-    return "Installed";
-  case PackageInstallState::LOCAL_ONLY:
-    return "Installed (local)";
-  case PackageInstallState::INSTALLED_NEWER_THAN_REPO:
-    return "Installed (newer)";
-  case PackageInstallState::UPGRADEABLE:
-    return "Upgradable";
-  case PackageInstallState::DOWNGRADEABLE:
-    return "Downgradable";
-  case PackageInstallState::AVAILABLE:
-    return "Available";
-  }
-  return "Unknown";
-}
-
 struct DisplayRow {
   PackageRow package;
-  PackageInstallState state;
   bool installed;
 };
 
@@ -294,6 +273,7 @@ class PackageBrowser {
     details.clear();
     showing_details = false;
     notice = installed ? "Loading installed packages..." : "Searching packages...";
+    list_notice.clear();
     loading_details = false;
     if (refresh_metadata) {
       notice = "Refreshing repository metadata...";
@@ -346,10 +326,15 @@ class PackageBrowser {
                             if (g_cancellable_is_cancelled(cancel)) {
                               return result;
                             }
-                            const auto resolution = dnf_backend_resolve_installed_package(package);
-                            result.rows.push_back({ std::move(package), resolution.state, resolution.exact_installed });
+                            const bool exact_installed = dnf_backend_resolve_installed_package(package).exact_installed;
+                            result.rows.push_back({ std::move(package), exact_installed });
                           }
                           result.notice = std::to_string(result.rows.size()) + " packages";
+                          if (installed) {
+                            result.notice += " installed";
+                          } else {
+                            result.notice += " matching " + term;
+                          }
                           if (repo_state == BaseRepoState::INSTALLED_ONLY) {
                             result.notice += " (repository metadata unavailable)";
                           } else if (repo_state == BaseRepoState::CACHED_METADATA) {
@@ -421,6 +406,7 @@ class PackageBrowser {
   size_t details_first = 0;
   std::string details;
   std::string notice;
+  std::string list_notice;
   std::string term;
   std::string active_search;
   bool installed_view = true;
@@ -443,7 +429,8 @@ class PackageBrowser {
         notice.clear();
       } else {
         rows = std::move(result.rows);
-        notice = std::move(result.notice);
+        list_notice = std::move(result.notice);
+        notice = list_notice;
       }
     } catch (const std::exception &error) {
       notice = error.what();
@@ -455,7 +442,7 @@ class PackageBrowser {
   {
     const auto &row = rows[selected];
     const std::string nevra = row.package.nevra;
-    const std::string status = state_text(row.state);
+    const std::string status = row.installed ? "Installed" : "Available";
     const auto context =
         row.installed ? PackageDetailsContext::INSTALLED_CONTEXT : PackageDetailsContext::SELECTED_VERSION;
     loading_details = true;
@@ -532,7 +519,7 @@ class PackageBrowser {
   {
     if (kind == OK && key == 27) {
       showing_details = false;
-      notice = std::to_string(rows.size()) + " packages";
+      notice = list_notice;
     } else if (kind == KEY_CODE_YES && key == KEY_UP && details_first > 0) {
       --details_first;
     } else if (kind == KEY_CODE_YES && key == KEY_DOWN) {
@@ -552,6 +539,7 @@ class PackageBrowser {
     erase();
     if (height < 8 || width < 50) {
       draw_text(0, 0, width - 1, "Terminal too small (50 x 8 required)");
+      curs_set(0);
       refresh();
       return;
     }
@@ -572,13 +560,18 @@ class PackageBrowser {
     } else {
       draw_list(height, width);
     }
+    if (editing) {
+      curs_set(1);
+    } else {
+      curs_set(0);
+    }
     refresh();
   }
 
   void draw_list(int height, int width)
   {
     const int name_width = width / 3;
-    const int version_width = width - name_width - 30;
+    const int version_width = width - name_width - 23;
     const int arch_x = name_width + version_width;
     const int state_x = arch_x + 10;
     const size_t page = static_cast<size_t>(height - 5);
@@ -607,15 +600,28 @@ class PackageBrowser {
       draw_text(y, 0, name_width - 1, row.package.name);
       draw_text(y, name_width, version_width - 1, row.package.display_version());
       draw_text(y, arch_x, 9, row.package.arch);
-      draw_text(y, state_x, width - state_x, state_text(row.state));
+      draw_text(y, state_x, width - state_x, row.installed ? "Installed" : "Available");
       if (active) {
         attroff(A_REVERSE);
       }
     }
 
     if (editing) {
-      draw_text(height - 2, 0, width, "Search: " + term);
+      draw_text(height - 2, 0, width, "Search: ");
+      auto input = wide_text(term);
+      int cells = 0;
+      size_t start = input.size();
+      while (start > 0) {
+        const int next = wcwidth(input[start - 1]);
+        if (cells + next > width - 9) {
+          break;
+        }
+        cells += next;
+        --start;
+      }
+      draw_text(height - 2, 8, width - 8, input.substr(start));
       draw_text(height - 1, 0, width - 1, "Enter: Search  Esc: Cancel");
+      wmove(stdscr, height - 2, 8 + cells);
     } else {
       draw_text(height - 2, 0, width, notice);
       draw_text(height - 1, 0, width - 1, "/:Search i:Installed r:Refresh Enter:Info q:Quit");

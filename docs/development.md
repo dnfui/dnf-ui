@@ -119,6 +119,15 @@ Use `/` to search, `i` to list installed packages, `r` to refresh repository met
 the arrow and page keys to navigate, Enter to open details, Escape to return, and `q` to quit. The terminal must be at least 50 columns wide and 8 rows high.
 Package transactions and repository changes are not part of this proof of concept.
 
+The Status column reports whether the exact package version is installed. It does not report resolved upgrades.
+Backend warnings are printed after the terminal closes. To see them while the app runs, redirect stderr to a file.
+Quitting cancels package queries where supported and waits for any non-cancellable backend work to finish.
+
+For a manual smoke test, search for `bash` twice, refresh the current search with `r`, and inspect installed package details.
+Resize the terminal, quit during a repository query and verify the shell is restored. Repeat in Docker.
+Run with repositories unavailable to check the fallback notice and saved warnings. Run with redirected stdin or stdout
+to verify that it rejects non-interactive use.
+
 ## Native transaction testing
 
 For native Polkit testing from the source tree, build the app and run it as a regular desktop user:
