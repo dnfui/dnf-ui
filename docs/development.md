@@ -133,7 +133,14 @@ removal and reinstall require an exact installed row.
 Press `v` in the pending view to validate the marks again and resolve a transaction preview through dnf5daemon.
 The preview includes dependency changes, additional removals, warnings, disk space and offline requirements.
 If a marked action is missing from the resolved transaction, the mark is retained and flagged.
-The daemon session is released after resolution. Key import and transaction execution are not implemented.
+Press `a` in a successful preview, then `y` to confirm the displayed changes. Escape dismisses an unapproved preview.
+The approved daemon session is submitted exactly once. Progress is shown while package controls and quitting are disabled.
+Online transactions clear pending marks on success or failure. A failed offline preparation retains the marks for review.
+Escape from the result reloads the active package view. Offline changes are prepared for reboot, not applied immediately.
+Use `dnf5 offline status` to inspect prepared changes and `sudo dnf5 offline clean` to discard them if needed.
+Native execution requires a working Polkit authentication agent. Key imports are declined; no automatic approval is used.
+The title bar shows when updates are prepared for reboot. Status is checked on package queries and after Apply.
+If the daemon status cannot be read, the title bar reports that it is unknown.
 
 The Upgradable view requires dnf5daemon and uses its upgrade target list, not local version comparisons.
 Its details show the reported target and summary, not a transaction preview.
@@ -141,15 +148,22 @@ The other views report whether the exact package version is installed. Refresh c
 If daemon refresh fails, local views still reload with a warning; the Upgradable view reports an error.
 Backend warnings are printed after the terminal closes. To see them while the app runs, redirect stderr to a file.
 Quitting cancels package queries where supported and waits for any non-cancellable backend work to finish.
+SIGHUP, SIGTERM and SIGINT request orderly shutdown. During Apply, shutdown waits for the daemon call to return.
+Forced termination, such as SIGKILL, cannot be handled.
 
 For a manual smoke test, search for `bash` twice, refresh the current search with `r`, and inspect installed package details.
 Switch between all five views, refresh each view and check the selected package summary and details.
 Mark packages, replace an action, switch views, review the pending list, unmark one and clear the queue.
 Preview marked changes, return to the pending list and verify that the marks are retained.
-Verify that no package is changed by marking, previewing or quitting.
+Verify that no package is changed by marking, previewing or quitting before confirmation.
+In Docker, mark a small package, preview and confirm installation, then confirm removal. Check the refreshed package state.
+Verify that declining confirmation leaves packages unchanged and that quitting is disabled during Apply.
+On a disposable system, send SIGTERM during Apply and verify that the process waits for the daemon call to finish.
+Prepare offline updates, restart the TUI, and check the reboot indication. Discard them externally and refresh with `r`.
 Compare the Upgradable targets with `dnfui-backend-cli list-upgrades` on the same system.
 When dnf5daemon is unavailable, check that local refresh still works with a warning and Upgradable reports an error.
-`make dockerdnf5daemontest` covers marking and rechecking a known TUI upgrade target and an unavailable daemon.
+`make dockerdnf5daemontest` covers marking, previewing, dismissing and applying a known TUI upgrade target,
+including a failed submission, offline preparation and an unavailable daemon.
 Resize the terminal, quit during a repository query and verify the shell is restored. Repeat in Docker.
 Run with repositories unavailable to check the fallback notice and saved warnings. Run with redirected stdin or stdout
 to verify that it rejects non-interactive use.

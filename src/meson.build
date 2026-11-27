@@ -106,9 +106,11 @@ if get_option('build_tui')
     backend_sources + daemon_client_sources + files(
       'tui/main.cpp',
       'tui/terminal.cpp',
+      'tui/shutdown.cpp',
       'tui/upgrade_query.cpp',
       'tui/pending_actions.cpp',
       'tui/transaction_preview.cpp',
+      'tui/transaction_apply.cpp',
       'ui/transaction/pending_transaction_request.cpp',
       'ui/transaction/pending_transaction_action_rows.cpp',
       'upgrade/daemon_upgrade_state.cpp',

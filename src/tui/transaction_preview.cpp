@@ -14,15 +14,6 @@
 namespace tui {
 namespace {
 
-  struct PreviewSession {
-    std::string path;
-
-    ~PreviewSession()
-    {
-      transaction_service_client_release_request(path);
-    }
-  };
-
   bool contains_mark(const std::vector<TransactionPreviewPackage> &packages, const PendingAction &action)
   {
     return std::any_of(packages.begin(), packages.end(), [&](const TransactionPreviewPackage &package) {
@@ -121,13 +112,13 @@ namespace {
                                         GCancellable *cancel,
                                         PreviewResult result)
   {
-    PreviewSession session;
+    auto session = std::make_unique<PreparedTransaction>();
     TransactionPreview preview;
     bool key_requested = false;
     const bool resolved = transaction_service_client_preview_request(
         request,
         preview,
-        session.path,
+        session->path_for_resolution(),
         result.error,
         [&key_requested](const TransactionKeyImportRequest &) {
           key_requested = true;
@@ -135,7 +126,7 @@ namespace {
         },
         cancel);
 #ifdef DNFUI_BUILD_TESTS
-    result.released_session_path = session.path;
+    result.session_path_for_tests = session->path();
 #endif
     if (key_requested) {
       result.error =
@@ -171,8 +162,14 @@ namespace {
       return result;
     }
 
+    if (session->path().empty()) {
+      result.error = "dnf5daemon returned no prepared session.";
+      return result;
+    }
     preview.identify_additional_removals(request.remove);
     result.preview = std::move(preview);
+    session->set_offline_mode(result.preview.requires_offline);
+    result.prepared = std::move(session);
     return result;
   }
 

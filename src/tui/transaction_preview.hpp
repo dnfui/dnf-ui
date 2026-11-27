@@ -4,6 +4,7 @@
 #pragma once
 
 #include "pending_actions.hpp"
+#include "transaction_apply.hpp"
 #include "transaction/transaction_preview.hpp"
 
 #include <set>
@@ -18,8 +19,10 @@ struct PreviewResult {
   TransactionPreview preview;
   std::vector<std::string> pending_issues;
   std::string error;
+  std::unique_ptr<PreparedTransaction> prepared;
+  OfflineState offline_state = OfflineState::UNKNOWN;
 #ifdef DNFUI_BUILD_TESTS
-  std::string released_session_path;
+  std::string session_path_for_tests;
 #endif
 };
 
@@ -28,7 +31,7 @@ std::vector<std::string> preview_mark_issues(const TransactionPreview &preview,
                                              const std::vector<PendingMark> &marks,
                                              const std::set<std::string> &installonly_nevras);
 
-// Resolve a preview and release its daemon session. This cannot apply packages.
+// Resolve a preview and retain the session only when all marked actions match.
 PreviewResult preview_pending_marks(const std::vector<PendingMark> &marks,
                                     GCancellable *cancel,
                                     const std::shared_ptr<std::atomic<bool>> &cancel_flag);

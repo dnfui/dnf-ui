@@ -187,7 +187,8 @@ DNFUI_TEST_DNF5DAEMON_UPGRADE_SPEC="$API_TEST_PACKAGE.noarch" \
 DNFUI_TEST_DNF5DAEMON_UPGRADE_EXPECTED_NEVRA="$API_TEST_PACKAGE-$API_TEST_NEW_VERSION-1.noarch" \
   run_daemon_test "TUI lists current daemon upgrade targets after refresh"
 
-dnf5 -y upgrade "$API_TEST_PACKAGE" >/dev/null
+DNFUI_TEST_DNF5DAEMON_UPGRADE_EXPECTED_NEVRA="$API_TEST_PACKAGE-$API_TEST_NEW_VERSION-1.noarch" \
+  run_daemon_test "TUI applies the approved upgrade session"
 test "$(rpm -q --qf '%{VERSION}' "$API_TEST_PACKAGE")" = "$API_TEST_NEW_VERSION"
 DNFUI_TEST_DNF5DAEMON_DOWNGRADE_SPEC="$API_TEST_PACKAGE-$API_TEST_OLD_VERSION-1.noarch" \
   run_daemon_test "dnf5daemon client previews downgrade requests"
@@ -208,6 +209,7 @@ run_daemon_test "dnf5daemon client previews remove requests"
 run_daemon_test "dnf5daemon client previews reinstall requests"
 remove_test_package
 
+DNFUI_TEST_DNF5DAEMON_OFFLINE=1 run_daemon_test "TUI prepares approved daemon changes for reboot"
 DNFUI_TEST_DNF5DAEMON_OFFLINE=1 run_daemon_test "dnf5daemon client prepares daemon changes for reboot"
 DNFUI_TEST_DNF5DAEMON_OFFLINE=1 run_daemon_test "dnf5daemon client discards prepared updates"
 DNFUI_TEST_DNF5DAEMON_OFFLINE=1 run_daemon_test "dnf5daemon client discards unreadable offline updates"

@@ -6,6 +6,7 @@
 #include "dnf_backend/dnf_backend.hpp"
 #include "i18n.hpp"
 #include "terminal.hpp"
+#include "shutdown.hpp"
 #include "pending_actions.hpp"
 #include "transaction_preview.hpp"
 #include "upgrade_query.hpp"
@@ -21,6 +22,7 @@
 #include <stdexcept>
 #include <string>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include <unistd.h>
@@ -60,6 +62,9 @@ enum class Screen {
   PENDING,
   PENDING_DETAILS,
   PREVIEW,
+  CONFIRM_APPLY,
+  APPLYING,
+  APPLY_RESULT,
 };
 
 enum class WorkerOperation {
@@ -68,6 +73,8 @@ enum class WorkerOperation {
   PACKAGE_DETAILS,
   PENDING_CHECK,
   PREVIEW,
+  RELEASE_PREVIEW,
+  APPLY,
 };
 
 enum class PackageView {
@@ -105,6 +112,13 @@ row_status(const DisplayRow &row)
   return row.installed ? "Installed" : "Available";
 }
 
+struct PackageQueryResult {
+  QueryResult query;
+  tui::OfflineState offline_state;
+};
+
+using WorkerResult = std::variant<QueryResult, PackageQueryResult, tui::PreviewResult, tui::ApplyResult>;
+
 class PackageBrowser {
   public:
   ~PackageBrowser()
@@ -117,6 +131,9 @@ class PackageBrowser {
 
   void cancel()
   {
+    if (operation == WorkerOperation::APPLY) {
+      return;
+    }
     cancel_requested->store(true, std::memory_order_relaxed);
     g_cancellable_cancel(cancellable.get());
   }
@@ -143,99 +160,122 @@ class PackageBrowser {
     has_queried = true;
     worker = std::async(
         std::launch::async,
-        [view, term, refresh_snapshot, refresh_metadata, cancel = cancellable.get(), cancel_flag = cancel_requested] {
-          QueryResult result;
-          if (g_cancellable_is_cancelled(cancel)) {
-            return result;
-          }
-
-          if (view == PackageView::UPGRADABLE) {
-            return tui::query_upgrades(refresh_metadata, cancel, cancel_flag);
-          }
-          DaemonUpgradeState::instance().mark_stale();
-
-          // A new Base already reads the rpmdb. On later queries, check for
-          // external changes without discarding usable repository metadata.
-          auto &manager = BaseManager::instance();
-          std::string daemon_refresh_error;
-          if (refresh_metadata) {
-            daemon_refresh_error = tui::refresh_daemon_metadata(cancel);
-            if (g_cancellable_is_cancelled(cancel)) {
-              return result;
-            }
-            manager.rebuild(BaseRefreshMode::FORCE_METADATA_CHECK, cancel_flag);
-          } else if (view == PackageView::UNNEEDED) {
-            // Installation reasons can change without changing installed NEVRAs.
-            // Reload system state using normal repository expiration rules.
-            manager.rebuild(BaseRefreshMode::NORMAL, cancel_flag);
-          } else if (refresh_snapshot) {
-            const bool changed = dnf_backend_refresh_installed_snapshot_preserving_cached_base();
-            if (g_cancellable_is_cancelled(cancel)) {
-              return result;
-            }
-            if (changed || manager.current_repo_state() != BaseRepoState::LIVE_METADATA) {
-              manager.drop_cached_base();
-            }
-          }
-
-          if (g_cancellable_is_cancelled(cancel)) {
-            return result;
-          }
-          std::vector<PackageRow> packages;
-          switch (view) {
-          case PackageView::INSTALLED:
-            packages = dnf_backend_get_installed_package_rows_interruptible(cancel);
-            break;
-          case PackageView::ALL:
-            packages = dnf_backend_get_browse_package_rows_interruptible({}, cancel);
-            break;
-          case PackageView::UNNEEDED:
-            packages = dnf_backend_get_unneeded_package_rows_interruptible(cancel);
-            break;
-          case PackageView::SEARCH:
-            packages = dnf_backend_search_package_rows_interruptible(term, {}, cancel);
-            break;
-          case PackageView::UPGRADABLE:
-            break;
-          }
-          if (g_cancellable_is_cancelled(cancel)) {
-            return result;
-          }
-          const BaseRepoState repo_state = manager.current_repo_state();
-          std::sort(packages.begin(), packages.end(), [](const PackageRow &a, const PackageRow &b) {
-            return a.nevra < b.nevra;
-          });
-
-          result.rows.reserve(packages.size());
-          for (auto &package : packages) {
-            if (g_cancellable_is_cancelled(cancel)) {
-              return result;
-            }
-            const bool exact_installed = dnf_backend_resolve_installed_package(package).exact_installed;
-            result.rows.push_back({ std::move(package), exact_installed });
-          }
-          result.notice = std::to_string(result.rows.size()) + " packages";
-          if (repo_state == BaseRepoState::INSTALLED_ONLY) {
-            result.notice += " (repository metadata unavailable)";
-          } else if (repo_state == BaseRepoState::CACHED_METADATA) {
-            result.notice += " (cached repository metadata)";
-          }
-          if (!daemon_refresh_error.empty()) {
-            std::cerr << "dnf5daemon refresh failed: " << daemon_refresh_error << '\n';
-            result.notice = "Daemon refresh failed; " + result.notice;
-          }
-          return result;
+        [view, term, refresh_snapshot, refresh_metadata, cancel = cancellable.get(), cancel_flag = cancel_requested]()
+            -> WorkerResult {
+          const auto offline = tui::query_offline_state(cancel);
+          return PackageQueryResult {
+            query_packages(view, term, refresh_snapshot, refresh_metadata, cancel, cancel_flag), offline
+          };
         });
   }
 
-  void run(bool colors_enabled)
+  static QueryResult query_packages(PackageView view,
+                                    const std::string &term,
+                                    bool refresh_snapshot,
+                                    bool refresh_metadata,
+                                    GCancellable *cancel,
+                                    const std::shared_ptr<std::atomic<bool>> &cancel_flag)
+  {
+    QueryResult result;
+    if (g_cancellable_is_cancelled(cancel)) {
+      return result;
+    }
+
+    if (view == PackageView::UPGRADABLE) {
+      return tui::query_upgrades(refresh_metadata, cancel, cancel_flag);
+    }
+    DaemonUpgradeState::instance().mark_stale();
+
+    // A new Base already reads the rpmdb. On later queries, check for
+    // external changes without discarding usable repository metadata.
+    auto &manager = BaseManager::instance();
+    std::string daemon_refresh_error;
+    if (refresh_metadata) {
+      daemon_refresh_error = tui::refresh_daemon_metadata(cancel);
+      if (g_cancellable_is_cancelled(cancel)) {
+        return result;
+      }
+      manager.rebuild(BaseRefreshMode::FORCE_METADATA_CHECK, cancel_flag);
+    } else if (view == PackageView::UNNEEDED) {
+      // Installation reasons can change without changing installed NEVRAs.
+      // Reload system state using normal repository expiration rules.
+      manager.rebuild(BaseRefreshMode::NORMAL, cancel_flag);
+    } else if (refresh_snapshot) {
+      const bool changed = dnf_backend_refresh_installed_snapshot_preserving_cached_base();
+      if (g_cancellable_is_cancelled(cancel)) {
+        return result;
+      }
+      if (changed || manager.current_repo_state() != BaseRepoState::LIVE_METADATA) {
+        manager.drop_cached_base();
+      }
+    }
+
+    if (g_cancellable_is_cancelled(cancel)) {
+      return result;
+    }
+    std::vector<PackageRow> packages;
+    switch (view) {
+    case PackageView::INSTALLED:
+      packages = dnf_backend_get_installed_package_rows_interruptible(cancel);
+      break;
+    case PackageView::ALL:
+      packages = dnf_backend_get_browse_package_rows_interruptible({}, cancel);
+      break;
+    case PackageView::UNNEEDED:
+      packages = dnf_backend_get_unneeded_package_rows_interruptible(cancel);
+      break;
+    case PackageView::SEARCH:
+      packages = dnf_backend_search_package_rows_interruptible(term, {}, cancel);
+      break;
+    case PackageView::UPGRADABLE:
+      break;
+    }
+    if (g_cancellable_is_cancelled(cancel)) {
+      return result;
+    }
+    const BaseRepoState repo_state = manager.current_repo_state();
+    std::sort(
+        packages.begin(), packages.end(), [](const PackageRow &a, const PackageRow &b) { return a.nevra < b.nevra; });
+
+    result.rows.reserve(packages.size());
+    for (auto &package : packages) {
+      if (g_cancellable_is_cancelled(cancel)) {
+        return result;
+      }
+      const bool exact_installed = dnf_backend_resolve_installed_package(package).exact_installed;
+      result.rows.push_back({ std::move(package), exact_installed });
+    }
+    result.notice = std::to_string(result.rows.size()) + " packages";
+    if (repo_state == BaseRepoState::INSTALLED_ONLY) {
+      result.notice += " (repository metadata unavailable)";
+    } else if (repo_state == BaseRepoState::CACHED_METADATA) {
+      result.notice += " (cached repository metadata)";
+    }
+    if (!daemon_refresh_error.empty()) {
+      std::cerr << "dnf5daemon refresh failed: " << daemon_refresh_error << '\n';
+      result.notice = "Daemon refresh failed; " + result.notice;
+    }
+    return result;
+  }
+
+  void run(bool colors_enabled, const tui::ShutdownSignals &shutdown)
   {
     colors = colors_enabled;
+    if (shutdown.requested()) {
+      return;
+    }
     query(PackageView::INSTALLED);
     bool redraw = true;
-    while (true) {
+    while (!shutdown.requested()) {
       if (collect_result()) {
         redraw = true;
+      }
+      if (operation == WorkerOperation::APPLY && apply_progress) {
+        const auto progress = apply_progress->text();
+        if (!progress.empty() && progress != notice) {
+          notice = progress;
+          redraw = true;
+        }
       }
       if (redraw) {
         draw();
@@ -244,6 +284,9 @@ class PackageBrowser {
 
       wint_t key = 0;
       const int kind = wget_wch(stdscr, &key);
+      if (shutdown.requested()) {
+        return;
+      }
       if (kind == ERR) {
         if (terminal_input_closed()) {
           return;
@@ -251,6 +294,9 @@ class PackageBrowser {
         continue;
       }
       if (kind == OK && key == 3) {
+        if (operation == WorkerOperation::APPLY) {
+          continue;
+        }
         return;
       }
       if ((kind == KEY_CODE_YES && key == KEY_RESIZE) || (kind == OK && key == 12)) {
@@ -264,6 +310,9 @@ class PackageBrowser {
         continue;
       }
       if (kind == OK && (key == L'q' || key == L'Q')) {
+        if (operation == WorkerOperation::APPLY) {
+          continue;
+        }
         return;
       }
       if (worker.valid()) {
@@ -273,8 +322,20 @@ class PackageBrowser {
       switch (screen) {
       case Screen::PACKAGE_DETAILS:
       case Screen::PENDING_DETAILS:
-      case Screen::PREVIEW:
         handle_details_key(kind, key);
+        break;
+      case Screen::PREVIEW:
+      case Screen::CONFIRM_APPLY:
+        handle_preview_key(kind, key);
+        break;
+      case Screen::APPLY_RESULT:
+        if (kind == OK && key == 27) {
+          query(active_view, active_search);
+        } else {
+          handle_details_key(kind, key);
+        }
+        break;
+      case Screen::APPLYING:
         break;
       case Screen::ACTION_MENU:
         handle_action_key(kind, key);
@@ -297,7 +358,7 @@ class PackageBrowser {
   std::unique_ptr<GCancellable, decltype(&g_object_unref)> cancellable { g_cancellable_new(), g_object_unref };
   // BaseManager rebuilds use an atomic cancellation flag rather than GCancellable.
   std::shared_ptr<std::atomic<bool>> cancel_requested = std::make_shared<std::atomic<bool>>(false);
-  std::future<QueryResult> worker;
+  std::future<WorkerResult> worker;
   std::vector<DisplayRow> rows;
   size_t selected = 0;
   size_t first = 0;
@@ -314,6 +375,9 @@ class PackageBrowser {
   WorkerOperation operation = WorkerOperation::NONE;
   std::vector<tui::PendingMark> pending;
   bool reload_after_pending = false;
+  std::unique_ptr<tui::PreparedTransaction> prepared;
+  std::shared_ptr<tui::TransactionProgress> apply_progress;
+  tui::OfflineState offline_state = tui::OfflineState::UNKNOWN;
   size_t pending_selected = 0;
   size_t pending_first = 0;
 
@@ -338,14 +402,33 @@ class PackageBrowser {
     const auto completed = operation;
     operation = WorkerOperation::NONE;
     try {
-      auto result = worker.get();
+      auto value = worker.get();
       if (completed == WorkerOperation::PREVIEW) {
+        auto &result = std::get<tui::PreviewResult>(value);
         update_pending_issues(std::move(result.pending_issues));
-        details = std::move(result.details);
+        offline_state = result.offline_state;
+        prepared = std::move(result.prepared);
+        details = result.error.empty() ? tui::format_preview(result.preview) : std::move(result.error);
         details_first = 0;
-        notice = std::move(result.notice);
+        notice = prepared ? "Transaction preview" : "Transaction preview failed";
         screen = Screen::PREVIEW;
-      } else if (completed == WorkerOperation::PENDING_CHECK) {
+        return true;
+      }
+      if (completed == WorkerOperation::APPLY) {
+        auto &result = std::get<tui::ApplyResult>(value);
+        finish_apply(result);
+        return true;
+      }
+      if (completed == WorkerOperation::RELEASE_PREVIEW) {
+        notice.clear();
+        return true;
+      }
+      if (completed == WorkerOperation::PACKAGE_QUERY) {
+        offline_state = std::get<PackageQueryResult>(value).offline_state;
+      }
+      auto &result = completed == WorkerOperation::PACKAGE_QUERY ? std::get<PackageQueryResult>(value).query
+                                                                 : std::get<QueryResult>(value);
+      if (completed == WorkerOperation::PENDING_CHECK) {
         update_pending_issues(std::move(result.pending_issues));
         screen = Screen::PENDING;
       } else if (completed == WorkerOperation::PACKAGE_DETAILS) {
@@ -369,7 +452,17 @@ class PackageBrowser {
         }
       }
     } catch (const std::exception &error) {
+      if (completed == WorkerOperation::APPLY) {
+        DaemonUpgradeState::instance().mark_stale();
+        BaseManager::instance().drop_cached_base();
+        tui::ApplyResult failed;
+        failed.message = std::string(error.what()) +
+            "\n\nInstalled packages may have changed. Review package state and dnf5 offline status before retrying.";
+        finish_apply(failed);
+        return true;
+      }
       if (completed == WorkerOperation::PREVIEW) {
+        prepared.reset();
         for (auto &mark : pending) {
           mark.issue = "Unchecked: preview failed.";
         }
@@ -385,6 +478,7 @@ class PackageBrowser {
         }
         std::cerr << "Pending validation failed: " << error.what() << '\n';
       } else if (completed == WorkerOperation::PACKAGE_QUERY) {
+        offline_state = tui::OfflineState::UNKNOWN;
         for (auto &mark : pending) {
           mark.issue = "Unchecked: package query failed.";
         }
@@ -413,7 +507,7 @@ class PackageBrowser {
         row.installed ? PackageDetailsContext::INSTALLED_CONTEXT : PackageDetailsContext::SELECTED_VERSION;
     operation = WorkerOperation::PACKAGE_DETAILS;
     notice = "Loading package details...";
-    worker = std::async(std::launch::async, [nevra, status, context, cancel = cancellable.get()] {
+    worker = std::async(std::launch::async, [nevra, status, context, cancel = cancellable.get()]() -> WorkerResult {
       QueryResult result;
       if (g_cancellable_is_cancelled(cancel)) {
         return result;
@@ -475,12 +569,13 @@ class PackageBrowser {
       } else {
         operation = WorkerOperation::PENDING_CHECK;
         notice = "Checking pending actions...";
-        worker = std::async(std::launch::async,
-                            [marks = pending, cancel = cancellable.get(), cancel_flag = cancel_requested] {
-                              QueryResult result;
-                              result.pending_issues = tui::validate_pending_marks(marks, cancel, cancel_flag);
-                              return result;
-                            });
+        worker =
+            std::async(std::launch::async,
+                       [marks = pending, cancel = cancellable.get(), cancel_flag = cancel_requested]() -> WorkerResult {
+                         QueryResult result;
+                         result.pending_issues = tui::validate_pending_marks(marks, cancel, cancel_flag);
+                         return result;
+                       });
       }
     } else if (!rows.empty()) {
       if (kind == OK && key == L'm') {
@@ -572,19 +667,22 @@ class PackageBrowser {
       reload_after_pending = true;
       notice = "Preparing transaction preview...";
       worker =
-          std::async(std::launch::async, [marks = pending, cancel = cancellable.get(), cancel_flag = cancel_requested] {
-            QueryResult result;
-            auto preview = tui::preview_pending_marks(marks, cancel, cancel_flag);
-            result.pending_issues = std::move(preview.pending_issues);
-            if (preview.error.empty()) {
-              result.notice = "Transaction preview";
-              result.details = tui::format_preview(preview.preview);
-            } else {
-              result.notice = "Transaction preview failed";
-              result.details = std::move(preview.error);
-            }
-            return result;
-          });
+          std::async(std::launch::async,
+                     [marks = pending, cancel = cancellable.get(), cancel_flag = cancel_requested]() -> WorkerResult {
+                       auto result = tui::preview_pending_marks(marks, cancel, cancel_flag);
+                       if (result.prepared) {
+                         // The daemon checked that no offline transaction was stored before resolving.
+                         result.offline_state = tui::OfflineState::NOT_PREPARED;
+                       } else {
+                         result.offline_state = tui::query_offline_state(cancel);
+                         if (!result.error.empty() && result.offline_state == tui::OfflineState::PREPARED) {
+                           std::cerr << "Transaction preview failed: " << result.error << '\n';
+                           result.error = std::string("Updates are already prepared for reboot.\n\n") +
+                               tui::offline_recovery_hint();
+                         }
+                       }
+                       return result;
+                     });
     } else if (kind == OK && key == L'x') {
       pending.erase(pending.begin() + pending_selected);
       if (pending_selected >= pending.size() && pending_selected > 0) {
@@ -619,6 +717,79 @@ class PackageBrowser {
     }
   }
 
+  void handle_preview_key(int kind, wint_t key)
+  {
+    if (kind == OK && key == 27 && screen == Screen::PREVIEW) {
+      screen = Screen::PENDING;
+      if (prepared) {
+        notice = "Releasing transaction preview...";
+        operation = WorkerOperation::RELEASE_PREVIEW;
+        worker = std::async(std::launch::async, [session = std::move(prepared)]() mutable -> WorkerResult {
+          session.reset();
+          return QueryResult {};
+        });
+      } else {
+        notice.clear();
+      }
+      return;
+    }
+    if (screen == Screen::CONFIRM_APPLY) {
+      if (kind == OK && (key == 27 || key == L'n')) {
+        screen = Screen::PREVIEW;
+        notice = "Transaction preview";
+        return;
+      }
+      if (kind == OK && key == L'y' && prepared && getmaxy(stdscr) >= MIN_HEIGHT && getmaxx(stdscr) >= MIN_WIDTH) {
+        start_apply();
+        return;
+      }
+    } else if (kind == OK && key == L'a' && prepared) {
+      screen = Screen::CONFIRM_APPLY;
+      notice = prepared->requires_offline() ? "Prepare these changes for reboot?" : "Apply these package changes?";
+      return;
+    }
+    if (kind != OK || key != 27) {
+      handle_details_key(kind, key);
+    }
+  }
+
+  void start_apply()
+  {
+    screen = Screen::APPLYING;
+    operation = WorkerOperation::APPLY;
+    notice = "Submitting approved transaction...";
+    apply_progress = std::make_shared<tui::TransactionProgress>();
+    worker = std::async(std::launch::async,
+                        [session = std::move(prepared), progress = apply_progress]() mutable -> WorkerResult {
+                          return tui::apply_transaction(std::move(session), *progress);
+                        });
+  }
+
+  void finish_apply(const tui::ApplyResult &result)
+  {
+    apply_progress.reset();
+    offline_state = result.offline_state;
+    rows.clear();
+    selected = 0;
+    first = 0;
+    // Keep marks only when offline preparation failed, as in the desktop frontend.
+    if (result.success || !result.offline) {
+      pending.clear();
+    } else {
+      for (auto &mark : pending) {
+        mark.issue = "Unchecked: offline preparation failed.";
+      }
+    }
+    pending_selected = 0;
+    pending_first = 0;
+    reload_after_pending = false;
+    details = result.message;
+    details_first = 0;
+    notice =
+        result.success ? (result.offline ? "Prepared for reboot" : "Transaction successful") : "Transaction failed";
+    screen = Screen::APPLY_RESULT;
+  }
+
   void handle_details_key(int kind, wint_t key)
   {
     if (kind == OK && key == 27) {
@@ -648,10 +819,24 @@ class PackageBrowser {
       return;
     }
 
-    draw_bar(0, width, " DNF UI - Terminal | Pending: " + std::to_string(pending.size()));
+    std::string heading = " DNF UI - Pending: " + std::to_string(pending.size());
+    if (offline_state == tui::OfflineState::PREPARED) {
+      heading += " | Reboot required";
+    } else if (offline_state == tui::OfflineState::UNKNOWN) {
+      heading += " | Offline status unknown";
+    }
+    draw_bar(0, width, heading);
 
-    if (screen == Screen::PACKAGE_DETAILS || screen == Screen::PENDING_DETAILS || screen == Screen::PREVIEW) {
-      if (screen == Screen::PREVIEW) {
+    if (screen == Screen::APPLYING) {
+      draw_text(1, 0, width, "Transaction in progress");
+      const auto lines = wrap_text(notice, width);
+      for (size_t i = 0; i < lines.size() && i < static_cast<size_t>(height - 4); ++i) {
+        draw_text(static_cast<int>(i) + 2, 0, width, lines[i]);
+      }
+      draw_bar(height - 1, width, " Wait for the transaction to finish");
+    } else if (screen == Screen::PACKAGE_DETAILS || screen == Screen::PENDING_DETAILS || screen == Screen::PREVIEW ||
+               screen == Screen::CONFIRM_APPLY || screen == Screen::APPLY_RESULT) {
+      if (screen == Screen::PREVIEW || screen == Screen::CONFIRM_APPLY || screen == Screen::APPLY_RESULT) {
         draw_text(1, 0, width, notice);
       }
       const auto lines = wrap_text(details, width);
@@ -661,7 +846,18 @@ class PackageBrowser {
       for (size_t i = 0; i < page && details_first + i < lines.size(); ++i) {
         draw_text(static_cast<int>(i) + 2, 0, width, lines[details_first + i]);
       }
-      draw_bar(height - 1, width, " Up/Down: Scroll  Esc: Back  q: Quit");
+      if (screen == Screen::CONFIRM_APPLY) {
+        draw_bar(height - 1, width, " y: Confirm  n/Esc: Cancel");
+      } else if (screen == Screen::PREVIEW && prepared) {
+        draw_bar(height - 1,
+                 width,
+                 prepared->requires_offline() ? " a:Prepare for reboot Esc:Back q:Quit"
+                                              : " a:Apply Up/Down:Scroll Esc:Back q:Quit");
+      } else if (screen == Screen::APPLY_RESULT) {
+        draw_bar(height - 1, width, " Esc: Reload packages  q: Quit");
+      } else {
+        draw_bar(height - 1, width, " Up/Down: Scroll  Esc: Back  q: Quit");
+      }
     } else if (screen == Screen::ACTION_MENU) {
       draw_action_menu(height, width);
     } else if (screen == Screen::PENDING) {
@@ -906,6 +1102,8 @@ main()
 
   dnfui_i18n_init();
   try {
+    // Install before ncurses so its default signal handlers do not bypass cleanup.
+    tui::ShutdownSignals shutdown;
     tui::BackendDiagnostics diagnostics;
     // Restore the terminal before waiting for any outstanding backend work.
     PackageBrowser browser;
@@ -914,7 +1112,7 @@ main()
       std::cerr << "Could not initialize the terminal.\n";
       return 1;
     }
-    browser.run(terminal.colors_enabled());
+    browser.run(terminal.colors_enabled(), shutdown);
     browser.cancel();
   } catch (const std::exception &error) {
     std::cerr << error.what() << '\n';

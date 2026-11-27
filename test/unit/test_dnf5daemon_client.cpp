@@ -835,12 +835,15 @@ TEST_CASE("TUI lists current daemon upgrade targets after refresh", "[dnf5daemon
   REQUIRE(marks.front().action.nevra == expected_nevra);
 
   const auto installed_before = package_row_nevras(dnf_backend_get_installed_package_rows_interruptible(nullptr));
-  const auto preview = tui::preview_pending_marks(marks, nullptr, cancel_flag);
+  auto preview = tui::preview_pending_marks(marks, nullptr, cancel_flag);
   INFO(preview.error);
   REQUIRE(preview.error.empty());
   REQUIRE(preview_section_contains_label(preview.preview.upgrade, expected_nevra));
-  REQUIRE_FALSE(preview.released_session_path.empty());
-  REQUIRE_FALSE(transaction_service_client_session_exists_for_tests(preview.released_session_path));
+  REQUIRE(preview.prepared != nullptr);
+  REQUIRE_FALSE(preview.session_path_for_tests.empty());
+  REQUIRE(transaction_service_client_session_exists_for_tests(preview.session_path_for_tests));
+  preview.prepared.reset();
+  REQUIRE_FALSE(transaction_service_client_session_exists_for_tests(preview.session_path_for_tests));
 
   // Resolve the real upgrade but compare it with a deliberately different marked target.
   TransactionRequest request;
@@ -850,13 +853,70 @@ TEST_CASE("TUI lists current daemon upgrade targets after refresh", "[dnf5daemon
   const auto rejected = tui::resolve_preview_for_tests(request, mismatched_marks);
   REQUIRE_FALSE(rejected.error.empty());
   REQUIRE(rejected.preview.empty());
+  REQUIRE(rejected.prepared == nullptr);
   REQUIRE(rejected.pending_issues.size() == 1);
   REQUIRE_FALSE(rejected.pending_issues.front().empty());
-  REQUIRE_FALSE(rejected.released_session_path.empty());
-  REQUIRE_FALSE(transaction_service_client_session_exists_for_tests(rejected.released_session_path));
+  REQUIRE_FALSE(rejected.session_path_for_tests.empty());
+  REQUIRE_FALSE(transaction_service_client_session_exists_for_tests(rejected.session_path_for_tests));
 
   BaseManager::instance().drop_cached_base();
   REQUIRE(package_row_nevras(dnf_backend_get_installed_package_rows_interruptible(nullptr)) == installed_before);
+
+  state.reset_for_tests();
+  transaction_service_client_reset_for_tests();
+}
+
+// -----------------------------------------------------------------------------
+// Apply the exact session prepared by the terminal frontend. Also exercise a
+// failed submission after the session was closed, without resolving it again.
+// -----------------------------------------------------------------------------
+TEST_CASE("TUI applies the approved upgrade session", "[dnf5daemon]")
+{
+  require_dnf5daemon_test_enabled();
+  const char *expected_nevra = g_getenv("DNFUI_TEST_DNF5DAEMON_UPGRADE_EXPECTED_NEVRA");
+  if (!expected_nevra || !*expected_nevra) {
+    SKIP("Set the expected NEVRA to run the TUI apply test.");
+  }
+
+  transaction_service_client_reset_for_tests();
+  auto &state = DaemonUpgradeState::instance();
+  state.reset_for_tests();
+  const auto cancel_flag = std::make_shared<std::atomic<bool>>(false);
+  const auto rows = tui::query_upgrades(false, nullptr, cancel_flag);
+  std::vector<tui::PendingMark> marks;
+  for (const auto &row : rows.rows) {
+    if (row.package.nevra == expected_nevra) {
+      REQUIRE(tui::mark_pending_action(marks, row, PendingAction::UPGRADE));
+    }
+  }
+  REQUIRE(marks.size() == 1);
+
+  auto preview = tui::preview_pending_marks(marks, nullptr, cancel_flag);
+  INFO(preview.error);
+  REQUIRE(preview.prepared != nullptr);
+  const auto installed_before = package_row_nevras(dnf_backend_get_installed_package_rows_interruptible(nullptr));
+  const auto path = preview.prepared->path();
+  transaction_service_client_release_request(path);
+  tui::TransactionProgress progress;
+  const auto failed = tui::apply_transaction(std::move(preview.prepared), progress);
+  REQUIRE_FALSE(failed.success);
+  REQUIRE_FALSE(failed.message.empty());
+  REQUIRE_FALSE(transaction_service_client_session_exists_for_tests(path));
+  REQUIRE(package_row_nevras(dnf_backend_get_installed_package_rows_interruptible(nullptr)) == installed_before);
+
+  preview = tui::preview_pending_marks(marks, nullptr, cancel_flag);
+  INFO(preview.error);
+  REQUIRE(preview.prepared != nullptr);
+  REQUIRE_FALSE(preview.prepared->requires_offline());
+  const auto approved_path = preview.prepared->path();
+  REQUIRE(transaction_service_client_session_exists_for_tests(approved_path));
+  const auto applied = tui::apply_transaction(std::move(preview.prepared), progress);
+  INFO(applied.message);
+  REQUIRE(applied.success);
+  REQUIRE_FALSE(applied.offline);
+  REQUIRE_FALSE(transaction_service_client_session_exists_for_tests(approved_path));
+  const auto installed = package_row_nevras(dnf_backend_get_installed_package_rows_interruptible(nullptr));
+  REQUIRE(std::find(installed.begin(), installed.end(), expected_nevra) != installed.end());
 
   state.reset_for_tests();
   transaction_service_client_reset_for_tests();
@@ -1195,6 +1255,61 @@ TEST_CASE("dnf5daemon client reports unavailable daemon", "[dnf5daemon]")
   REQUIRE_FALSE(error.empty());
   REQUIRE(preview.empty());
 
+  transaction_service_client_reset_for_tests();
+}
+
+// -----------------------------------------------------------------------------
+// Verify that the terminal frontend preserves the offline mode of its preview.
+// -----------------------------------------------------------------------------
+TEST_CASE("TUI prepares approved daemon changes for reboot", "[dnf5daemon]")
+{
+  require_dnf5daemon_test_enabled();
+  const char *enabled = g_getenv("DNFUI_TEST_DNF5DAEMON_OFFLINE");
+  if (!enabled || std::string(enabled) != "1") {
+    SKIP("Set DNFUI_TEST_DNF5DAEMON_OFFLINE=1 only in a disposable test system.");
+  }
+
+  transaction_service_client_reset_for_tests();
+  BaseManager::instance().drop_cached_base();
+  const auto installed = dnf_backend_get_installed_package_rows_interruptible(nullptr);
+  const auto installed_before = package_row_nevras(installed);
+  std::vector<tui::PendingMark> marks;
+  for (const auto &row : installed) {
+    if (row.name == "dnf5daemon-server") {
+      REQUIRE(tui::mark_pending_action(marks, { row, true }, PendingAction::REINSTALL));
+    }
+  }
+  REQUIRE(marks.size() == 1);
+
+  const auto cancel_flag = std::make_shared<std::atomic<bool>>(false);
+  auto preview = tui::preview_pending_marks(marks, nullptr, cancel_flag);
+  INFO(preview.error);
+  REQUIRE(preview.prepared != nullptr);
+  REQUIRE(preview.preview.requires_offline);
+  REQUIRE(preview.prepared->requires_offline());
+  const auto path = preview.prepared->path();
+
+  tui::TransactionProgress progress;
+  const auto applied = tui::apply_transaction(std::move(preview.prepared), progress);
+  INFO(applied.message);
+  REQUIRE(applied.success);
+  REQUIRE(applied.offline);
+  REQUIRE(applied.offline_state == tui::OfflineState::PREPARED);
+  REQUIRE_FALSE(transaction_service_client_session_exists_for_tests(path));
+  REQUIRE(package_row_nevras(dnf_backend_get_installed_package_rows_interruptible(nullptr)) == installed_before);
+
+  // A new connection must detect an already prepared transaction.
+  transaction_service_client_reset_for_tests();
+  REQUIRE(tui::query_offline_state(nullptr) == tui::OfflineState::PREPARED);
+
+  std::string error;
+  bool prepared = false;
+  REQUIRE(transaction_service_client_has_prepared_offline_updates(prepared, error));
+  REQUIRE(prepared);
+  REQUIRE(transaction_service_client_discard_offline_transaction(error));
+  REQUIRE(transaction_service_client_has_prepared_offline_updates(prepared, error));
+  REQUIRE_FALSE(prepared);
+  REQUIRE(tui::query_offline_state(nullptr) == tui::OfflineState::NOT_PREPARED);
   transaction_service_client_reset_for_tests();
 }
 
