@@ -1,6 +1,7 @@
 # Fedora packages needed for native DNF UI development.
 # This file is read by the installer script in utils.
 # Keep this list in sync with dnf-ui.spec and the Dockerfile.
+# ncurses-devel is only needed for the optional terminal frontend.
 #
 # The list covers native builds, unit tests, package validation, RPM builds,
 # translations, and dnf5daemon based app testing.
@@ -18,6 +19,7 @@ libdnf5-devel
 make
 meson
 mock
+ncurses-devel
 ninja-build
 pkgconf
 polkit

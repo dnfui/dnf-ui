@@ -8,6 +8,7 @@ export CONTAINER_RUNTIME
 
 APP_BIN_NAME = dnfui
 BACKEND_CLI_BIN_NAME = dnfui-backend-cli
+TUI_BIN_NAME = dnfui-tui
 TEST_BIN_NAME = dnfui-tests
 MEMCHECK ?= ./utils/run_memcheck.sh
 MEMCHECK_APP_ARGS ?=
@@ -46,6 +47,12 @@ else
   MESON_BUILD_TESTS = false
 endif
 
+ifneq ($(filter dnfui-tui run-tui,$(MAKECMDGOALS)),)
+  MESON_BUILD_TUI = true
+else
+  MESON_BUILD_TUI = false
+endif
+
 MESON_BUILD_ROOT = build
 MESON_BUILD_DIR = $(MESON_BUILD_ROOT)/$(MESON_BUILD_NAME)
 MESON_SETUP_ARGS = \
@@ -54,12 +61,14 @@ MESON_SETUP_ARGS = \
 	--buildtype $(MESON_BUILD_TYPE) \
 	-Dwarning_level=$(MESON_WARNING_LEVEL) \
 	-Dbuild_tests=$(MESON_BUILD_TESTS) \
+	-Dbuild_tui=$(MESON_BUILD_TUI) \
 	-Ddebug_trace=$(MESON_DEBUG_TRACE) \
 	-Dfinal_build=$(MESON_FINAL_BUILD) \
 	-Db_sanitize=$(MESON_SANITIZE)
 
 APP_BUILD_PATH = $(CURDIR)/$(MESON_BUILD_DIR)/src/$(APP_BIN_NAME)
 BACKEND_CLI_BUILD_PATH = $(CURDIR)/$(MESON_BUILD_DIR)/src/$(BACKEND_CLI_BIN_NAME)
+TUI_BUILD_PATH = $(CURDIR)/$(MESON_BUILD_DIR)/src/$(TUI_BIN_NAME)
 TEST_BUILD_PATH = $(CURDIR)/$(MESON_BUILD_DIR)/test/$(TEST_BIN_NAME)
 
 # -----------------------------------------------------------------------------
@@ -82,6 +91,8 @@ help:
 	@printf '%-36s %s\n' 'meson-setup' 'Configure or reconfigure the active Meson build directory.'
 	@printf '%-36s %s\n' 'dnfui' 'Build the desktop app binary.'
 	@printf '%-36s %s\n' 'dnfui-backend-cli' 'Build the developer backend CLI probe.'
+	@printf '%-36s %s\n' 'dnfui-tui' 'Build the experimental terminal frontend.'
+	@printf '%-36s %s\n' 'run-tui' 'Build and run the terminal frontend locally.'
 	@printf '%-36s %s\n' 'dnfui-tests' 'Build the test binary.'
 	@printf '%-36s %s\n' 'run' 'Build and run the desktop app locally.'
 	@printf '%-36s %s\n' 'test' 'Build and run the local test suite.'
@@ -97,6 +108,7 @@ help:
 	@printf '%-36s %s\n' 'dockersetup' 'Build the Docker development image.'
 	@printf '%-36s %s\n' 'dockerlogin' 'Open a shell in the Docker development container.'
 	@printf '%-36s %s\n' 'dockercli' 'Open a Docker shell with the backend CLI probe ready.'
+	@printf '%-36s %s\n' 'dockertui' 'Run the terminal frontend in Docker.'
 	@printf '%-36s %s\n' 'dockerrun' 'Run the desktop app in Docker.'
 	@printf '%-36s %s\n' 'dockerheaptrack' 'Profile desktop app heap allocations in Docker.'
 	@printf '%-36s %s\n' 'dockertest' 'Run the backend test suite in Docker.'
@@ -154,6 +166,17 @@ dnfui: meson-setup
 dnfui-backend-cli: meson-setup
 	$(MESON) compile -C "$(MESON_BUILD_DIR)" dnfui-backend-cli
 	ln -sfn "$(BACKEND_CLI_BUILD_PATH)" "$(BACKEND_CLI_BIN_NAME)"
+
+# Build the terminal frontend and update the local convenience symlink:
+.PHONY: dnfui-tui
+dnfui-tui: meson-setup
+	$(MESON) compile -C "$(MESON_BUILD_DIR)" dnfui-tui
+	ln -sfn "$(TUI_BUILD_PATH)" "$(TUI_BIN_NAME)"
+
+# Run the terminal frontend from the current build:
+.PHONY: run-tui
+run-tui: dnfui-tui
+	@./$(TUI_BIN_NAME)
 
 # Build the backend test binary and update the local symlink:
 .PHONY: dnfui-tests
@@ -227,6 +250,11 @@ dockerlogin:
 .PHONY: dockercli
 dockercli:
 	@DEBUG_TRACE="$(DEBUG_TRACE)" ./docker/docker_backend_cli.sh
+
+# Run the terminal frontend in Docker:
+.PHONY: dockertui
+dockertui:
+	@DEBUG_TRACE="$(DEBUG_TRACE)" ./docker/docker_tui.sh
 
 # Run the app in Docker:
 .PHONY: dockerrun
@@ -373,7 +401,7 @@ indent:
 .PHONY: clean
 clean:
 	$(RM) -r "$(MESON_BUILD_ROOT)"
-	$(RM) "$(APP_BIN_NAME)" "$(BACKEND_CLI_BIN_NAME)" "$(TEST_BIN_NAME)"
+	$(RM) "$(APP_BIN_NAME)" "$(BACKEND_CLI_BIN_NAME)" "$(TUI_BIN_NAME)" "$(TEST_BIN_NAME)"
 
 # Remove everything:
 .PHONY: distclean

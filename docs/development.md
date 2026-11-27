@@ -96,6 +96,29 @@ Repository enable and disable commands do change system repository configuration
 The GUI self-protection check is process-specific, so the development CLI does not represent the GUI rule that blocks
 DNF UI from removing or replacing itself.
 
+## Experimental terminal frontend
+
+The read-only terminal frontend uses the same package backend as **DNF UI**, but is built as a separate executable.
+It is not installed by the RPM. Install `ncurses-devel` if your native development dependencies predate this target.
+
+```sh
+make run-tui
+```
+
+To run against the development container's package database, rebuild the image and launch the TUI:
+
+```sh
+make dockersetup
+make dockertui
+```
+
+The container builds under `/tmp/dnfui-build`. It does not mount the host package database or start dnf5daemon.
+If your terminal type is unavailable in the image, use `TERM=xterm-256color make dockertui`.
+
+Use `/` to search, `i` to list installed packages, `r` to refresh repository metadata and reload the current view,
+the arrow and page keys to navigate, Enter to open details, Escape to return, and `q` to quit. The terminal must be at least 50 columns wide and 8 rows high.
+Package transactions and repository changes are not part of this proof of concept.
+
 ## Native transaction testing
 
 For native Polkit testing from the source tree, build the app and run it as a regular desktop user:

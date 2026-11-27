@@ -48,6 +48,7 @@ jobs:
                 gtk4-devel \
                 libdnf5-devel \
                 meson \
+                ncurses-devel \
                 ninja-build \
                 xorg-x11-server-Xvfb \
                 xorg-x11-xauth
@@ -55,7 +56,8 @@ jobs:
               meson setup build/ci \
                 --prefix /usr \
                 --libexecdir libexec \
-                -Dbuild_tests=true
+                -Dbuild_tests=true \
+                -Dbuild_tui=true
               meson compile -C build/ci
               meson compile -C build/ci dnfui-backend-cli
               meson compile -C build/ci dnf-ui-pot
@@ -82,6 +84,7 @@ jobs:
                 --libexecdir libexec \
                 --buildtype release \
                 -Dwarning_level=3 \
+                -Dbuild_tui=true \
                 -Dfinal_build=true
               meson compile -C build/final
             '

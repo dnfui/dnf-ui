@@ -8,6 +8,8 @@ RUN dnf install -y \
     desktop-file-utils \
     gtk4-devel \
     libdnf5-devel \
+    ncurses-devel \
+    ncurses-term \
     dnf5daemon-server \
     polkit \
     gcc-c++ \

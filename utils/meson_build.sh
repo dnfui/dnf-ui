@@ -33,6 +33,7 @@ BUILD_ROOT="${DNFUI_MESON_BUILD_ROOT:-$DEFAULT_BUILD_ROOT}"
 BUILD_DIR="$BUILD_ROOT/$BUILD_NAME"
 APP_BIN="$PROJECT_ROOT/dnfui"
 BACKEND_CLI_BIN="$PROJECT_ROOT/dnfui-backend-cli"
+TUI_BIN="$PROJECT_ROOT/dnfui-tui"
 TEST_BIN="$PROJECT_ROOT/dnfui-tests"
 
 # Keep repo-root convenience symlinks for the default native build tree, but
@@ -55,9 +56,11 @@ yes | no) ;;
 esac
 
 build_tests="false"
+build_tui="false"
 target_names=()
 link_app="no"
 link_backend_cli="no"
+link_tui="no"
 link_tests="no"
 
 for arg in "$@"; do
@@ -73,6 +76,11 @@ for arg in "$@"; do
   backend-cli)
     target_names+=("dnfui-backend-cli")
     link_backend_cli="yes"
+    ;;
+  tui)
+    build_tui="true"
+    target_names+=("dnfui-tui")
+    link_tui="yes"
     ;;
   tests)
     build_tests="true"
@@ -91,7 +99,7 @@ for arg in "$@"; do
 done
 
 if [ "${#target_names[@]}" -eq 0 ]; then
-  echo "*** Set at least one meson build target. Use app, backend-cli, tests, all, or build-dir. ***" >&2
+  echo "*** Set at least one meson build target. Use app, backend-cli, tui, tests, all, or build-dir. ***" >&2
   exit 1
 fi
 
@@ -103,6 +111,7 @@ if [ -d "$BUILD_DIR" ]; then
     --buildtype "$BUILD_TYPE" \
     -Dwarning_level="$WARNING_LEVEL" \
     -Dbuild_tests="$build_tests" \
+    -Dbuild_tui="$build_tui" \
     -Ddebug_trace="$DEBUG_TRACE_BUILD" \
     -Dfinal_build="$FINAL_BUILD" \
     -Db_sanitize="$SANITIZE"
@@ -113,6 +122,7 @@ else
     --buildtype "$BUILD_TYPE" \
     -Dwarning_level="$WARNING_LEVEL" \
     -Dbuild_tests="$build_tests" \
+    -Dbuild_tui="$build_tui" \
     -Ddebug_trace="$DEBUG_TRACE_BUILD" \
     -Dfinal_build="$FINAL_BUILD" \
     -Db_sanitize="$SANITIZE"
@@ -126,6 +136,10 @@ fi
 
 if [ "$LINK_ROOT_SYMLINKS" = "yes" ] && [ "$link_backend_cli" = "yes" ]; then
   ln -sfn "$BUILD_DIR/src/dnfui-backend-cli" "$BACKEND_CLI_BIN"
+fi
+
+if [ "$LINK_ROOT_SYMLINKS" = "yes" ] && [ "$link_tui" = "yes" ]; then
+  ln -sfn "$BUILD_DIR/src/dnfui-tui" "$TUI_BIN"
 fi
 
 if [ "$LINK_ROOT_SYMLINKS" = "yes" ] && [ "$link_tests" = "yes" ]; then
