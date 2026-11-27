@@ -13,7 +13,7 @@
 #pragma once
 
 #include "dnf_backend/dnf_backend.hpp"
-#include "ui/transaction/pending_transaction_state.hpp"
+#include "transaction/pending_action.hpp"
 #include "upgrade/daemon_upgrade_target.hpp"
 
 #include <set>
