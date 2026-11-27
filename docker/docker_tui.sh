@@ -27,4 +27,6 @@ fi
   "$IMAGE_NAME" \
   bash -c 'BUILD_DIR="$(./utils/meson_build.sh build-dir)" &&
     ./utils/meson_build.sh tui &&
+    mkdir -p /run/dbus &&
+    dbus-daemon --system --fork &&
     exec "$BUILD_DIR/src/dnfui-tui"'

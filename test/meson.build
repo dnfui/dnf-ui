@@ -52,6 +52,7 @@ dnfui_tests = executable(
     '../src/ui/repository/repository_apply_model.cpp',
     '../src/ui/repository/repository_apply_operation.cpp',
     '../src/upgrade/daemon_upgrade_state.cpp',
+    '../src/tui/upgrade_query.cpp',
     '../src/ui/transaction/pending_transaction_action_rows.cpp',
     '../src/ui/package_table/package_table_columns.cpp',
     '../src/ui/package_table/package_table_export_csv.cpp',

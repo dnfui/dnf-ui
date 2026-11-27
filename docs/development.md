@@ -112,10 +112,12 @@ make dockersetup
 make dockertui
 ```
 
-The container builds under `/tmp/dnfui-build`. It does not mount the host package database or start dnf5daemon.
+The container builds under `/tmp/dnfui-build` and starts its own system bus for dnf5daemon activation.
+It does not mount the host package database or system bus.
 If your terminal type is unavailable in the image, use `TERM=xterm-256color make dockertui`.
 
-Use `/` to search, `i` to list installed packages, `a` to list all packages, and `u` to list unneeded packages.
+Use `/` to search, `i` to list installed packages, `a` to list all packages, `u` to list unneeded packages,
+and `g` to list upgradable packages.
 Press `r` to refresh repository metadata and reload the current view. Use the arrow and page keys to navigate,
 Enter to open details, Escape to return, and `q` to quit. The terminal must be at least 50 columns wide and 8 rows high.
 The selected package summary is shown when the terminal has at least 12 rows. Enter opens the full details.
@@ -124,12 +126,18 @@ The Unneeded view lists packages identified by libdnf5 as unneeded; it does not 
 It reloads DNF system state each time, following normal repository metadata expiration rules.
 Package transactions and repository changes are not part of this proof of concept.
 
-The Status column reports whether the exact package version is installed. It does not report resolved upgrades.
+The Upgradable view requires dnf5daemon and uses its upgrade target list, not local version comparisons.
+Its details show the reported target and summary, not a transaction preview.
+The other views report whether the exact package version is installed. Refresh checks both daemon and local metadata.
+If daemon refresh fails, local views still reload with a warning; the Upgradable view reports an error.
 Backend warnings are printed after the terminal closes. To see them while the app runs, redirect stderr to a file.
 Quitting cancels package queries where supported and waits for any non-cancellable backend work to finish.
 
 For a manual smoke test, search for `bash` twice, refresh the current search with `r`, and inspect installed package details.
-Switch between all four views, refresh each view and check the selected package summary and details.
+Switch between all five views, refresh each view and check the selected package summary and details.
+Compare the Upgradable targets with `dnfui-backend-cli list-upgrades` on the same system.
+When dnf5daemon is unavailable, check that local refresh still works with a warning and Upgradable reports an error.
+`make dockerdnf5daemontest` covers a known TUI upgrade target after refresh and an unavailable daemon.
 Resize the terminal, quit during a repository query and verify the shell is restored. Repeat in Docker.
 Run with repositories unavailable to check the fallback notice and saved warnings. Run with redirected stdin or stdout
 to verify that it rejects non-interactive use.

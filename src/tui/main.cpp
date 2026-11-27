@@ -6,6 +6,7 @@
 #include "dnf_backend/dnf_backend.hpp"
 #include "i18n.hpp"
 #include "terminal.hpp"
+#include "upgrade_query.hpp"
 
 #include <algorithm>
 #include <atomic>
@@ -24,10 +25,12 @@
 
 namespace {
 
+using tui::DisplayRow;
 using tui::draw_bar;
 using tui::draw_text;
 using tui::HEADING_COLOR;
 using tui::INSTALLED_COLOR;
+using tui::QueryResult;
 using tui::terminal_input_closed;
 using tui::wide_text;
 using tui::wrap_text;
@@ -51,6 +54,7 @@ enum class PackageView {
   INSTALLED,
   ALL,
   UNNEEDED,
+  UPGRADABLE,
   SEARCH,
 };
 
@@ -64,22 +68,22 @@ view_name(PackageView view)
     return "All packages";
   case PackageView::UNNEEDED:
     return "Unneeded packages";
+  case PackageView::UPGRADABLE:
+    return "Upgradable packages";
   case PackageView::SEARCH:
     return "Search results";
   }
   return "Unknown";
 }
 
-struct DisplayRow {
-  PackageRow package;
-  bool installed;
-};
-
-struct QueryResult {
-  std::vector<DisplayRow> rows;
-  std::string details;
-  std::string notice;
-};
+const char *
+row_status(const DisplayRow &row)
+{
+  if (row.upgrade) {
+    return "Upgradable";
+  }
+  return row.installed ? "Installed" : "Available";
+}
 
 class PackageBrowser {
   public:
@@ -111,6 +115,8 @@ class PackageBrowser {
     loading_details = false;
     if (refresh_metadata) {
       notice = "Refreshing repository metadata...";
+    } else if (view == PackageView::UPGRADABLE) {
+      notice = "Loading upgradable packages from dnf5daemon...";
     }
 
     const bool refresh_snapshot = has_queried;
@@ -123,10 +129,20 @@ class PackageBrowser {
             return result;
           }
 
+          if (view == PackageView::UPGRADABLE) {
+            return tui::query_upgrades(refresh_metadata, cancel, cancel_flag);
+          }
+          DaemonUpgradeState::instance().mark_stale();
+
           // A new Base already reads the rpmdb. On later queries, check for
           // external changes without discarding usable repository metadata.
           auto &manager = BaseManager::instance();
+          std::string daemon_refresh_error;
           if (refresh_metadata) {
+            daemon_refresh_error = tui::refresh_daemon_metadata(cancel);
+            if (g_cancellable_is_cancelled(cancel)) {
+              return result;
+            }
             manager.rebuild(BaseRefreshMode::FORCE_METADATA_CHECK, cancel_flag);
           } else if (view == PackageView::UNNEEDED) {
             // Installation reasons can change without changing installed NEVRAs.
@@ -159,6 +175,8 @@ class PackageBrowser {
           case PackageView::SEARCH:
             packages = dnf_backend_search_package_rows_interruptible(term, {}, cancel);
             break;
+          case PackageView::UPGRADABLE:
+            break;
           }
           if (g_cancellable_is_cancelled(cancel)) {
             return result;
@@ -181,6 +199,10 @@ class PackageBrowser {
             result.notice += " (repository metadata unavailable)";
           } else if (repo_state == BaseRepoState::CACHED_METADATA) {
             result.notice += " (cached repository metadata)";
+          }
+          if (!daemon_refresh_error.empty()) {
+            std::cerr << "dnf5daemon refresh failed: " << daemon_refresh_error << '\n';
+            result.notice = "Daemon refresh failed; " + result.notice;
           }
           return result;
         });
@@ -285,8 +307,18 @@ class PackageBrowser {
   void load_details()
   {
     const auto &row = rows[selected];
+    if (row.upgrade) {
+      // These details come from the same daemon result as the selected row.
+      details = std::string("Status: ") + row_status(row) + "\nPackage ID: " + row.package.nevra +
+          "\nRepo: " + row.package.repo + "\n\nSummary: " + row.package.summary +
+          "\n\nUpgrade target reported by dnf5daemon. This is not a transaction preview.";
+      details_first = 0;
+      showing_details = true;
+      return;
+    }
+
     const std::string nevra = row.package.nevra;
-    const std::string status = row.installed ? "Installed" : "Available";
+    const std::string status = row_status(row);
     const auto context =
         row.installed ? PackageDetailsContext::INSTALLED_CONTEXT : PackageDetailsContext::SELECTED_VERSION;
     loading_details = true;
@@ -341,6 +373,8 @@ class PackageBrowser {
       query(PackageView::ALL);
     } else if (kind == OK && key == L'u') {
       query(PackageView::UNNEEDED);
+    } else if (kind == OK && key == L'g') {
+      query(PackageView::UPGRADABLE);
     } else if (kind == OK && key == L'r') {
       query(active_view, active_search, true);
     } else if (!rows.empty()) {
@@ -507,7 +541,7 @@ class PackageBrowser {
       if (row.installed && !active && colors) {
         attron(COLOR_PAIR(INSTALLED_COLOR));
       }
-      draw_text(y, 0, status_width - 1, row.installed ? "Installed" : "Available");
+      draw_text(y, 0, status_width - 1, row_status(row));
       if (row.installed && !active && colors) {
         attroff(COLOR_PAIR(INSTALLED_COLOR));
       }
@@ -529,11 +563,11 @@ class PackageBrowser {
     } else if (worker.valid()) {
       draw_bar(height - 1, width, " q: Quit");
     } else {
-      const std::string shortcuts = "/: Search  i: Installed  a: All  u: Unneeded  r: Refresh  Enter: Info  q: Quit";
+      const std::string shortcuts = "/:Search i:Installed a:All u:Unneeded g:Upgradable r:Refresh Enter:Info q:Quit";
       if (shortcuts.size() < static_cast<size_t>(width)) {
         draw_bar(height - 1, width, shortcuts);
       } else {
-        draw_bar(height - 1, width, "/:Find i:Inst a:All u:Unneed r:Ref Enter q:Quit");
+        draw_bar(height - 1, width, "/:Find i:Inst a:All u:Unneed g:Up r:Ref Enter q");
       }
     }
 

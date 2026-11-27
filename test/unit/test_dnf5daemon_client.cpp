@@ -11,11 +11,15 @@
 #include "transaction/transaction_request.hpp"
 #include "dnf5daemon_client/transaction_service_client.hpp"
 #include "dnf5daemon_client/transaction_service_client_parser.hpp"
+#include "tui/upgrade_query.hpp"
 
 #include <glib.h>
 #include <libdnf5/transaction/offline.hpp>
 
 #include <algorithm>
+#include <atomic>
+#include <memory>
+#include <stdexcept>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -784,6 +788,82 @@ TEST_CASE("dnf5daemon client lists upgrade targets", "[dnf5daemon]")
     REQUIRE(target.name_arch_key() == target.name + "\n" + target.arch);
     REQUIRE(target.upgrade_spec() == target.name + "." + target.arch);
   }
+}
+
+// -----------------------------------------------------------------------------
+// Verify that the TUI retains the daemon target and its snapshot generation.
+// The Docker fixture provides a known upgrade from a local repository.
+// -----------------------------------------------------------------------------
+TEST_CASE("TUI lists current daemon upgrade targets after refresh", "[dnf5daemon]")
+{
+  require_dnf5daemon_test_enabled();
+  const char *expected_nevra = g_getenv("DNFUI_TEST_DNF5DAEMON_UPGRADE_EXPECTED_NEVRA");
+  if (!expected_nevra || !*expected_nevra) {
+    SKIP("Set the expected NEVRA to run the TUI upgrade target test.");
+  }
+  transaction_service_client_reset_for_tests();
+  auto &state = DaemonUpgradeState::instance();
+  state.reset_for_tests();
+
+  const auto cancel_flag = std::make_shared<std::atomic<bool>>(false);
+  const auto generation_before = BaseManager::instance().current_generation();
+  const auto result = tui::query_upgrades(true, nullptr, cancel_flag);
+  const auto snapshot = state.snapshot();
+
+  REQUIRE(BaseManager::instance().current_generation() > generation_before);
+  REQUIRE(snapshot.status == DaemonUpgradeSnapshotStatus::READY);
+  REQUIRE(result.rows.size() == snapshot.targets_by_name_arch.size());
+  bool found_expected = false;
+  for (const auto &row : result.rows) {
+    REQUIRE(row.upgrade != nullptr);
+    REQUIRE_FALSE(row.installed);
+    REQUIRE(state.is_current_target(row.upgrade->target, row.upgrade->generation));
+    REQUIRE(row.package.nevra == row.upgrade->target.nevra);
+    if (row.package.nevra == expected_nevra) {
+      found_expected = true;
+    }
+  }
+  REQUIRE(found_expected);
+
+  state.reset_for_tests();
+  transaction_service_client_reset_for_tests();
+}
+
+// -----------------------------------------------------------------------------
+// A cancelled request must not publish a failed or successful daemon snapshot.
+// -----------------------------------------------------------------------------
+TEST_CASE("TUI skips cancelled daemon upgrade queries")
+{
+  auto &state = DaemonUpgradeState::instance();
+  state.reset_for_tests();
+
+  std::unique_ptr<GCancellable, decltype(&g_object_unref)> cancel { g_cancellable_new(), g_object_unref };
+  g_cancellable_cancel(cancel.get());
+  const auto cancel_flag = std::make_shared<std::atomic<bool>>(true);
+  const auto result = tui::query_upgrades(true, cancel.get(), cancel_flag);
+
+  REQUIRE(result.rows.empty());
+  REQUIRE(state.snapshot().status == DaemonUpgradeSnapshotStatus::NOT_LOADED);
+}
+
+// -----------------------------------------------------------------------------
+// Verify that an unavailable daemon is an error, not an empty upgrade list.
+// -----------------------------------------------------------------------------
+TEST_CASE("TUI reports failed daemon upgrade queries", "[dnf5daemon]")
+{
+  require_dnf5daemon_test_enabled();
+  transaction_service_client_reset_for_tests();
+  auto &state = DaemonUpgradeState::instance();
+  state.reset_for_tests();
+
+  ScopedEnvVar missing_system_bus("DBUS_SYSTEM_BUS_ADDRESS", "unix:path=/tmp/dnfui-missing-system-bus");
+  const auto cancel_flag = std::make_shared<std::atomic<bool>>(false);
+  REQUIRE_THROWS_AS(tui::query_upgrades(false, nullptr, cancel_flag), std::runtime_error);
+  REQUIRE(state.snapshot().status == DaemonUpgradeSnapshotStatus::ERROR);
+  REQUIRE(state.snapshot().targets_by_name_arch.empty());
+
+  state.reset_for_tests();
+  transaction_service_client_reset_for_tests();
 }
 
 // -----------------------------------------------------------------------------

@@ -103,7 +103,13 @@ if get_option('build_tui')
 
   executable(
     'dnfui-tui',
-    backend_sources + files('tui/main.cpp', 'tui/terminal.cpp', 'i18n.cpp'),
+    backend_sources + daemon_client_sources + files(
+      'tui/main.cpp',
+      'tui/terminal.cpp',
+      'tui/upgrade_query.cpp',
+      'upgrade/daemon_upgrade_state.cpp',
+      'i18n.cpp',
+    ),
     include_directories: src_inc,
     dependencies: [libdnf5_dep, gio_dep, ncursesw_dep, threads_dep],
     install: false,

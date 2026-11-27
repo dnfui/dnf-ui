@@ -184,6 +184,8 @@ test "$(rpm -q --qf '%{VERSION}' "$API_TEST_PACKAGE")" = "$API_TEST_OLD_VERSION"
 DNFUI_TEST_DNF5DAEMON_UPGRADE_SPEC="$API_TEST_PACKAGE.noarch" \
   DNFUI_TEST_DNF5DAEMON_UPGRADE_EXPECTED_NEVRA="$API_TEST_PACKAGE-$API_TEST_NEW_VERSION-1.noarch" \
   run_daemon_test "dnf5daemon client previews selected upgrade requests"
+DNFUI_TEST_DNF5DAEMON_UPGRADE_EXPECTED_NEVRA="$API_TEST_PACKAGE-$API_TEST_NEW_VERSION-1.noarch" \
+  run_daemon_test "TUI lists current daemon upgrade targets after refresh"
 
 dnf5 -y upgrade "$API_TEST_PACKAGE" >/dev/null
 test "$(rpm -q --qf '%{VERSION}' "$API_TEST_PACKAGE")" = "$API_TEST_NEW_VERSION"
@@ -217,3 +219,4 @@ run_daemon_test "dnf5daemon client previews install requests"
 run_daemon_test "dnf5daemon client rejects removing dnf5daemon-server"
 run_daemon_test "dnf5daemon client reports resolve failure"
 run_daemon_test "dnf5daemon client reports unavailable daemon"
+run_daemon_test "TUI reports failed daemon upgrade queries"
