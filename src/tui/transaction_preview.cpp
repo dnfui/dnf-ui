@@ -148,8 +148,8 @@ namespace {
       result.error = "Transaction preview cancelled.";
       return result;
     }
-    result.pending_issues = preview_mark_issues(preview, marks, installonly_nevras);
-    for (const auto &issue : result.pending_issues) {
+    result.preview_issues = preview_mark_issues(preview, marks, installonly_nevras);
+    for (const auto &issue : result.preview_issues) {
       if (!issue.empty() && result.error.empty()) {
         result.error = issue;
       }

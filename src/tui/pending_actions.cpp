@@ -60,6 +60,35 @@ pending_action_name(PendingAction::Type type)
 }
 
 bool
+PendingMark::has_issue() const
+{
+  return !issue.empty() || !preview_issue.empty();
+}
+
+std::string
+PendingMark::issue_text() const
+{
+  if (issue.empty()) {
+    return preview_issue;
+  }
+  if (preview_issue.empty()) {
+    return issue;
+  }
+  return issue + "\n\n" + preview_issue;
+}
+
+void
+update_pending_preview_issues(std::vector<PendingMark> &marks, std::vector<std::string> issues)
+{
+  if (issues.size() != marks.size()) {
+    return;
+  }
+  for (size_t i = 0; i < marks.size(); ++i) {
+    marks[i].preview_issue = std::move(issues[i]);
+  }
+}
+
+bool
 mark_pending_action(std::vector<PendingMark> &marks, const DisplayRow &row, PendingAction::Type type)
 {
   const auto choices = pending_choices(row);

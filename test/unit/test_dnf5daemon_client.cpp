@@ -839,6 +839,8 @@ TEST_CASE("TUI lists current daemon upgrade targets after refresh", "[dnf5daemon
   INFO(preview.error);
   REQUIRE(preview.error.empty());
   REQUIRE(preview_section_contains_label(preview.preview.upgrade, expected_nevra));
+  REQUIRE(preview.preview_issues.size() == marks.size());
+  REQUIRE(preview.preview_issues.front().empty());
   REQUIRE(preview.prepared != nullptr);
   REQUIRE_FALSE(preview.session_path_for_tests.empty());
   REQUIRE(transaction_service_client_session_exists_for_tests(preview.session_path_for_tests));
@@ -854,8 +856,8 @@ TEST_CASE("TUI lists current daemon upgrade targets after refresh", "[dnf5daemon
   REQUIRE_FALSE(rejected.error.empty());
   REQUIRE(rejected.preview.empty());
   REQUIRE(rejected.prepared == nullptr);
-  REQUIRE(rejected.pending_issues.size() == 1);
-  REQUIRE_FALSE(rejected.pending_issues.front().empty());
+  REQUIRE(rejected.preview_issues.size() == 1);
+  REQUIRE_FALSE(rejected.preview_issues.front().empty());
   REQUIRE_FALSE(rejected.session_path_for_tests.empty());
   REQUIRE_FALSE(transaction_service_client_session_exists_for_tests(rejected.session_path_for_tests));
 

@@ -167,3 +167,52 @@ TEST_CASE("TUI detects an externally installed pending package")
   REQUIRE(marks.front().action.type == PendingAction::INSTALL);
   reset_backend_globals();
 }
+
+TEST_CASE("TUI preserves preview mismatches across package validation")
+{
+  reset_backend_globals();
+  std::vector<tui::PendingMark> marks;
+  const tui::DisplayRow row { make_row("1"), false };
+  REQUIRE(tui::mark_pending_action(marks, row, PendingAction::INSTALL));
+
+  tui::update_pending_preview_issues(marks, { "Preview mismatch" });
+  REQUIRE(marks.front().has_issue());
+  REQUIRE(marks.front().issue_text() == "Preview mismatch");
+
+  marks.front().issue = "Unchecked: repository availability needs checking.";
+  REQUIRE(marks.front().issue_text().find(marks.front().issue) != std::string::npos);
+  REQUIRE(marks.front().issue_text().find("Preview mismatch") != std::string::npos);
+  marks.front().issue = tui::pending_snapshot_issue(marks.front(), DaemonUpgradeState::instance().snapshot());
+  REQUIRE(marks.front().issue.empty());
+  REQUIRE(marks.front().has_issue());
+
+  // A failed validation or resolution supplies no new comparison result.
+  tui::update_pending_preview_issues(marks, {});
+  REQUIRE(marks.front().preview_issue == "Preview mismatch");
+
+  tui::update_pending_preview_issues(marks, { "" });
+  REQUIRE_FALSE(marks.front().has_issue());
+  reset_backend_globals();
+}
+
+TEST_CASE("TUI remarking a package clears only its own preview mismatch")
+{
+  reset_backend_globals();
+  const tui::DisplayRow row { make_row("1"), false };
+  auto other = make_row("1");
+  other.name = "other";
+  other.nevra = "other-1-1.noarch";
+  const tui::DisplayRow other_row { other, false };
+  std::vector<tui::PendingMark> marks;
+  REQUIRE(tui::mark_pending_action(marks, row, PendingAction::INSTALL));
+  REQUIRE(tui::mark_pending_action(marks, other_row, PendingAction::INSTALL));
+  tui::update_pending_preview_issues(marks, { "First mismatch", "Other mismatch" });
+
+  REQUIRE(tui::mark_pending_action(marks, row, PendingAction::INSTALL));
+  REQUIRE(marks.size() == 2);
+  REQUIRE(marks.front().action.nevra == other.nevra);
+  REQUIRE(marks.front().preview_issue == "Other mismatch");
+  REQUIRE(marks.back().action.nevra == row.package.nevra);
+  REQUIRE_FALSE(marks.back().has_issue());
+  reset_backend_globals();
+}

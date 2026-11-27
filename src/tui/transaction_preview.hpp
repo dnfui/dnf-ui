@@ -18,6 +18,8 @@ namespace tui {
 struct PreviewResult {
   TransactionPreview preview;
   std::vector<std::string> pending_issues;
+  // Populated only after a complete resolution and comparison with the marked actions.
+  std::vector<std::string> preview_issues;
   std::string error;
   std::unique_ptr<PreparedTransaction> prepared;
   OfflineState offline_state = OfflineState::UNKNOWN;

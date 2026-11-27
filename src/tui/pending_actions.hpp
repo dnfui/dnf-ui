@@ -16,7 +16,14 @@ struct PendingMark {
   PendingAction action;
   DisplayRow source;
   std::string issue;
+  std::string preview_issue {};
+
+  bool has_issue() const;
+  std::string issue_text() const;
 };
+
+// A failed or incomplete resolve must not erase the last known preview mismatch.
+void update_pending_preview_issues(std::vector<PendingMark> &marks, std::vector<std::string> issues);
 
 bool mark_pending_action(std::vector<PendingMark> &marks, const DisplayRow &row, PendingAction::Type type);
 

@@ -415,6 +415,7 @@ class PackageBrowser {
       if (completed == WorkerOperation::PREVIEW) {
         auto &result = std::get<tui::PreviewResult>(value);
         update_pending_issues(std::move(result.pending_issues));
+        tui::update_pending_preview_issues(pending, std::move(result.preview_issues));
         offline_state = result.offline_state;
         prepared = std::move(result.prepared);
         details = result.error.empty() ? tui::format_preview(result.preview) : std::move(result.error);
@@ -713,7 +714,7 @@ class PackageBrowser {
       const auto &action = mark.action;
       details = std::string("Pending action: ") + tui::pending_action_name(action.type) +
           "\n\nPackage: " + action.nevra + "\n\nRequest spec: " + action.transaction_spec +
-          "\n\nCheck: " + (mark.issue.empty() ? "No known issue" : mark.issue);
+          "\n\nCheck: " + (mark.has_issue() ? mark.issue_text() : "No known issue");
       details_first = 0;
       screen = Screen::PENDING_DETAILS;
     } else if (kind == KEY_CODE_YES && key == KEY_PPAGE) {
@@ -941,7 +942,7 @@ class PackageBrowser {
         attron(A_REVERSE);
         mvhline(y, 0, ' ', width);
       }
-      const std::string label = (mark.issue.empty() ? "" : "!") + std::string(tui::pending_action_name(action.type));
+      const std::string label = (mark.has_issue() ? "!" : "") + std::string(tui::pending_action_name(action.type));
       draw_text(y, 0, action_width - 1, label);
       draw_text(y, action_width, width - action_width, action.nevra);
       if (active) {
@@ -1060,7 +1061,7 @@ class PackageBrowser {
         draw_text(y,
                   0,
                   status_width - 1,
-                  std::string(action->issue.empty() ? "*" : "!") + tui::pending_action_name(action->action.type));
+                  std::string(action->has_issue() ? "!" : "*") + tui::pending_action_name(action->action.type));
       } else {
         draw_text(y, 0, status_width - 1, row_status(row));
       }

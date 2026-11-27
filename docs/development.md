@@ -134,6 +134,7 @@ removal and reinstall require an exact installed row.
 Press `v` in the pending view to validate the marks again and resolve a transaction preview through dnf5daemon.
 The preview includes dependency changes, additional removals, warnings, disk space and offline requirements.
 If a marked action is missing from the resolved transaction, the mark is retained and flagged.
+The mismatch remains visible until the action matches a later preview or the mark is replaced.
 Press `a` in a successful preview, then `y` to confirm the displayed changes. Escape dismisses an unapproved preview.
 The approved daemon session is submitted exactly once. Progress is shown while package controls and quitting are disabled.
 Online transactions clear pending marks on success or failure. A failed offline preparation retains the marks for review.
