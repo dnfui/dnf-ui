@@ -51,6 +51,22 @@ list_page_rows(int height)
   return std::max(1, height - TABLE_FIRST_ROW - FOOTER_HEIGHT - summary);
 }
 
+enum class Screen {
+  PACKAGES,
+  SEARCH,
+  PACKAGE_DETAILS,
+  ACTION_MENU,
+  PENDING,
+  PENDING_DETAILS,
+};
+
+enum class WorkerOperation {
+  NONE,
+  PACKAGE_QUERY,
+  PACKAGE_DETAILS,
+  PENDING_CHECK,
+};
+
 enum class PackageView {
   INSTALLED,
   ALL,
@@ -110,10 +126,10 @@ class PackageBrowser {
     selected = 0;
     first = 0;
     details.clear();
-    showing_details = false;
+    screen = Screen::PACKAGES;
     notice = view == PackageView::SEARCH ? "Searching packages..." : "Loading packages...";
     list_notice.clear();
-    loading_details = false;
+    operation = WorkerOperation::PACKAGE_QUERY;
     if (refresh_metadata) {
       notice = "Refreshing repository metadata...";
     } else if (view == PackageView::UPGRADABLE) {
@@ -239,7 +255,7 @@ class PackageBrowser {
         redraw = true;
         continue;
       }
-      if (editing) {
+      if (screen == Screen::SEARCH) {
         handle_search_key(kind, key);
         redraw = true;
         continue;
@@ -251,14 +267,22 @@ class PackageBrowser {
         continue;
       }
       redraw = true;
-      if (showing_details) {
+      switch (screen) {
+      case Screen::PACKAGE_DETAILS:
+      case Screen::PENDING_DETAILS:
         handle_details_key(kind, key);
-      } else if (choosing_action) {
+        break;
+      case Screen::ACTION_MENU:
         handle_action_key(kind, key);
-      } else if (showing_pending) {
+        break;
+      case Screen::PENDING:
         handle_pending_key(kind, key);
-      } else {
+        break;
+      case Screen::PACKAGES:
         handle_list_key(kind, key);
+        break;
+      case Screen::SEARCH:
+        break;
       }
     }
   }
@@ -282,26 +306,23 @@ class PackageBrowser {
   PackageView active_view = PackageView::INSTALLED;
   bool colors = false;
   bool has_queried = false;
-  bool editing = false;
-  bool loading_details = false;
-  bool showing_details = false;
+  Screen screen = Screen::PACKAGES;
+  WorkerOperation operation = WorkerOperation::NONE;
   std::vector<tui::PendingMark> pending;
-  bool checking_pending = false;
   bool reload_after_pending = false;
   size_t pending_selected = 0;
   size_t pending_first = 0;
-  bool showing_pending = false;
-  bool choosing_action = false;
 
   bool collect_result()
   {
     if (!worker.valid() || worker.wait_for(std::chrono::seconds(0)) != std::future_status::ready) {
       return false;
     }
+    const auto completed = operation;
+    operation = WorkerOperation::NONE;
     try {
       auto result = worker.get();
-      if (checking_pending) {
-        checking_pending = false;
+      if (completed == WorkerOperation::PENDING_CHECK) {
         if (result.pending_issues.size() == pending.size()) {
           for (size_t i = 0; i < pending.size(); ++i) {
             pending[i].issue = std::move(result.pending_issues[i]);
@@ -311,11 +332,11 @@ class PackageBrowser {
             mark.issue = "Unchecked: validation did not finish.";
           }
         }
-        showing_pending = true;
-      } else if (loading_details) {
+        screen = Screen::PENDING;
+      } else if (completed == WorkerOperation::PACKAGE_DETAILS) {
         details = std::move(result.details);
         details_first = 0;
-        showing_details = true;
+        screen = Screen::PACKAGE_DETAILS;
         notice.clear();
       } else {
         rows = std::move(result.rows);
@@ -333,14 +354,13 @@ class PackageBrowser {
         }
       }
     } catch (const std::exception &error) {
-      if (checking_pending) {
-        checking_pending = false;
-        showing_pending = true;
+      if (completed == WorkerOperation::PENDING_CHECK) {
+        screen = Screen::PENDING;
         for (auto &mark : pending) {
           mark.issue = "Unchecked: validation failed.";
         }
         std::cerr << "Pending validation failed: " << error.what() << '\n';
-      } else if (!loading_details) {
+      } else if (completed == WorkerOperation::PACKAGE_QUERY) {
         for (auto &mark : pending) {
           mark.issue = "Unchecked: package query failed.";
         }
@@ -359,7 +379,7 @@ class PackageBrowser {
           "\nRepo: " + row.package.repo + "\n\nSummary: " + row.package.summary +
           "\n\nUpgrade target reported by dnf5daemon. This is not a transaction preview.";
       details_first = 0;
-      showing_details = true;
+      screen = Screen::PACKAGE_DETAILS;
       return;
     }
 
@@ -367,7 +387,7 @@ class PackageBrowser {
     const std::string status = row_status(row);
     const auto context =
         row.installed ? PackageDetailsContext::INSTALLED_CONTEXT : PackageDetailsContext::SELECTED_VERSION;
-    loading_details = true;
+    operation = WorkerOperation::PACKAGE_DETAILS;
     notice = "Loading package details...";
     worker = std::async(std::launch::async, [nevra, status, context, cancel = cancellable.get()] {
       QueryResult result;
@@ -388,10 +408,9 @@ class PackageBrowser {
   void handle_search_key(int kind, wint_t key)
   {
     if (kind == OK && key == 27) {
-      editing = false;
+      screen = Screen::PACKAGES;
     } else if ((kind == OK && (key == L'\n' || key == L'\r')) || (kind == KEY_CODE_YES && key == KEY_ENTER)) {
       if (!term.empty()) {
-        editing = false;
         query(PackageView::SEARCH, term);
       }
     } else if ((kind == KEY_CODE_YES && key == KEY_BACKSPACE) || (kind == OK && (key == 127 || key == 8))) {
@@ -412,7 +431,7 @@ class PackageBrowser {
   {
     if (kind == OK && key == L'/') {
       term.clear();
-      editing = true;
+      screen = Screen::SEARCH;
     } else if (kind == OK && key == L'i') {
       query(PackageView::INSTALLED);
     } else if (kind == OK && key == L'a') {
@@ -428,9 +447,9 @@ class PackageBrowser {
       pending_first = 0;
       reload_after_pending = !pending.empty();
       if (pending.empty()) {
-        showing_pending = true;
+        screen = Screen::PENDING;
       } else {
-        checking_pending = true;
+        operation = WorkerOperation::PENDING_CHECK;
         notice = "Checking pending actions...";
         worker = std::async(std::launch::async,
                             [marks = pending, cancel = cancellable.get(), cancel_flag = cancel_requested] {
@@ -441,7 +460,7 @@ class PackageBrowser {
       }
     } else if (!rows.empty()) {
       if (kind == OK && key == L'm') {
-        choosing_action = true;
+        screen = Screen::ACTION_MENU;
         return;
       }
       const size_t page = static_cast<size_t>(list_page_rows(getmaxy(stdscr)));
@@ -469,7 +488,7 @@ class PackageBrowser {
       return;
     }
     if (key == 27) {
-      choosing_action = false;
+      screen = Screen::PACKAGES;
       return;
     }
 
@@ -481,7 +500,7 @@ class PackageBrowser {
       if (action != pending.end()) {
         pending.erase(action);
         notice = "Unmarked: " + row.package.name;
-        choosing_action = false;
+        screen = Screen::PACKAGES;
       }
       return;
     }
@@ -503,13 +522,13 @@ class PackageBrowser {
     } else {
       notice = "Package action is no longer available.";
     }
-    choosing_action = false;
+    screen = Screen::PACKAGES;
   }
 
   void handle_pending_key(int kind, wint_t key)
   {
     if (kind == OK && (key == 27 || key == L'p')) {
-      showing_pending = false;
+      screen = Screen::PACKAGES;
       if (reload_after_pending) {
         reload_after_pending = false;
         // Validation may have replaced the installed or daemon snapshot.
@@ -548,7 +567,7 @@ class PackageBrowser {
           "\n\nPackage: " + action.nevra + "\n\nRequest spec: " + action.transaction_spec +
           "\n\nCheck: " + (mark.issue.empty() ? "No known issue" : mark.issue);
       details_first = 0;
-      showing_details = true;
+      screen = Screen::PENDING_DETAILS;
     } else if (kind == KEY_CODE_YES && key == KEY_PPAGE) {
       const size_t page = static_cast<size_t>(std::max(1, getmaxy(stdscr) - 4));
       pending_selected = pending_selected > page ? pending_selected - page : 0;
@@ -561,7 +580,7 @@ class PackageBrowser {
   void handle_details_key(int kind, wint_t key)
   {
     if (kind == OK && key == 27) {
-      showing_details = false;
+      screen = screen == Screen::PENDING_DETAILS ? Screen::PENDING : Screen::PACKAGES;
       notice = list_notice;
     } else if (kind == KEY_CODE_YES && key == KEY_UP && details_first > 0) {
       --details_first;
@@ -589,7 +608,7 @@ class PackageBrowser {
 
     draw_bar(0, width, " DNF UI - Terminal | Pending: " + std::to_string(pending.size()));
 
-    if (showing_details) {
+    if (screen == Screen::PACKAGE_DETAILS || screen == Screen::PENDING_DETAILS) {
       const auto lines = wrap_text(details, width);
       const size_t page = static_cast<size_t>(height - 4);
       const size_t last = lines.size() > page ? lines.size() - page : 0;
@@ -598,14 +617,14 @@ class PackageBrowser {
         draw_text(static_cast<int>(i) + 2, 0, width, lines[details_first + i]);
       }
       draw_bar(height - 1, width, " Up/Down: Scroll  Esc: Back  q: Quit");
-    } else if (choosing_action) {
+    } else if (screen == Screen::ACTION_MENU) {
       draw_action_menu(height, width);
-    } else if (showing_pending) {
+    } else if (screen == Screen::PENDING) {
       draw_pending(height, width);
     } else {
       draw_list(height, width);
     }
-    if (editing) {
+    if (screen == Screen::SEARCH) {
       curs_set(1);
     } else {
       curs_set(0);
@@ -691,7 +710,7 @@ class PackageBrowser {
     draw_text(1, 0, width, "Search: ");
     attroff(A_BOLD);
 
-    if (!editing) {
+    if (screen != Screen::SEARCH) {
       draw_text(1, 8, width - 8, active_search.empty() ? "(press / to search)" : active_search);
       return;
     }
@@ -756,7 +775,7 @@ class PackageBrowser {
       attroff(COLOR_PAIR(HEADING_COLOR));
     }
     attroff(A_BOLD);
-    if (!worker.valid() && !editing) {
+    if (!worker.valid() && screen != Screen::SEARCH) {
       const std::string actions = "m:Mark p:Pending";
       draw_text(2, width - static_cast<int>(actions.size()) - 1, static_cast<int>(actions.size()), actions);
     }
@@ -807,7 +826,7 @@ class PackageBrowser {
     }
 
     draw_text(height - 2, 0, width, notice);
-    if (editing) {
+    if (screen == Screen::SEARCH) {
       draw_bar(height - 1, width, " Enter: Search  Esc: Cancel");
     } else if (worker.valid()) {
       draw_bar(height - 1, width, " q: Quit");
