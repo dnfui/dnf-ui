@@ -53,6 +53,8 @@ jobs:
                 xorg-x11-server-Xvfb \
                 xorg-x11-xauth
 
+              bash test/build/test_meson_option_migration.sh
+
               meson setup build/ci \
                 --prefix /usr \
                 --libexecdir libexec \

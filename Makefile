@@ -150,6 +150,7 @@ all: dnfui
 meson-setup:
 	$(call require_non_root,native build targets)
 	if [ -d "$(MESON_BUILD_DIR)" ]; then \
+		./utils/meson_register_tui_option.sh "$(MESON_BUILD_DIR)" $(MESON) && \
 		$(MESON) setup "$(MESON_BUILD_DIR)" --reconfigure $(MESON_SETUP_ARGS); \
 	else \
 		$(MESON) setup "$(MESON_BUILD_DIR)" $(MESON_SETUP_ARGS); \

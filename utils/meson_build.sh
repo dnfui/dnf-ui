@@ -104,6 +104,7 @@ if [ "${#target_names[@]}" -eq 0 ]; then
 fi
 
 if [ -d "$BUILD_DIR" ]; then
+  "$SCRIPT_DIR/meson_register_tui_option.sh" "$BUILD_DIR" meson
   meson setup "$BUILD_DIR" \
     --reconfigure \
     --prefix /usr \
