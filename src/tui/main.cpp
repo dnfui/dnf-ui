@@ -157,16 +157,25 @@ class PackageBrowser {
     }
 
     const bool refresh_snapshot = has_queried;
+    const bool check_offline = !has_queried || refresh_metadata;
     has_queried = true;
-    worker = std::async(
-        std::launch::async,
-        [view, term, refresh_snapshot, refresh_metadata, cancel = cancellable.get(), cancel_flag = cancel_requested]()
-            -> WorkerResult {
-          const auto offline = tui::query_offline_state(cancel);
-          return PackageQueryResult {
-            query_packages(view, term, refresh_snapshot, refresh_metadata, cancel, cancel_flag), offline
-          };
-        });
+    if (check_offline) {
+      offline_state = tui::OfflineState::UNKNOWN;
+    }
+    worker = std::async(std::launch::async,
+                        [view,
+                         term,
+                         refresh_snapshot,
+                         refresh_metadata,
+                         check_offline,
+                         previous_offline = offline_state,
+                         cancel = cancellable.get(),
+                         cancel_flag = cancel_requested]() -> WorkerResult {
+                          const auto offline = check_offline ? tui::query_offline_state(cancel) : previous_offline;
+                          return PackageQueryResult {
+                            query_packages(view, term, refresh_snapshot, refresh_metadata, cancel, cancel_flag), offline
+                          };
+                        });
   }
 
   static QueryResult query_packages(PackageView view,
@@ -478,7 +487,6 @@ class PackageBrowser {
         }
         std::cerr << "Pending validation failed: " << error.what() << '\n';
       } else if (completed == WorkerOperation::PACKAGE_QUERY) {
-        offline_state = tui::OfflineState::UNKNOWN;
         for (auto &mark : pending) {
           mark.issue = "Unchecked: package query failed.";
         }

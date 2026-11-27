@@ -121,7 +121,8 @@ and `g` to list upgradable packages.
 Press `r` to refresh repository metadata and reload the current view. Use the arrow and page keys to navigate,
 Enter to open details, Escape to return, and `q` to quit. The terminal must be at least 50 columns wide and 8 rows high.
 The selected package summary is shown when the terminal has at least 12 rows. Enter opens the full details.
-The All view uses the same compact package listing as **DNF UI** (latest candidate per name and architecture).
+The All and Search views use the compact package listing (one row per name and architecture).
+Older available versions are not shown separately, so downgrade selection is not fully supported yet.
 The Unneeded view lists packages identified by libdnf5 as unneeded; it does not remove any packages.
 It reloads DNF system state each time, following normal repository metadata expiration rules.
 Press `m` on a package to choose an available action. Press `p` to review pending actions, `x` to unmark the
@@ -139,7 +140,8 @@ Online transactions clear pending marks on success or failure. A failed offline 
 Escape from the result reloads the active package view. Offline changes are prepared for reboot, not applied immediately.
 Use `dnf5 offline status` to inspect prepared changes and `sudo dnf5 offline clean` to discard them if needed.
 Native execution requires a working Polkit authentication agent. Key imports are declined; no automatic approval is used.
-The title bar shows when updates are prepared for reboot. Status is checked on package queries and after Apply.
+The title bar shows when updates are prepared for reboot. Status is checked at startup, on explicit refresh,
+and during the preview and apply workflow. Ordinary package queries keep the last known status.
 If the daemon status cannot be read, the title bar reports that it is unknown.
 
 The Upgradable view requires dnf5daemon and uses its upgrade target list, not local version comparisons.
